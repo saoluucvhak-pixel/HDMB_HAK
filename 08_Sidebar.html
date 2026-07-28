@@ -1,0 +1,30 @@
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+</div>

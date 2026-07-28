@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+<style>
+  :root {
+    --sidebar-bg: #14231b;
+    --sidebar-bg-2: #182a20;
+    --active-green: #2f7d52;
+    --accent-gold: #c9973f;
+    --accent-purple: #6b4a63;
+    --text-light: #cdd6d0;
+    --text-muted: #7d8c84;
+    --card-bg: #ffffff;
+    --page-bg: #f2f3f1;
+    --border-light: #e5e7e5;
+    --heading: #1c2a22;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; display: flex; min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--page-bg); color: var(--heading);
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .app-sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
+  }
+  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
+
+  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
+    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
+  .tab-bar a, .tab-bar span {
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-purple { background: var(--accent-purple); color: #fff; }
+  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
+  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+    .brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
+  }
+</style>
+
+<style>
+    .tabs2 { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; }
+    .tab2 { padding: 9px 12px; cursor: pointer; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; color: #667; }
+    .tab2.active { border-bottom-color: var(--active-green); color: var(--active-green); }
+    .panel2 { display: none; }
+    .panel2.active { display: block; }
+    .row-do { background: #fdecea; }
+    .row-vang { background: #fef9e7; }
+    td.so-lieu, th.so-lieu { text-align: right !important; font-variant-numeric: tabular-nums; }
+    .pagination-btn { padding: 4px 10px; border: 1px solid var(--border-light); border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; }
+    .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+</div>
+
+  <div class="app-main">
+    <div class="page-title">Báo cáo tổng hợp</div>
+    <div class="page-subtitle">Báo cáo hợp đồng (lọc + kiểm tra hồ sơ) và tình hình thực hiện (khối lượng/giá trị đã — còn thực hiện).</div>
+
+    <div class="tabs2">
+      <div class="tab2 active" data-panel="pBaoCaoHD">📄 Báo cáo hợp đồng</div>
+      <div class="tab2" data-panel="pThucHien">📊 Tình hình thực hiện</div>
+      <div class="tab2" data-panel="pThanhLy">🧾 Thanh lý hợp đồng</div>
+    </div>
+
+    <!-- ============ 1. BÁO CÁO HỢP ĐỒNG (lọc + phân trang + màu) ============ -->
+    <div class="panel2 active" id="pBaoCaoHD">
+      <div class="card">
+        <h3>Bộ lọc</h3>
+        <div class="field-row">
+          <div class="field"><label>Từ ngày (ngày ký)</label><input id="bcTuNgay" type="date"></div>
+          <div class="field"><label>Đến ngày (ngày ký)</label><input id="bcDenNgay" type="date"></div>
+          <div class="field"><label>Số hợp đồng</label><input id="bcSoHD"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Tên chủ rừng</label><input id="bcTenChuRung"></div>
+          <div class="field"><label>Tên người nhận ủy quyền</label><input id="bcTenUyQuyen"></div>
+          <div class="field"><label>Địa chỉ rừng (xã/huyện/tỉnh)</label><input id="bcDiaChiRung" placeholder="gõ 1 phần địa chỉ"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Tình trạng hợp đồng</label>
+            <select id="bcTinhTrang">
+              <option>Tất cả</option>
+              <option>Chờ thực hiện</option>
+              <option>Đang thực hiện</option>
+              <option>Hoàn thành</option>
+              <option>Đã hủy</option>
+              <option>Đã thanh lý</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-green" style="margin-top:10px" onclick="taiBaoCaoHD(1)">🔍 Lọc dữ liệu</button>
+        <button class="btn btn-outline" style="margin-top:10px" onclick="taiBaoCaoHD(1, true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
+        <div id="msgLocBC" class="msg" style="display:none;margin-top:8px"></div>
+        <p class="hint">🔴 Dòng đỏ: thiếu hồ sơ bắt buộc (CCCD / giấy xác nhận-nguồn gốc-QSDĐ / giấy ủy quyền nếu có ủy quyền). 🟡 Dòng vàng: thiếu ảnh hoặc tọa độ GPS.</p>
+      </div>
+
+      <div class="card">
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tblBaoCaoHD">
+            <thead>
+              <tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>Địa chỉ rừng</th><th>Tọa độ</th><th>Trạng thái</th><th>Ghi chú thiếu</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="phanTrangBC" style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- ============ 2. TÌNH HÌNH THỰC HIỆN ============ -->
+    <div class="panel2" id="pThucHien">
+      <div class="card">
+        <h3>🔍 Xem trước dữ liệu DNTT_GK_DN_CT (kiểm tra cột trước khi dùng)</h3>
+        <p class="hint" style="margin-top:-8px">✅ Khối lượng/giá trị "đã thực hiện" đang <b>TỰ ĐỘNG lấy từ DNTT_GK_DN_CT</b> (cột Khối lượng thanh toán KG, cột Thành tiền — đã xác nhận đúng cột). Nếu số liệu hiển thị bên dưới có gì bất thường, bấm nút dưới để xem lại cột hệ thống đang dò và báo mình kiểm tra lại.</p>
+        <p class="hint" style="margin-top:2px">⚠️ Nếu 1 hợp đồng chưa có dữ liệu khớp trong DNTT_GK_DN_CT, hệ thống tự động dùng cột <code>KhoiLuongThucHien</code> tự nhập trong HD_RUNG (mặc định 0) làm dự phòng.</p>
+        <button class="btn btn-outline" onclick="xemTruocDNTT()">👁️ Xem trước dữ liệu DNTT_GK_DN_CT</button>
+        <div id="ketQuaXemTruocDNTT" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h3>Tổng hợp khối lượng &amp; giá trị</h3>
+        <button class="btn btn-green" onclick="chayTongHop()">⚙️ Chạy trích xuất dữ liệu</button>
+        <button class="btn btn-outline" onclick="chayTongHop(true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
+        <button class="btn btn-gold" onclick="xuatSheet()">⬇️ Xuất ra Google Sheet</button>
+        <div id="msg" class="msg" style="display:none"></div>
+      </div>
+
+      <div class="kpi-row" style="margin-bottom:18px">
+        <div class="kpi-card"><div class="label">SỐ HỢP ĐỒNG</div><div class="value" id="kpiSoHD">0</div></div>
+        <div class="kpi-card"><div class="label">TỔNG KHỐI LƯỢNG DỰ KIẾN</div><div class="value" id="kpiKhoiLuong">0</div></div>
+        <div class="kpi-card"><div class="label">TỔNG GIÁ TRỊ (VNĐ)</div><div class="value" id="kpiGiaTri">0</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Trạng thái &amp; tiến độ hồ sơ</h3>
+        <div class="kpi-row" style="margin-bottom:14px">
+          <div class="kpi-card"><div class="label">ĐÃ ĐO GPS ĐỦ</div><div class="value" id="kpiGPSDu">0</div></div>
+          <div class="kpi-card"><div class="label">ĐÃ ĐỦ HỒ SƠ</div><div class="value" id="kpiHoSoDu">0</div></div>
+          <div class="kpi-card"><div class="label">ĐÃ CÓ ẢNH</div><div class="value" id="kpiCoAnh">0</div></div>
+        </div>
+        <div id="theoTrangThai" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+      </div>
+
+      <div class="card">
+        <h3>Chi tiết khối lượng/giá trị — đã thực hiện — còn thực hiện</h3>
+        <p class="hint" style="margin-top:-8px">🔴 Dòng đỏ: giá trị còn thực hiện bị âm (đã thực hiện vượt giá trị hợp đồng). Đơn vị KL: Tấn.</p>
+        <div class="field-row" style="margin-bottom:10px">
+          <div class="field"><label>Lọc theo Số HĐ</label><input id="ttLocSoHD" onkeyup="locBangChiTiet()"></div>
+          <div class="field"><label>Lọc theo tên chủ rừng</label><input id="ttLocTenChuRung" onkeyup="locBangChiTiet()"></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tblChiTiet">
+            <thead>
+              <tr>
+                <th>Số HĐ</th><th>Chủ rừng</th><th class="so-lieu">KL HĐ (Tấn)</th><th class="so-lieu">KL đã TH (Tấn)</th><th class="so-lieu">KL còn lại (Tấn)</th>
+                <th class="so-lieu">Giá trị hợp đồng</th><th class="so-lieu">Giá trị đã TH</th><th class="so-lieu">Giá trị còn lại</th>
+                <th>Bắt đầu TH</th><th>Kết thúc TH</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 3. THANH LÝ HỢP ĐỒNG ============ -->
+    <div class="panel2" id="pThanhLy">
+      <div class="card">
+        <h3>🧾 Danh sách hợp đồng chờ thanh lý</h3>
+        <div class="field-row">
+          <div class="field"><label>Số hợp đồng</label><input id="tlLocSoHD" onkeyup="taiDanhSachThanhLy(1)"></div>
+          <div class="field"><label>Tên chủ rừng</label><input id="tlLocTenChuRung" onkeyup="taiDanhSachThanhLy(1)"></div>
+          <div class="field"><label>Người nhận tiền (ủy quyền)</label><input id="tlLocTenUyQuyen" onkeyup="taiDanhSachThanhLy(1)"></div>
+        </div>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="taiDanhSachThanhLy(1)">🔄 Tải danh sách</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="taiDanhSachThanhLy(1, true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
+        <div style="overflow-x:auto;margin-top:10px">
+          <table class="data-table" id="tblThanhLy">
+            <thead>
+              <tr>
+                <th>Số HĐ</th><th>Chủ rừng</th><th>Người nhận tiền</th><th class="so-lieu">KL HĐ (Tấn)</th><th class="so-lieu">Giá trị hợp đồng</th>
+                <th class="so-lieu">KL đã TH (Tấn)</th><th class="so-lieu">Giá trị đã TH</th><th class="so-lieu">KL còn lại (Tấn)</th>
+                <th>TH từ ngày</th><th>TH đến ngày</th><th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="phanTrangTL" style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px"></div>
+        <div id="msgTL" class="msg" style="display:none;margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  document.querySelectorAll('.tab2').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab2').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.panel2').forEach(function (p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  function formatSo(v) { return (v || 0).toLocaleString('vi-VN'); }
+  function formatKL(v) { return (((Number(v) || 0) / 1000)).toLocaleString('vi-VN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); } // KG → Tấn (÷1000)
+  function formatTien(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }); }
+  function showMsg(id, text, ok) {
+    var el = document.getElementById(id);
+    el.style.display = 'block';
+    el.className = 'msg ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+  }
+
+  // ============ 1. BÁO CÁO HỢP ĐỒNG ============
+  var trangBCHienTai = 1;
+  var dsChiTietGoc = [];
+
+  function locBangChiTiet() {
+    var tkSoHD = (document.getElementById('ttLocSoHD').value || '').toLowerCase();
+    var tkTen = (document.getElementById('ttLocTenChuRung').value || '').toLowerCase();
+    var loc = dsChiTietGoc.filter(function (m) {
+      if (tkSoHD && (m.soHD || '').toString().toLowerCase().indexOf(tkSoHD) === -1) return false;
+      if (tkTen && (m.chuRung || '').toLowerCase().indexOf(tkTen) === -1) return false;
+      return true;
+    });
+    var tbody = document.querySelector('#tblChiTiet tbody');
+    tbody.innerHTML = '';
+    if (!loc.length) { tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có dòng nào khớp bộ lọc.</td></tr>'; return; }
+    loc.forEach(function (m) {
+      var tr = document.createElement('tr');
+      if (m.giaTriConLai < 0) tr.className = 'row-do';
+      tr.innerHTML = '<td>' + (m.soHD || '') + '</td><td>' + (m.chuRung || '') + '</td>' +
+        '<td class="so-lieu">' + formatKL(m.tongKhoiLuongDuKien) + '</td><td class="so-lieu">' + formatKL(m.tongKhoiLuongThucHien) + '</td><td class="so-lieu">' + formatKL(m.khoiLuongConLai) + '</td>' +
+        '<td class="so-lieu">' + formatTien(m.tongGiaTri) + '</td><td class="so-lieu">' + formatTien(m.tongGiaTriThucHien) + '</td><td class="so-lieu">' + formatTien(m.giaTriConLai) + '</td>' +
+        '<td>' + (m.thucHienTuNgay ? new Date(m.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
+        '<td>' + (m.thucHienDenNgay ? new Date(m.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+  function taiBaoCaoHD(trang, forceLamMoi) {
+    var boLoc = {
+      tuNgay: document.getElementById('bcTuNgay').value, denNgay: document.getElementById('bcDenNgay').value,
+      soHD: document.getElementById('bcSoHD').value, tenChuRung: document.getElementById('bcTenChuRung').value,
+      tenNguoiUyQuyen: document.getElementById('bcTenUyQuyen').value, diaChiRung: document.getElementById('bcDiaChiRung').value,
+      tinhTrang: document.getElementById('bcTinhTrang').value
+    };
+    showMsg('msgLocBC', '⌛ Đang lọc...', true);
+    google.script.run.withSuccessHandler(function (kq) {
+      trangBCHienTai = kq.trang;
+      var tbody = document.querySelector('#tblBaoCaoHD tbody');
+      tbody.innerHTML = '';
+      if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="8" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
+      kq.items.forEach(function (r) {
+        var tr = document.createElement('tr');
+        if (r.mucDo === 'do') tr.className = 'row-do'; else if (r.mucDo === 'vang') tr.className = 'row-vang';
+        var ghiChu = r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '✅');
+        var toaDoText = r.toaDo ? ('<a href="#" onclick="xemToaDoTrenBanDo(' + r.toaDo.lat + ',' + r.toaDo.lng + ');return false;">' + r.toaDo.lat.toFixed(5) + ', ' + r.toaDo.lng.toFixed(5) + '</a>') : '<span class="hint">Chưa có</span>';
+        tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + new Date(r.ngayKy).toLocaleDateString('vi-VN') + '</td>' +
+          '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.tenUyQuyen || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
+          '<td>' + toaDoText + '</td><td>' + r.tinhTrang + '</td><td style="font-size:11px">' + ghiChu + '</td>';
+        tbody.appendChild(tr);
+      });
+      var pg = document.getElementById('phanTrangBC');
+      pg.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiBaoCaoHD(' + (kq.trang - 1) + ')">‹ Trước</button>' +
+        '<span>Trang ' + kq.trang + ' / ' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)</span>' +
+        '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiBaoCaoHD(' + (kq.trang + 1) + ')">Sau ›</button>';
+      showMsg('msgLocBC', '✅ Đã lọc — tìm thấy ' + kq.tongSo + ' hợp đồng khớp điều kiện. ' + (kq.tuCache ? '⚡ (lấy từ cache, không có thay đổi mới)' : '🔄 (vừa tính lại toàn bộ)'), true);
+    }).layBaoCaoHopDongPhanTrang(boLoc, trang || 1, 20, !!forceLamMoi);
+  }
+
+  function xemToaDoTrenBanDo(lat, lng) {
+    window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');
+  }
+
+  // ============ 2. TÌNH HÌNH THỰC HIỆN ============
+  function chayTongHop(forceLamMoi) {
+    showMsg('msg', '⌛ Đang tổng hợp...', true);
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('kpiSoHD').textContent = formatSo(kq.soHopDong);
+        document.getElementById('kpiKhoiLuong').textContent = formatKL(kq.tongKhoiLuong);
+        document.getElementById('kpiGiaTri').textContent = formatTien(kq.tongGiaTri);
+
+        var tbody = document.querySelector('#tblChiTiet tbody');
+        tbody.innerHTML = '';
+        dsChiTietGoc = kq.chiTiet;
+        locBangChiTiet();
+        showMsg('msg', '✅ Đã tổng hợp ' + kq.soHopDong + ' hợp đồng.' + (forceLamMoi ? ' 🔄 (vừa tính lại toàn bộ)' : ''), true);
+      })
+      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
+      .layTongHopChoWebapp(!!forceLamMoi);
+
+    google.script.run.withSuccessHandler(function (kq) {
+      document.getElementById('kpiGPSDu').textContent = formatSo(kq.soHDDaDoGPSDu) + ' / ' + formatSo(kq.tongSoHopDong);
+      document.getElementById('kpiHoSoDu').textContent = formatSo(kq.soHDDuHoSo) + ' / ' + formatSo(kq.tongSoHopDong);
+      document.getElementById('kpiCoAnh').textContent = formatSo(kq.soHDCoAnh) + ' / ' + formatSo(kq.tongSoHopDong);
+      var badgeWrap = document.getElementById('theoTrangThai');
+      badgeWrap.innerHTML = '';
+      Object.keys(kq.theoTrangThai).forEach(function (tt) {
+        var span = document.createElement('span');
+        span.className = 'btn btn-outline'; span.style.cursor = 'default';
+        span.textContent = tt + ': ' + kq.theoTrangThai[tt];
+        badgeWrap.appendChild(span);
+      });
+    }).layTinhHinhThucHien();
+  }
+
+  function xuatSheet() {
+    showMsg('msg', '⌛ Đang xuất ra Google Sheet...', true);
+    google.script.run
+      .withSuccessHandler(function (kq) { showMsg('msg', '✅ ' + kq, true); })
+      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
+      .xuatBaoCaoTongHopHopDong();
+  }
+
+  // ============ 3. THANH LÝ HỢP ĐỒNG ============
+  var trangTLHienTai = 1;
+  function taiDanhSachThanhLy(trang, forceLamMoi) {
+    var boLoc = {
+      soHD: document.getElementById('tlLocSoHD').value,
+      tenChuRung: document.getElementById('tlLocTenChuRung').value,
+      tenUyQuyen: document.getElementById('tlLocTenUyQuyen').value
+    };
+    google.script.run.withSuccessHandler(function (kq) {
+      trangTLHienTai = kq.trang;
+      var tbody = document.querySelector('#tblThanhLy tbody');
+      tbody.innerHTML = '';
+      if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có hợp đồng nào.</td></tr>';
+      kq.items.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.chuRung || '') + '</td><td>' + (r.nguoiUyQuyen || '') + '</td>' +
+          '<td class="so-lieu">' + formatKL(r.khoiLuongHopDong) + '</td><td class="so-lieu">' + formatTien(r.giaTriHopDong) + '</td>' +
+          '<td class="so-lieu">' + formatKL(r.khoiLuongThucHien) + '</td><td class="so-lieu">' + formatTien(r.giaTriThucHien) + '</td>' +
+          '<td class="so-lieu">' + formatKL(r.khoiLuongConLai) + '</td>' +
+          '<td>' + (r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td>' + (r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td><button class="btn btn-gold" style="padding:4px 8px;font-size:11px" onclick="thanhLyHopDong(\'' + r.idHD + '\')">Thanh lý</button></td>';
+        tbody.appendChild(tr);
+      });
+      var pg = document.getElementById('phanTrangTL');
+      pg.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiDanhSachThanhLy(' + (kq.trang - 1) + ')">‹ Trước</button>' +
+        '<span>Trang ' + kq.trang + ' / ' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)</span>' +
+        '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiDanhSachThanhLy(' + (kq.trang + 1) + ')">Sau ›</button>';
+    }).layDanhSachThanhLy(trang || 1, 20, boLoc, !!forceLamMoi);
+  }
+
+  function thanhLyHopDong(idHD, boQua) {
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (kq.thanhCong) { showMsg('msgTL', '✅ Đã thanh lý hợp đồng ' + idHD, true); taiDanhSachThanhLy(trangTLHienTai); return; }
+        if (kq.canXacNhan) {
+          var tatCaThieu = (kq.thieuBatBuoc || []).concat(kq.thieuPhu || []);
+          if (confirm('Hồ sơ thiếu:\n- ' + tatCaThieu.join('\n- ') + '\n\nBạn có tiếp tục thanh lý không?')) thanhLyHopDong(idHD, true);
+          return;
+        }
+        showMsg('msgTL', '❌ ' + kq.loi + (kq.thieuBatBuoc && kq.thieuBatBuoc.length ? '\n- ' + kq.thieuBatBuoc.join('\n- ') : ''), false);
+      })
+      .withFailureHandler(function (err) { showMsg('msgTL', '❌ Lỗi: ' + err.message, false); })
+      .THANH_LY_HOP_DONG(idHD, boQua === true);
+  }
+
+  function xemTruocDNTT() {
+    document.getElementById('ketQuaXemTruocDNTT').innerHTML = '<p class="hint">⌛ Đang đọc...</p>';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { document.getElementById('ketQuaXemTruocDNTT').innerHTML = '<div class="msg err">❌ ' + kq.loi + '</div>'; return; }
+        var html = '<p><b>Đã dò được:</b> Số HĐ = cột ' + kq.cotDaDo.soHD + ', Khối lượng = cột ' + kq.cotDaDo.khoiLuong + ', Giá trị = cột ' + kq.cotDaDo.giaTri + '</p>';
+        html += '<p class="hint">Tiêu đề toàn bộ cột trong sheet: ' + kq.tieuDeCot.map(function (t) { return t.cot + ':"' + t.tieuDe + '"'; }).join(', ') + '</p>';
+        html += '<table class="small"><tr><th>Số HĐ (dò được)</th><th>Khối lượng (dò được)</th><th>Giá trị (dò được)</th></tr>';
+        kq.mauDong.forEach(function (d) {
+          html += '<tr><td>' + d.soHD + '</td><td>' + d.khoiLuong + '</td><td>' + d.giaTri + '</td></tr>';
+        });
+        html += '</table><p class="hint">Nếu cột nào SAI, báo mình đúng cột nào (theo tiêu đề ở trên) để chỉnh lại từ khóa dò trong 06_CreateUpdate.gs.</p>';
+        document.getElementById('ketQuaXemTruocDNTT').innerHTML = html;
+      })
+      .withFailureHandler(function (err) { document.getElementById('ketQuaXemTruocDNTT').innerHTML = '<div class="msg err">❌ Lỗi: ' + err.message + '</div>'; })
+      .layXemTruocDNTT();
+  }
+
+  window.addEventListener('DOMContentLoaded', function () {
+    taiBaoCaoHD(1);
+    chayTongHop();
+    taiDanhSachThanhLy(1);
+  });
+</script>
+</body>
+</html>
