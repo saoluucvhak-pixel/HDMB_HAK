@@ -269,8 +269,25 @@ function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
   trang = trang || 1;
   kichThuoc = kichThuoc || 20;
 
-  const ketQuaCache = layHoacTinhBaoCao_('baoCaoHopDong', tinhChiTietBaoCaoHopDong_KhongCache_, boBuoc);
-  const tatCa = ketQuaCache.duLieu;
+  if (boBuoc) XAY_DUNG_LAI_TOAN_BO_DRAFT(); // chỉ tính lại toàn bộ khi bấm "Làm mới dữ liệu" tường minh
+
+  const tatCa = docToanBoDraftBaoCao_().map(function (m) {
+    const toaDo = m.toaDoTrungBinh ? (function () {
+      const p = m.toaDoTrungBinh.split(',');
+      return { lat: parseFloat(p[0]), lng: parseFloat(p[1]) };
+    })() : null;
+    const thieuDo = m.thieuHoSoChiTiet ? m.thieuHoSoChiTiet.split('; ').filter(Boolean) : [];
+    const thieuVang = [];
+    if (!m.daDoGPSDu) thieuVang.push('Chưa đo đủ tọa độ GPS');
+    if (!m.coAnh) thieuVang.push('Chưa có ảnh hiện trường');
+    let mucDo = 'binh_thuong';
+    if (thieuDo.length) mucDo = 'do'; else if (thieuVang.length) mucDo = 'vang';
+    return {
+      idHD: m.idHD, soHD: m.soHD, ngayKy: m.ngayKy, tenChuRung: m.tenChuRung,
+      tenUyQuyen: m.tenUyQuyen, diaChiRung: m.diaChiRung, tinhTrang: m.tinhTrang,
+      toaDo: toaDo, mucDo: mucDo, thieuDo: thieuDo, thieuVang: thieuVang
+    };
+  });
 
   const tuNgay = boLoc.tuNgay ? new Date(boLoc.tuNgay) : null;
   const denNgay = boLoc.denNgay ? new Date(boLoc.denNgay) : null;
@@ -294,7 +311,7 @@ function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
   trang = Math.min(Math.max(1, trang), tongTrang);
   const batDau = (trang - 1) * kichThuoc;
 
-  return { items: loc.slice(batDau, batDau + kichThuoc), trang: trang, tongTrang: tongTrang, tongSo: tongSo, tuCache: ketQuaCache.tuCache };
+  return { items: loc.slice(batDau, batDau + kichThuoc), trang: trang, tongTrang: tongTrang, tongSo: tongSo, tuCache: !boBuoc };
 }
 
 /**

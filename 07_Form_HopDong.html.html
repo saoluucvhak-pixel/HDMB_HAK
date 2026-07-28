@@ -143,7 +143,7 @@
 </style>
 
 <div style="background:#fff3cd;border:2px solid #e74c3c;padding:8px 14px;border-radius:6px;font-weight:700;color:#c0392b;margin-bottom:10px">
-  🔖 PHIÊN BẢN: 2026-07-28-FIX09 — nếu bạn không thấy dòng này màu đỏ, nghĩa là đang xem bản CŨ, chưa deploy đúng.
+  🔖 PHIÊN BẢN: 2026-07-28-FIX14-NODRIVE — nếu bạn không thấy dòng này màu đỏ, nghĩa là đang xem bản CŨ, chưa deploy đúng.
 </div>
 <div class="page-title">Quản lý Hợp đồng Gỗ Keo</div>
 <div class="page-subtitle">Chọn "Tạo hợp đồng mới" hoặc bấm "Sửa" trên 1 hợp đồng trong danh sách để mở form chi tiết.</div>
@@ -673,14 +673,14 @@
    *  (ĐỌC THẲNG 1 dòng theo số dòng thật, không phải tìm kiếm) rồi mới lấy dữ liệu con. */
   function chonHopDong(soDong) {
     veChiTiet();
-    showMsg('msgLuu', '⌛ Đang tải hợp đồng...', true);
+    showMsg('msgLuu', '⌛ Đang tải hợp đồng (soDong nhận được: ' + JSON.stringify(soDong) + ', kiểu: ' + typeof soDong + ')...', true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     google.script.run
       .withFailureHandler(function (err) { showMsg('msgLuu', '❌ Lỗi khi tải hợp đồng: ' + err.message, false); })
       .withSuccessHandler(function (kq) {
         if (!kq || kq.khongTimThay) {
-          showMsg('msgLuu', '❌ Không tìm thấy hợp đồng (dòng ' + soDong + ')' + (kq && kq.chanDoan ? ' — ' + kq.chanDoan : ''), false);
+          showMsg('msgLuu', '❌ Không tìm thấy hợp đồng (dòng ' + JSON.stringify(soDong) + '). Toàn bộ phản hồi từ server: ' + JSON.stringify(kq), false);
           return;
         }
         setVal('hoSoNguonGocTongHop', '');
@@ -691,7 +691,8 @@
 
         setVal('tenChuRung', kq.tenChuRung); setVal('cccdChuRung', kq.cccdChuRung);
         setVal('soHD', kq.soHD);
-        setVal('ngayCap', kq.ngayCap); setVal('noiCap', kq.noiCap); setVal('sdtChuRung', kq.sdtChuRung);
+        document.getElementById('ngayCap').value = kq.ngayCap ? new Date(kq.ngayCap).toISOString().split('T')[0] : '';
+        setVal('noiCap', kq.noiCap); setVal('sdtChuRung', kq.sdtChuRung);
         setVal('diaChiThuongTru', kq.diaChiThuongTru); setVal('diaChiRung', kq.diaChiRung);
         document.getElementById('ngayKy').value = kq.ngayKy ? new Date(kq.ngayKy).toISOString().split('T')[0] : '';
         setVal('dienTichKy', kq.dienTichKy); setVal('slDuKien', kq.slDuKien); setVal('donGia', kq.donGia);
@@ -886,8 +887,8 @@
       '<label class="lbl" style="margin-top:16px">📍 Tọa độ GPS đã có</label>' +
       '<div id="dsGPS"><p class="hint">Đang tải...</p></div>' +
       '<div class="field-row" style="margin-top:8px">' +
-      '  <div class="field"><label>Lat</label><input id="gpsLatTay" type="number" step="any"></div>' +
-      '  <div class="field"><label>Lng</label><input id="gpsLngTay" type="number" step="any"></div>' +
+      '  <div class="field"><label>Lat</label><input id="gpsLatTay" type="text" placeholder="vd: 15.733975 hoặc 15°44\'02.3\\"N"></div>' +
+      '  <div class="field"><label>Lng</label><input id="gpsLngTay" type="text" placeholder="vd: 108.023957 hoặc 108°01\'26.2\\"E"></div>' +
       '</div>' +
       '<button class="btn btn-outline" style="margin-top:8px" onclick="themDiemGPSTay()">➕ Thêm tọa độ (nhập tay)</button>' +
 
@@ -955,12 +956,16 @@
   }
 
   function themDiemGPSTay() {
-    var lat = Number(val('gpsLatTay')), lng = Number(val('gpsLngTay'));
-    if (!lat || !lng) { showMsg('msgAnh', '❌ Nhập đủ Lat/Lng.', false); return; }
+    var latTho = val('gpsLatTay'), lngTho = val('gpsLngTay');
+    if (!latTho || !lngTho) { showMsg('msgAnh', '❌ Nhập đủ Lat/Lng.', false); return; }
     google.script.run
-      .withSuccessHandler(function () { showMsg('msgAnh', '✅ Đã thêm tọa độ ' + lat.toFixed(6) + ', ' + lng.toFixed(6), true); taiDiemGPS(); })
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { showMsg('msgAnh', '❌ ' + kq.loi, false); return; }
+        showMsg('msgAnh', '✅ Đã thêm tọa độ (nhận diện: ' + kq.dinhDangDaNhanDien.lat + ').', true);
+        taiDiemGPS();
+      })
       .withFailureHandler(function (err) { showMsg('msgAnh', '❌ Lỗi: ' + err.message, false); })
-      .CAP_NHAT_GPS_RUNG(rungDangSuaTrongModal, { lat: lat, lng: lng, heToaDo: 'DD' }, false);
+      .CAP_NHAT_GPS_RUNG(rungDangSuaTrongModal, { lat: latTho, lng: lngTho }, false);
   }
 
   function taiAnhLenRung() {

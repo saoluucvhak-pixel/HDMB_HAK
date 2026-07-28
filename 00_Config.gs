@@ -24,7 +24,21 @@ const SHEET_NAME = {
   DM_KH:      'DM_KH',
   BAO_CAO:    'BaoCao_KiemTra',    // sheet kết quả kiểm tra sẽ được tạo tự động
   DRAFT_ANH:  'Draft_AnhRung',     // sheet nháp: ảnh + GPS trích xuất chờ duyệt trước khi ghi vào HD_GPS/HD_Picture
-  NHAT_KY:    'NhatKy_SuaDoi'      // sheet nhật ký ghi lại mọi thay đổi hợp đồng (tự tạo)
+  NHAT_KY:    'NhatKy_SuaDoi',     // sheet nhật ký ghi lại mọi thay đổi hợp đồng (tự tạo)
+  DRAFT_BAOCAO: 'Draft_BaoCaoHopDong' // sheet nháp tổng hợp sẵn 1 dòng/hợp đồng cho MỌI báo cáo — cập nhật ngay khi có thay đổi, không cần tính lại khi xem báo cáo
+};
+
+/** Cột của sheet Draft_BaoCaoHopDong — mỗi dòng = 1 hợp đồng, đủ dữ liệu cho tất cả báo cáo, tránh tính lại/trùng lặp logic giữa các báo cáo khác nhau */
+const DRAFT_BAOCAO_COL = {
+  ID_HD: 0, SO_HD: 1, NGAY_KY: 2, TEN_CHU_RUNG: 3, DIA_CHI_THUONG_TRU: 4, CCCD_CHU_RUNG: 5,
+  NGAY_CAP: 6, NOI_CAP: 7, TEN_UY_QUYEN: 8, CCCD_UY_QUYEN: 9,
+  KHOI_LUONG_DU_KIEN: 10, DON_GIA_DU_KIEN: 11, GIA_TRI_HOP_DONG: 12,
+  KHOI_LUONG_THUC_HIEN: 13, DON_GIA_THUC_HIEN: 14, GIA_TRI_THUC_HIEN: 15,
+  KHOI_LUONG_CON_LAI: 16, GIA_TRI_CON_LAI: 17,
+  THUC_HIEN_TU_NGAY: 18, THUC_HIEN_DEN_NGAY: 19, DANH_SACH_SO_PHIEU_CAN: 20,
+  TINH_TRANG: 21, SO_LO_RUNG: 22, SO_TAI_KHOAN: 23, CO_ANH: 24, DA_DO_GPS_DU: 25, HO_SO_DU: 26,
+  THIEU_HO_SO_CHI_TIET: 27, TOA_DO_TRUNG_BINH: 28, DIA_CHI_RUNG: 29,
+  CAP_NHAT_LUC: 30
 };
 
 /**
@@ -160,6 +174,36 @@ function getSS_() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
+/** URL file Google Sheet RIÊNG do người dùng chỉ định để lưu Draft/Cache báo cáo */
+const REPORT_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1G_SUfAY4xV8GZkM4JRhQbzeergRP2OO5AL89LuSnz8U/edit?usp=sharing';
+
+/**
+ * File Google Sheet RIÊNG dành cho Cache/Draft báo cáo — KHÔNG dùng chung với
+ * file dữ liệu chính (HD_NCC, HD_RUNG...), để tránh rủi ro: nếu sheet cache lỡ
+ * bị sửa/xóa nhầm, hoặc phình quá to, không ảnh hưởng gì đến dữ liệu gốc.
+ * Dùng ĐÚNG file đã chỉ định ở REPORT_SPREADSHEET_URL — chỉ tự tạo file mới nếu
+ * vì lý do gì đó không mở được file này (mất quyền truy cập, đã bị xóa...).
+ * Lưu ID vào Script Properties để chống trùng (không mở lại theo URL parse mỗi
+ * lần, tránh trường hợp URL đổi định dạng gây mở nhầm).
+ */
+function getReportSS_() {
+  const props = PropertiesService.getScriptProperties();
+  let id = props.getProperty('REPORT_SPREADSHEET_ID');
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* ID cũ không mở được -> thử lại từ URL chỉ định bên dưới */ }
+  }
+  try {
+    const ss = SpreadsheetApp.openByUrl(REPORT_SPREADSHEET_URL);
+    props.setProperty('REPORT_SPREADSHEET_ID', ss.getId()); // lưu lại ID để lần sau mở nhanh, chống tạo trùng
+    return ss;
+  } catch (e) {
+    // Không mở được file chỉ định (hiếm khi xảy ra) -> tự tạo 1 file mới để hệ thống vẫn hoạt động được
+    const ssMoi = SpreadsheetApp.create('HAK_BaoCao_Cache (tự động - không xóa)');
+    props.setProperty('REPORT_SPREADSHEET_ID', ssMoi.getId());
+    return ssMoi;
+  }
+}
+
 function getSheet_(name) {
   const sh = getSS_().getSheetByName(name);
   if (!sh) throw new Error('Không tìm thấy sheet: ' + name);
@@ -228,11 +272,10 @@ function layThoiGianThayDoiGanNhat_() {
 }
 
 function getOrCreateCacheSheet_() {
-  const ss = getSS_();
+  const ss = getReportSS_(); // đổi sang file RIÊNG cho báo cáo/cache — không dùng file chính nữa
   let sh = ss.getSheetByName(CACHE_SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(CACHE_SHEET_NAME);
-    sh.hideSheet();
     sh.getRange(1, 1, 1, 3).setValues([['TenCache', 'ThoiGianTao', 'DuLieuJSON (nhiều dòng nếu dài)']]);
   }
   return sh;
@@ -290,6 +333,75 @@ function layHoacTinhBaoCao_(tenCache, hamTinh, boBuoc) {
   luuCacheBaoCao_(tenCache, ketQua);
   return { tuCache: false, duLieu: ketQua };
 }
+
+/**
+ * ============================================================
+ *  SHEET DRAFT BÁO CÁO HỢP ĐỒNG (Draft_BaoCaoHopDong)
+ * ============================================================
+ * Mỗi hợp đồng = 1 dòng, đã tổng hợp sẵn MỌI số liệu cần cho các báo cáo
+ * (khối lượng/giá trị dự kiến-thực hiện-còn lại, ngày thực hiện, số phiếu cân,
+ * trạng thái hồ sơ/GPS/ảnh...). Cập nhật NGAY LẬP TỨC mỗi khi hợp đồng/lô rừng/
+ * tài khoản có thay đổi (xem các hàm CAP_NHAT_DRAFT_* gọi từ 06_CreateUpdate.gs),
+ * nên các trang báo cáo chỉ cần ĐỌC thẳng sheet này — không phải tính toán lại
+ * từ đầu mỗi lần mở, và không bị trùng lặp logic tính toán giữa nhiều báo cáo.
+ */
+function getOrCreateDraftBaoCaoSheet_() {
+  const ss = getReportSS_(); // đổi sang file RIÊNG cho báo cáo/cache — không dùng file chính nữa
+  let sh = ss.getSheetByName(SHEET_NAME.DRAFT_BAOCAO);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_NAME.DRAFT_BAOCAO);
+    const header = [
+      'ID_HD', 'Số HĐ', 'Ngày ký', 'Tên chủ rừng', 'Địa chỉ thường trú', 'CCCD chủ rừng',
+      'Ngày cấp', 'Nơi cấp', 'Tên ủy quyền', 'CCCD ủy quyền',
+      'KL dự kiến', 'Đơn giá dự kiến', 'Giá trị HĐ',
+      'KL thực hiện', 'Đơn giá thực hiện', 'Giá trị thực hiện',
+      'KL còn lại', 'Giá trị còn lại',
+      'Thực hiện từ ngày', 'Thực hiện đến ngày', 'Danh sách số phiếu cân',
+      'Tình trạng', 'Số lô rừng', 'Số tài khoản', 'Có ảnh', 'Đã đo GPS đủ', 'Hồ sơ đủ',
+      'Chi tiết hồ sơ thiếu', 'Tọa độ trung bình (lat,lng)', 'Địa chỉ rừng',
+      'Cập nhật lúc'
+    ];
+    sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
+  }
+  return sh;
+}
+
+/** Tìm số dòng thật của 1 hợp đồng trong sheet Draft theo ID_HD, -1 nếu chưa có */
+function timDongDraftBaoCao_(sh, idHD) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return -1;
+  const ids = sh.getRange(2, DRAFT_BAOCAO_COL.ID_HD + 1, lastRow - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if ((ids[i][0] || '').toString().trim() === idHD.toString().trim()) return i + 2;
+  }
+  return -1;
+}
+
+/** Đọc toàn bộ dữ liệu Draft đã tổng hợp sẵn, trả về mảng object (dùng cho mọi báo cáo) */
+function docToanBoDraftBaoCao_() {
+  const sh = getOrCreateDraftBaoCaoSheet_();
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+  const c = DRAFT_BAOCAO_COL;
+  return data.map(function (r) {
+    return {
+      idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: r[c.NGAY_KY], tenChuRung: r[c.TEN_CHU_RUNG],
+      diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
+      ngayCap: r[c.NGAY_CAP], noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: r[c.CCCD_UY_QUYEN],
+      khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], donGiaDuKien: r[c.DON_GIA_DU_KIEN], giaTriHopDong: r[c.GIA_TRI_HOP_DONG],
+      khoiLuongThucHien: r[c.KHOI_LUONG_THUC_HIEN], donGiaThucHien: r[c.DON_GIA_THUC_HIEN], giaTriThucHien: r[c.GIA_TRI_THUC_HIEN],
+      khoiLuongConLai: r[c.KHOI_LUONG_CON_LAI], giaTriConLai: r[c.GIA_TRI_CON_LAI],
+      thucHienTuNgay: r[c.THUC_HIEN_TU_NGAY] || null, thucHienDenNgay: r[c.THUC_HIEN_DEN_NGAY] || null,
+      danhSachSoPhieuCan: r[c.DANH_SACH_SO_PHIEU_CAN],
+      tinhTrang: r[c.TINH_TRANG], soLoRung: r[c.SO_LO_RUNG], soTaiKhoan: r[c.SO_TAI_KHOAN],
+      coAnh: !!r[c.CO_ANH], daDoGPSDu: !!r[c.DA_DO_GPS_DU], hoSoDu: !!r[c.HO_SO_DU],
+      thieuHoSoChiTiet: r[c.THIEU_HO_SO_CHI_TIET] || '', toaDoTrungBinh: r[c.TOA_DO_TRUNG_BINH] || '',
+      diaChiRung: r[c.DIA_CHI_RUNG] || ''
+    };
+  });
+}
+
 
 /** Đọc toàn bộ dữ liệu (trừ header) của 1 sheet, trả về mảng 2 chiều */
 function readData_(sheetName) {

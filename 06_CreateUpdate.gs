@@ -201,7 +201,7 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
           if (!den || d > den) den = d;
         });
       });
-      if (tu || den) theoSoHD[soHD] = { tuNgay: tu, denNgay: den };
+      if (tu || den) theoSoHD[soHD] = { tuNgay: tu, denNgay: den, danhSachSoCT: soCTTheoSoHD[soHD].join(', ') };
     });
 
     return { thanhCong: true, theoSoHD: theoSoHD };
@@ -576,6 +576,7 @@ function THEM_LO_RUNG_MOI(d) {
     // Đồng bộ DM_DIACHI theo địa chỉ của lô rừng mới thêm
     if (d.diaChiRung) dongBoDiaChiTuRung_(d.idHD, { diaChiRung: d.diaChiRung });
 
+    CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
     return { thanhCong: true, idRung: idRung, maRung: maRung, stt: stt };
   } finally {
     lock.releaseLock();
@@ -604,6 +605,7 @@ function THEM_TAI_KHOAN_MOI(d) {
 
   const shTK = getSheet_(SHEET_NAME.HD_STK);
   shTK.appendRow(row);
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
   return { thanhCong: true, soDong: shTK.getLastRow() };
 }
 
@@ -626,10 +628,11 @@ function CAP_NHAT_LO_RUNG(idRung, patch) {
   });
 
   // Nếu có sửa địa chỉ rừng, đồng bộ luôn vào DM_DIACHI
+  const idHDCuaRung = sh.getRange(soDong, RUNG_COL.ID_KEY_HD + 1).getValue();
   if (patch.diaChiRung) {
-    const idHDCuaRung = sh.getRange(soDong, RUNG_COL.ID_KEY_HD + 1).getValue();
     dongBoDiaChiTuRung_(idHDCuaRung, { diaChiRung: patch.diaChiRung });
   }
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
 
   return { thanhCong: true, dong: soDong };
 }
@@ -639,8 +642,57 @@ function CAP_NHAT_LO_RUNG(idRung, patch) {
  * gọi hàm này nhiều lần với cùng idRung để thêm từng điểm, hoặc set ghiDe=true
  * để xóa hết điểm cũ và ghi lại từ đầu.
  */
+/**
+ * Nhận diện và quy đổi 1 giá trị tọa độ (Lat HOẶC Lng) VỀ DECIMAL DEGREES (DD),
+ * bất kể người dùng nhập theo định dạng nào:
+ *   - Decimal thường:        15.733975  hoặc  15,733975 (dấu phẩy thập phân kiểu VN)
+ *   - DMS có ký hiệu độ:      15°44'02.3"N   hoặc  108°01'26.2"E
+ *   - DMS cách nhau khoảng trắng: 15 44 02.3 N
+ *   - DMS cách nhau dấu chấm (kiểu cũ hệ thống): 15.44.02.3N (xem convertDmsToDd gốc)
+ * Trả về { gia_tri: number|null, dinh_dang_nhan_dien: string } để có thể hiện
+ * cho người dùng biết hệ thống đã hiểu đúng định dạng nào chưa.
+ */
+function chuanHoaToaDo_(input) {
+  if (input === null || input === undefined || input === '') return { gia_tri: null, dinh_dang_nhan_dien: 'rỗng' };
+  let s = input.toString().trim();
+
+  // 1) DMS có ký hiệu độ/phút/giây (°'") kèm hướng N/S/E/W — định dạng phổ biến nhất khi copy từ Google Maps/app đo GPS
+  let m = s.match(/(-?\d+)[°\s]+(\d+)['\s]+([\d.]+)["\s]*([NSEW]?)/i);
+  if (m) {
+    const d = parseFloat(m[1]), mi = parseFloat(m[2]), se = parseFloat(m[3]);
+    let dd = Math.abs(d) + mi / 60 + se / 3600;
+    const huong = (m[4] || '').toUpperCase();
+    if (huong === 'S' || huong === 'W' || d < 0) dd = -dd;
+    return { gia_tri: dd, dinh_dang_nhan_dien: 'DMS (độ-phút-giây)' };
+  }
+
+  // 2) Decimal thuần, cho phép dấu phẩy thập phân kiểu Việt Nam (15,733975 -> 15.733975)
+  //    Phân biệt với DMS-cách-nhau-dấu-chấm cũ (15.44.02.3) bằng cách đếm số dấu chấm:
+  //    nếu chỉ có 0-1 dấu chấm/phẩy -> chắc chắn là decimal thường.
+  const soDauChamPhay = (s.match(/[.,]/g) || []).length;
+  if (soDauChamPhay <= 1) {
+    const so = parseFloat(s.replace(',', '.'));
+    if (!isNaN(so)) return { gia_tri: so, dinh_dang_nhan_dien: 'Decimal (thập phân thường)' };
+  }
+
+  // 3) Dự phòng cuối: định dạng DMS kiểu cũ của hệ thống (vd "15.44.02.3N", xem convertDmsToDd() gốc)
+  const dd2 = convertDmsToDd(s);
+  if (dd2 !== null && !isNaN(dd2)) return { gia_tri: dd2, dinh_dang_nhan_dien: 'DMS (kiểu cũ, cách nhau dấu chấm)' };
+
+  return { gia_tri: null, dinh_dang_nhan_dien: 'KHÔNG nhận diện được — vui lòng kiểm tra lại định dạng nhập' };
+}
+
 function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
-  // diemGPS: { lat, lng, heToaDo: 'DD'|'DMS', diaChi (tùy chọn) }
+  // diemGPS: { lat, lng, heToaDo (tùy chọn, không còn bắt buộc — hệ thống tự nhận diện), diaChi (tùy chọn) }
+  // Luôn CHUẨN HÓA lat/lng về decimal (DD) NGAY TẠI ĐÂY trước khi lưu — dù người dùng
+  // nhập định dạng gì (decimal, DMS có ký hiệu, DMS cách khoảng trắng...), dữ liệu lưu
+  // vào sheet LUÔN LÀ 1 HỆ DUY NHẤT (decimal), tránh lẫn lộn nhiều hệ tọa độ về sau.
+  const latChuan = chuanHoaToaDo_(diemGPS.lat);
+  const lngChuan = chuanHoaToaDo_(diemGPS.lng);
+  if (latChuan.gia_tri === null || lngChuan.gia_tri === null) {
+    return { thanhCong: false, loi: 'Không nhận diện được định dạng tọa độ. Lat: "' + diemGPS.lat + '" (' + latChuan.dinh_dang_nhan_dien + '), Lng: "' + diemGPS.lng + '" (' + lngChuan.dinh_dang_nhan_dien + '). Vui lòng nhập lại (vd: 15.733975 hoặc 15°44\'02.3"N).' };
+  }
+
   const sh = getSheet_(SHEET_NAME.HD_GPS);
   if (ghiDe) {
     const data = sh.getDataRange().getValues();
@@ -655,10 +707,11 @@ function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
   const idGPS = rung ? rung[RUNG_COL.SO_HD] + '-' + formatNgay_(rung[RUNG_COL.NGAY_KY]) : idRung;
 
   sh.appendRow([
-    idRung, idGPS, diemGPS.lat, diemGPS.lng, diemGPS.lat + ', ' + diemGPS.lng,
-    diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', '', false, diemGPS.heToaDo || 'DD'
+    idRung, idGPS, latChuan.gia_tri, lngChuan.gia_tri, latChuan.gia_tri + ', ' + lngChuan.gia_tri,
+    diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
   ]);
-  return { thanhCong: true };
+  if (rung) CAP_NHAT_DRAFT_MOT_HOP_DONG(rung[RUNG_COL.ID_KEY_HD]);
+  return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien } };
 }
 
 /**
@@ -675,6 +728,8 @@ function CAP_NHAT_TAI_KHOAN(soDong, patch) {
   Object.keys(patch).forEach(function (key) {
     if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(patch[key]);
   });
+  const idHDCuaTK = sh.getRange(soDong, STK_COL.ID_HD + 1).getValue();
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaTK);
   return { thanhCong: true };
 }
 
@@ -891,7 +946,7 @@ function HUY_HOP_DONG(idHD) {
   const kq = timHopDongTheoId(idHD);
   if (!kq || kq.khongTimThay) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng: ' + idHD + (kq && kq.chanDoan ? ' — ' + kq.chanDoan : '') };
   const ketQua = CAP_NHAT_HOP_DONG(kq.soDong, { tinhTrang: 'Đã hủy' });
-  if (ketQua.thanhCong) ghiNhatKy_('Hủy hợp đồng', idHD, 'Chủ rừng: ' + kq.tenChuRung);
+  if (ketQua.thanhCong) { ghiNhatKy_('Hủy hợp đồng', idHD, 'Chủ rừng: ' + kq.tenChuRung); CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); }
   return ketQua;
 }
 
@@ -955,6 +1010,7 @@ function XOA_VINH_VIEN_HOP_DONG(idHD, xacNhan) {
     }
 
     ghiNhatKy_('XÓA VĨNH VIỄN', idHD, 'Đã xóa ' + soDongDaXoa + ' dòng dữ liệu liên quan khỏi các sheet.');
+    XOA_DRAFT_MOT_HOP_DONG_(idHD);
     return { thanhCong: true, soDongDaXoa: soDongDaXoa };
   } finally {
     lock.releaseLock();
@@ -1350,15 +1406,27 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
   const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
   const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
 
+  // Chuyển an toàn 1 giá trị ngày (có thể là Date object thô từ getValues(), chuỗi rỗng,
+  // hoặc chuỗi có sẵn) sang chuỗi ISO — tránh truyền thẳng Date object thô qua
+  // google.script.run (nghi ngờ đây là nguyên nhân client nhận về null dù hàm chạy đúng
+  // khi gọi trực tiếp trong Apps Script editor).
+  const ngayToISO_ = function (v) {
+    if (!v) return '';
+    try {
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? '' : d.toISOString();
+    } catch (e) { return ''; }
+  };
+
   return {
     soDong: soDong,
     idHD: idHD,
     soHD: r[NCC_COL.SO_HD],
-    ngayKy: r[NCC_COL.NGAY_KY],
+    ngayKy: ngayToISO_(r[NCC_COL.NGAY_KY]),
     tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
     diaChiThuongTru: r[NCC_COL.DIA_CHI_TT],
     cccdChuRung: r[NCC_COL.CCCD_CHU_RUNG],
-    ngayCap: r[NCC_COL.NGAY_CAP],
+    ngayCap: ngayToISO_(r[NCC_COL.NGAY_CAP]),
     noiCap: r[NCC_COL.NOI_CAP],
     sdtChuRung: r[NCC_COL.SDT_CHU_RUNG],
     tenUyQuyen: r[NCC_COL.TEN_UY_QUYEN],
@@ -1366,7 +1434,7 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
     noiCapUyQuyen: r[NCC_COL.NOI_CAP_UQ],
     diaChiUyQuyen: r[NCC_COL.DIA_CHI_UQ],
     sdtUyQuyen: r[NCC_COL.SDT_UQ],
-    ngayCapUyQuyen: r[NCC_COL.NGAY_CAP_UQ],
+    ngayCapUyQuyen: ngayToISO_(r[NCC_COL.NGAY_CAP_UQ]),
     diaChiRung: r[NCC_COL.DIA_CHI_RUNG],
     dienTichKy: r[NCC_COL.DIEN_TICH_KY],
     hoSoNguonGoc: r[NCC_COL.HO_SO_NGUON_GOC],
@@ -1377,10 +1445,10 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
     soTK: r[NCC_COL.SO_TK],
     nganHang: r[NCC_COL.NGAN_HANG],
     tinhTrang: r[NCC_COL.TINH_TRANG],
-    danhSachRung: layDanhSachRung(idHD),
+    danhSachRung: layDanhSachRung(idHD).map(function (r) { return Object.assign({}, r, { dinhKem: null }); }), // bỏ resolveDriveLink_ (gọi Drive) khỏi luồng chính -- nghi ngờ nguyên nhân lỗi khi chạy qua web
     danhSachTaiKhoan: layDanhSachTaiKhoan(idHD),
-    anh: layAnhCuaHopDong(idHD),
-    hoSo: layHoSoCuaHopDong(idHD)
+    anh: [],
+    hoSo: []
   };
 }
 
@@ -1393,7 +1461,9 @@ function XOA_LO_RUNG(idRung) {
   const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, idRung);
   if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy lô rừng có ID_RUNG = ' + idRung };
 
-  getSheet_(SHEET_NAME.HD_RUNG).deleteRow(soDong);
+  const shRung = getSheet_(SHEET_NAME.HD_RUNG);
+  const idHDCuaRung = shRung.getRange(soDong, RUNG_COL.ID_KEY_HD + 1).getValue(); // lấy TRƯỚC khi xóa dòng
+  shRung.deleteRow(soDong);
 
   // Xóa các điểm GPS con của lô rừng này
   const shGPS = getSheet_(SHEET_NAME.HD_GPS);
@@ -1403,6 +1473,7 @@ function XOA_LO_RUNG(idRung) {
       shGPS.deleteRow(i + 1);
     }
   }
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
   return { thanhCong: true };
 }
 
@@ -1410,7 +1481,9 @@ function XOA_LO_RUNG(idRung) {
 function XOA_TAI_KHOAN(soDong) {
   const sh = getSheet_(SHEET_NAME.HD_STK);
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
+  const idHDCuaTK = sh.getRange(soDong, STK_COL.ID_HD + 1).getValue();
   sh.deleteRow(soDong);
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaTK);
   return { thanhCong: true };
 }
 
@@ -1510,6 +1583,7 @@ function THANH_LY_HOP_DONG(idHD, boQuaCanhBaoPhu) {
 
   CAP_NHAT_HOP_DONG(kqTim.soDong, { tinhTrang: 'Đã thanh lý' });
   ghiNhatKy_('Thanh lý hợp đồng', idHD, 'Chủ rừng: ' + kqTim.tenChuRung + ((thieuBatBuoc.length || thieuPhu.length) ? ' (đã bỏ qua cảnh báo thiếu: ' + thieuBatBuoc.concat(thieuPhu).join('; ') + ')' : ''));
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD);
   return { thanhCong: true };
 }
 
@@ -1676,5 +1750,6 @@ function LUU_HOP_DONG_DAY_DU(payload) {
       ' — Tài khoản: +' + soTKThem + ' / sửa ' + soTKSua + ' / -' + soTKXoa);
   }
 
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); // cập nhật Draft NGAY sau khi mọi thứ (hợp đồng + rừng + tài khoản) đã ghi xong
   return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK };
 }

@@ -18,7 +18,18 @@ function onOpen() {
     .addItem('🔎 Đối chiếu OCR file gốc với dữ liệu Sheet', 'DOI_CHIEU_HO_SO_DINH_KY')
     .addSeparator()
     .addItem('⏰ Thiết lập chạy tự động hàng tuần', 'THIET_LAP_TRIGGER_DINH_KY')
+    .addSeparator()
+    .addItem('🔄 Xây dựng lại Draft báo cáo (chạy 1 lần khi mới cài đặt)', 'XAY_DUNG_LAI_TOAN_BO_DRAFT')
+    .addItem('📂 Mở file Báo cáo/Cache riêng', 'MO_FILE_BAO_CAO_RIENG')
+    .addItem('⚡ Bật bẫy nhật ký tự động (HD_NCC/RUNG/STK/GPS/Picture)', 'THIET_LAP_TRIGGER_ONEDIT_DRAFT')
+    .addItem('⏱️ Bật đồng bộ định kỳ phần thanh toán (30 phút/lần)', 'THIET_LAP_TRIGGER_DONG_BO_THANH_TOAN')
     .addToUi();
+}
+
+/** Hiện link file Google Sheet riêng chứa Draft/Cache báo cáo (tách khỏi file dữ liệu chính) */
+function MO_FILE_BAO_CAO_RIENG() {
+  const url = getReportSS_().getUrl();
+  SpreadsheetApp.getUi().alert('File Báo cáo/Cache riêng:\n' + url + '\n\n(Copy link này để mở trong tab mới)');
 }
 
 /** Mở sidebar nhập liệu Tạo hợp đồng / Thêm rừng / Thêm tài khoản / Sửa rừng */
