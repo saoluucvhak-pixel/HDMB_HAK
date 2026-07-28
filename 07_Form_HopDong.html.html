@@ -142,6 +142,9 @@
   .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 
+<div style="background:#fff3cd;border:2px solid #e74c3c;padding:8px 14px;border-radius:6px;font-weight:700;color:#c0392b;margin-bottom:10px">
+  🔖 PHIÊN BẢN: 2026-07-28-FIX09 — nếu bạn không thấy dòng này màu đỏ, nghĩa là đang xem bản CŨ, chưa deploy đúng.
+</div>
 <div class="page-title">Quản lý Hợp đồng Gỗ Keo</div>
 <div class="page-subtitle">Chọn "Tạo hợp đồng mới" hoặc bấm "Sửa" trên 1 hợp đồng trong danh sách để mở form chi tiết.</div>
 
@@ -666,58 +669,52 @@
    *  KHÔNG gọi lại server để tìm/đọc lại hợp đồng => loại bỏ hoàn toàn khả năng "không tìm thấy".
    *  Chỉ gọi server 1 lần duy nhất để lấy dữ liệu CON (rừng/tài khoản/ảnh/hồ sơ) theo idHD —
    *  bước này dùng filter đơn giản (không phải tìm 1 dòng đơn lẻ) nên luôn ổn định. */
+  /** Chọn 1 hợp đồng để Sửa/Xem — gọi server lấy chi tiết qua layHopDongTheoSoDong
+   *  (ĐỌC THẲNG 1 dòng theo số dòng thật, không phải tìm kiếm) rồi mới lấy dữ liệu con. */
   function chonHopDong(soDong) {
-    var kq = cacheHopDongTheoSoDong[soDong];
-    if (!kq) {
-      // Trường hợp hiếm: cache chưa có (vd bấm quá nhanh trước khi danh sách tải xong) -> tải lại danh sách rồi thử lại
-      var dangOChiTiet = document.getElementById('viewChiTiet').style.display !== 'none';
-      var idEl = dangOChiTiet ? 'msgLuu' : 'msgDanhSach';
-      var elMsg = document.getElementById(idEl);
-      elMsg.style.display = 'block'; elMsg.className = 'msg err';
-      elMsg.innerHTML = '⌛ Dữ liệu chưa sẵn sàng, đang tải lại danh sách... vui lòng bấm "Sửa" lại sau 1 giây.';
-      taiDanhSachHD(trangHDHienTai || 1);
-      return;
-    }
-
     veChiTiet();
-    setVal('hoSoNguonGocTongHop', '');
-    idHDDangSua = kq.idHD;
-    soDongDangSua = kq.soDong;
-    soHDDangSua = kq.soHD;
-    document.getElementById('nhanDangSua').textContent = '(đang sửa hợp đồng ' + kq.soHD + ')';
-
-    setVal('tenChuRung', kq.tenChuRung); setVal('cccdChuRung', kq.cccdChuRung);
-    setVal('soHD', kq.soHD);
-    setVal('ngayCap', kq.ngayCap); setVal('noiCap', kq.noiCap); setVal('sdtChuRung', kq.sdtChuRung);
-    setVal('diaChiThuongTru', kq.diaChiThuongTru); setVal('diaChiRung', kq.diaChiRung);
-    document.getElementById('ngayKy').value = kq.ngayKy ? new Date(kq.ngayKy).toISOString().split('T')[0] : '';
-    setVal('dienTichKy', kq.dienTichKy); setVal('slDuKien', kq.slDuKien); setVal('donGia', kq.donGia);
-    document.getElementById('slDuKien').dataset.tuDong = '0'; // dữ liệu thật đã có, không tự ghi đè nữa
-    tuTinhKhoiLuongGiaTri();
-    naptDanhSachLoaiHoSo(kq.hoSoNguonGoc); setVal('soGiayTo', kq.soGiayTo);
-    document.getElementById('uyQuyenTT').value = kq.uyQuyenTT || 'Không'; toggleUyQuyen();
-    setVal('tenUyQuyen', kq.tenUyQuyen); setVal('cccdUyQuyen', kq.cccdUyQuyen);
-    setVal('ngayCapUyQuyen', kq.ngayCapUyQuyen ? new Date(kq.ngayCapUyQuyen).toISOString().split('T')[0] : '');
-    setVal('noiCapUyQuyen', kq.noiCapUyQuyen); setVal('sdtUyQuyen', kq.sdtUyQuyen); setVal('diaChiUyQuyen', kq.diaChiUyQuyen);
-    document.getElementById('tinhTrang').value = kq.tinhTrang || 'Đang thực hiện';
-
-    apDungCheDoChiXem(kq.tinhTrang === 'Đã thanh lý');
-    dongModal();
-    showMsg('msgLuu', '⌛ Đang tải danh sách lô rừng/tài khoản...', true);
+    showMsg('msgLuu', '⌛ Đang tải hợp đồng...', true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Gọi server 1 LẦN DUY NHẤT để lấy dữ liệu con — dùng filter theo idHD (ổn định, không phải tìm 1 dòng đơn lẻ)
     google.script.run
-      .withSuccessHandler(function (conData) {
-        dsRung = (conData.danhSachRung || []).map(function (r) { r.xoa = false; return r; });
-        dsTaiKhoan = (conData.danhSachTaiKhoan || []).map(function (t) { t.xoa = false; return t; });
+      .withFailureHandler(function (err) { showMsg('msgLuu', '❌ Lỗi khi tải hợp đồng: ' + err.message, false); })
+      .withSuccessHandler(function (kq) {
+        if (!kq || kq.khongTimThay) {
+          showMsg('msgLuu', '❌ Không tìm thấy hợp đồng (dòng ' + soDong + ')' + (kq && kq.chanDoan ? ' — ' + kq.chanDoan : ''), false);
+          return;
+        }
+        setVal('hoSoNguonGocTongHop', '');
+        idHDDangSua = kq.idHD;
+        soDongDangSua = kq.soDong;
+        soHDDangSua = kq.soHD;
+        document.getElementById('nhanDangSua').textContent = '(đang sửa hợp đồng ' + kq.soHD + ')';
+
+        setVal('tenChuRung', kq.tenChuRung); setVal('cccdChuRung', kq.cccdChuRung);
+        setVal('soHD', kq.soHD);
+        setVal('ngayCap', kq.ngayCap); setVal('noiCap', kq.noiCap); setVal('sdtChuRung', kq.sdtChuRung);
+        setVal('diaChiThuongTru', kq.diaChiThuongTru); setVal('diaChiRung', kq.diaChiRung);
+        document.getElementById('ngayKy').value = kq.ngayKy ? new Date(kq.ngayKy).toISOString().split('T')[0] : '';
+        setVal('dienTichKy', kq.dienTichKy); setVal('slDuKien', kq.slDuKien); setVal('donGia', kq.donGia);
+        document.getElementById('slDuKien').dataset.tuDong = '0';
+        tuTinhKhoiLuongGiaTri();
+        naptDanhSachLoaiHoSo(kq.hoSoNguonGoc); setVal('soGiayTo', kq.soGiayTo);
+        document.getElementById('uyQuyenTT').value = kq.uyQuyenTT || 'Không'; toggleUyQuyen();
+        setVal('tenUyQuyen', kq.tenUyQuyen); setVal('cccdUyQuyen', kq.cccdUyQuyen);
+        setVal('ngayCapUyQuyen', kq.ngayCapUyQuyen ? new Date(kq.ngayCapUyQuyen).toISOString().split('T')[0] : '');
+        setVal('noiCapUyQuyen', kq.noiCapUyQuyen); setVal('sdtUyQuyen', kq.sdtUyQuyen); setVal('diaChiUyQuyen', kq.diaChiUyQuyen);
+        document.getElementById('tinhTrang').value = kq.tinhTrang || 'Đang thực hiện';
+
+        dsRung = (kq.danhSachRung || []).map(function (r) { r.xoa = false; return r; });
+        dsTaiKhoan = (kq.danhSachTaiKhoan || []).map(function (t) { t.xoa = false; return t; });
         renderTomTatRung(); renderTomTatTK();
+
+        apDungCheDoChiXem(kq.tinhTrang === 'Đã thanh lý');
+        dongModal();
         showMsg('msgLuu', kq.tinhTrang === 'Đã thanh lý'
           ? '🔒 Hợp đồng ' + kq.soHD + ' đã THANH LÝ — chỉ xem, không thể sửa.'
           : '✅ Đã tải hợp đồng ' + kq.soHD + '.', true);
       })
-      .withFailureHandler(function (err) { showMsg('msgLuu', '⚠️ Đã tải thông tin hợp đồng, nhưng lỗi khi tải rừng/tài khoản: ' + err.message, false); })
-      .layDuLieuConCuaHopDong(kq.idHD);
+      .layHopDongTheoSoDong(soDong);
   }
 
   /** Khóa/mở khóa toàn bộ input/select/button trong các card Thông tin hợp đồng, Lô rừng, Tài khoản

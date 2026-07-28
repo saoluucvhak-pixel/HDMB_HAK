@@ -1306,33 +1306,15 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
 
   const items = loc.slice(batDau, batDau + kichThuoc).map(function (x) {
     const r = x.r;
+    // ⚠️ CHỈ trả về vài trường TÓM TẮT cho danh sách — KHÔNG nhồi hết mọi trường vào đây.
+    // Lý do: nếu mỗi dòng chứa ĐẦY ĐỦ 20+ trường, tổng dữ liệu 20 dòng/trang có thể vượt
+    // giới hạn kích thước phản hồi của google.script.run, khiến client nhận về null dù
+    // hàm backend chạy đúng (đã xác minh qua log). Khi bấm Sửa, dùng soDong để lấy chi
+    // tiết riêng qua layHopDongTheoSoDong (đọc thẳng 1 dòng, không phải tìm kiếm).
     return {
-      // Đầy đủ MỌI trường của hợp đồng — khi bấm Sửa, dùng THẲNG dữ liệu này (đã có sẵn ở
-      // trình duyệt), KHÔNG gọi lại server để tìm/đọc lại lần nữa. Loại bỏ hoàn toàn khả
-      // năng "Không tìm thấy hợp đồng" vì không còn bước tìm kiếm nào ở bước chọn/sửa nữa.
       soDong: x.soDong,
       idHD: r[NCC_COL.ID_HD], soHD: r[NCC_COL.SO_HD], tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
-      diaChiRung: r[NCC_COL.DIA_CHI_RUNG], tinhTrang: (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim(),
-      ngayKy: r[NCC_COL.NGAY_KY],
-      diaChiThuongTru: r[NCC_COL.DIA_CHI_TT],
-      cccdChuRung: r[NCC_COL.CCCD_CHU_RUNG],
-      ngayCap: r[NCC_COL.NGAY_CAP],
-      noiCap: r[NCC_COL.NOI_CAP],
-      sdtChuRung: r[NCC_COL.SDT_CHU_RUNG],
-      tenUyQuyen: r[NCC_COL.TEN_UY_QUYEN],
-      cccdUyQuyen: r[NCC_COL.CCCD_UY_QUYEN],
-      noiCapUyQuyen: r[NCC_COL.NOI_CAP_UQ],
-      diaChiUyQuyen: r[NCC_COL.DIA_CHI_UQ],
-      sdtUyQuyen: r[NCC_COL.SDT_UQ],
-      ngayCapUyQuyen: r[NCC_COL.NGAY_CAP_UQ],
-      dienTichKy: r[NCC_COL.DIEN_TICH_KY],
-      hoSoNguonGoc: r[NCC_COL.HO_SO_NGUON_GOC],
-      soGiayTo: r[NCC_COL.SO_GIAY_TO],
-      uyQuyenTT: r[NCC_COL.UY_QUYEN_TT],
-      slDuKien: r[NCC_COL.SL_DU_KIEN],
-      donGia: r[NCC_COL.DON_GIA],
-      soTK: r[NCC_COL.SO_TK],
-      nganHang: r[NCC_COL.NGAN_HANG]
+      diaChiRung: r[NCC_COL.DIA_CHI_RUNG], tinhTrang: (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim()
     };
   });
 
@@ -1344,7 +1326,16 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
  * KHÔNG tìm kiếm theo chuỗi (loại bỏ hoàn toàn khả năng "Không tìm thấy hợp đồng").
  * Đây là cách CHỌN/SỬA hợp đồng CHÍNH THỨC dùng cho toàn bộ webapp.
  */
+/** Wrapper bắt lỗi — đảm bảo mọi ngoại lệ bên trong đều hiện rõ ra ngoài, không bị nuốt mất */
 function layHopDongTheoSoDong(soDong) {
+  try {
+    return layHopDongTheoSoDong_ThucThi_(soDong);
+  } catch (e) {
+    return { khongTimThay: true, chanDoan: 'LỖI SERVER thực sự khi đọc hợp đồng: ' + e.message };
+  }
+}
+
+function layHopDongTheoSoDong_ThucThi_(soDong) {
   const soDongGoc = soDong; // giữ lại giá trị GỐC (trước khi ép kiểu) để chẩn đoán nếu có bất thường
   soDong = Number(soDong);
   const sh = getSheet_(SHEET_NAME.HD_NCC);
