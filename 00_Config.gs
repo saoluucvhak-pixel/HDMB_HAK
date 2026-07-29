@@ -186,20 +186,26 @@ const REPORT_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1G_SUfAY4
  * Lưu ID vào Script Properties để chống trùng (không mở lại theo URL parse mỗi
  * lần, tránh trường hợp URL đổi định dạng gây mở nhầm).
  */
+let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — tránh mở lại file ngoài nhiều lần cùng 1 request (SpreadsheetApp.openById tốn thời gian mạng mỗi lần gọi)
+
 function getReportSS_() {
+  if (_reportSSCache) return _reportSSCache; // đã mở rồi trong lượt chạy này -> dùng lại luôn, không mở lại
+
   const props = PropertiesService.getScriptProperties();
   let id = props.getProperty('REPORT_SPREADSHEET_ID');
   if (id) {
-    try { return SpreadsheetApp.openById(id); } catch (e) { /* ID cũ không mở được -> thử lại từ URL chỉ định bên dưới */ }
+    try { _reportSSCache = SpreadsheetApp.openById(id); return _reportSSCache; } catch (e) { /* ID cũ không mở được -> thử lại từ URL chỉ định bên dưới */ }
   }
   try {
     const ss = SpreadsheetApp.openByUrl(REPORT_SPREADSHEET_URL);
     props.setProperty('REPORT_SPREADSHEET_ID', ss.getId()); // lưu lại ID để lần sau mở nhanh, chống tạo trùng
+    _reportSSCache = ss;
     return ss;
   } catch (e) {
     // Không mở được file chỉ định (hiếm khi xảy ra) -> tự tạo 1 file mới để hệ thống vẫn hoạt động được
     const ssMoi = SpreadsheetApp.create('HAK_BaoCao_Cache (tự động - không xóa)');
     props.setProperty('REPORT_SPREADSHEET_ID', ssMoi.getId());
+    _reportSSCache = ssMoi;
     return ssMoi;
   }
 }
@@ -333,6 +339,31 @@ function layHoacTinhBaoCao_(tenCache, hamTinh, boBuoc) {
   luuCacheBaoCao_(tenCache, ketQua);
   return { tuCache: false, duLieu: ketQua };
 }
+
+/**
+ * Đọc cache "CHỈ ĐỌC" — khác với docCacheBaoCao_ (kiểm tra hạn theo nhật ký
+ * CHUNG của mọi thay đổi hợp đồng/rừng/tài khoản), hàm này đọc thẳng bất kể
+ * nhật ký chung có gì mới hay không. Dùng cho dữ liệu mà độ mới của nó do 1
+ * trigger RIÊNG quyết định (vd dữ liệu thanh toán DNTT_GK_DN_CT — chỉ nên làm
+ * mới bởi trigger đồng bộ thanh toán 30 phút/lần, KHÔNG phải bởi việc sửa 1
+ * hợp đồng bất kỳ — nếu không sẽ bị tính lại toàn bộ mỗi lần sửa 1 hợp đồng,
+ * gây chậm/timeout). Nếu chưa từng có cache, tính 1 lần đầu tiên rồi lưu lại.
+ */
+function docCacheBaoCao_ChiDoc_(tenCache, hamTinhNeuChuaCo) {
+  try {
+    const sh = getOrCreateCacheSheet_();
+    const data = sh.getDataRange().getValues();
+    const dongCuaCache = data.filter(function (r) { return r[0] === tenCache; });
+    if (dongCuaCache.length) {
+      const json = dongCuaCache.map(function (r) { return r[2]; }).join('');
+      return JSON.parse(json);
+    }
+  } catch (e) { /* rơi xuống tính mới bên dưới */ }
+  const ketQua = hamTinhNeuChuaCo();
+  luuCacheBaoCao_(tenCache, ketQua);
+  return ketQua;
+}
+
 
 /**
  * ============================================================

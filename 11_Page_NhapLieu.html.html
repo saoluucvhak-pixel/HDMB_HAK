@@ -384,9 +384,6 @@
   .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 
-<div style="background:#fff3cd;border:2px solid #e74c3c;padding:8px 14px;border-radius:6px;font-weight:700;color:#c0392b;margin-bottom:10px">
-  🔖 PHIÊN BẢN: 2026-07-28-FIX14-NODRIVE — nếu bạn không thấy dòng này màu đỏ, nghĩa là đang xem bản CŨ, chưa deploy đúng.
-</div>
 <div class="page-title">Quản lý Hợp đồng Gỗ Keo</div>
 <div class="page-subtitle">Chọn "Tạo hợp đồng mới" hoặc bấm "Sửa" trên 1 hợp đồng trong danh sách để mở form chi tiết.</div>
 
@@ -438,7 +435,7 @@
   </div>
   <div style="overflow-x:auto">
     <table class="data-table" id="tblDSHopDong">
-      <thead><tr><th>Số HĐ</th><th>Chủ rừng</th><th>Địa chỉ rừng</th><th>Trạng thái</th><th></th></tr></thead>
+      <thead><tr><th>Số HĐ</th><th>Ngày ký hợp đồng</th><th>Chủ rừng</th><th>Địa chỉ rừng</th><th>Trạng thái</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -863,7 +860,7 @@
     timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300);
   }
 
-  var cacheHopDongTheoSoDong = {}; // lưu ĐẦY ĐỦ dữ liệu từng hợp đồng khi tải danh sách — dùng thẳng khi Sửa, không gọi lại server
+  // (Đã bỏ cache theo soDong ở client — giờ dùng layHopDongTheoSoDong gọi thẳng server khi bấm Sửa, tin cậy hơn)
 
   function taiDanhSachHD(trang) {
     google.script.run
@@ -882,14 +879,15 @@
       var tbody = document.querySelector('#tblDSHopDong tbody');
       tbody.innerHTML = '';
       if (!kq.items.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
       }
       kq.items.forEach(function (r) {
-        cacheHopDongTheoSoDong[r.soDong] = r; // lưu lại để dùng ngay khi bấm Sửa, không cần hỏi lại server
+        // (không cần lưu cache theo soDong nữa)
         var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Hoàn thành' ? 'badge-hoan' : 'badge-dang');
         var tr = document.createElement('tr');
         tr.innerHTML =
-          '<td>' + (r.soHD || '') + '</td><td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
+          '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
           '<td><span class="badge-status ' + badge + '">' + (r.tinhTrang || '') + '</span></td>' +
           '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px;white-space:nowrap" onclick="chonHopDong(' + r.soDong + ')">' + (r.tinhTrang === 'Đã thanh lý' ? 'Xem' : 'Sửa') + '</button></td>';
         tbody.appendChild(tr);
@@ -907,7 +905,7 @@
     }).layDanhSachHopDong(trang || 1, 20, val('tuKhoaHD'), val('locTinhTrangHD'));
   }
 
-  /** Chọn 1 hợp đồng để Sửa/Xem — dùng THẲNG dữ liệu đã có sẵn từ danh sách (cacheHopDongTheoSoDong),
+  /** Chọn 1 hợp đồng để Sửa/Xem — gọi thẳng layHopDongTheoSoDong(soDong) ở server
    *  KHÔNG gọi lại server để tìm/đọc lại hợp đồng => loại bỏ hoàn toàn khả năng "không tìm thấy".
    *  Chỉ gọi server 1 lần duy nhất để lấy dữ liệu CON (rừng/tài khoản/ảnh/hồ sơ) theo idHD —
    *  bước này dùng filter đơn giản (không phải tìm 1 dòng đơn lẻ) nên luôn ổn định. */
@@ -1014,7 +1012,7 @@
       var trangThaiHoSo = (r.dinhKem && r.dinhKem.url) ? '✅ Có hồ sơ' : '⚠️ Chưa có hồ sơ';
       return '<div class="rung-summary-row">' +
         '<div><b>' + (r.idRung || '(chưa lưu)') + '</b> — ' + (r.diaChiRung || '') + '<br>' +
-        '<span class="hint">DT: ' + formatSoNhap_(r.dienTichM2) + ' m² · Đơn giá: ' + formatSoNhap_(r.donGia) + ' đ · KL: ' + formatSoNhap_(r.khoiLuongDuKien) + ' kg · ' + trangThaiGPS + ' · ' + trangThaiHoSo + '</span></div>' +
+        '<span class="hint">DT: ' + formatSoNhap_(r.dienTichM2) + ' m² · Đơn giá: ' + formatSoNhap_(r.donGia) + ' đ/tấn · KL: ' + formatSoNhap_(r.khoiLuongDuKien) + ' tấn · ' + trangThaiGPS + ' · ' + trangThaiHoSo + '</span></div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moModalRung(\'' + (r.idRung || '') + '\')">✏️ Sửa</button> ' +
         (r.idRung ? '<button class="btn" style="padding:5px 12px;font-size:12px;background:#e74c3c;color:#fff" onclick="xoaLoRung(\'' + r.idRung + '\')">🗑️ Xóa</button>' : '') +
         '</div></div>';
@@ -1050,8 +1048,8 @@
       '  <div class="field"><label>Diện tích (m2)</label><input id="mRungDT" type="text" inputmode="numeric" value="' + formatSoNhap_(r.dienTichM2) + '" onchange="tinhKLTuDongModal()"></div>' +
       '</div>' +
       '<div class="field-row">' +
-      '  <div class="field"><label>Đơn giá (VNĐ)</label><input id="mRungDonGia" type="text" inputmode="numeric" value="' + formatSoNhap_(r.donGia) + '"></div>' +
-      '  <div class="field"><label>Khối lượng dự kiến (kg)</label><input id="mRungKL" type="text" inputmode="numeric" value="' + formatSoNhap_(r.khoiLuongDuKien) + '"></div>' +
+      '  <div class="field"><label>Đơn giá (VNĐ/tấn)</label><input id="mRungDonGia" type="text" inputmode="numeric" value="' + formatSoNhap_(r.donGia) + '"></div>' +
+      '  <div class="field"><label>Khối lượng dự kiến (Tấn)</label><input id="mRungKL" type="text" inputmode="numeric" value="' + formatSoNhap_(r.khoiLuongDuKien) + '"></div>' +
       '</div>' +
       '<div class="field-row">' +
       '  <div class="field"><label>Hồ sơ nguồn gốc</label><input id="mRungHoSo" value="' + (r.hoSoNguonGoc || '') + '" list="dlHoSoNguonGocRung"></div>' +
@@ -1069,7 +1067,7 @@
   function tinhKLTuDongModal() {
     var dt = Number((val('mRungDT') || '').toString().replace(/[.,\s]/g, ''));
     if (dt > 0) {
-      var kl = Math.round((dt / 10000) * DINH_MUC_TAN_TREN_HA_JS * 1000);
+      var kl = Math.round((dt / 10000) * DINH_MUC_TAN_TREN_HA_JS); // kết quả tính bằng TẤN (khớp đơn vị người dùng tự nhập tay)
       document.getElementById('mRungKL').value = kl.toLocaleString('vi-VN');
     }
   }
@@ -1129,8 +1127,8 @@
       '<label class="lbl" style="margin-top:16px">📍 Tọa độ GPS đã có</label>' +
       '<div id="dsGPS"><p class="hint">Đang tải...</p></div>' +
       '<div class="field-row" style="margin-top:8px">' +
-      '  <div class="field"><label>Lat</label><input id="gpsLatTay" type="number" step="any"></div>' +
-      '  <div class="field"><label>Lng</label><input id="gpsLngTay" type="number" step="any"></div>' +
+      '  <div class="field"><label>Lat</label><input id="gpsLatTay" type="text" placeholder="vd: 15.733975 hoặc 15°44\'02.3\\"N"></div>' +
+      '  <div class="field"><label>Lng</label><input id="gpsLngTay" type="text" placeholder="vd: 108.023957 hoặc 108°01\'26.2\\"E"></div>' +
       '</div>' +
       '<button class="btn btn-outline" style="margin-top:8px" onclick="themDiemGPSTay()">➕ Thêm tọa độ (nhập tay)</button>' +
 
@@ -1198,12 +1196,16 @@
   }
 
   function themDiemGPSTay() {
-    var lat = Number(val('gpsLatTay')), lng = Number(val('gpsLngTay'));
-    if (!lat || !lng) { showMsg('msgAnh', '❌ Nhập đủ Lat/Lng.', false); return; }
+    var latTho = val('gpsLatTay'), lngTho = val('gpsLngTay');
+    if (!latTho || !lngTho) { showMsg('msgAnh', '❌ Nhập đủ Lat/Lng.', false); return; }
     google.script.run
-      .withSuccessHandler(function () { showMsg('msgAnh', '✅ Đã thêm tọa độ ' + lat.toFixed(6) + ', ' + lng.toFixed(6), true); taiDiemGPS(); })
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { showMsg('msgAnh', '❌ ' + kq.loi, false); return; }
+        showMsg('msgAnh', '✅ Đã thêm tọa độ (nhận diện: ' + kq.dinhDangDaNhanDien.lat + ').', true);
+        taiDiemGPS();
+      })
       .withFailureHandler(function (err) { showMsg('msgAnh', '❌ Lỗi: ' + err.message, false); })
-      .CAP_NHAT_GPS_RUNG(rungDangSuaTrongModal, { lat: lat, lng: lng, heToaDo: 'DD' }, false);
+      .CAP_NHAT_GPS_RUNG(rungDangSuaTrongModal, { lat: latTho, lng: lngTho }, false);
   }
 
   function taiAnhLenRung() {

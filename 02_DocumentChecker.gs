@@ -108,8 +108,9 @@ function fileTonTaiTrenDrive_(duongDan) {
 function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
+  const coLoc = !!(tuNgay || denNgay); // có lọc theo ngày hay không — ảnh hưởng việc dọn dòng cũ
 
-  if (tuNgay || denNgay) {
+  if (coLoc) {
     const tu = tuNgay ? new Date(tuNgay) : null;
     const den = denNgay ? new Date(denNgay) : null;
     rungRows = rungRows.filter(function (r) {
@@ -144,29 +145,58 @@ function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
     });
   });
 
-  // Xuất báo cáo
+  // ---- Cập nhật TỪNG PHẦN vào sheet (KHÔNG xóa hết mỗi lần chạy) ----
   const ss = getSS_();
   let sh = ss.getSheetByName(SHEET_NAME.BAO_CAO);
-  if (sh) sh.clear(); else sh = ss.insertSheet(SHEET_NAME.BAO_CAO);
-
   const header = ['ID_HD', 'Số HĐ', 'Mã Rừng', 'Chủ rừng', 'Kết quả', 'Hồ sơ còn thiếu', 'Cảnh báo'];
-  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
-
-  const rows = ketQua.map(function (k) {
-    return [k.idHD, k.soHD, k.maRung, k.chuRung, k.dat ? '✅ Đầy đủ' : '❌ Thiếu hồ sơ', k.thieu, k.canhBao];
-  });
-  if (rows.length) sh.getRange(2, 1, rows.length, header.length).setValues(rows);
-
-  // Tô màu dòng thiếu hồ sơ
-  for (let i = 0; i < rows.length; i++) {
-    if (!ketQua[i].dat) {
-      sh.getRange(i + 2, 1, 1, header.length).setBackground('#fdecea');
-    }
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_NAME.BAO_CAO);
+    sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
   }
+
+  // Đọc danh sách Mã Rừng đã có sẵn trong sheet (cột C) để biết dòng nào cập nhật, dòng nào thêm mới
+  const lastRow = sh.getLastRow();
+  const maRungTheoDong = {}; // { maRung: soDong }
+  if (lastRow >= 2) {
+    const cotMaRung = sh.getRange(2, 3, lastRow - 1, 1).getValues();
+    cotMaRung.forEach(function (r, i) {
+      const mr = (r[0] || '').toString().trim();
+      if (mr) maRungTheoDong[mr] = i + 2;
+    });
+  }
+
+  const maRungDaXuLy = {};
+  ketQua.forEach(function (k) {
+    const dong = [k.idHD, k.soHD, k.maRung, k.chuRung, k.dat ? '✅ Đầy đủ' : '❌ Thiếu hồ sơ', k.thieu, k.canhBao];
+    const mauNen = k.dat ? '#ffffff' : '#fdecea';
+    const soDongDaCo = maRungTheoDong[k.maRung];
+    if (soDongDaCo) {
+      sh.getRange(soDongDaCo, 1, 1, header.length).setValues([dong]).setBackground(mauNen);
+    } else {
+      sh.appendRow(dong);
+      sh.getRange(sh.getLastRow(), 1, 1, header.length).setBackground(mauNen);
+    }
+    maRungDaXuLy[k.maRung] = true;
+  });
+
+  // Dọn dòng của lô rừng ĐÃ BỊ XÓA khỏi HD_RUNG — CHỈ làm việc này khi chạy KHÔNG lọc
+  // theo ngày (chạy đầy đủ), vì nếu có lọc thì không biết chắc lô rừng nào thật sự
+  // đã bị xóa hay chỉ đang nằm ngoài khoảng lọc.
+  let soDaXoa = 0;
+  if (!coLoc) {
+    const dongCanXoa = Object.keys(maRungTheoDong)
+      .filter(function (mr) { return !maRungDaXuLy[mr]; })
+      .map(function (mr) { return maRungTheoDong[mr]; })
+      .sort(function (a, b) { return b - a; }); // xóa từ dưới lên để không lệch số dòng
+    dongCanXoa.forEach(function (soDong) { sh.deleteRow(soDong); soDaXoa++; });
+  }
+
   sh.autoResizeColumns(1, header.length);
 
   const soThieu = ketQua.filter(function (k) { return !k.dat; }).length;
-  return 'Đã kiểm tra ' + ketQua.length + ' lô rừng — ' + soThieu + ' hồ sơ CÒN THIẾU. Xem chi tiết ở sheet "' + SHEET_NAME.BAO_CAO + '"';
+  return 'Đã kiểm tra ' + ketQua.length + ' lô rừng — ' + soThieu + ' hồ sơ CÒN THIẾU' +
+    (soDaXoa ? ' (đã dọn ' + soDaXoa + ' dòng của lô rừng không còn tồn tại)' : '') +
+    '. Xem chi tiết ở sheet "' + SHEET_NAME.BAO_CAO + '"';
 }
 
 /**
@@ -180,81 +210,6 @@ function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
  * (diaChiRung lọc kiểu "chứa chuỗi" vì dữ liệu hiện chỉ có 1 trường địa chỉ tự do,
  * không tách sẵn cột xã/huyện/tỉnh — gõ 1 phần tên xã/huyện/tỉnh để lọc gần đúng)
  */
-/**
- * Tính chi tiết ĐẦY ĐỦ (chưa lọc/phân trang) cho TẤT CẢ hợp đồng — đây là phần
- * NẶNG (kiểm tra hồ sơ + tọa độ từng hợp đồng), nên được CACHE lại (xem
- * layHoacTinhBaoCao_ ở 00_Config.gs) và chỉ tính lại khi có thay đổi mới.
- */
-function tinhChiTietBaoCaoHopDong_KhongCache_() {
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const gpsRows = readData_(SHEET_NAME.HD_GPS);
-  const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
-
-  const rungByHD = {};
-  rungRows.forEach(function (r) {
-    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
-    if (!rungByHD[idHD]) rungByHD[idHD] = [];
-    rungByHD[idHD].push(r);
-  });
-  const gpsByIdRung = {};
-  gpsRows.forEach(function (g) {
-    const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
-    if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = [];
-    gpsByIdRung[idRung].push(g);
-  });
-
-  function toaDoTrungBinhHopDong(idHD) {
-    const cacIdRung = (rungByHD[idHD] || []).map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); });
-    let latTong = 0, lngTong = 0, dem = 0;
-    cacIdRung.forEach(function (idRung) {
-      (gpsByIdRung[idRung] || []).forEach(function (g) {
-        const type = g[GPS_COL.HE_TOA_DO];
-        const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-        const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
-        if (!isNaN(lat) && !isNaN(lng)) { latTong += lat; lngTong += lng; dem++; }
-      });
-    });
-    return dem ? { lat: latTong / dem, lng: lngTong / dem } : null;
-  }
-
-  function layAnhTheoIdHD_Cache_(idHD) {
-    const ketQua = [];
-    pictureRows.forEach(function (r) {
-      if ((r[PICTURE_COL.ID_HD] || '').toString().trim() !== idHD.toString().trim()) return;
-      for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
-        const link = resolveDriveLink_(r[c]);
-        if (link) ketQua.push(link);
-      }
-    });
-    return ketQua;
-  }
-
-  return nccRows.map(function (r) {
-    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
-    const cacLoRung = rungByHD[idHD] || [];
-    const thieuDo = [];
-    const thieuVang = [];
-
-    cacLoRung.forEach(function (rung) {
-      const kq = kiemTraHoSoMotLoRung_(rung);
-      thieuDo.push.apply(thieuDo, kq.thieu);
-      if (!(Number(rung[RUNG_COL.DIEN_TICH_GPS]) > 0)) thieuVang.push(rung[RUNG_COL.ID_RUNG] + ': chưa đo GPS');
-    });
-    thieuDo.push.apply(thieuDo, kiemTraUyQuyenVaTaiKhoan_(r));
-    if (!layAnhTheoIdHD_Cache_(idHD).length) thieuVang.push('Chưa có ảnh hiện trường');
-
-    let mucDo = 'binh_thuong';
-    if (thieuDo.length) mucDo = 'do'; else if (thieuVang.length) mucDo = 'vang';
-
-    return {
-      idHD: idHD, soHD: r[NCC_COL.SO_HD], ngayKy: r[NCC_COL.NGAY_KY], tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
-      tenUyQuyen: r[NCC_COL.TEN_UY_QUYEN], diaChiRung: r[NCC_COL.DIA_CHI_RUNG], tinhTrang: r[NCC_COL.TINH_TRANG],
-      toaDo: toaDoTrungBinhHopDong(idHD),
-      mucDo: mucDo, thieuDo: thieuDo, thieuVang: thieuVang
-    };
-  });
-}
 
 /**
  * Báo cáo hợp đồng cho webapp: đọc TOÀN BỘ chi tiết từ CACHE (rất nhanh, chỉ
@@ -269,7 +224,7 @@ function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
   trang = trang || 1;
   kichThuoc = kichThuoc || 20;
 
-  if (boBuoc) XAY_DUNG_LAI_TOAN_BO_DRAFT(); // chỉ tính lại toàn bộ khi bấm "Làm mới dữ liệu" tường minh
+  if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ từ đầu
 
   const tatCa = docToanBoDraftBaoCao_().map(function (m) {
     const toaDo = m.toaDoTrungBinh ? (function () {
@@ -284,7 +239,13 @@ function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
     if (thieuDo.length) mucDo = 'do'; else if (thieuVang.length) mucDo = 'vang';
     return {
       idHD: m.idHD, soHD: m.soHD, ngayKy: m.ngayKy, tenChuRung: m.tenChuRung,
-      tenUyQuyen: m.tenUyQuyen, diaChiRung: m.diaChiRung, tinhTrang: m.tinhTrang,
+      cccdChuRung: m.cccdChuRung, tenUyQuyen: m.tenUyQuyen,
+      soTaiKhoan: m.soTaiKhoan, soLoRung: m.soLoRung,
+      khoiLuongDuKien: m.khoiLuongDuKien, khoiLuongThucHien: m.khoiLuongThucHien,
+      giaTriHopDong: m.giaTriHopDong, giaTriThucHien: m.giaTriThucHien,
+      thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay,
+      coAnh: m.coAnh, daDoGPSDu: m.daDoGPSDu, hoSoDu: m.hoSoDu,
+      diaChiRung: m.diaChiRung, tinhTrang: m.tinhTrang,
       toaDo: toaDo, mucDo: mucDo, thieuDo: thieuDo, thieuVang: thieuVang
     };
   });

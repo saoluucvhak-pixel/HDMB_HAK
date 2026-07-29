@@ -259,7 +259,7 @@ function layDuLieuThucHienTuDNTT_() {
       const soHD = (data[i][colSoHD] || '').toString().trim();
       if (!soHD) continue;
       if (!theoSoHD[soHD]) theoSoHD[soHD] = { khoiLuong: 0, giaTri: 0 };
-      if (colKL !== -1) theoSoHD[soHD].khoiLuong += Number(data[i][colKL]) || 0;
+      if (colKL !== -1) theoSoHD[soHD].khoiLuong += (Number(data[i][colKL]) || 0) / 1000; // DNTT lưu KG -> quy về TẤN cho khớp đơn vị với HD_RUNG (đã xác nhận HD_RUNG nhập bằng TẤN)
       if (colGiaTri !== -1) theoSoHD[soHD].giaTri += Number(data[i][colGiaTri]) || 0;
     }
     return { thanhCong: true, theoSoHD: theoSoHD };
@@ -1355,6 +1355,9 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
     return ten.indexOf(tk) !== -1 || soHD.indexOf(tk) !== -1 || idHD.indexOf(tk) !== -1;
   });
 
+  // Sắp xếp NGÀY KÝ mới nhất → cũ nhất (trước khi cắt trang, để đúng thứ tự xuyên suốt các trang)
+  loc.sort(function (a, b) { return new Date(b.r[NCC_COL.NGAY_KY] || 0) - new Date(a.r[NCC_COL.NGAY_KY] || 0); });
+
   const tongSo = loc.length;
   const tongTrang = Math.max(1, Math.ceil(tongSo / kichThuoc));
   trang = Math.min(Math.max(1, trang), tongTrang);
@@ -1369,7 +1372,9 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
     // tiết riêng qua layHopDongTheoSoDong (đọc thẳng 1 dòng, không phải tìm kiếm).
     return {
       soDong: x.soDong,
-      idHD: r[NCC_COL.ID_HD], soHD: r[NCC_COL.SO_HD], tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
+      idHD: r[NCC_COL.ID_HD], soHD: r[NCC_COL.SO_HD],
+      ngayKy: r[NCC_COL.NGAY_KY] ? new Date(r[NCC_COL.NGAY_KY]).toISOString() : '', // chuỗi ISO, KHÔNG truyền Date object thô qua google.script.run
+      tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
       diaChiRung: r[NCC_COL.DIA_CHI_RUNG], tinhTrang: (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim()
     };
   });
@@ -1502,33 +1507,26 @@ function layDanhSachThanhLy(trang, kichThuoc, boLoc, boBuoc) {
   kichThuoc = kichThuoc || 20;
   boLoc = boLoc || {};
 
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  const tongHop = tongHopHopDong(true, boBuoc);
-  const ngayCan = layNgayCanMinMaxTheoHopDong_(boBuoc);
+  if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ
 
   const chuaLoc = function (s, tk) { return !tk || (s || '').toString().toLowerCase().indexOf(tk.toLowerCase()) !== -1; };
 
-  const list = nccRows
-    .filter(function (r) { return (r[NCC_COL.TINH_TRANG] || '') !== 'Đã thanh lý'; })
-    .filter(function (r) {
-      if (!chuaLoc(r[NCC_COL.SO_HD], boLoc.soHD)) return false;
-      if (!chuaLoc(r[NCC_COL.TEN_CHU_RUNG], boLoc.tenChuRung)) return false;
-      if (!chuaLoc(r[NCC_COL.TEN_UY_QUYEN], boLoc.tenUyQuyen)) return false;
+  const list = docToanBoDraftBaoCao_()
+    .filter(function (m) { return m.tinhTrang !== 'Đã thanh lý'; })
+    .filter(function (m) {
+      if (!chuaLoc(m.soHD, boLoc.soHD)) return false;
+      if (!chuaLoc(m.tenChuRung, boLoc.tenChuRung)) return false;
+      if (!chuaLoc(m.tenUyQuyen, boLoc.tenUyQuyen)) return false;
       return true;
     })
-    .map(function (r) {
-      const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
-      const soHDChuan = (r[NCC_COL.SO_HD] || '').toString().trim();
-      const m = tongHop[idHD] || { tongKhoiLuongDuKien: 0, tongGiaTri: 0, tongKhoiLuongThucHien: 0, tongGiaTriThucHien: 0, khoiLuongConLai: 0, giaTriConLai: 0 };
-      const nc = (ngayCan.thanhCong && ngayCan.theoSoHD[soHDChuan]) || null;
+    .map(function (m) {
       return {
-        idHD: idHD, soHD: r[NCC_COL.SO_HD], chuRung: r[NCC_COL.TEN_CHU_RUNG],
-        nguoiUyQuyen: r[NCC_COL.TEN_UY_QUYEN] || '(không ủy quyền)', tinhTrang: r[NCC_COL.TINH_TRANG],
-        khoiLuongHopDong: m.tongKhoiLuongDuKien, giaTriHopDong: m.tongGiaTri,
-        khoiLuongThucHien: m.tongKhoiLuongThucHien, giaTriThucHien: m.tongGiaTriThucHien,
+        idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
+        nguoiUyQuyen: m.tenUyQuyen || '(không ủy quyền)', tinhTrang: m.tinhTrang,
+        khoiLuongHopDong: m.khoiLuongDuKien, giaTriHopDong: m.giaTriHopDong,
+        khoiLuongThucHien: m.khoiLuongThucHien, giaTriThucHien: m.giaTriThucHien,
         khoiLuongConLai: m.khoiLuongConLai, giaTriConLai: m.giaTriConLai,
-        thucHienTuNgay: nc && nc.tuNgay ? nc.tuNgay : null,
-        thucHienDenNgay: nc && nc.denNgay ? nc.denNgay : null
+        thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay
       };
     });
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; line-height: 1.6; color: #1c2a22; padding: 4px 16px 16px; }
+    h1 { font-size: 18px; border-bottom: 3px solid #2e7d32; padding-bottom: 8px; }
+    h2 { font-size: 15px; color: #2e7d32; margin-top: 22px; }
+    h3 { font-size: 13px; color: #1c2a22; margin-top: 14px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #1c2a22; color: #fff; }
+    tr:nth-child(even) { background: #f7f7f7; }
+    pre { background: #f0fff4; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+    code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .warn { background: #fdecea; border-left: 4px solid #e74c3c; padding: 8px 12px; margin: 10px 0; }
+    a { color: #2e7d32; }
+  </style>
+</head>
+<body>
+
+<h1>📖 Hướng dẫn sử dụng — Hệ thống Quản lý Hợp đồng Gỗ Keo</h1>
+
+<h2>1. Tổng quan hệ thống</h2>
+<pre>HD_NCC (Hợp đồng - bảng cha)
+  ├── HD_RUNG (Lô rừng - con 1, 1 hợp đồng nhiều lô rừng)
+  │     ├── HD_GPS      (Tọa độ GPS - con của rừng, 1 rừng nhiều điểm)
+  │     └── HD_Picture  (Ảnh hiện trường - con của rừng, tối đa 10 ảnh/dòng)
+  └── HD_STK (Tài khoản nhận tiền - con 2, 1 hợp đồng nhiều số TK)</pre>
+<p>Dữ liệu <b>bên ngoài</b> (chỉ đọc): <b>Báo giá gỗ keo</b> (tra đơn giá theo ngày), <b>DNTT_GK_DN_CT</b> (khối lượng/giá trị đã thực hiện + thanh toán), <b>PhieuCan_DN</b> (phiếu cân).</p>
+
+<h2>2. Quy trình nhập liệu — từng bước</h2>
+<h3>Bước 1 — Tạo hợp đồng mới</h3>
+<p>Trang <b>📝 Nhập liệu</b> → "➕ Tạo hợp đồng mới" → điền Họ tên/CCCD/Ngày ký *(bắt buộc)* → có thể dùng "📄 Nhập nhanh từ bản scan" để tự đọc CCCD/giấy ủy quyền (luôn kiểm tra lại) → "💾 Lưu thông tin hợp đồng".</p>
+
+<h3>Bước 2 — Thêm lô rừng</h3>
+<p>"➕ Thêm hợp đồng rừng" → điền Địa chỉ/Diện tích/Đơn giá (KL tự tính = 120 tấn/ha × DT) → "💾 Lưu lô rừng" → form mở thêm khu vực <b>Hồ sơ/GPS/Ảnh</b>:</p>
+<ul>
+  <li><b>Tọa độ GPS</b>: nhập tay (decimal hoặc độ-phút-giây, hệ thống tự nhận diện) hoặc tải ảnh có định vị</li>
+  <li><b>Ảnh hiện trường</b>: tải lên → nháp chờ duyệt → "✅ Duyệt"</li>
+  <li><b>Hồ sơ pháp lý</b>: đính kèm PDF/ảnh</li>
+</ul>
+
+<h3>Bước 3 — Thêm tài khoản nhận tiền</h3>
+<p>"➕ Thêm tài khoản" → Số TK, Ngân hàng, Ủy quyền TT (Không → mặc định người nhận là chủ rừng) → "💾 Lưu tài khoản".</p>
+
+<h3>Bước 4-7</h3>
+<p>Theo dõi qua Báo cáo tổng hợp → Kiểm tra & Đối chiếu định kỳ → Sửa/Xóa khi cần → Thanh lý khi hoàn thành.</p>
+
+<h2>3. Các báo cáo có sẵn</h2>
+<table>
+<tr><th>Báo cáo</th><th>Xem ở đâu</th><th>Nội dung</th></tr>
+<tr><td>Báo cáo hợp đồng</td><td>Báo cáo tổng hợp</td><td>Tổng quan: chủ rừng, CCCD, KL, đơn giá, giá trị, tình trạng</td></tr>
+<tr><td>Tình hình thực hiện</td><td>Báo cáo tổng hợp</td><td>KL/giá trị dự kiến-thực hiện-còn lại, ngày TH, số phiếu cân (chỉ HĐ Đang/Chờ thực hiện)</td></tr>
+<tr><td>Thanh lý hợp đồng</td><td>Báo cáo tổng hợp</td><td>Danh sách hợp đồng chưa thanh lý</td></tr>
+<tr><td>Hồ sơ rừng</td><td>Báo cáo tổng hợp</td><td>Chi tiết từng lô rừng + xem tọa độ/ảnh</td></tr>
+<tr><td>Thanh toán</td><td>Báo cáo tổng hợp</td><td>Tổng hợp theo tài khoản/chủ rừng</td></tr>
+<tr><td>BaoCao_KiemTra</td><td>Sheet file chính</td><td>Kết quả kiểm tra hồ sơ pháp lý từng lô rừng</td></tr>
+</table>
+
+<h2>4. Cơ chế "Làm mới" & luồng dữ liệu báo cáo</h2>
+<p><b>Vấn đề giải quyết:</b> nếu mỗi lần mở báo cáo đều tính lại từ đầu → rất chậm, dễ timeout. Giải pháp: tính sẵn, lưu lại, chỉ cập nhật phần thay đổi.</p>
+<pre>DỮ LIỆU GỐC (HD_NCC, HD_RUNG, HD_STK, HD_GPS, HD_Picture)
+        │  Tạo/Sửa/Xóa (webapp hoặc sửa tay trên Sheet)
+        ▼
+BẪY TỰ ĐỘNG cập nhật NGAY 1 dòng bị ảnh hưởng (không xóa sheet)
+        ▼
+Draft_BaoCaoHopDong (FILE RIÊNG - đã tổng hợp sẵn)
+        │  Đọc thẳng, không tính toán thêm
+        ▼
+WEBAPP: các báo cáo hiện gần như tức thì
+
+DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
+        │  Trigger đồng bộ riêng (30 phút/lần, chỉ khi có dữ liệu mới)
+        ▼
+   (nhập vào Draft ở trên, cùng cơ chế)</pre>
+
+<h3>3 cơ chế cập nhật Draft — không cái nào xóa hết làm lại</h3>
+<table>
+<tr><th>Cơ chế</th><th>Kích hoạt khi nào</th><th>Phạm vi cập nhật</th></tr>
+<tr><td>Bẫy nhật ký tự động</td><td>Ngay khi Tạo/Sửa/Xóa (webapp hoặc sửa tay trên Sheet)</td><td>Đúng 1 dòng hợp đồng bị ảnh hưởng</td></tr>
+<tr><td>Nút "🔄 Làm mới dữ liệu"</td><td>Bấm tay</td><td>Chỉ hợp đồng có nhật ký thay đổi từ lần trước</td></tr>
+<tr><td>Trigger đồng bộ thanh toán (30 phút/lần)</td><td>Tự động khi DNTT_GK_DN_CT có dữ liệu mới</td><td>Cập nhật "đã thực hiện" cho mọi hợp đồng, vẫn ghi đè từng dòng</td></tr>
+</table>
+<div class="warn"><b>Ngoại lệ DUY NHẤT có xóa-làm-lại:</b> menu "Xây dựng lại Draft báo cáo" — chỉ dùng 1 lần lúc cài đặt ban đầu. Đã tối ưu chống timeout (tự chia đợt, bấm lại để tiếp tục nếu chưa xong, không tính lại từ đầu).</div>
+
+<h3>BaoCao_KiemTra — cơ chế riêng, khác Draft</h3>
+<table>
+<tr><th></th><th>Draft_BaoCaoHopDong</th><th>BaoCao_KiemTra</th></tr>
+<tr><td>Kích hoạt</td><td>Tự động liên tục</td><td>Chỉ khi bấm "Chạy kiểm tra" hoặc theo lịch</td></tr>
+<tr><td>Cập nhật theo</td><td>Từng dòng hợp đồng</td><td>Từng dòng lô rừng (Mã Rừng)</td></tr>
+<tr><td>Xóa-làm-lại?</td><td>Không (trừ xây dựng lại 1 lần)</td><td>Không — ghi đè/thêm dòng thay đổi, tự dọn dòng đã xóa (chỉ khi chạy không lọc ngày)</td></tr>
+</table>
+
+
+</body>
+</html>

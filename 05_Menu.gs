@@ -9,10 +9,12 @@
  */
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🚀 HỆ THỐNG HAK - QUẢN LÝ GỖ KEO')
+    .addItem('📖 Hướng dẫn sử dụng', 'HIEN_HUONG_DAN_SU_DUNG')
+    .addSeparator()
     .addItem('🗺️ Mở bản đồ (GPS + diện tích)', 'RUN_HAK_SYSTEM_FINAL')
     .addItem('📝 Nhập liệu: HĐ mới / Rừng / Tài khoản', 'moFormNhapLieu')
     .addSeparator()
-    .addItem('📊 Tổng hợp khối lượng & giá trị hợp đồng', 'xuatBaoCaoTongHopHopDong')
+    .addItem('🗑️ Dọn dẹp sheet TongHop_HopDong cũ (không dùng nữa)', 'XOA_SHEET_TONGHOP_CU')
     .addItem('📋 Kiểm tra hồ sơ pháp lý (CCCD/GCN QSDĐ/Ủy quyền...)', 'KIEM_TRA_HO_SO_TOAN_BO')
     .addItem('🖼️ Kiểm tra ảnh (GPS ảnh, dấu hiệu chỉnh sửa)', 'KIEM_TRA_ANH_TOAN_BO')
     .addItem('🔎 Đối chiếu OCR file gốc với dữ liệu Sheet', 'DOI_CHIEU_HO_SO_DINH_KY')
@@ -24,6 +26,13 @@ function onOpen() {
     .addItem('⚡ Bật bẫy nhật ký tự động (HD_NCC/RUNG/STK/GPS/Picture)', 'THIET_LAP_TRIGGER_ONEDIT_DRAFT')
     .addItem('⏱️ Bật đồng bộ định kỳ phần thanh toán (30 phút/lần)', 'THIET_LAP_TRIGGER_DONG_BO_THANH_TOAN')
     .addToUi();
+}
+
+/** Hiện hướng dẫn sử dụng đầy đủ trong 1 cửa sổ dialog ngay trong Google Sheet */
+function HIEN_HUONG_DAN_SU_DUNG() {
+  const html = HtmlService.createHtmlOutputFromFile('13_HuongDan')
+    .setWidth(900).setHeight(650);
+  SpreadsheetApp.getUi().showModalDialog(html, '📖 Hướng dẫn sử dụng — Hệ thống HAK');
 }
 
 /** Hiện link file Google Sheet riêng chứa Draft/Cache báo cáo (tách khỏi file dữ liệu chính) */

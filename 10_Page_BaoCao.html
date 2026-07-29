@@ -199,7 +199,14 @@
         <div style="overflow-x:auto">
           <table class="data-table" id="tblBaoCaoHD">
             <thead>
-              <tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>Địa chỉ rừng</th><th>Tọa độ</th><th>Trạng thái</th><th>Ghi chú thiếu</th></tr>
+              <tr>
+                <th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Số CCCD</th><th>Người ủy quyền</th>
+                <th class="so-lieu">Số TK</th><th class="so-lieu">Số lô rừng</th>
+                <th class="so-lieu">SL dự kiến (Tấn)</th><th class="so-lieu">SL thực hiện (Tấn)</th>
+                <th class="so-lieu">Giá trị dự kiến</th><th class="so-lieu">Giá trị thực hiện</th>
+                <th>Bắt đầu TH</th><th>Đến ngày</th>
+                <th>Ảnh</th><th>GPS</th><th>Hồ sơ</th><th>Trạng thái</th><th>Ghi chú thiếu</th>
+              </tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -221,7 +228,7 @@
         <h3>Tổng hợp khối lượng &amp; giá trị</h3>
         <button class="btn btn-green" onclick="chayTongHop()">⚙️ Chạy trích xuất dữ liệu</button>
         <button class="btn btn-outline" onclick="chayTongHop(true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
-        <button class="btn btn-gold" onclick="xuatSheet()">⬇️ Xuất ra Google Sheet</button>
+
         <div id="msg" class="msg" style="display:none"></div>
       </div>
 
@@ -299,6 +306,17 @@
         <div class="field-row">
           <div class="field"><label>Lọc theo Số HĐ</label><input id="hsrLocSoHD" onkeyup="renderBangHoSoRung()"></div>
           <div class="field"><label>Lọc theo tên chủ rừng</label><input id="hsrLocTenChuRung" onkeyup="renderBangHoSoRung()"></div>
+          <div class="field">
+            <label>Lọc theo tình trạng</label>
+            <select id="hsrLocTinhTrang" onchange="renderBangHoSoRung()">
+              <option value="">Tất cả</option>
+              <option>Chờ thực hiện</option>
+              <option>Đang thực hiện</option>
+              <option>Hoàn thành</option>
+              <option>Đã hủy</option>
+              <option>Đã thanh lý</option>
+            </select>
+          </div>
         </div>
         <button class="btn btn-green" onclick="taiBaoCaoHoSoRung()">🔄 Tải báo cáo</button>
         <div id="msgHoSoRung" class="msg" style="display:none;margin-top:10px"></div>
@@ -306,7 +324,7 @@
           <table class="data-table" id="tblHoSoRung">
             <thead>
               <tr>
-                <th>Mã rừng</th><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Nguồn gốc</th>
+                <th>Mã rừng</th><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Tình trạng</th><th>Nguồn gốc</th>
                 <th>Số giấy tờ</th><th>Ngày giấy tờ</th><th class="so-lieu">Diện tích (m2)</th>
                 <th class="so-lieu">KL dự kiến (Tấn)</th><th class="so-lieu">Đơn giá TB</th><th class="so-lieu">Giá trị theo HĐ</th><th></th>
               </tr>
@@ -357,7 +375,7 @@
   });
 
   function formatSo(v) { return (v || 0).toLocaleString('vi-VN'); }
-  function formatKL(v) { return (((Number(v) || 0) / 1000)).toLocaleString('vi-VN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); } // KG → Tấn (÷1000)
+  function formatKL(v) { return (Number(v) || 0).toLocaleString('vi-VN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); } // Dữ liệu đã là TẤN sẵn (người dùng nhập tay bằng Tấn) — không cần quy đổi khi hiển thị
   function formatTien(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }); }
   function showMsg(id, text, ok) {
     var el = document.getElementById(id);
@@ -404,15 +422,20 @@
       trangBCHienTai = kq.trang;
       var tbody = document.querySelector('#tblBaoCaoHD tbody');
       tbody.innerHTML = '';
-      if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="8" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
+      if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="18" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
       kq.items.forEach(function (r) {
         var tr = document.createElement('tr');
         if (r.mucDo === 'do') tr.className = 'row-do'; else if (r.mucDo === 'vang') tr.className = 'row-vang';
         var ghiChu = r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '✅');
-        var toaDoText = r.toaDo ? ('<a href="#" onclick="xemToaDoTrenBanDo(' + r.toaDo.lat + ',' + r.toaDo.lng + ');return false;">' + r.toaDo.lat.toFixed(5) + ', ' + r.toaDo.lng.toFixed(5) + '</a>') : '<span class="hint">Chưa có</span>';
-        tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + new Date(r.ngayKy).toLocaleDateString('vi-VN') + '</td>' +
-          '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.tenUyQuyen || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
-          '<td>' + toaDoText + '</td><td>' + r.tinhTrang + '</td><td style="font-size:11px">' + ghiChu + '</td>';
+        tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.cccdChuRung || '') + '</td><td>' + (r.tenUyQuyen || '') + '</td>' +
+          '<td class="so-lieu">' + (r.soTaiKhoan || 0) + '</td><td class="so-lieu">' + (r.soLoRung || 0) + '</td>' +
+          '<td class="so-lieu">' + formatKL(r.khoiLuongDuKien) + '</td><td class="so-lieu">' + formatKL(r.khoiLuongThucHien) + '</td>' +
+          '<td class="so-lieu">' + formatTien(r.giaTriHopDong) + '</td><td class="so-lieu">' + formatTien(r.giaTriThucHien) + '</td>' +
+          '<td>' + (r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td>' + (r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
+          '<td>' + (r.coAnh ? '✅' : '⚠️') + '</td><td>' + (r.daDoGPSDu ? '✅' : '⚠️') + '</td><td>' + (r.hoSoDu ? '✅' : '❌') + '</td>' +
+          '<td>' + r.tinhTrang + '</td><td style="font-size:11px">' + ghiChu + '</td>';
         tbody.appendChild(tr);
       });
       var pg = document.getElementById('phanTrangBC');
@@ -458,14 +481,6 @@
         badgeWrap.appendChild(span);
       });
     }).layTinhHinhThucHien();
-  }
-
-  function xuatSheet() {
-    showMsg('msg', '⌛ Đang xuất ra Google Sheet...', true);
-    google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msg', '✅ ' + kq, true); })
-      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
-      .xuatBaoCaoTongHopHopDong();
   }
 
   // ============ 3. THANH LÝ HỢP ĐỒNG ============
@@ -553,19 +568,22 @@
   function renderBangHoSoRung() {
     var tkSoHD = (document.getElementById('hsrLocSoHD').value || '').toLowerCase();
     var tkTen = (document.getElementById('hsrLocTenChuRung').value || '').toLowerCase();
+    var locTT = document.getElementById('hsrLocTinhTrang').value;
     var loc = dsHoSoRungGoc.filter(function (r) {
       if (tkSoHD && (r.soHD || '').toString().toLowerCase().indexOf(tkSoHD) === -1) return false;
       if (tkTen && (r.tenChuRung || '').toLowerCase().indexOf(tkTen) === -1) return false;
+      if (locTT && (r.tinhTrang || '') !== locTT) return false;
       return true;
     });
     var tbody = document.querySelector('#tblHoSoRung tbody');
     tbody.innerHTML = '';
-    if (!loc.length) { tbody.innerHTML = '<tr><td colspan="11" class="hint" style="text-align:center">Chưa có dữ liệu — bấm "Tải báo cáo".</td></tr>'; return; }
+    if (!loc.length) { tbody.innerHTML = '<tr><td colspan="12" class="hint" style="text-align:center">Chưa có dữ liệu — bấm "Tải báo cáo".</td></tr>'; return; }
     loc.forEach(function (r) {
       var tr = document.createElement('tr');
       tr.innerHTML = '<td>' + (r.idRung || '') + '</td><td>' + (r.soHD || '') + '</td>' +
         '<td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
-        '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.hoSoNguonGoc || '') + '</td><td>' + (r.soGiayTo || '') + '</td>' +
+        '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.tinhTrang || '') + '</td>' +
+        '<td>' + (r.hoSoNguonGoc || '') + '</td><td>' + (r.soGiayTo || '') + '</td>' +
         '<td>' + (r.ngayGiayTo ? new Date(r.ngayGiayTo).toLocaleDateString('vi-VN') : '') + '</td>' +
         '<td class="so-lieu">' + formatSo_(r.dienTich) + '</td><td class="so-lieu">' + formatKL(r.khoiLuongDuKien) + '</td>' +
         '<td class="so-lieu">' + formatTien(r.donGia) + '</td><td class="so-lieu">' + formatTien(r.giaTri) + '</td>' +
