@@ -409,13 +409,17 @@ function timDongDraftBaoCao_(sh, idHD) {
 }
 
 /** Đọc toàn bộ dữ liệu Draft đã tổng hợp sẵn, trả về mảng object (dùng cho mọi báo cáo) */
+let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nếu cùng 1 request cần đọc Draft nhiều lần, chỉ đọc thật từ file ngoài đúng 1 lần
+
 function docToanBoDraftBaoCao_() {
+  if (_draftDataCache) return _draftDataCache; // đã đọc rồi trong lượt chạy này -> dùng lại luôn
+
   const sh = getOrCreateDraftBaoCaoSheet_();
   const lastRow = sh.getLastRow();
-  if (lastRow < 2) return [];
+  if (lastRow < 2) { _draftDataCache = []; return _draftDataCache; }
   const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
   const c = DRAFT_BAOCAO_COL;
-  return data.map(function (r) {
+  _draftDataCache = data.map(function (r) {
     return {
       idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: r[c.NGAY_KY], tenChuRung: r[c.TEN_CHU_RUNG],
       diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
@@ -431,6 +435,7 @@ function docToanBoDraftBaoCao_() {
       diaChiRung: r[c.DIA_CHI_RUNG] || ''
     };
   });
+  return _draftDataCache;
 }
 
 

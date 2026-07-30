@@ -248,10 +248,13 @@ function layBaoCaoHoSoRung() {
     gpsByIdRung[idRung].push(g);
   });
 
-  // Lấy TÌNH TRẠNG hợp đồng từ Draft_BaoCaoHopDong (đã tổng hợp sẵn) — dùng để lọc
-  // dropdown theo tình trạng mà không cần đọc lại HD_NCC riêng.
+  // Lấy TÌNH TRẠNG hợp đồng từ HD_NCC (LOCAL, nhanh) — KHÔNG đọc Draft (file ngoài,
+  // phải mở qua mạng, chậm hơn) vì HD_NCC đã có sẵn đúng cột Tình trạng ngay tại đây.
   const tinhTrangByIdHD = {};
-  docToanBoDraftBaoCao_().forEach(function (m) { tinhTrangByIdHD[m.idHD] = m.tinhTrang; });
+  readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
+    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
+    if (idHD) tinhTrangByIdHD[idHD] = r[NCC_COL.TINH_TRANG] || 'Đang thực hiện';
+  });
 
   return rungRows.map(function (r) {
     const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
@@ -488,6 +491,7 @@ function CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD) {
     } else {
       sh.getRange(soDong, 1, 1, dong.length).setValues([dong]);
     }
+    _draftDataCache = null; // xóa bộ nhớ đệm — nếu cùng lượt chạy có đọc lại Draft sau đây, phải thấy đúng dữ liệu vừa ghi
   } catch (e) {
     // Không để lỗi cập nhật Draft làm hỏng thao tác chính (tạo/sửa hợp đồng vẫn phải thành công) — chỉ ghi log
     ghiNhatKy_('LỖI cập nhật Draft báo cáo', idHD, e.message);
