@@ -178,32 +178,37 @@ function layBaoCaoHopDongDonGian() {
  * cho từng hợp đồng, kèm số liệu tổng hợp để hiển thị KPI trên webapp.
  */
 function layTinhHinhThucHien() {
-  // ĐỌC CACHE Draft_BaoCaoHopDong — đã có sẵn coAnh/daDoGPSDu/hoSoDu (tính khi
-  // Thêm/Sửa lô rừng, xem tinhDongDraftChoHopDong_) — KHÔNG đọc trực tiếp
-  // HD_NCC + HD_RUNG + HD_PICTURE mỗi lần tải trang nữa (nguyên nhân treo/nghẽn
-  // khi các sheet đó đã nhiều dòng).
-  const list = docToanBoDraftBaoCao_();
-  const chiTiet = list.map(function (m) {
+  try {
+    // ĐỌC CACHE Draft_BaoCaoHopDong — đã có sẵn coAnh/daDoGPSDu/hoSoDu (tính khi
+    // Thêm/Sửa lô rừng, xem tinhDongDraftChoHopDong_) — KHÔNG đọc trực tiếp
+    // HD_NCC + HD_RUNG + HD_PICTURE mỗi lần tải trang nữa (nguyên nhân treo/nghẽn
+    // khi các sheet đó đã nhiều dòng).
+    const list = docToanBoDraftBaoCao_();
+    const chiTiet = list.map(function (m) {
+      return {
+        idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung, tinhTrang: m.tinhTrang || 'Đang thực hiện',
+        tongLoRung: m.soLoRung, daDoGPSDuChua: m.daDoGPSDu, hoSoDuChua: m.hoSoDu, coAnh: m.coAnh
+      };
+    });
+
+    // Đếm theo trạng thái
+    const theoTrangThai = {};
+    chiTiet.forEach(function (c) {
+      theoTrangThai[c.tinhTrang] = (theoTrangThai[c.tinhTrang] || 0) + 1;
+    });
+
     return {
-      idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung, tinhTrang: m.tinhTrang || 'Đang thực hiện',
-      tongLoRung: m.soLoRung, daDoGPSDuChua: m.daDoGPSDu, hoSoDuChua: m.hoSoDu, coAnh: m.coAnh
+      tongSoHopDong: chiTiet.length,
+      theoTrangThai: theoTrangThai,
+      soHDDaDoGPSDu: chiTiet.filter(function (c) { return c.daDoGPSDuChua; }).length,
+      soHDDuHoSo: chiTiet.filter(function (c) { return c.hoSoDuChua; }).length,
+      soHDCoAnh: chiTiet.filter(function (c) { return c.coAnh; }).length,
+      chiTiet: chiTiet
     };
-  });
-
-  // Đếm theo trạng thái
-  const theoTrangThai = {};
-  chiTiet.forEach(function (c) {
-    theoTrangThai[c.tinhTrang] = (theoTrangThai[c.tinhTrang] || 0) + 1;
-  });
-
-  return {
-    tongSoHopDong: chiTiet.length,
-    theoTrangThai: theoTrangThai,
-    soHDDaDoGPSDu: chiTiet.filter(function (c) { return c.daDoGPSDuChua; }).length,
-    soHDDuHoSo: chiTiet.filter(function (c) { return c.hoSoDuChua; }).length,
-    soHDCoAnh: chiTiet.filter(function (c) { return c.coAnh; }).length,
-    chiTiet: chiTiet
-  };
+  } catch (e) {
+    ghiLoiBackend_('layTinhHinhThucHien', e);
+    throw new Error('layTinhHinhThucHien lỗi: ' + e.message);
+  }
 }
 /** layBaoCaoHoSoRung() ĐÃ CHUYỂN SANG 16_DraftHoSoRung.gs — đọc cache Draft_HoSoRung
  *  thay vì đọc trực tiếp HD_RUNG+HD_GPS+HD_NCC mỗi lần tải (nguyên nhân treo/nghẽn

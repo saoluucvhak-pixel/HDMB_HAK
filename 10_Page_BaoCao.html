@@ -154,6 +154,11 @@
     <div class="page-title">Báo cáo tổng hợp</div>
     <div class="page-subtitle">Báo cáo hợp đồng (lọc + kiểm tra hồ sơ) và tình hình thực hiện (khối lượng/giá trị đã — còn thực hiện).</div>
 
+    <div style="background:#fff3cd;border:1px solid #f0dfb8;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <button class="btn btn-outline" onclick="testKetNoi()">🧪 TEST kết nối (tạm thời, để chẩn đoán)</button>
+      <span id="ketQuaTestKetNoi" style="margin-left:10px;font-weight:700"></span>
+    </div>
+
     <div class="tabs2">
       <div class="tab2 active" data-panel="pBaoCaoHD">📄 Báo cáo hợp đồng</div>
       <div class="tab2" data-panel="pThucHien">📊 Tình hình thực hiện</div>
@@ -410,6 +415,18 @@
       tbody.appendChild(tr);
     });
   }
+  function testKetNoi() {
+    document.getElementById('ketQuaTestKetNoi').textContent = '⌛ Đang gọi...';
+    var bd = new Date().getTime();
+    google.script.run
+      .withFailureHandler(function (err) { document.getElementById('ketQuaTestKetNoi').textContent = '❌ LỖI: ' + err.message; })
+      .withSuccessHandler(function (kq) {
+        var ms = new Date().getTime() - bd;
+        document.getElementById('ketQuaTestKetNoi').textContent = kq + ' (mất ' + ms + ' ms)';
+      })
+      .TEST_KET_NOI_DON_GIAN();
+  }
+
   function taiBaoCaoHD(trang, forceLamMoi) {
     var boLoc = {
       tuNgay: document.getElementById('bcTuNgay').value, denNgay: document.getElementById('bcDenNgay').value,

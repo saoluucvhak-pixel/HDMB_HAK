@@ -12,6 +12,38 @@
  *  3) Gửi lại toàn bộ log đó — sẽ thấy ngay bước nào chậm bất thường.
  * ============================================================
  */
+/** Hàm TEST ĐƠN GIẢN NHẤT — không đọc sheet, không gọi hàm nào khác, chỉ trả về chữ.
+ *  Dùng để cô lập: nếu ngay cả hàm này cũng "treo" khi gọi từ webapp, thì lỗi chắc
+ *  chắn nằm ở tầng kết nối/deploy của TRANG ĐÓ, không phải do logic đọc dữ liệu. */
+function TEST_KET_NOI_DON_GIAN() {
+  return '✅ Kết nối OK lúc ' + new Date().toLocaleTimeString('vi-VN');
+}
+
+/**
+ * Xóa trigger lỗi "GEO_DETECT_LOCATION" (còn sót lại từ project mẫu cũ, không
+ * thuộc hệ thống HAK, đang chạy mỗi 5 phút và luôn Failed).
+ * CÁCH DÙNG: chọn hàm này ở thanh chọn hàm trong Apps Script editor → bấm ▶ Run.
+ * Chạy 1 lần là xong, không cần chạy lại.
+ */
+function XOA_TRIGGER_LOI_GEO_DETECT_LOCATION() {
+  const triggers = ScriptApp.getProjectTriggers();
+  let daXoa = 0;
+  const conLai = [];
+  triggers.forEach(function (t) {
+    if (t.getHandlerFunction() === 'GEO_DETECT_LOCATION') {
+      ScriptApp.deleteTrigger(t);
+      daXoa++;
+    } else {
+      conLai.push(t.getHandlerFunction());
+    }
+  });
+  const thongBao = '✅ Đã xóa ' + daXoa + ' trigger "GEO_DETECT_LOCATION".\n\n' +
+    'Các trigger CÒN LẠI (không đụng tới, vẫn hoạt động bình thường):\n• ' + conLai.join('\n• ');
+  Logger.log(thongBao);
+  try { SpreadsheetApp.getUi().alert(thongBao); } catch (e) { /* nếu chạy từ editor (không phải menu Sheet) thì không có UI, chỉ cần xem ở Logger.log là đủ */ }
+  return thongBao;
+}
+
 function CHAY_CHAN_DOAN_TOC_DO() {
   const ketQua = [];
   function do_(ten, hamChay) {

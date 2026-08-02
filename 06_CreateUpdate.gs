@@ -1510,39 +1510,44 @@ function XOA_TAI_KHOAN(soDong) {
  * kèm số lượng/giá trị hợp đồng, đã thực hiện, còn lại — lấy từ tongHopHopDong().
  */
 function layDanhSachThanhLy(trang, kichThuoc, boLoc, boBuoc) {
-  trang = trang || 1;
-  kichThuoc = kichThuoc || 20;
-  boLoc = boLoc || {};
+  try {
+    trang = trang || 1;
+    kichThuoc = kichThuoc || 20;
+    boLoc = boLoc || {};
 
-  if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ
+    if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ
 
-  const chuaLoc = function (s, tk) { return !tk || (s || '').toString().toLowerCase().indexOf(tk.toLowerCase()) !== -1; };
+    const chuaLoc = function (s, tk) { return !tk || (s || '').toString().toLowerCase().indexOf(tk.toLowerCase()) !== -1; };
 
-  const list = docToanBoDraftBaoCao_()
-    .filter(function (m) { return m.tinhTrang !== 'Đã thanh lý'; })
-    .filter(function (m) {
-      if (!chuaLoc(m.soHD, boLoc.soHD)) return false;
-      if (!chuaLoc(m.tenChuRung, boLoc.tenChuRung)) return false;
-      if (!chuaLoc(m.tenUyQuyen, boLoc.tenUyQuyen)) return false;
-      return true;
-    })
-    .map(function (m) {
-      return {
-        idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
-        nguoiUyQuyen: m.tenUyQuyen || '(không ủy quyền)', tinhTrang: m.tinhTrang,
-        khoiLuongHopDong: m.khoiLuongDuKien, giaTriHopDong: m.giaTriHopDong,
-        khoiLuongThucHien: m.khoiLuongThucHien, giaTriThucHien: m.giaTriThucHien,
-        khoiLuongConLai: m.khoiLuongConLai, giaTriConLai: m.giaTriConLai,
-        thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay
-      };
-    });
+    const list = docToanBoDraftBaoCao_()
+      .filter(function (m) { return m.tinhTrang !== 'Đã thanh lý'; })
+      .filter(function (m) {
+        if (!chuaLoc(m.soHD, boLoc.soHD)) return false;
+        if (!chuaLoc(m.tenChuRung, boLoc.tenChuRung)) return false;
+        if (!chuaLoc(m.tenUyQuyen, boLoc.tenUyQuyen)) return false;
+        return true;
+      })
+      .map(function (m) {
+        return {
+          idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
+          nguoiUyQuyen: m.tenUyQuyen || '(không ủy quyền)', tinhTrang: m.tinhTrang,
+          khoiLuongHopDong: m.khoiLuongDuKien, giaTriHopDong: m.giaTriHopDong,
+          khoiLuongThucHien: m.khoiLuongThucHien, giaTriThucHien: m.giaTriThucHien,
+          khoiLuongConLai: m.khoiLuongConLai, giaTriConLai: m.giaTriConLai,
+          thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay
+        };
+      });
 
-  const tongSo = list.length;
-  const tongTrang = Math.max(1, Math.ceil(tongSo / kichThuoc));
-  trang = Math.min(Math.max(1, trang), tongTrang);
-  const batDau = (trang - 1) * kichThuoc;
+    const tongSo = list.length;
+    const tongTrang = Math.max(1, Math.ceil(tongSo / kichThuoc));
+    trang = Math.min(Math.max(1, trang), tongTrang);
+    const batDau = (trang - 1) * kichThuoc;
 
-  return { items: list.slice(batDau, batDau + kichThuoc), trang: trang, tongTrang: tongTrang, tongSo: tongSo };
+    return { items: list.slice(batDau, batDau + kichThuoc), trang: trang, tongTrang: tongTrang, tongSo: tongSo };
+  } catch (e) {
+    ghiLoiBackend_('layDanhSachThanhLy', e);
+    throw new Error('layDanhSachThanhLy lỗi: ' + e.message);
+  }
 }
 
 /**
