@@ -19,8 +19,13 @@ function laCCCDHopLe_(cccd) {
 /**
  * Kiểm tra hồ sơ của MỘT dòng HD_RUNG (một lô rừng cụ thể).
  * Trả về { idKeyHD, maRung, thieu: [...], canhBao: [...], dat: true/false }
+ * @param {boolean} boQuaKiemTraDrive - true = KHÔNG gọi DriveApp (nhanh, chỉ kiểm tra có điền
+ *   tên file đính kèm hay chưa) — dùng cho các KPI/tổng hợp tự chạy mỗi lần tải trang (nhiều
+ *   dòng, không thể chờ gọi Drive API tuần tự cho từng dòng). Khi cần XÁC MINH file có THẬT
+ *   SỰ tồn tại trên Drive hay không (đúng/đủ 100%), dùng false — chỉ nên dùng cho hành động
+ *   thủ công, chạy ít lần (vd: "Kiểm tra hồ sơ pháp lý" ở menu).
  */
-function kiemTraHoSoMotLoRung_(row) {
+function kiemTraHoSoMotLoRung_(row, boQuaKiemTraDrive) {
   const thieu = [];
   const canhBao = [];
 
@@ -46,7 +51,7 @@ function kiemTraHoSoMotLoRung_(row) {
   const dinhKem = (row[RUNG_COL.DINH_KEM_GIAY_TO] || '').toString().trim();
   if (!dinhKem) {
     thieu.push('Chưa đính kèm file scan giấy tờ nguồn gốc (PDF/ảnh)');
-  } else if (!fileTonTaiTrenDrive_(dinhKem)) {
+  } else if (!boQuaKiemTraDrive && !fileTonTaiTrenDrive_(dinhKem)) {
     thieu.push('File đính kèm "' + dinhKem + '" không tìm thấy trên Drive (đường dẫn/tên file sai hoặc đã bị xóa)');
   }
 
@@ -290,7 +295,10 @@ function layDuLieuKiemTraHoSoWebapp() {
   });
 
   return rungRows.map(function (r) {
-    const kq = kiemTraHoSoMotLoRung_(r);
+    // Bỏ qua kiểm tra Drive (chậm, gọi API cho từng dòng) — bảng này TỰ TẢI mỗi lần
+    // mở trang nên cần nhanh. Muốn xác minh chính xác file có tồn tại trên Drive
+    // hay không, dùng nút "⚙️ Chạy kiểm tra đầy đủ" (ghi vào sheet BaoCao_KiemTra).
+    const kq = kiemTraHoSoMotLoRung_(r, true);
     const idHD = kq.idKeyHD;
     const rowNCC = nccById[idHD];
     const thieuUyQuyen = rowNCC ? kiemTraUyQuyenVaTaiKhoan_(rowNCC) : [];

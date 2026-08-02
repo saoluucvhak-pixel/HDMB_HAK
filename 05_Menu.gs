@@ -22,6 +22,8 @@ function onOpen() {
     .addItem('⏰ Thiết lập chạy tự động hàng tuần', 'THIET_LAP_TRIGGER_DINH_KY')
     .addSeparator()
     .addItem('🔄 Xây dựng lại Draft báo cáo (chạy 1 lần khi mới cài đặt)', 'XAY_DUNG_LAI_TOAN_BO_DRAFT')
+    .addItem('🌲 Xây dựng lại cache Hồ sơ rừng (chạy 1 lần khi mới cài đặt tính năng này)', 'CHAY_XAY_DUNG_LAI_DRAFT_HOSORUNG')
+    .addItem('⏱️ Chẩn đoán tốc độ báo cáo (đo thời gian từng bước)', 'CHAY_CHAN_DOAN_TOC_DO_VA_HIEN_KQ')
     .addItem('📂 Mở file Báo cáo/Cache riêng', 'MO_FILE_BAO_CAO_RIENG')
     .addItem('⚡ Bật bẫy nhật ký tự động (HD_NCC/RUNG/STK/GPS/Picture)', 'THIET_LAP_TRIGGER_ONEDIT_DRAFT')
     .addItem('⏱️ Bật đồng bộ định kỳ phần thanh toán (30 phút/lần)', 'THIET_LAP_TRIGGER_DONG_BO_THANH_TOAN')

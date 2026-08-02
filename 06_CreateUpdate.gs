@@ -577,6 +577,8 @@ function THEM_LO_RUNG_MOI(d) {
     if (d.diaChiRung) dongBoDiaChiTuRung_(d.idHD, { diaChiRung: d.diaChiRung });
 
     CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
+    CAP_NHAT_CT_HOPDONG_(d.idHD); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+    CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
     return { thanhCong: true, idRung: idRung, maRung: maRung, stt: stt };
   } finally {
     lock.releaseLock();
@@ -633,6 +635,8 @@ function CAP_NHAT_LO_RUNG(idRung, patch) {
     dongBoDiaChiTuRung_(idHDCuaRung, { diaChiRung: patch.diaChiRung });
   }
   CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
+  CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
 
   return { thanhCong: true, dong: soDong };
 }
@@ -711,6 +715,7 @@ function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
     diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
   ]);
   if (rung) CAP_NHAT_DRAFT_MOT_HOP_DONG(rung[RUNG_COL.ID_KEY_HD]);
+  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
   return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien } };
 }
 
@@ -1479,6 +1484,8 @@ function XOA_LO_RUNG(idRung) {
     }
   }
   CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
+  CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+  XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); // xóa khỏi cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
   return { thanhCong: true };
 }
 

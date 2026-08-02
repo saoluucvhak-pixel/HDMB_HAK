@@ -178,47 +178,15 @@ function layBaoCaoHopDongDonGian() {
  * cho từng hợp đồng, kèm số liệu tổng hợp để hiển thị KPI trên webapp.
  */
 function layTinhHinhThucHien() {
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
-
-  // Nhóm lô rừng theo hợp đồng để tính đã đo GPS đủ chưa + hồ sơ đủ chưa
-  const rungByHD = {};
-  rungRows.forEach(function (r) {
-    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
-    if (!idHD) return;
-    if (!rungByHD[idHD]) rungByHD[idHD] = [];
-    rungByHD[idHD].push(r);
-  });
-
-  // Hợp đồng nào có ít nhất 1 ảnh trong HD_Picture
-  const coAnhByHD = {};
-  pictureRows.forEach(function (r) {
-    const idHD = (r[PICTURE_COL.ID_HD] || '').toString().trim();
-    if (!idHD) return;
-    for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
-      if (r[c]) { coAnhByHD[idHD] = true; break; }
-    }
-  });
-
-  const chiTiet = nccRows.map(function (r) {
-    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
-    const cacLoRung = rungByHD[idHD] || [];
-    const tongLo = cacLoRung.length;
-    const soLoDaDoGPS = cacLoRung.filter(function (lo) { return Number(lo[RUNG_COL.DIEN_TICH_GPS]) > 0; }).length;
-    const soLoDuHoSo = cacLoRung.filter(function (lo) { return kiemTraHoSoMotLoRung_(lo).dat; }).length;
-
+  // ĐỌC CACHE Draft_BaoCaoHopDong — đã có sẵn coAnh/daDoGPSDu/hoSoDu (tính khi
+  // Thêm/Sửa lô rừng, xem tinhDongDraftChoHopDong_) — KHÔNG đọc trực tiếp
+  // HD_NCC + HD_RUNG + HD_PICTURE mỗi lần tải trang nữa (nguyên nhân treo/nghẽn
+  // khi các sheet đó đã nhiều dòng).
+  const list = docToanBoDraftBaoCao_();
+  const chiTiet = list.map(function (m) {
     return {
-      idHD: idHD,
-      soHD: r[NCC_COL.SO_HD],
-      chuRung: r[NCC_COL.TEN_CHU_RUNG],
-      tinhTrang: r[NCC_COL.TINH_TRANG] || 'Đang thực hiện',
-      tongLoRung: tongLo,
-      soLoDaDoGPS: soLoDaDoGPS,
-      daDoGPSDuChua: tongLo > 0 && soLoDaDoGPS === tongLo,
-      soLoDuHoSo: soLoDuHoSo,
-      hoSoDuChua: tongLo > 0 && soLoDuHoSo === tongLo,
-      coAnh: !!coAnhByHD[idHD]
+      idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung, tinhTrang: m.tinhTrang || 'Đang thực hiện',
+      tongLoRung: m.soLoRung, daDoGPSDuChua: m.daDoGPSDu, hoSoDuChua: m.hoSoDu, coAnh: m.coAnh
     };
   });
 
@@ -237,54 +205,9 @@ function layTinhHinhThucHien() {
     chiTiet: chiTiet
   };
 }
-/** Báo cáo hồ sơ rừng theo từng lô rừng, kèm tọa độ trung bình để tra bản đồ */
-function layBaoCaoHoSoRung() {
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const gpsRows = readData_(SHEET_NAME.HD_GPS);
-  const gpsByIdRung = {};
-  gpsRows.forEach(function (g) {
-    const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
-    if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = [];
-    gpsByIdRung[idRung].push(g);
-  });
-
-  // Lấy TÌNH TRẠNG hợp đồng từ HD_NCC (LOCAL, nhanh) — KHÔNG đọc Draft (file ngoài,
-  // phải mở qua mạng, chậm hơn) vì HD_NCC đã có sẵn đúng cột Tình trạng ngay tại đây.
-  const tinhTrangByIdHD = {};
-  readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
-    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
-    if (idHD) tinhTrangByIdHD[idHD] = r[NCC_COL.TINH_TRANG] || 'Đang thực hiện';
-  });
-
-  return rungRows.map(function (r) {
-    const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
-    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
-    const dienTich = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-
-    let toaDo = null;
-    const cacDiem = gpsByIdRung[idRung] || [];
-    if (cacDiem.length) {
-      let latTong = 0, lngTong = 0, dem = 0;
-      cacDiem.forEach(function (g) {
-        const type = g[GPS_COL.HE_TOA_DO];
-        const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-        const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
-        if (!isNaN(lat) && !isNaN(lng)) { latTong += lat; lngTong += lng; dem++; }
-      });
-      if (dem) toaDo = { lat: latTong / dem, lng: lngTong / dem };
-    }
-
-    return {
-      idRung: idRung, idHD: idHD, soHD: r[RUNG_COL.SO_HD], ngayKy: r[RUNG_COL.NGAY_KY], tenChuRung: r[RUNG_COL.TEN_CHU_RUNG],
-      tinhTrang: tinhTrangByIdHD[idHD] || 'Đang thực hiện',
-      hoSoNguonGoc: r[RUNG_COL.HO_SO_NGUON_GOC], soGiayTo: r[RUNG_COL.SO_GIAY_TO], ngayGiayTo: r[RUNG_COL.NGAY_GIAY_TO],
-      dienTich: dienTich, khoiLuongDuKien: khoiLuong, donGia: donGia, giaTri: donGia * khoiLuong,
-      toaDo: toaDo, soDiemGPS: cacDiem.length
-    };
-  }).sort(function (a, b) { return new Date(b.ngayKy || 0) - new Date(a.ngayKy || 0); });
-}
+/** layBaoCaoHoSoRung() ĐÃ CHUYỂN SANG 16_DraftHoSoRung.gs — đọc cache Draft_HoSoRung
+ *  thay vì đọc trực tiếp HD_RUNG+HD_GPS+HD_NCC mỗi lần tải (nguyên nhân treo/nghẽn
+ *  khi HD_RUNG nhiều dòng). KHÔNG khai báo lại ở đây để tránh xung đột hàm trùng tên. */
 
 /** Chi tiết đầy đủ 1 lô rừng (tọa độ từng điểm + ảnh) — dùng khi bấm "Xem chi tiết" */
 function layChiTietHoSoMotLoRung(idRung) {
@@ -393,11 +316,11 @@ function tinhDongDraftChoHopDong_(idHD, row, rungRows, stkRows, gpsRows, coAnh, 
 
   const soLo = rungRows.length;
   const soLoDaDoGPS = rungRows.filter(function (r) { return Number(r[RUNG_COL.DIEN_TICH_GPS]) > 0; }).length;
-  const soLoDuHoSo = rungRows.filter(function (r) { return kiemTraHoSoMotLoRung_(r).dat; }).length;
+  const soLoDuHoSo = rungRows.filter(function (r) { return kiemTraHoSoMotLoRung_(r, true).dat; }).length;
 
   const thieuChiTiet = [];
   rungRows.forEach(function (r) {
-    const kqKt = kiemTraHoSoMotLoRung_(r);
+    const kqKt = kiemTraHoSoMotLoRung_(r, true); // bỏ qua kiểm tra Drive — hàm này chạy tự động ở MỌI lần Lưu, không thể chờ gọi Drive API tuần tự
     thieuChiTiet.push.apply(thieuChiTiet, kqKt.thieu.map(function (t) { return r[RUNG_COL.ID_RUNG] + ': ' + t; }));
   });
   thieuChiTiet.push.apply(thieuChiTiet, kiemTraUyQuyenVaTaiKhoan_(row));
@@ -544,7 +467,7 @@ function LAM_MOI_DRAFT_THEO_THAY_DOI() {
     }
   });
 
-  idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); });
+  idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); });
   props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
 
   return {
@@ -681,8 +604,11 @@ function xuLyOnEditDraft_(e) {
     let idHD = null;
     if (ten === SHEET_NAME.HD_NCC) {
       idHD = sh.getRange(hang, NCC_COL.ID_HD + 1).getValue();
+      if (idHD) CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD.toString().trim()); // Tình trạng HĐ đổi -> ảnh hưởng mọi lô rừng con
     } else if (ten === SHEET_NAME.HD_RUNG) {
       idHD = sh.getRange(hang, RUNG_COL.ID_KEY_HD + 1).getValue();
+      const idRungSua = (sh.getRange(hang, RUNG_COL.ID_RUNG + 1).getValue() || '').toString().trim();
+      if (idRungSua) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRungSua);
     } else if (ten === SHEET_NAME.HD_STK) {
       idHD = sh.getRange(hang, STK_COL.ID_HD + 1).getValue();
     } else if (ten === SHEET_NAME.HD_GPS) {
@@ -691,6 +617,7 @@ function xuLyOnEditDraft_(e) {
         const rungRows = readData_(SHEET_NAME.HD_RUNG);
         const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
         idHD = rung ? rung[RUNG_COL.ID_KEY_HD] : null;
+        CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // tọa độ đổi -> cập nhật lại tọa độ TB trong cache
       }
     } else if (ten === SHEET_NAME.HD_PICTURE) {
       idHD = sh.getRange(hang, PICTURE_COL.ID_HD + 1).getValue();

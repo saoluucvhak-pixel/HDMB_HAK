@@ -418,8 +418,9 @@
       tinhTrang: document.getElementById('bcTinhTrang').value
     };
     showMsg('msgLocBC', '⌛ Đang lọc...', true);
-    google.script.run.withSuccessHandler(function (kq) {
-      trangBCHienTai = kq.trang;
+    google.script.run
+      .withFailureHandler(function (err) { showMsg('msgLocBC', '❌ Lỗi tải báo cáo hợp đồng: ' + err.message, false); })
+      .withSuccessHandler(function (kq) {
       var tbody = document.querySelector('#tblBaoCaoHD tbody');
       tbody.innerHTML = '';
       if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="18" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
@@ -468,7 +469,9 @@
       .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
       .layTongHopChoWebapp(!!forceLamMoi);
 
-    google.script.run.withSuccessHandler(function (kq) {
+    google.script.run
+      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi tải Tình hình thực hiện: ' + err.message, false); })
+      .withSuccessHandler(function (kq) {
       document.getElementById('kpiGPSDu').textContent = formatSo(kq.soHDDaDoGPSDu) + ' / ' + formatSo(kq.tongSoHopDong);
       document.getElementById('kpiHoSoDu').textContent = formatSo(kq.soHDDuHoSo) + ' / ' + formatSo(kq.tongSoHopDong);
       document.getElementById('kpiCoAnh').textContent = formatSo(kq.soHDCoAnh) + ' / ' + formatSo(kq.tongSoHopDong);
@@ -491,8 +494,9 @@
       tenChuRung: document.getElementById('tlLocTenChuRung').value,
       tenUyQuyen: document.getElementById('tlLocTenUyQuyen').value
     };
-    google.script.run.withSuccessHandler(function (kq) {
-      trangTLHienTai = kq.trang;
+    google.script.run
+      .withFailureHandler(function (err) { showMsg('msgTL', '❌ Lỗi tải danh sách thanh lý: ' + err.message, false); })
+      .withSuccessHandler(function (kq) {
       var tbody = document.querySelector('#tblThanhLy tbody');
       tbody.innerHTML = '';
       if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có hợp đồng nào.</td></tr>';
