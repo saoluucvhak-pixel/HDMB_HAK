@@ -195,7 +195,13 @@ let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — trán
  */
 function LAY_CAU_HINH_KET_NOI() {
   const props = PropertiesService.getScriptProperties();
-  const ketQua = { draftUrl: '', draftTen: '', draftLoi: '', folderUrl: '', folderTen: '', folderLoi: '', misaFolderUrl: '', misaFolderTen: '', misaFolderLoi: '' };
+  const ketQua = {
+    draftUrl: '', draftTen: '', draftLoi: '',
+    folderUrl: '', folderTen: '', folderLoi: '',
+    hoSoFolderUrl: '', hoSoFolderTen: '', hoSoFolderLoi: '',
+    gpsFolderUrl: '', gpsFolderTen: '', gpsFolderLoi: '',
+    misaFolderUrl: '', misaFolderTen: '', misaFolderLoi: ''
+  };
 
   try {
     const ss = getReportSS_();
@@ -206,12 +212,27 @@ function LAY_CAU_HINH_KET_NOI() {
   }
 
   try {
-    const idThuMuc = props.getProperty('ANH_FOLDER_ID');
-    const folder = idThuMuc ? DriveApp.getFolderById(idThuMuc) : layHoacTaoThuMucAnh_();
+    const folder = layHoacTaoThuMucAnh_();
     ketQua.folderUrl = folder.getUrl();
     ketQua.folderTen = folder.getName();
   } catch (e) {
     ketQua.folderLoi = e.message;
+  }
+
+  try {
+    const folderHoSo = layHoacTaoThuMucHoSo_();
+    ketQua.hoSoFolderUrl = folderHoSo.getUrl();
+    ketQua.hoSoFolderTen = folderHoSo.getName();
+  } catch (e) {
+    ketQua.hoSoFolderLoi = e.message;
+  }
+
+  try {
+    const folderGps = layHoacTaoThuMucAnhGPS_();
+    ketQua.gpsFolderUrl = folderGps.getUrl();
+    ketQua.gpsFolderTen = folderGps.getName();
+  } catch (e) {
+    ketQua.gpsFolderLoi = e.message;
   }
 
   try {
@@ -226,13 +247,19 @@ function LAY_CAU_HINH_KET_NOI() {
 }
 
 /**
- * Đổi cấu hình kết nối: file Draft báo cáo (Google Sheet) và/hoặc thư mục Drive
- * lưu ảnh/hồ sơ. Truyền URL rỗng để GIỮ NGUYÊN giá trị đang dùng (không đổi).
- * Luôn xác minh mở được TRƯỚC khi lưu — không lưu URL không hợp lệ.
+ * Đổi cấu hình kết nối: file Draft báo cáo (Google Sheet) và/hoặc các thư mục
+ * Drive (ảnh hiện trường, hồ sơ pháp lý, ảnh GPS, xuất báo cáo MISA). Truyền
+ * URL rỗng để GIỮ NGUYÊN giá trị đang dùng (không đổi). Luôn xác minh mở được
+ * TRƯỚC khi lưu — không lưu URL không hợp lệ.
  */
-function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl) {
+function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
   const props = PropertiesService.getScriptProperties();
   const ketQua = { thanhCong: true, thongBao: [] };
+
+  function trichIdThuMuc_(url) {
+    const khop = url.toString().trim().match(/[-\w]{25,}/); // trích ID thư mục từ URL dạng .../folders/ID...
+    return khop ? khop[0] : url.toString().trim();
+  }
 
   if (draftUrl) {
     try {
@@ -248,22 +275,40 @@ function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl) {
 
   if (folderUrl) {
     try {
-      const khop = folderUrl.toString().trim().match(/[-\w]{25,}/); // trích ID thư mục từ URL dạng .../folders/ID...
-      const idThuMuc = khop ? khop[0] : folderUrl.toString().trim();
-      const folder = DriveApp.getFolderById(idThuMuc);
+      const folder = DriveApp.getFolderById(trichIdThuMuc_(folderUrl));
       props.setProperty('ANH_FOLDER_ID', folder.getId());
-      ketQua.thongBao.push('✅ Đã đổi thư mục Drive lưu ảnh/báo cáo sang "' + folder.getName() + '".');
+      ketQua.thongBao.push('✅ Đã đổi thư mục ảnh hiện trường sang "' + folder.getName() + '".');
     } catch (e) {
       ketQua.thanhCong = false;
-      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục Drive: ' + e.message);
+      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục ảnh hiện trường: ' + e.message);
+    }
+  }
+
+  if (hoSoFolderUrl) {
+    try {
+      const folderHoSo = DriveApp.getFolderById(trichIdThuMuc_(hoSoFolderUrl));
+      props.setProperty('HOSO_FOLDER_ID', folderHoSo.getId());
+      ketQua.thongBao.push('✅ Đã đổi thư mục hồ sơ pháp lý sang "' + folderHoSo.getName() + '".');
+    } catch (e) {
+      ketQua.thanhCong = false;
+      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục hồ sơ pháp lý: ' + e.message);
+    }
+  }
+
+  if (gpsFolderUrl) {
+    try {
+      const folderGps = DriveApp.getFolderById(trichIdThuMuc_(gpsFolderUrl));
+      props.setProperty('GPS_ANH_FOLDER_ID', folderGps.getId());
+      ketQua.thongBao.push('✅ Đã đổi thư mục ảnh GPS sang "' + folderGps.getName() + '".');
+    } catch (e) {
+      ketQua.thanhCong = false;
+      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục ảnh GPS: ' + e.message);
     }
   }
 
   if (misaFolderUrl) {
     try {
-      const khop2 = misaFolderUrl.toString().trim().match(/[-\w]{25,}/);
-      const idThuMucMisa = khop2 ? khop2[0] : misaFolderUrl.toString().trim();
-      const folderMisa = DriveApp.getFolderById(idThuMucMisa);
+      const folderMisa = DriveApp.getFolderById(trichIdThuMuc_(misaFolderUrl));
       props.setProperty('MISA_FOLDER_ID', folderMisa.getId());
       ketQua.thongBao.push('✅ Đã đổi thư mục xuất báo cáo MISA sang "' + folderMisa.getName() + '".');
     } catch (e) {
@@ -272,7 +317,7 @@ function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl) {
     }
   }
 
-  if (!draftUrl && !folderUrl && !misaFolderUrl) ketQua.thongBao.push('Không có gì để lưu (các ô đều trống).');
+  if (!draftUrl && !folderUrl && !misaFolderUrl && !hoSoFolderUrl && !gpsFolderUrl) ketQua.thongBao.push('Không có gì để lưu (các ô đều trống).');
   ketQua.thongBao = ketQua.thongBao.join(' ');
   return ketQua;
 }

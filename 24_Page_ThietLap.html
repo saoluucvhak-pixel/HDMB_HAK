@@ -172,7 +172,11 @@
       <p id="ketNoiHienTai" class="hint">Đang đọc kết nối hiện tại...</p>
       <div class="field-row">
         <div class="field"><label>URL file Draft báo cáo (Google Sheet riêng)</label><input id="clDraftUrl" placeholder="Để trống = giữ nguyên file đang dùng"></div>
-        <div class="field"><label>URL thư mục Drive lưu ảnh/hồ sơ</label><input id="clFolderUrl" placeholder="Để trống = giữ nguyên thư mục đang dùng"></div>
+        <div class="field"><label>URL thư mục Drive lưu ảnh hiện trường</label><input id="clFolderUrl" placeholder="Để trống = giữ nguyên thư mục đang dùng"></div>
+        <div class="field"><label>URL thư mục lưu hồ sơ pháp lý (CCCD/GCN QSDĐ...)</label><input id="clHoSoFolderUrl" placeholder="Để trống = giữ nguyên thư mục đang dùng"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>URL thư mục lưu ảnh minh chứng GPS</label><input id="clGpsFolderUrl" placeholder="Để trống = giữ nguyên thư mục đang dùng"></div>
         <div class="field"><label>URL thư mục xuất báo cáo MISA</label><input id="clMisaFolderUrl" placeholder="Để trống = giữ nguyên thư mục đang dùng"></div>
       </div>
       <button class="btn btn-green" onclick="luuKetNoi()">💾 Lưu kết nối</button>
@@ -188,10 +192,19 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">⚡ Chuyển tên file ảnh/hồ sơ pháp lý sang URL thật</h3>
+      <p class="hint" style="margin-top:-4px">Khắc phục "Xem chi tiết" chậm/treo lúc hiện ảnh — ghi đè các ô còn lưu TÊN FILE (dữ liệu cũ) thành URL Drive thật. Chỉ xử lý ô CHƯA phải URL nên chạy lại nhiều lần rất rẻ.</p>
+      <p id="trangThaiTriggerAnh" class="hint">Đang kiểm tra trạng thái chạy định kỳ...</p>
+      <button class="btn btn-outline" onclick="chayChuyenDoiAnhNgay()">▶️ Chạy ngay 1 lần</button>
+      <button class="btn btn-green" onclick="batTriggerChuyenDoiAnh()">⏱️ Bật chạy định kỳ (6 tiếng/lần)</button>
+      <button class="btn btn-outline" onclick="tatTriggerChuyenDoiAnh()">⏹️ Tắt chạy định kỳ</button>
+      <div id="msgChuyenDoiAnh" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">⚙️ Cài đặt Vùng (Locale)</h3>
       <p class="hint" style="margin-top:-4px">Quyết định cách Google Sheets hiểu <b>ngày tháng</b> (vd Việt Nam = dd/mm/yyyy, United States = mm/dd/yyyy) <b>và cách hiển thị số</b> (dấu phân cách hàng nghìn/thập phân, vd Việt Nam "1.234.567,89" khác United States "1,234,567.89") khi gõ tay trực tiếp vào Sheet. Áp dụng cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng.</p>
       <p class="hint" style="margin-top:-4px">⚠️ Chỉ thay đổi khi bạn bấm nút "✅ Áp dụng" bên dưới — mở lại trang này bất cứ lúc nào cũng chỉ HIỂN THỊ vùng đang dùng, không tự đặt lại.</p>
-      <p class="hint" style="margin-top:-4px">Quyết định cách Google Sheets hiểu ngày tháng khi gõ tay trực tiếp vào ô (vd Việt Nam = dd/mm/yyyy). Áp dụng cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng.</p>
       <div class="field-row" style="align-items:flex-end">
         <div class="field" style="max-width:340px">
           <label>Vùng</label>
@@ -281,9 +294,11 @@
   // ---- Kết nối dữ liệu (file Draft + thư mục Drive) ----
   function renderKetNoi_(kq) {
     var dong1 = kq.draftLoi ? '❌ File Draft báo cáo: ' + kq.draftLoi : '✅ File Draft báo cáo: "' + kq.draftTen + '" — <a href="' + kq.draftUrl + '" target="_blank">mở file</a>';
-    var dong2 = kq.folderLoi ? '❌ Thư mục ảnh/hồ sơ: ' + kq.folderLoi : '✅ Thư mục ảnh/hồ sơ: "' + kq.folderTen + '" — <a href="' + kq.folderUrl + '" target="_blank">mở thư mục</a>';
-    var dong3 = kq.misaFolderLoi ? '❌ Thư mục xuất MISA: ' + kq.misaFolderLoi : '✅ Thư mục xuất MISA: "' + kq.misaFolderTen + '" — <a href="' + kq.misaFolderUrl + '" target="_blank">mở thư mục</a>';
-    document.getElementById('ketNoiHienTai').innerHTML = dong1 + '<br>' + dong2 + '<br>' + dong3;
+    var dong2 = kq.folderLoi ? '❌ Thư mục ảnh hiện trường: ' + kq.folderLoi : '✅ Thư mục ảnh hiện trường: "' + kq.folderTen + '" — <a href="' + kq.folderUrl + '" target="_blank">mở thư mục</a>';
+    var dong3 = kq.hoSoFolderLoi ? '❌ Thư mục hồ sơ pháp lý: ' + kq.hoSoFolderLoi : '✅ Thư mục hồ sơ pháp lý: "' + kq.hoSoFolderTen + '" — <a href="' + kq.hoSoFolderUrl + '" target="_blank">mở thư mục</a>';
+    var dong4 = kq.gpsFolderLoi ? '❌ Thư mục ảnh GPS: ' + kq.gpsFolderLoi : '✅ Thư mục ảnh GPS: "' + kq.gpsFolderTen + '" — <a href="' + kq.gpsFolderUrl + '" target="_blank">mở thư mục</a>';
+    var dong5 = kq.misaFolderLoi ? '❌ Thư mục xuất MISA: ' + kq.misaFolderLoi : '✅ Thư mục xuất MISA: "' + kq.misaFolderTen + '" — <a href="' + kq.misaFolderUrl + '" target="_blank">mở thư mục</a>';
+    document.getElementById('ketNoiHienTai').innerHTML = [dong1, dong2, dong3, dong4, dong5].join('<br>');
   }
   google.script.run.withSuccessHandler(renderKetNoi_).withFailureHandler(function (err) {
     document.getElementById('ketNoiHienTai').textContent = 'Không đọc được kết nối hiện tại: ' + err.message;
@@ -292,19 +307,61 @@
   function luuKetNoi() {
     var draftUrl = document.getElementById('clDraftUrl').value.trim();
     var folderUrl = document.getElementById('clFolderUrl').value.trim();
+    var hoSoFolderUrl = document.getElementById('clHoSoFolderUrl').value.trim();
+    var gpsFolderUrl = document.getElementById('clGpsFolderUrl').value.trim();
     var misaFolderUrl = document.getElementById('clMisaFolderUrl').value.trim();
-    if (!draftUrl && !folderUrl && !misaFolderUrl) { showMsg('msgKetNoi', '⚠️ Nhập ít nhất 1 URL để đổi (để trống hết = không có gì để lưu).', false); return; }
+    if (!draftUrl && !folderUrl && !misaFolderUrl && !hoSoFolderUrl && !gpsFolderUrl) { showMsg('msgKetNoi', '⚠️ Nhập ít nhất 1 URL để đổi (để trống hết = không có gì để lưu).', false); return; }
     showMsg('msgKetNoi', '⌛ Đang kiểm tra và lưu...', true);
     google.script.run
       .withSuccessHandler(function (kq) {
         showMsg('msgKetNoi', kq.thongBao, kq.thanhCong);
         if (kq.thanhCong) {
-          document.getElementById('clDraftUrl').value = ''; document.getElementById('clFolderUrl').value = ''; document.getElementById('clMisaFolderUrl').value = '';
+          document.getElementById('clDraftUrl').value = ''; document.getElementById('clFolderUrl').value = '';
+          document.getElementById('clHoSoFolderUrl').value = ''; document.getElementById('clGpsFolderUrl').value = ''; document.getElementById('clMisaFolderUrl').value = '';
           google.script.run.withSuccessHandler(renderKetNoi_).LAY_CAU_HINH_KET_NOI();
         }
       })
       .withFailureHandler(function (err) { showMsg('msgKetNoi', '❌ Lỗi: ' + err.message, false); })
-      .LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl);
+      .LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl);
+  }
+
+  // ---- Chuyển tên file ảnh/hồ sơ pháp lý sang URL thật + chạy định kỳ ----
+  function renderTrangThaiTriggerAnh_(kq) {
+    document.getElementById('trangThaiTriggerAnh').innerHTML = kq.daBat
+      ? '⏱️ Đang BẬT chạy định kỳ (6 tiếng/lần).'
+      : '⏹️ Đang TẮT — chỉ chạy khi bạn bấm "Chạy ngay 1 lần" hoặc bật định kỳ.';
+  }
+  google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_)
+    .withFailureHandler(function (err) { document.getElementById('trangThaiTriggerAnh').textContent = 'Không đọc được trạng thái: ' + err.message; })
+    .KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL();
+
+  function chayChuyenDoiAnhNgay() {
+    showMsg('msgChuyenDoiAnh', '⌛ Đang chạy (ảnh trước, hồ sơ pháp lý sau)...', true);
+    google.script.run
+      .withSuccessHandler(function (kq1) {
+        google.script.run
+          .withSuccessHandler(function (kq2) { showMsg('msgChuyenDoiAnh', 'Ảnh: ' + kq1.thongBao + '\n\nHồ sơ pháp lý: ' + kq2.thongBao, true); })
+          .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi (hồ sơ pháp lý): ' + err.message, false); })
+          .CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL();
+      })
+      .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi (ảnh): ' + err.message, false); })
+      .CHUYEN_DOI_TEN_FILE_ANH_SANG_URL();
+  }
+
+  function batTriggerChuyenDoiAnh() {
+    showMsg('msgChuyenDoiAnh', '⌛ Đang bật...', true);
+    google.script.run
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+      .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
+      .THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL();
+  }
+
+  function tatTriggerChuyenDoiAnh() {
+    showMsg('msgChuyenDoiAnh', '⌛ Đang tắt...', true);
+    google.script.run
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+      .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
+      .TAT_TRIGGER_CHUYEN_DOI_ANH_URL();
   }
 
   // ---- Cài đặt Vùng ----

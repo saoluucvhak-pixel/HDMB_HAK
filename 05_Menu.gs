@@ -36,8 +36,9 @@ function onOpen() {
     .addItem('📅 Đồng bộ định dạng ngày/tháng/năm (dd/mm/yyyy)', 'DINH_DANG_NGAY_THANG_NAM_DONG_BO')
     .addItem('⚙️ Cài đặt Vùng (Locale)...', 'MO_DIALOG_CAI_DAT_VUNG')
     .addItem('📤 Xuất báo cáo MISA (Update_Hopdong_NCC_DN.xlsx)', 'XUAT_BAO_CAO_MISA_TU_MENU')
-    .addItem('⚡ Chuyển tên file ảnh sang URL thật (khắc phục "Xem chi tiết" chậm/treo — chạy 1 lần)', 'CHUYEN_DOI_TEN_FILE_ANH_SANG_URL')
-    .addItem('⚡ Chuyển hồ sơ pháp lý (DinhKemGiayTo) sang URL thật — chạy 1 lần', 'CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL')
+    .addItem('⚡ Chuyển tên file ảnh sang URL thật (khắc phục "Xem chi tiết" chậm/treo — chạy 1 lần)', 'CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU')
+    .addItem('⚡ Chuyển hồ sơ pháp lý (DinhKemGiayTo) sang URL thật — chạy 1 lần', 'CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_TU_MENU')
+    .addItem('⏱️ Bật chạy định kỳ chuyển ảnh/hồ sơ sang URL (6 tiếng/lần)', 'THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL')
     .addToUi();
 }
 

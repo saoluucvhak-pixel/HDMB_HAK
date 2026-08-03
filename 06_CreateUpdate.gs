@@ -1064,7 +1064,10 @@ function layGPSCuaRung(idRung) {
 function TAI_ANH_GPS_LEN_DRIVE(base64Data, mimeType, tenFileGoc) {
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
   try {
-    const folder = layHoacTaoThuMucAnh_();
+    // ⚠️ ĐÃ SỬA: trước đây dùng CHUNG thư mục với ảnh hiện trường
+    // (layHoacTaoThuMucAnh_) — giờ tách thư mục RIÊNG cho ảnh minh chứng GPS,
+    // để cấu hình được độc lập ở trang Thiết lập.
+    const folder = layHoacTaoThuMucAnhGPS_();
     const bytes = Utilities.base64Decode(base64Data);
     const ten = tenFileGoc || ('gps_' + new Date().getTime() + '.jpg');
     const blob = Utilities.newBlob(bytes, mimeType || 'image/jpeg', ten);
@@ -1073,6 +1076,20 @@ function TAI_ANH_GPS_LEN_DRIVE(base64Data, mimeType, tenFileGoc) {
   } catch (e) {
     return { thanhCong: false, loi: e.message };
   }
+}
+
+/** Lấy (hoặc tạo mới) thư mục Drive RIÊNG lưu ảnh minh chứng cho từng điểm GPS
+ *  (khác thư mục ảnh hiện trường HD_Picture) — ưu tiên thư mục đã cấu hình qua
+ *  trang Thiết lập (Script Property GPS_ANH_FOLDER_ID). */
+function layHoacTaoThuMucAnhGPS_() {
+  const idDaCauHinh = PropertiesService.getScriptProperties().getProperty('GPS_ANH_FOLDER_ID');
+  if (idDaCauHinh) {
+    try { return DriveApp.getFolderById(idDaCauHinh); } catch (e) { /* ID đã lưu không mở được nữa -> rơi về tìm/tạo theo tên bên dưới */ }
+  }
+  const ten = 'HD_GPS_Images';
+  const it = DriveApp.getFoldersByName(ten);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(ten);
 }
 
 /** Thêm 1 link ảnh CÓ SẴN (đã có trên Drive, dán trực tiếp) vào HD_Picture của 1 hợp đồng — không qua luồng nháp/EXIF vì đây là link có sẵn, không phải file mới tải lên. */
@@ -1094,7 +1111,14 @@ function THEM_LINK_ANH_HOP_DONG(idHD, url) {
 
 /** Lấy (hoặc tạo mới) thư mục Drive lưu hồ sơ pháp lý (CCCD/GCN QSDĐ/giấy xác nhận/ủy quyền...) */
 function layHoacTaoThuMucHoSo_() {
-  const ten = 'HD_HoSo_PhapLy';
+  // Ưu tiên thư mục đã cấu hình qua trang Thiết lập (Script Property) — giống
+  // cơ chế của layHoacTaoThuMucAnh_(), cho phép trỏ sang thư mục khác mà không
+  // cần sửa code.
+  const idDaCauHinh = PropertiesService.getScriptProperties().getProperty('HOSO_FOLDER_ID');
+  if (idDaCauHinh) {
+    try { return DriveApp.getFolderById(idDaCauHinh); } catch (e) { /* ID đã lưu không mở được nữa -> rơi về tìm/tạo theo tên bên dưới */ }
+  }
+  const ten = 'HD_RUNG_Files_';
   const it = DriveApp.getFoldersByName(ten);
   if (it.hasNext()) return it.next();
   return DriveApp.createFolder(ten);
