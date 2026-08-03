@@ -96,9 +96,28 @@ function kiemTraUyQuyenVaTaiKhoan_(rowNCC) {
  * Kiểm tra 1 file (theo tên/đường dẫn lưu trong sheet) có thực sự tồn tại trên Drive.
  * Hỗ trợ 2 cách lưu phổ biến: đường dẫn dạng "Folder/ten_file.jpg" hoặc chỉ tên file.
  */
+/**
+ * ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY hàm này giả định "duongDan" luôn là tên file/đường dẫn
+ * đơn giản (vd "anh_123.jpg" hoặc "folder/anh_123.jpg"), nên chỉ tách phần sau
+ * dấu "/" cuối cùng rồi tìm theo TÊN FILE. Sau khi dữ liệu DinhKemGiayTo/ảnh
+ * được chuyển sang LINK DRIVE ĐẦY ĐỦ (dạng
+ * "https://drive.google.com/file/d/FILE_ID/view"), cách tách cũ lấy nhầm phần
+ * cuối URL (vd chữ "view") làm "tên file" -> tìm không ra -> báo sai "không có
+ * hồ sơ đính kèm" dù link vẫn tồn tại và mở được bình thường.
+ * Giờ: nếu là URL Drive, trích đúng FILE ID (không phụ thuộc tên file) rồi xác
+ * minh bằng DriveApp.getFileById() — chính xác tuyệt đối, không sợ trùng tên.
+ * Nếu không phải URL (dữ liệu cũ còn sót), vẫn tra theo tên file như trước.
+ */
 function fileTonTaiTrenDrive_(duongDan) {
   try {
-    const tenFile = duongDan.split('/').pop();
+    const v = (duongDan || '').toString().trim();
+    if (!v) return false;
+    if (v.indexOf('http') === 0) {
+      const khop = v.match(/\/d\/([a-zA-Z0-9_-]+)/) || v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (!khop || !khop[1]) return false; // là URL nhưng không trích được File ID -> không xác minh được, coi như thiếu
+      try { DriveApp.getFileById(khop[1]); return true; } catch (e) { return false; } // ID không tồn tại/không có quyền xem
+    }
+    const tenFile = v.split('/').pop();
     const it = DriveApp.getFilesByName(tenFile);
     return it.hasNext();
   } catch (e) {

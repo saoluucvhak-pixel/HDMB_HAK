@@ -118,14 +118,30 @@ function layBaoCaoHoSoRung() {
   if (lastRow < 2) return [];
   const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
   const c = DRAFT_HSR_COL;
+
+  // Đọc THẲNG từ HD_GPS (xem layCoAnhVaGpsTrucTiep_ ở 00_Config.gs) để ghi đè
+  // tọa độ — đảm bảo đúng ngay cả khi Draft_HoSoRung chưa kịp đồng bộ (vd GPS
+  // được nhập thẳng vào sheet bằng tay, hoặc 1 hàm ghi nào đó quên gọi cập
+  // nhật cache này).
+  let theoIdRung = {};
+  try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* lỗi thì dùng tạm dữ liệu cache cũ bên dưới */ }
+
   return data.map(function (r) {
-    const laiCoGPS = r[c.SO_DIEM_GPS] > 0 && r[c.TOA_DO_LAT] !== '';
+    const idRung = (r[c.ID_RUNG] || '').toString().trim();
+    const ttThat = theoIdRung[idRung];
+    const laiCoGPS = ttThat ? !!ttThat.toaDo : (r[c.SO_DIEM_GPS] > 0 && r[c.TOA_DO_LAT] !== '');
     return {
-      idRung: r[c.ID_RUNG], idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: r[c.NGAY_KY], tenChuRung: r[c.TEN_CHU_RUNG],
+      // ⚠️ ngayKy/ngayGiayTo: dùng ngayToISO_() thay vì trả Date object thô —
+      // Date thô lồng trong mảng object có thể khiến CẢ response về client bị
+      // null qua google.script.run (cùng nguyên nhân đã vá ở docToanBoDraftBaoCao_,
+      // xem 00_Config.gs). Frontend vẫn dùng new Date(...) để hiển thị nên
+      // parse chuỗi ISO ra đúng ngày, không cần sửa gì ở HTML.
+      idRung: r[c.ID_RUNG], idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
       tinhTrang: r[c.TINH_TRANG] || 'Đang thực hiện',
-      hoSoNguonGoc: r[c.HO_SO_NGUON_GOC], soGiayTo: r[c.SO_GIAY_TO], ngayGiayTo: r[c.NGAY_GIAY_TO],
+      hoSoNguonGoc: r[c.HO_SO_NGUON_GOC], soGiayTo: r[c.SO_GIAY_TO], ngayGiayTo: ngayToISO_(r[c.NGAY_GIAY_TO]),
       dienTich: r[c.DIEN_TICH], khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], donGia: r[c.DON_GIA], giaTri: r[c.GIA_TRI],
-      toaDo: laiCoGPS ? { lat: r[c.TOA_DO_LAT], lng: r[c.TOA_DO_LNG] } : null, soDiemGPS: r[c.SO_DIEM_GPS] || 0
+      toaDo: ttThat ? ttThat.toaDo : (laiCoGPS ? { lat: r[c.TOA_DO_LAT], lng: r[c.TOA_DO_LNG] } : null),
+      soDiemGPS: ttThat ? ttThat.soDiemGPS : (r[c.SO_DIEM_GPS] || 0)
     };
   }).sort(function (a, b) { return new Date(b.ngayKy || 0) - new Date(a.ngayKy || 0); });
 }

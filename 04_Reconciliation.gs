@@ -37,13 +37,19 @@ function ocrFile_(fileId) {
   try {
     file = Drive.Files.insert(resource, DriveApp.getFileById(fileId).getBlob(), { ocr: true, ocrLanguage: 'vi' });
   } catch (e) {
-    if (e.message && e.message.indexOf('OCR is not supported') !== -1) {
-      throw new Error(
-        'File này đã bị Google Drive tự động chuyển sang định dạng Google Docs khi tải lên (cài đặt Drive "Convert uploads to Google Docs" đang bật), nên không OCR được nữa. ' +
-        'Vào Google Drive → ⚙️ Cài đặt → bỏ tick "Chuyển đổi các bản tải lên sang định dạng trình chỉnh sửa Google" rồi tải file lại.'
-      );
+    // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY chỉ đoán 1 nguyên nhân duy nhất (Convert uploads to
+    // Google Docs) rồi hiện lời khuyên cố định, CHE MẤT lỗi gốc thật từ Google.
+    // Nếu bạn đã bỏ tick cài đặt đó mà vẫn lỗi, nghĩa là nguyên nhân thật có thể
+    // KHÁC (vd file quá lớn, định dạng ảnh không được OCR hỗ trợ, quyền
+    // OAuth/API bị giới hạn...). Giờ LUÔN hiện đúng câu lỗi gốc từ Google trước,
+    // kèm gợi ý CÓ THỂ ĐÚNG (không chắc chắn) ngay sau — để không bị bế tắc nếu
+    // đoán sai.
+    const loiGoc = (e && e.message) ? e.message : e.toString();
+    let goiY = '';
+    if (loiGoc.indexOf('OCR is not supported') !== -1) {
+      goiY = ' 👉 Gợi ý (chưa chắc đúng, cần xác nhận): có thể do file đã bị Google Drive tự động chuyển sang định dạng Google Docs khi tải lên — kiểm tra cài đặt "Convert uploads to Google Docs" ở ĐÚNG tài khoản đang chạy web app (executeAs), không phải tài khoản bạn đang xem trang.';
     }
-    throw e;
+    throw new Error('Lỗi OCR gốc từ Google: "' + loiGoc + '".' + goiY);
   }
   const doc = DocumentApp.openById(file.id);
   const text = doc.getBody().getText();
@@ -181,10 +187,23 @@ function doiChieuMotLoRung_(row) {
   const duongDan = (row[RUNG_COL.DINH_KEM_GIAY_TO] || '').toString().trim();
   if (!duongDan) { ketQua.loi = 'Không có file đính kèm để đối chiếu'; return ketQua; }
 
-  const tenFile = duongDan.split('/').pop();
-  const it = DriveApp.getFilesByName(tenFile);
-  if (!it.hasNext()) { ketQua.loi = 'Không tìm thấy file trên Drive: ' + tenFile; return ketQua; }
-  const fileId = it.next().getId();
+  // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY luôn giả định duongDan là TÊN FILE đơn giản, tách phần
+  // sau dấu "/" cuối rồi tìm theo tên (DriveApp.getFilesByName). Sau khi dữ
+  // liệu DinhKemGiayTo được chuyển sang LINK DRIVE ĐẦY ĐỦ, cách tách cũ lấy
+  // nhầm phần cuối URL (vd chữ "view") làm "tên file" -> luôn báo "Không tìm
+  // thấy file". Giờ nếu là URL thì trích đúng FILE ID để mở trực tiếp bằng
+  // getFileById() — chính xác tuyệt đối; nếu không phải URL (dữ liệu cũ còn
+  // sót) thì vẫn tra theo tên file như trước.
+  let fileId = null;
+  if (duongDan.indexOf('http') === 0) {
+    const khop = duongDan.match(/\/d\/([a-zA-Z0-9_-]+)/) || duongDan.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (khop && khop[1]) fileId = khop[1];
+  } else {
+    const tenFile = duongDan.split('/').pop();
+    const it = DriveApp.getFilesByName(tenFile);
+    if (it.hasNext()) fileId = it.next().getId();
+  }
+  if (!fileId) { ketQua.loi = 'Không tìm thấy file trên Drive: ' + duongDan; return ketQua; }
 
   try {
     const text = ocrFile_(fileId);

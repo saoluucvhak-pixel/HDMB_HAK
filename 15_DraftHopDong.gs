@@ -203,7 +203,7 @@ function LUU_CHINH_THUC(idDraft) {
       idRungThat = kq.idRung;
     }
     (rg.gpsMoi || []).forEach(function (p) {
-      const kqGps = CAP_NHAT_GPS_RUNG(idRungThat, { lat: p.lat, lng: p.lng }, false);
+      const kqGps = CAP_NHAT_GPS_RUNG(idRungThat, { lat: p.lat, lng: p.lng, anhUrl: p.anhUrl || '' }, false);
       if (!kqGps.thanhCong) loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
     });
   });

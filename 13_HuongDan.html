@@ -3,22 +3,180 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; line-height: 1.6; color: #1c2a22; padding: 4px 16px 16px; }
-    h1 { font-size: 18px; border-bottom: 3px solid #2e7d32; padding-bottom: 8px; }
-    h2 { font-size: 15px; color: #2e7d32; margin-top: 22px; }
-    h3 { font-size: 13px; color: #1c2a22; margin-top: 14px; }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
-    th { background: #1c2a22; color: #fff; }
-    tr:nth-child(even) { background: #f7f7f7; }
-    pre { background: #f0fff4; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
-    code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-    .warn { background: #fdecea; border-left: 4px solid #e74c3c; padding: 8px 12px; margin: 10px 0; }
-    a { color: #2e7d32; }
-  </style>
+<style>
+
+  :root {
+    --sidebar-bg: #14231b;
+    --sidebar-bg-2: #182a20;
+    --active-green: #2f7d52;
+    --accent-gold: #c9973f;
+    --accent-purple: #6b4a63;
+    --text-light: #cdd6d0;
+    --text-muted: #7d8c84;
+    --card-bg: #ffffff;
+    --page-bg: #f2f3f1;
+    --border-light: #e5e7e5;
+    --heading: #1c2a22;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; display: flex; min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--page-bg); color: var(--heading);
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .app-sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
+  }
+  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
+
+  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
+    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
+  .tab-bar a, .tab-bar span {
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  /* Modal "Xem chi tiết lô rừng" — nổi giữa màn hình, không phụ thuộc vị trí
+     cuộn trang, vì bảng Hồ sơ rừng có thể rất dài (hàng trăm dòng) khiến card
+     cũ (nằm ngay sau bảng, theo dòng chảy trang bình thường) bị đẩy xuống tít
+     dưới, người dùng phải cuộn rất xa mới thấy. */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,35,27,0.55);
+    z-index: 1000; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.mo { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: 12px; padding: 22px 24px;
+    max-width: 640px; width: 100%; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-purple { background: var(--accent-purple); color: #fff; }
+  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
+  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+    .brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
+  }
+</style>
+<style>
+  .app-main h1 { font-size: 20px; border-bottom: 3px solid var(--active-green); padding-bottom: 8px; margin-top: 0; }
+  .app-main h2 { font-size: 16px; color: var(--active-green); margin-top: 24px; }
+  .app-main h3 { font-size: 13px; color: var(--heading); margin-top: 14px; }
+  .app-main table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
+  .app-main table th, .app-main table td { border: 1px solid var(--border-light); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .app-main table th { background: var(--sidebar-bg); color: #fff; }
+  .app-main table tr:nth-child(even) { background: #f7f7f7; }
+  .app-main pre { background: #f0fff4; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+  .app-main code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .app-main .warn { background: #fdecea; border-left: 4px solid #e74c3c; padding: 8px 12px; margin: 10px 0; }
+  .app-main a { color: var(--active-green); }
+</style>
 </head>
 <body>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+
+  <div class="nav-group-label">Khác</div>
+  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
+    <span class="icon">📖</span> Hướng dẫn sử dụng
+  </a>
+  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
+    <span class="icon">⚙️</span> Thiết lập
+  </a>
+</div>
+
+  <div class="app-main">
+
 
 <h1>📖 Hướng dẫn sử dụng — Hệ thống Quản lý Hợp đồng Gỗ Keo</h1>
 
@@ -33,6 +191,10 @@
 <h2>2. Quy trình nhập liệu — từng bước</h2>
 <h3>Bước 1 — Tạo hợp đồng mới</h3>
 <p>Trang <b>📝 Nhập liệu</b> → "➕ Tạo hợp đồng mới" → điền Họ tên/CCCD/Ngày ký *(bắt buộc)* → có thể dùng "📄 Nhập nhanh từ bản scan" để tự đọc CCCD/giấy ủy quyền (luôn kiểm tra lại) → "💾 Lưu thông tin hợp đồng".</p>
+<ul>
+  <li><b>Địa chỉ thường trú</b> và <b>Nơi cấp CCCD</b>: gõ vài ký tự sẽ hiện gợi ý từ các giá trị đã từng nhập trước đó (đỡ gõ lại từ đầu, tránh sai chính tả giữa các lần).</li>
+  <li><b>Nhóm KH/NCC</b>: chọn 31121 hoặc 31122 — dùng khi xuất báo cáo sang phần mềm MISA (cột "Nhóm KH/NCC" trong <code>Update_DM_NCC</code>). Nếu không chắc chọn mã nào, để trống và điền tay sau khi xuất file.</li>
+</ul>
 
 <h3>Bước 2 — Thêm lô rừng</h3>
 <p>"➕ Thêm hợp đồng rừng" → điền Địa chỉ/Diện tích/Đơn giá (KL tự tính = 120 tấn/ha × DT) → "💾 Lưu lô rừng" → form mở thêm khu vực <b>Hồ sơ/GPS/Ảnh</b>:</p>
@@ -94,5 +256,40 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 </table>
 
 
+<h2>5. Nhập nhanh từ bản scan (OCR)</h2>
+<p>Ở form Nhập liệu, khu vực "📄 Nhập nhanh từ bản scan" cho phép chọn ảnh/PDF CCCD hoặc giấy ủy quyền, hệ thống tự đọc chữ trong ảnh (OCR thật, không phải đọc thuộc tính file) rồi điền tạm vào nháp.</p>
+<div class="warn">
+  ⚠️ <b>Luôn xem lại kết quả trước khi "Lưu chính thức"</b> — độ chính xác phụ thuộc ảnh có rõ nét, đủ sáng, không nghiêng hay không. Nếu gặp lỗi <code>"OCR is not supported for files of type application/vnd.google-apps.document"</code>, vào Google Drive (đúng tài khoản đang chạy web app, xem ở Deploy → Manage deployments → "Execute as") → ⚙️ Cài đặt → mục "Tải lên" → tắt "Chuyển đổi các bản tải lên sang định dạng trình chỉnh sửa Google".
+</div>
+
+<h2>6. Xem chi tiết lô rừng (tọa độ + hồ sơ + ảnh)</h2>
+<p>Ở tab <b>🌲 Hồ sơ rừng</b> (Báo cáo tổng hợp), bấm "🔄 Tải báo cáo" rồi bấm "📍 Xem chi tiết" trên dòng cần xem — hiện lên khung nổi giữa màn hình (đóng bằng nút ✕, bấm ra ngoài, hoặc phím Esc), gồm:</p>
+<ul>
+  <li><b>Tọa độ GPS</b> — từng điểm đã đo, có link mở Google Maps</li>
+  <li><b>Hồ sơ pháp lý</b> — loại hồ sơ, số giấy tờ, link file đính kèm (bấm mở trực tiếp)</li>
+  <li><b>Ảnh hiện trường</b> — tách 2 nhóm: "Ảnh riêng của lô rừng này" (chắc chắn đúng lô) và "Ảnh chung của cả hợp đồng" (chưa rõ thuộc lô nào cụ thể nếu hợp đồng có nhiều lô)</li>
+</ul>
+
+<h2>7. Tab Thanh toán</h2>
+<p>Bấm "🔄 Tải báo cáo" để xem tổng hợp thanh toán theo từng Số tài khoản (gộp từ DNTT_GK_DN_CT). 3 ô lọc phía trên (Người nhận tiền / Số hợp đồng / Tên chủ rừng) vừa gõ tìm tự do, vừa bấm vào ô sẽ hiện gợi ý có sẵn để chọn nhanh.</p>
+
+<h2>8. Công cụ hệ thống (menu "🚀 HỆ THỐNG HAK" trên Google Sheet)</h2>
+<table>
+<tr><th>Công cụ</th><th>Khi nào dùng</th></tr>
+<tr><td>🔄 Xây dựng lại Draft báo cáo</td><td>Chỉ 1 lần lúc cài đặt ban đầu, hoặc khi nghi ngờ Draft bị sai lệch nhiều</td></tr>
+<tr><td>🌲 Xây dựng lại cache Hồ sơ rừng</td><td>Tương tự, riêng cho tab Hồ sơ rừng</td></tr>
+<tr><td>⏱️ Bật đồng bộ định kỳ phần thanh toán</td><td>Bật 1 lần để "Khối lượng thực hiện" tự cập nhật mỗi 30 phút khi DNTT_GK_DN_CT có dữ liệu mới</td></tr>
+<tr><td>💰 Đồng bộ thanh toán NGAY</td><td>Muốn cập nhật ngay, không chờ 30 phút (vd vừa sửa DNTT_GK_DN_CT xong)</td></tr>
+<tr><td>🛰️ Chẩn đoán GPS lô rừng</td><td>Khi "Xem chi tiết" không hiện tọa độ dù đã đo</td></tr>
+<tr><td>🖼️ Chẩn đoán ảnh / 🔎 Chẩn đoán ảnh theo 1 lô rừng</td><td>Khi ảnh không hiện link mở được</td></tr>
+<tr><td>⚡ Chuyển tên file ảnh / hồ sơ pháp lý sang URL thật</td><td>Chạy 1 lần nếu "Xem chi tiết" bị chậm/treo lúc hiện ảnh</td></tr>
+<tr><td>🔎 Chẩn đoán Số HĐ trong Hồ sơ rừng</td><td>Khi lọc theo Số HĐ ở tab Hồ sơ rừng ra trống bất thường</td></tr>
+<tr><td>📝 Định dạng TEXT cho cột quan trọng</td><td>Chạy 1 lần — giữ Số CCCD/SĐT/Số TK/Số HĐ... không bị Sheets tự chuyển thành số (mất số 0 đầu)</td></tr>
+<tr><td>📅 Đồng bộ định dạng ngày/tháng/năm</td><td>Chạy 1 lần — đặt hiển thị ngày kiểu dd/mm/yyyy cho các cột ngày</td></tr>
+</table>
+<div class="warn">✅ Menu "📅 Đồng bộ định dạng ngày/tháng/năm" đã tự đặt luôn <b>Vùng địa lý (Locale) = Việt Nam</b> cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng bằng code — không cần vào Cài đặt bảng tính làm tay nữa.</div>
+
+
+  </div>
 </body>
 </html>

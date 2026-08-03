@@ -27,6 +27,17 @@ function onOpen() {
     .addItem('📂 Mở file Báo cáo/Cache riêng', 'MO_FILE_BAO_CAO_RIENG')
     .addItem('⚡ Bật bẫy nhật ký tự động (HD_NCC/RUNG/STK/GPS/Picture)', 'THIET_LAP_TRIGGER_ONEDIT_DRAFT')
     .addItem('⏱️ Bật đồng bộ định kỳ phần thanh toán (30 phút/lần)', 'THIET_LAP_TRIGGER_DONG_BO_THANH_TOAN')
+    .addItem('💰 Đồng bộ thanh toán NGAY (không chờ 30 phút)', 'CHAY_DONG_BO_THANH_TOAN_NGAY')
+    .addItem('🛰️ Chẩn đoán GPS lô rừng (vì sao không hiện tọa độ)', 'CHAN_DOAN_GPS_TOAN_BO')
+    .addItem('🖼️ Chẩn đoán ảnh (vì sao không có link xem)', 'CHAN_DOAN_ANH_TOAN_BO')
+    .addItem('🔎 Chẩn đoán ảnh theo 1 lô rừng cụ thể (lệch ID_HD)', 'CHAN_DOAN_ANH_THEO_RUNG_TU_MENU')
+    .addItem('🔎 Chẩn đoán Số HĐ trong Hồ sơ rừng (lọc ra trống)', 'CHAN_DOAN_SO_HD_HOSORUNG')
+    .addItem('📝 Định dạng TEXT cho cột quan trọng (CCCD/SĐT/Số HĐ/Số TK...)', 'DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_TU_MENU')
+    .addItem('📅 Đồng bộ định dạng ngày/tháng/năm (dd/mm/yyyy)', 'DINH_DANG_NGAY_THANG_NAM_DONG_BO')
+    .addItem('⚙️ Cài đặt Vùng (Locale)...', 'MO_DIALOG_CAI_DAT_VUNG')
+    .addItem('📤 Xuất báo cáo MISA (Update_Hopdong_NCC_DN.xlsx)', 'XUAT_BAO_CAO_MISA_TU_MENU')
+    .addItem('⚡ Chuyển tên file ảnh sang URL thật (khắc phục "Xem chi tiết" chậm/treo — chạy 1 lần)', 'CHUYEN_DOI_TEN_FILE_ANH_SANG_URL')
+    .addItem('⚡ Chuyển hồ sơ pháp lý (DinhKemGiayTo) sang URL thật — chạy 1 lần', 'CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL')
     .addToUi();
 }
 

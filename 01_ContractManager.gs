@@ -214,13 +214,63 @@ function layTinhHinhThucHien() {
  *  thay vì đọc trực tiếp HD_RUNG+HD_GPS+HD_NCC mỗi lần tải (nguyên nhân treo/nghẽn
  *  khi HD_RUNG nhiều dòng). KHÔNG khai báo lại ở đây để tránh xung đột hàm trùng tên. */
 
-/** Chi tiết đầy đủ 1 lô rừng (tọa độ từng điểm + ảnh) — dùng khi bấm "Xem chi tiết" */
+/**
+ * Chi tiết đầy đủ 1 lô rừng (tọa độ từng điểm + ảnh) — dùng khi bấm "Xem chi tiết".
+ *
+ * ⚠️ ĐÃ SỬA: trước đây CHỈ lấy ảnh từ Draft_AnhRung (bảng nháp của luồng "Tải ảnh
+ * kiểm tra -> Duyệt") — bảng này CHỈ có dữ liệu nếu ảnh đi đúng luồng đó và có
+ * gán rõ ID_RUNG. Ảnh thêm bằng "dán link ảnh có sẵn" (THEM_LINK_ANH_HOP_DONG)
+ * hoặc ảnh import sẵn từ trước ghi THẲNG vào HD_Picture và KHÔNG hề có mặt
+ * trong Draft_AnhRung -> "Xem chi tiết" trước đây luôn trống với các ảnh này.
+ * Lưu ý cấu trúc gốc: HD_Picture chỉ lưu theo ID_HD (cả hợp đồng), KHÔNG lưu
+ * theo từng lô rừng riêng — nên không thể biết chắc 1 ảnh trong HD_Picture
+ * thuộc lô rừng cụ thể nào. Giải pháp: hiện thêm khối "Ảnh chung của hợp đồng"
+ * (đọc từ HD_Picture) bên cạnh khối "Ảnh riêng của lô rừng này" (Draft_AnhRung,
+ * chính xác theo lô vì có ID_RUNG) — ghi rõ nhãn để không gây hiểu lầm.
+ */
 function layChiTietHoSoMotLoRung(idRung) {
+  idRung = (idRung || '').toString().trim();
+  const rungRows = readData_(SHEET_NAME.HD_RUNG);
+  const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
+  const idHD = rung ? (rung[RUNG_COL.ID_KEY_HD] || '').toString().trim() : '';
+  const rungCungHopDong = idHD ? rungRows.filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD; }) : [];
+  const tongSoLoCuaHopDong = rungCungHopDong.length;
+
+  // ⚠️ ĐÃ SỬA: dữ liệu xác nhận cột "ID_HD" trong HD_Picture có thể lưu ĐÚNG
+  // CHỦ ĐỊNH giá trị ID_RUNG (không phải lỗi/nhầm lẫn) để gán ảnh cho MỘT lô
+  // rừng cụ thể. Vậy ảnh khớp ID_RUNG của ĐÚNG lô đang xem phải xếp vào
+  // "Ảnh riêng của lô rừng này" — KHÔNG phải "ảnh chung chưa gán" như trước.
+  // Chỉ ảnh khớp ID_HD thật của hợp đồng, hoặc khớp ID_RUNG của MỘT LÔ KHÁC
+  // (không phải lô đang xem), mới thật sự là "ảnh chung/mơ hồ, chưa rõ của lô nào".
+  const anhTuHDPictureTheoDungLoNay = layAnhTheoDinhDanhHDPicture_(idRung);
+  const anhRiengCuaLo = layDraftAnhChoRung(idRung).filter(function (a) { return a.trangThai === 'Đã duyệt'; }).concat(anhTuHDPictureTheoDungLoNay);
+
+  let anhChungMoHo = idHD ? layAnhTheoDinhDanhHDPicture_(idHD) : [];
+  rungCungHopDong.forEach(function (r) {
+    const idRungKhac = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
+    if (idRungKhac && idRungKhac !== idRung) anhChungMoHo = anhChungMoHo.concat(layAnhTheoDinhDanhHDPicture_(idRungKhac));
+  });
+
   return {
     toaDo: layGPSCuaRung(idRung),
-    anh: layDraftAnhChoRung(idRung).filter(function (a) { return a.trangThai === 'Đã duyệt'; })
+    anh: anhRiengCuaLo,
+    anhChungHopDong: anhChungMoHo,
+    tongSoLoCuaHopDong: tongSoLoCuaHopDong,
+    // ⚠️ BỔ SUNG: TRƯỚC ĐÂY "Xem chi tiết" hoàn toàn không trả về link hồ sơ
+    // pháp lý (DinhKemGiayTo — CCCD/GCN QSDĐ/giấy xác nhận nguồn gốc...) của lô
+    // rừng, dù dữ liệu này đã có sẵn trong HD_RUNG — nên không có gì để hiện dù
+    // đã đính kèm. Dùng lại resolveDriveLink_() đã có sẵn (06_CreateUpdate.gs)
+    // để lấy link bấm mở được trực tiếp, giống hệt cách trang "Kiểm tra hồ sơ" làm.
+    hoSoPhapLy: rung ? {
+      hoSoNguonGoc: rung[RUNG_COL.HO_SO_NGUON_GOC] || '',
+      soGiayTo: rung[RUNG_COL.SO_GIAY_TO] || '',
+      dinhKem: resolveDriveLink_(rung[RUNG_COL.DINH_KEM_GIAY_TO])
+    } : null
   };
 }
+
+
+
 
 /**
  * Báo cáo tổng hợp thanh toán theo hợp đồng và chủ rừng — gộp theo Số TK nhận
@@ -653,18 +703,56 @@ function THIET_LAP_TRIGGER_DONG_BO_THANH_TOAN() {
   SpreadsheetApp.getUi().alert('✅ Đã thiết lập đồng bộ định kỳ (30 phút/lần) cho phần thanh toán/thực hiện từ DNTT_GK_DN_CT.');
 }
 
+/**
+ * Đồng bộ thanh toán/thực hiện NGAY LẬP TỨC — bỏ qua mọi kiểm tra "có thay đổi
+ * hay không" (khác với dongBoThanhToanNeuCoThayDoi_ vốn chỉ chạy trigger 30
+ * phút/lần và có thể bỏ lỡ). Dùng để: (1) khắc phục ngay dữ liệu "Khối lượng
+ * thực hiện" đang bị cũ/sai do cache chưa từng được làm mới, hoặc (2) chạy thử
+ * sau khi vừa sửa DNTT_GK_DN_CT để xác nhận báo cáo đã cập nhật đúng.
+ */
+function CHAY_DONG_BO_THANH_TOAN_NGAY() {
+  const ss = SpreadsheetApp.openByUrl(DNTT_URL);
+  const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('DNTT_SO_DONG_LAN_TRUOC', sh.getLastRow().toString());
+  try { props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', DriveApp.getFileById(ss.getId()).getLastUpdated().getTime().toString()); } catch (e) { /* bỏ qua nếu không lấy được */ }
+
+  luuCacheBaoCao_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_());
+  luuCacheBaoCao_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_());
+
+  const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+  idsHopDong.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); });
+
+  const thongBao = '✅ Đã đồng bộ lại "Khối lượng/Giá trị thực hiện" cho ' + idsHopDong.length + ' hợp đồng từ DNTT_GK_DN_CT mới nhất.';
+  try { SpreadsheetApp.getUi().alert(thongBao); } catch (e) { /* chạy từ editor thì bỏ qua UI */ }
+  return thongBao;
+}
+
 function dongBoThanhToanNeuCoThayDoi_() {
   try {
     const ss = SpreadsheetApp.openByUrl(DNTT_URL);
     const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
     const soDongHienTai = sh.getLastRow();
 
+    // ⚠️ TRƯỚC ĐÂY: chỉ so sánh SỐ DÒNG để phát hiện thay đổi — nếu ai đó SỬA
+    // giá trị trong 1 dòng CÓ SẴN của DNTT_GK_DN_CT (không thêm dòng mới), số
+    // dòng không đổi -> hệ thống tưởng "không có gì mới" và bỏ qua, khiến
+    // "Khối lượng thực hiện" trong báo cáo bị SAI/CŨ so với DNTT thực tế. Giờ
+    // kiểm tra THÊM thời điểm sửa đổi gần nhất của file (Drive lastUpdated) —
+    // bắt được cả việc sửa tại chỗ, không chỉ thêm/xóa dòng.
+    let thoiGianSuaGanNhat = null;
+    try { thoiGianSuaGanNhat = DriveApp.getFileById(ss.getId()).getLastUpdated().getTime(); } catch (e) { /* không lấy được thì bỏ qua, vẫn dùng số dòng làm cơ sở */ }
+
     const props = PropertiesService.getScriptProperties();
     const soDongLanTruoc = Number(props.getProperty('DNTT_SO_DONG_LAN_TRUOC') || 0);
+    const thoiGianLanTruoc = Number(props.getProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC') || 0);
 
-    if (soDongHienTai === soDongLanTruoc) return; // không có gì mới, khỏi cập nhật
+    const coThayDoiSoDong = soDongHienTai !== soDongLanTruoc;
+    const coThayDoiNoiDung = thoiGianSuaGanNhat !== null && thoiGianSuaGanNhat !== thoiGianLanTruoc;
+    if (!coThayDoiSoDong && !coThayDoiNoiDung) return; // không có gì mới (cả số dòng lẫn thời điểm sửa đều giữ nguyên), khỏi cập nhật
 
     props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDongHienTai.toString());
+    if (thoiGianSuaGanNhat !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSuaGanNhat.toString());
 
     // Làm mới 2 cache liên quan đến thanh toán TRƯỚC (tính 1 LẦN DUY NHẤT ở đây,
     // không phải để mỗi hợp đồng tự đọc lại DNTT_GK_DN_CT/PhieuCan_DN riêng lẻ)

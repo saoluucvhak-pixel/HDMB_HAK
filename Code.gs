@@ -62,6 +62,26 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  if (page === "huongdan") {
+    var tmplHuongDan = HtmlService.createTemplateFromFile('13_HuongDan');
+    tmplHuongDan.baseUrl = ScriptApp.getService().getUrl();
+    tmplHuongDan.currentPage = 'huongdan';
+    return tmplHuongDan.evaluate()
+      .setTitle('📖 Hướng dẫn sử dụng HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (page === "thietlap") {
+    var tmplThietLap = HtmlService.createTemplateFromFile('24_Page_ThietLap');
+    tmplThietLap.baseUrl = ScriptApp.getService().getUrl();
+    tmplThietLap.currentPage = 'thietlap';
+    return tmplThietLap.evaluate()
+      .setTitle('⚙️ Thiết lập HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   var tmplMap = HtmlService.createTemplateFromFile('MapContainer');
   tmplMap.baseUrl = ScriptApp.getService().getUrl();
   tmplMap.currentPage = '';

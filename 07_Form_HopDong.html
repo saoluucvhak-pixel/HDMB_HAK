@@ -1,151 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <base target="_top">
-  <meta charset="UTF-8">
-<style>
-  :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
-    --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-    background: var(--page-bg); color: var(--heading);
-  }
-
-  /* ---------- SIDEBAR ---------- */
-  .app-sidebar {
-    width: 250px; min-width: 250px; background: var(--sidebar-bg);
-    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
-  .brand .logo {
-    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
-    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
-  }
-  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
-  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
-
-  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
-    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
-  }
-  .nav-item:hover { background: rgba(255,255,255,0.05); }
-  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
-  .nav-item .icon { width: 18px; text-align: center; }
-
-  /* ---------- MAIN CONTENT ---------- */
-  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
-  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
-
-  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
-  .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
-    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
-  }
-  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
-
-  .card {
-    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
-    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  }
-  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
-
-  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
-  .field input, .field select {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
-  }
-
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
-    font-size: 13px; font-weight: 700; cursor: pointer; }
-  .btn-green { background: var(--active-green); color: #fff; }
-  .btn-gold { background: var(--accent-gold); color: #fff; }
-  .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
-  .btn:disabled { opacity: .6; cursor: not-allowed; }
-
-  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .kpi-card {
-    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
-    border-radius: 10px; padding: 18px 20px;
-  }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
-  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
-
-  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
-
-  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
-  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
-
-  @media (max-width: 800px) {
-    body { flex-direction: column; }
-    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
-    .brand { display: none; }
-    .nav-group-label { display: none; }
-    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
-    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
-  }
-</style>
-</head>
-<body>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
-
-  <div class="app-main">
 <style>
   .hint { font-size: 11px; color: #889; }
   .khoa-khi-thanh-ly[disabled] { opacity: .6; }
@@ -195,7 +47,6 @@
 <div id="breadcrumbBar" class="breadcrumb-bar"></div>
 
 <datalist id="dlDiaChi"></datalist>
-<datalist id="dlNoiCap"></datalist>
 <datalist id="dlNganHang">
   <option value="Vietcombank"><option value="Agribank"><option value="BIDV"><option value="Vietinbank">
   <option value="Techcombank"><option value="MBBank"><option value="ACB"><option value="Sacombank">
@@ -272,7 +123,7 @@
     <div class="field-row">
       <div class="field"><label>Số hợp đồng <span class="hint">(để trống sẽ tự sinh)</span></label><input id="soHD" placeholder="Tự động nếu để trống"></div>
       <div class="field"><label>Ngày cấp CCCD</label><input id="ngayCap" type="date"></div>
-      <div class="field"><label>Nơi cấp CCCD</label><input id="noiCap" list="dlNoiCap"></div>
+      <div class="field"><label>Nơi cấp CCCD</label><input id="noiCap"></div>
     </div>
     <div class="field-row">
       <div class="field"><label>Số điện thoại</label><input id="sdtChuRung"></div>
@@ -287,16 +138,6 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Nhóm KH/NCC <span class="hint">(dùng khi xuất báo cáo sang MISA)</span></label>
-        <select id="nhomKH">
-          <option value="">-- Chọn --</option>
-          <option value="31121">31121</option>
-          <option value="31122">31122</option>
-        </select>
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
         <label>Ủy quyền thanh toán?</label>
         <select id="uyQuyenTT" onchange="toggleUyQuyen()"><option>Không</option><option>Có</option></select>
       </div>
@@ -305,7 +146,7 @@
     </div>
     <div class="field-row" id="khoUyQuyenThem" style="display:none">
       <div class="field"><label>Ngày cấp CCCD người ủy quyền</label><input id="ngayCapUyQuyen" type="date"></div>
-      <div class="field"><label>Nơi cấp CCCD người ủy quyền</label><input id="noiCapUyQuyen" list="dlNoiCap"></div>
+      <div class="field"><label>Nơi cấp CCCD người ủy quyền</label><input id="noiCapUyQuyen"></div>
       <div class="field"><label>Số điện thoại người ủy quyền</label><input id="sdtUyQuyen"></div>
     </div>
     <div class="field-row" id="khoUyQuyenThem2" style="display:none">
@@ -427,9 +268,6 @@
         <div class="field"><label>Kinh độ (Lng)</label><input id="gpsLngTay" placeholder="vd: 108.126"></div>
         <div class="field"><label>&nbsp;</label><button class="btn btn-green" style="width:100%" onclick="themDiemGPSVaoNhap()">➕ Thêm điểm (nháp)</button></div>
       </div>
-      <input type="file" id="fileAnhChoDiemGPS" accept="image/*" style="display:none">
-      <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhChoDiemGPS').click()">📷 Ảnh minh chứng cho điểm này (tùy chọn)...</button>
-      <span id="tenFileAnhChoDiemGPS" class="hint" style="margin-left:8px"></span>
       <input type="file" id="fileAnhLayGPS" accept="image/*" style="display:none">
       <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhLayGPS').click()">📁 Lấy tọa độ từ ảnh (EXIF)...</button>
       <span id="tenFileAnhLayGPS" class="hint" style="margin-left:8px"></span>
@@ -446,10 +284,7 @@
       <span id="tenFileAnhHienTruong" class="hint" style="margin-left:8px"></span>
       <button class="btn btn-green" style="margin-top:8px" onclick="taiAnhHienTruong()">⬆️ Tải lên (vào hàng chờ duyệt)</button>
       <div id="msgAnh" class="msg" style="display:none;margin-top:8px"></div>
-      <p class="hint" style="margin-top:10px">📌 Ảnh riêng của lô rừng này (chờ duyệt / đã duyệt):</p>
-      <div id="dsAnh" style="margin-top:4px"></div>
-      <p class="hint" style="margin-top:14px">📁 Ảnh chung của cả hợp đồng (thêm bằng cách khác, vd dán link — không phân biệt lô rừng nào):</p>
-      <div id="dsAnhChungHopDong" style="margin-top:4px"></div>
+      <div id="dsAnh" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -516,7 +351,6 @@
       tenChuRung: val('tenChuRung'), cccdChuRung: val('cccdChuRung'), soHD: val('soHD'),
       ngayKy: val('ngayKy'), ngayCap: val('ngayCap'), noiCap: val('noiCap'), sdtChuRung: val('sdtChuRung'),
       diaChiThuongTru: val('diaChiThuongTru'), tinhTrang: val('tinhTrang'), uyQuyenTT: val('uyQuyenTT'),
-      nhomKH: val('nhomKH'),
       tenUyQuyen: val('tenUyQuyen'), cccdUyQuyen: val('cccdUyQuyen'), ngayCapUyQuyen: val('ngayCapUyQuyen'),
       noiCapUyQuyen: val('noiCapUyQuyen'), sdtUyQuyen: val('sdtUyQuyen'), diaChiUyQuyen: val('diaChiUyQuyen')
     };
@@ -541,8 +375,6 @@
     });
     var f3 = document.getElementById('fileAnhLayGPS');
     if (f3) f3.addEventListener('change', function () { taiAnhLayGPS(); });
-    var f4 = document.getElementById('fileAnhChoDiemGPS');
-    if (f4) f4.addEventListener('change', function () { document.getElementById('tenFileAnhChoDiemGPS').textContent = f4.files[0] ? '✅ ' + f4.files[0].name : ''; });
   });
 
   // ============ OCR BẢN SCAN (điền vào form -> tự lưu nháp qua listener input/change) ============
@@ -589,12 +421,6 @@
       var dl = document.getElementById('dlDiaChi'); dl.innerHTML = '';
       list.forEach(function (dc) { var opt = document.createElement('option'); opt.value = dc; dl.appendChild(opt); });
     }).layGoiYDiaChi();
-  }
-  function naptDanhSachNoiCap() {
-    google.script.run.withSuccessHandler(function (list) {
-      var dl = document.getElementById('dlNoiCap'); dl.innerHTML = '';
-      list.forEach(function (nc) { var opt = document.createElement('option'); opt.value = nc; dl.appendChild(opt); });
-    }).layGoiYNoiCap();
   }
   function naptDanhSachLoaiHoSo(giuLaiGiaTri) {
     google.script.run.withSuccessHandler(function (list) {
@@ -735,7 +561,6 @@
     document.getElementById('ngayCap').value = h.ngayCap ? new Date(h.ngayCap).toISOString().split('T')[0] : '';
     setVal('noiCap', h.noiCap); setVal('sdtChuRung', h.sdtChuRung); setVal('diaChiThuongTru', h.diaChiThuongTru);
     document.getElementById('tinhTrang').value = h.tinhTrang || 'Đang thực hiện';
-    document.getElementById('nhomKH').value = h.nhomKH || '';
     document.getElementById('uyQuyenTT').value = h.uyQuyenTT || 'Không'; toggleUyQuyen();
     setVal('tenUyQuyen', h.tenUyQuyen); setVal('cccdUyQuyen', h.cccdUyQuyen);
     setVal('ngayCapUyQuyen', h.ngayCapUyQuyen ? new Date(h.ngayCapUyQuyen).toISOString().split('T')[0] : '');
@@ -827,11 +652,7 @@
     chonTabRung('gps');
     renderDsGPS_();
     if (rungDangSuaLaThat) { taiDsHoSoRungThat(r.idRung); taiDsAnh(r.idRung); }
-    else {
-      document.getElementById('dsHoSoRung').innerHTML = '';
-      document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>';
-      document.getElementById('dsAnhChungHopDong').innerHTML = '';
-    }
+    else { document.getElementById('dsHoSoRung').innerHTML = ''; document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>'; }
     hienTrang('trangRung');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: tenChuRungHienTai, onClick: 'quayVeTrangHopDong' }, { label: r.idRung || 'Lô rừng nháp' }]);
   }
@@ -871,7 +692,6 @@
       document.getElementById('khuVucTabsRung').style.display = 'block';
       chonTabRung('gps'); renderDsGPS_();
       document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>';
-      document.getElementById('dsAnhChungHopDong').innerHTML = '';
     }
     luuNhapNgay();
     showMsg('msgFormRung', '✅ Đã lưu vào nháp.', true);
@@ -897,8 +717,7 @@
       google.script.run.withSuccessHandler(function (list) {
         var el = document.getElementById('dsGPSDaLuu');
         el.innerHTML = (!list || !list.length) ? '<p class="hint">Chưa có điểm nào.</p>' : list.map(function (p, i) {
-          var anh = p.hinhAnh ? ' <a href="' + p.hinhAnh + '" target="_blank">🖼️ Xem ảnh</a>' : '';
-          return '<div class="gps-row"><span>Điểm ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + anh + '</span></div>';
+          return '<div class="gps-row"><span>Điểm ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + '</span></div>';
         }).join('');
       }).withFailureHandler(function () { document.getElementById('dsGPSDaLuu').innerHTML = '<p class="hint">Không tải được.</p>'; }).layGPSCuaRung(r.idRung);
     } else {
@@ -908,38 +727,14 @@
     var elNhap = document.getElementById('dsGPSNhap');
     var gpsMoi = r.gpsMoi || [];
     elNhap.innerHTML = !gpsMoi.length ? '<p class="hint">Chưa có điểm nào trong nháp.</p>' : gpsMoi.map(function (p, i) {
-      var anh = p.anhUrl ? ' <a href="' + p.anhUrl + '" target="_blank">🖼️</a>' : '';
-      return '<div class="gps-row nhap"><span>🟡 Điểm nháp ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + anh + '</span>' +
+      return '<div class="gps-row nhap"><span>🟡 Điểm nháp ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + '</span>' +
         '<button class="btn btn-outline" style="padding:2px 8px;font-size:11px" onclick="xoaDiemGPSNhap(' + i + ')">Xóa</button></div>';
     }).join('');
   }
   function themDiemGPSVaoNhap() {
     var lat = val('gpsLatTay'), lng = val('gpsLngTay');
     if (!lat || !lng) { showMsg('msgGPS', '❌ Nhập đủ Vĩ độ và Kinh độ.', false); return; }
-    var fi = document.getElementById('fileAnhChoDiemGPS');
-    if (fi.files.length) {
-      // Có chọn ảnh minh chứng riêng cho điểm này -> tải lên Drive trước, xong mới ghi điểm kèm link ảnh
-      var file = fi.files[0];
-      showMsg('msgGPS', '⌛ Đang tải ảnh minh chứng lên...', true);
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var base64 = e.target.result.split(',')[1];
-        google.script.run
-          .withSuccessHandler(function (kq) {
-            fi.value = ''; document.getElementById('tenFileAnhChoDiemGPS').textContent = '';
-            ghiDiemGPSVaoNhap_(Number(lat), Number(lng), kq.thanhCong ? kq.url : '');
-            if (!kq.thanhCong) showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng KHÔNG tải được ảnh: ' + kq.loi, false);
-          })
-          .withFailureHandler(function (err) {
-            ghiDiemGPSVaoNhap_(Number(lat), Number(lng), '');
-            showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng lỗi tải ảnh: ' + err.message, false);
-          })
-          .TAI_ANH_GPS_LEN_DRIVE(base64, file.type, file.name);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      ghiDiemGPSVaoNhap_(Number(lat), Number(lng), '');
-    }
+    ghiDiemGPSVaoNhap_(Number(lat), Number(lng));
   }
   function taiAnhLayGPS() {
     var fi = document.getElementById('fileAnhLayGPS');
@@ -952,39 +747,25 @@
       var base64 = e.target.result.split(',')[1];
       google.script.run
         .withSuccessHandler(function (kq) {
-          if (!kq.thanhCong) { fi.value = ''; showMsg('msgGPS', '❌ ' + kq.loi, false); return; }
-          // ⚠️ BỔ SUNG: TRƯỚC ĐÂY ảnh dùng để đọc EXIF bị VỨT BỎ sau khi lấy xong tọa độ —
-          // chỉ giữ lại lat/lng, không lưu ảnh vào đâu cả (cột HINH_ANH trong HD_GPS luôn
-          // trống). Giờ tải LUÔN chính ảnh này lên Drive và đính kèm vào điểm GPS, vì đây
-          // đúng là ảnh minh chứng thực địa cho điểm tọa độ đó.
-          showMsg('msgGPS', '⌛ Đọc được tọa độ — đang lưu kèm ảnh minh chứng...', true);
-          google.script.run
-            .withSuccessHandler(function (kqAnh) {
-              fi.value = '';
-              ghiDiemGPSVaoNhap_(kq.lat, kq.lng, kqAnh.thanhCong ? kqAnh.url : '');
-              showMsg('msgGPS', kqAnh.thanhCong ? '✅ Đã thêm điểm + ảnh minh chứng vào nháp.' : '⚠️ Đã thêm điểm nhưng không lưu được ảnh: ' + kqAnh.loi, true);
-            })
-            .withFailureHandler(function (err) {
-              fi.value = '';
-              ghiDiemGPSVaoNhap_(kq.lat, kq.lng, '');
-              showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng lỗi lưu ảnh: ' + err.message, false);
-            })
-            .TAI_ANH_GPS_LEN_DRIVE(base64, file.type, file.name);
+          fi.value = '';
+          if (!kq.thanhCong) { showMsg('msgGPS', '❌ ' + kq.loi, false); return; }
+          showMsg('msgGPS', '✅ Đọc được tọa độ từ ảnh — đã thêm vào nháp.', true);
+          ghiDiemGPSVaoNhap_(kq.lat, kq.lng);
         })
-        .withFailureHandler(function (err) { fi.value = ''; showMsg('msgGPS', '❌ Lỗi: ' + err.message, false); })
+        .withFailureHandler(function (err) { showMsg('msgGPS', '❌ Lỗi: ' + err.message, false); })
         .TRICH_XUAT_GPS_TU_ANH(base64, file.type);
     };
     reader.readAsDataURL(file);
   }
-  function ghiDiemGPSVaoNhap_(lat, lng, anhUrl) {
+  function ghiDiemGPSVaoNhap_(lat, lng) {
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r) return;
     if (!r.gpsMoi) r.gpsMoi = [];
-    r.gpsMoi.push({ lat: lat, lng: lng, anhUrl: anhUrl || '' });
+    r.gpsMoi.push({ lat: lat, lng: lng });
     setVal('gpsLatTay', ''); setVal('gpsLngTay', '');
     luuNhapNgay();
     renderDsGPS_();
-    if (!anhUrl) showMsg('msgGPS', '✅ Đã thêm điểm vào nháp (sẽ ghi thật khi Lưu chính thức).', true);
+    showMsg('msgGPS', '✅ Đã thêm điểm vào nháp (sẽ ghi thật khi Lưu chính thức).', true);
   }
   function xoaDiemGPSNhap(idx) {
     var r = timRungTrongNhap_(rungDangSuaKey);
@@ -1017,29 +798,7 @@
     };
     reader.readAsDataURL(file);
   }
-  // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY hàm này chỉ xóa trắng khu vực hiển thị, KHÔNG hề gọi gì
-  // để lấy hồ sơ đã đính kèm — nên khi mở lại 1 lô rừng đã có sẵn file, khu vực
-  // "Hồ sơ pháp lý đính kèm" luôn trống dù dữ liệu đã lưu (thấy đúng trong Báo
-  // cáo "Xem chi tiết" nhưng không thấy ở đây). Giờ gọi layHoSoCuaHopDong() đã
-  // có sẵn (06_CreateUpdate.gs) để hiện link file thật, bấm mở được trực tiếp.
-  function taiDsHoSoRungThat(idRung) {
-    var el = document.getElementById('dsHoSoRung');
-    el.innerHTML = '<p class="hint">Đang tải...</p>';
-    if (!duNhap.idHD) { el.innerHTML = ''; return; }
-    google.script.run
-      .withSuccessHandler(function (list) {
-        var hs = (list || []).find(function (x) { return (x.idRung || '').toString().trim() === idRung.toString().trim(); });
-        if (!hs) { el.innerHTML = '<p class="hint">Không tìm thấy thông tin hồ sơ.</p>'; return; }
-        var dongFile = hs.dinhKem
-          ? (hs.dinhKem.url
-            ? '<a href="' + hs.dinhKem.url + '" target="_blank">📎 ' + hs.dinhKem.ten + '</a>'
-            : (hs.dinhKem.ten || '') + ' <span class="hint">(không tìm thấy file trên Drive)</span>')
-          : '<span class="hint">Chưa đính kèm file nào.</span>';
-        el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
-      })
-      .withFailureHandler(function () { el.innerHTML = '<p class="hint">Không tải được thông tin hồ sơ đính kèm.</p>'; })
-      .layHoSoCuaHopDong(duNhap.idHD);
-  }
+  function taiDsHoSoRungThat(idRung) { document.getElementById('dsHoSoRung').innerHTML = ''; }
   function taiAnhHienTruong() {
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r || !r.idRung) { showMsg('msgAnh', '❌ Lô rừng chưa có ID thật — Lưu chính thức trước.', false); return; }
@@ -1066,7 +825,7 @@
     google.script.run
       .withSuccessHandler(function (list) {
         var el = document.getElementById('dsAnh');
-        if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh riêng nào của lô rừng này.</p>'; return; }
+        if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh nào.</p>'; return; }
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
           var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + a.soDong + ')">✅ Duyệt</button> ' +
@@ -1076,28 +835,6 @@
       })
       .withFailureHandler(function () { document.getElementById('dsAnh').innerHTML = '<p class="hint">Không tải được danh sách ảnh.</p>'; })
       .layDraftAnhChoRung(idRung);
-
-    // ⚠️ BỔ SUNG: layDraftAnhChoRung() ở trên CHỈ trả ảnh đi qua đúng luồng
-    // "Tải ảnh hiện trường -> Duyệt" VÀ đã gán rõ ID_RUNG. Ảnh thêm bằng cách
-    // khác (dán link ảnh có sẵn, import sẵn từ trước) ghi thẳng vào HD_Picture
-    // theo ID_HD (không phân biệt lô rừng) nên KHÔNG có mặt ở danh sách trên —
-    // trước đây khiến tab "Hình ảnh" báo "Chưa có ảnh nào" dù hợp đồng đã có
-    // ảnh từ trước. Tải thêm khối "Ảnh chung của hợp đồng" (dùng layAnhCuaHopDong
-    // đã có sẵn, 06_CreateUpdate.gs) để không bị mất hiển thị các ảnh này.
-    var elChung = document.getElementById('dsAnhChungHopDong');
-    if (duNhap.idHD) {
-      google.script.run
-        .withSuccessHandler(function (list) {
-          if (!list || !list.length) { elChung.innerHTML = '<p class="hint">Chưa có ảnh chung nào.</p>'; return; }
-          elChung.innerHTML = list.map(function (a) {
-            return '<div class="anh-row"><span>' + (a.ten || '') + '</span><span>' + (a.url ? '<a href="' + a.url + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a>' : '<span class="hint">(không tìm thấy file trên Drive)</span>') + '</span></div>';
-          }).join('');
-        })
-        .withFailureHandler(function () { elChung.innerHTML = '<p class="hint">Không tải được.</p>'; })
-        .layAnhCuaHopDong(duNhap.idHD);
-    } else {
-      elChung.innerHTML = '';
-    }
   }
   function duyetAnh(soDong) { var r = timRungTrongNhap_(rungDangSuaKey); google.script.run.withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { alert('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong); }
   function tuChoiAnh(soDong) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); google.script.run.withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { alert('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong); }
@@ -1238,10 +975,5 @@
 
   // ============ KHỞI TẠO ============
   naptDanhSachDiaChi();
-  naptDanhSachNoiCap();
   veTrangDanhSach();
 </script>
-
-  </div>
-</body>
-</html>

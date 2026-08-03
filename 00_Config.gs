@@ -188,6 +188,95 @@ const REPORT_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1G_SUfAY4
  */
 let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — tránh mở lại file ngoài nhiều lần cùng 1 request (SpreadsheetApp.openById tốn thời gian mạng mỗi lần gọi)
 
+/**
+ * Đọc cấu hình kết nối hiện tại (file Draft báo cáo + thư mục Drive lưu ảnh) —
+ * dùng cho trang Thiết lập trên webapp, để có thể XEM và ĐỔI sang dữ liệu/dự án
+ * khác mà không cần sửa code.
+ */
+function LAY_CAU_HINH_KET_NOI() {
+  const props = PropertiesService.getScriptProperties();
+  const ketQua = { draftUrl: '', draftTen: '', draftLoi: '', folderUrl: '', folderTen: '', folderLoi: '', misaFolderUrl: '', misaFolderTen: '', misaFolderLoi: '' };
+
+  try {
+    const ss = getReportSS_();
+    ketQua.draftUrl = ss.getUrl();
+    ketQua.draftTen = ss.getName();
+  } catch (e) {
+    ketQua.draftLoi = e.message;
+  }
+
+  try {
+    const idThuMuc = props.getProperty('ANH_FOLDER_ID');
+    const folder = idThuMuc ? DriveApp.getFolderById(idThuMuc) : layHoacTaoThuMucAnh_();
+    ketQua.folderUrl = folder.getUrl();
+    ketQua.folderTen = folder.getName();
+  } catch (e) {
+    ketQua.folderLoi = e.message;
+  }
+
+  try {
+    const folderMisa = layThuMucXuatMisa_();
+    ketQua.misaFolderUrl = folderMisa.getUrl();
+    ketQua.misaFolderTen = folderMisa.getName();
+  } catch (e) {
+    ketQua.misaFolderLoi = e.message;
+  }
+
+  return ketQua;
+}
+
+/**
+ * Đổi cấu hình kết nối: file Draft báo cáo (Google Sheet) và/hoặc thư mục Drive
+ * lưu ảnh/hồ sơ. Truyền URL rỗng để GIỮ NGUYÊN giá trị đang dùng (không đổi).
+ * Luôn xác minh mở được TRƯỚC khi lưu — không lưu URL không hợp lệ.
+ */
+function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl) {
+  const props = PropertiesService.getScriptProperties();
+  const ketQua = { thanhCong: true, thongBao: [] };
+
+  if (draftUrl) {
+    try {
+      const ss = SpreadsheetApp.openByUrl(draftUrl.toString().trim());
+      props.setProperty('REPORT_SPREADSHEET_ID', ss.getId());
+      _reportSSCache = null; // xóa cache trong bộ nhớ để lần đọc sau lấy đúng file mới
+      ketQua.thongBao.push('✅ Đã đổi file Draft báo cáo sang "' + ss.getName() + '".');
+    } catch (e) {
+      ketQua.thanhCong = false;
+      ketQua.thongBao.push('❌ Không mở được URL file Draft báo cáo: ' + e.message);
+    }
+  }
+
+  if (folderUrl) {
+    try {
+      const khop = folderUrl.toString().trim().match(/[-\w]{25,}/); // trích ID thư mục từ URL dạng .../folders/ID...
+      const idThuMuc = khop ? khop[0] : folderUrl.toString().trim();
+      const folder = DriveApp.getFolderById(idThuMuc);
+      props.setProperty('ANH_FOLDER_ID', folder.getId());
+      ketQua.thongBao.push('✅ Đã đổi thư mục Drive lưu ảnh/báo cáo sang "' + folder.getName() + '".');
+    } catch (e) {
+      ketQua.thanhCong = false;
+      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục Drive: ' + e.message);
+    }
+  }
+
+  if (misaFolderUrl) {
+    try {
+      const khop2 = misaFolderUrl.toString().trim().match(/[-\w]{25,}/);
+      const idThuMucMisa = khop2 ? khop2[0] : misaFolderUrl.toString().trim();
+      const folderMisa = DriveApp.getFolderById(idThuMucMisa);
+      props.setProperty('MISA_FOLDER_ID', folderMisa.getId());
+      ketQua.thongBao.push('✅ Đã đổi thư mục xuất báo cáo MISA sang "' + folderMisa.getName() + '".');
+    } catch (e) {
+      ketQua.thanhCong = false;
+      ketQua.thongBao.push('❌ Không mở được URL/ID thư mục MISA: ' + e.message);
+    }
+  }
+
+  if (!draftUrl && !folderUrl && !misaFolderUrl) ketQua.thongBao.push('Không có gì để lưu (các ô đều trống).');
+  ketQua.thongBao = ketQua.thongBao.join(' ');
+  return ketQua;
+}
+
 function getReportSS_() {
   if (_reportSSCache) return _reportSSCache; // đã mở rồi trong lượt chạy này -> dùng lại luôn, không mở lại
 
@@ -214,6 +303,25 @@ function getSheet_(name) {
   const sh = getSS_().getSheetByName(name);
   if (!sh) throw new Error('Không tìm thấy sheet: ' + name);
   return sh;
+}
+
+/**
+ * Chuyển an toàn 1 giá trị ngày (có thể là Date object thô đọc từ getValues(),
+ * chuỗi rỗng, hoặc chuỗi có sẵn) sang chuỗi ISO — BẮT BUỘC dùng trước khi đưa
+ * bất kỳ trường ngày/tháng nào vào object trả về qua google.script.run.
+ * LÝ DO: Date object thô nằm LỒNG BÊN TRONG object/mảng (không phải giá trị
+ * trả về top-level) khi truyền qua kênh web của Apps Script có thể khiến
+ * TOÀN BỘ response về client bị null — dù hàm chạy đúng khi gọi trực tiếp
+ * trong Apps Script editor (xem ngayToISO_ cục bộ từng dùng ở 06_CreateUpdate.gs
+ * để vá đúng lỗi này — giờ tách thành hàm DÙNG CHUNG để mọi hàm khác trong dự
+ * án đều gọi được, tránh quên convert ở chỗ mới thêm sau này).
+ */
+function ngayToISO_(v) {
+  if (!v) return '';
+  try {
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? '' : d.toISOString();
+  } catch (e) { return ''; }
 }
 
 /**
@@ -411,6 +519,97 @@ function timDongDraftBaoCao_(sh, idHD) {
 /** Đọc toàn bộ dữ liệu Draft đã tổng hợp sẵn, trả về mảng object (dùng cho mọi báo cáo) */
 let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nếu cùng 1 request cần đọc Draft nhiều lần, chỉ đọc thật từ file ngoài đúng 1 lần
 
+/**
+ * Đọc TRỰC TIẾP HD_RUNG + HD_GPS + HD_Picture (đọc TOÀN BỘ sheet đúng 1 LẦN,
+ * không đọc theo từng dòng) để tính "Có ảnh" / "Đã đo GPS đủ" / "Tọa độ trung
+ * bình" THẬT — dùng làm lớp GHI ĐÈ lên Draft trong docToanBoDraftBaoCao_() và
+ * layBaoCaoHoSoRung().
+ *
+ * LÝ DO CẦN LỚP NÀY: Draft chỉ đúng NẾU đúng hàm CAP_NHAT_DRAFT_MOT_HOP_DONG /
+ * CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_ được gọi mỗi khi ảnh/GPS thay đổi. Nếu dữ
+ * liệu GPS/ảnh được NHẬP THẲNG vào sheet HD_GPS/HD_Picture bằng tay (không qua
+ * webapp), hoặc lỡ sót 1 hàm ghi nào đó quên gọi cập nhật Draft, Draft sẽ hiện
+ * SAI (thiếu ảnh/tọa độ) dù dữ liệu gốc đã có đầy đủ. Việc đọc thẳng ở đây
+ * đảm bảo báo cáo LUÔN khớp với dữ liệu THẬT trong HD_GPS/HD_Picture tại thời
+ * điểm xem báo cáo — không phụ thuộc Draft có được đồng bộ đúng lúc hay không.
+ * Chi phí: chỉ 3 lượt đọc TOÀN BỘ sheet (không phải đọc theo từng hợp đồng),
+ * nên vẫn nhanh dù có hàng trăm/nghìn dòng.
+ *
+ * @return {Object} { theoIdHD: { [idHD]: {coAnh, daDoGPSDu, toaDoTrungBinh} },
+ *                     theoIdRung: { [idRung]: {toaDo: {lat,lng}|null, soDiemGPS} } }
+ */
+function layCoAnhVaGpsTrucTiep_() {
+  const rungRows = readData_(SHEET_NAME.HD_RUNG);
+  const gpsRows = readData_(SHEET_NAME.HD_GPS);
+  const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
+
+  // ---- Gom tọa độ GPS hợp lệ theo ID_RUNG (đúng 1 lượt đọc HD_GPS) ----
+  const gpsByIdRung = {}; // { [idRung]: { latTong, lngTong, dem } }
+  gpsRows.forEach(function (g) {
+    const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
+    if (!idRung) return;
+    const type = g[GPS_COL.HE_TOA_DO];
+    const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+    if (isNaN(lat) || isNaN(lng)) return;
+    if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = { latTong: 0, lngTong: 0, dem: 0 };
+    gpsByIdRung[idRung].latTong += lat; gpsByIdRung[idRung].lngTong += lng; gpsByIdRung[idRung].dem++;
+  });
+
+  // ---- coAnh theo "định danh thô" trong HD_Picture (đúng 1 lượt đọc HD_Picture) ----
+  // ⚠️ Không dùng thẳng làm coAnhByIdHD nữa: đã phát hiện một số dòng CŨ trong
+  // HD_Picture lưu NHẦM giá trị ID_RUNG vào cột ID_HD (xác nhận qua đối chiếu
+  // trực tiếp dữ liệu thật — xem layAnhCuaHopDong() ở 06_CreateUpdate.gs). Nên
+  // giữ nguyên "định danh thô" (có thể là ID_HD thật HOẶC lỡ là ID_RUNG) rồi
+  // đối chiếu lại theo CẢ HAI khả năng ở bước gộp theo hợp đồng bên dưới.
+  const coAnhByDinhDanhTho = {};
+  pictureRows.forEach(function (r) {
+    const dinhDanh = (r[PICTURE_COL.ID_HD] || '').toString().trim();
+    if (!dinhDanh || coAnhByDinhDanhTho[dinhDanh]) return;
+    for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) { if (r[c]) { coAnhByDinhDanhTho[dinhDanh] = true; break; } }
+  });
+
+  // ---- Gộp theo ID_HD: số lô, số lô đã đo GPS, có ảnh không, tọa độ trung bình toàn hợp đồng ----
+  const goptheoIdHD = {};
+  rungRows.forEach(function (r) {
+    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
+    const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
+    if (!idHD || !idRung) return;
+    if (!goptheoIdHD[idHD]) goptheoIdHD[idHD] = { soLo: 0, soLoDaDoGPS: 0, latTong: 0, lngTong: 0, demDiem: 0, coAnh: false };
+    const g = goptheoIdHD[idHD];
+    g.soLo++;
+    // Khớp coAnh theo ID_HD thật HOẶC theo chính ID_RUNG của lô này (phòng dữ
+    // liệu cũ lưu nhầm ID_RUNG vào cột ID_HD trong HD_Picture)
+    if (coAnhByDinhDanhTho[idHD] || coAnhByDinhDanhTho[idRung]) g.coAnh = true;
+    const gpsRung = gpsByIdRung[idRung];
+    if (gpsRung && gpsRung.dem > 0) {
+      g.soLoDaDoGPS++;
+      g.latTong += gpsRung.latTong; g.lngTong += gpsRung.lngTong; g.demDiem += gpsRung.dem;
+    }
+  });
+
+  const theoIdHD = {};
+  Object.keys(goptheoIdHD).forEach(function (idHD) {
+    const g = goptheoIdHD[idHD];
+    theoIdHD[idHD] = {
+      coAnh: g.coAnh,
+      daDoGPSDu: g.soLo > 0 && g.soLoDaDoGPS === g.soLo,
+      toaDoTrungBinh: g.demDiem ? (g.latTong / g.demDiem).toFixed(6) + ',' + (g.lngTong / g.demDiem).toFixed(6) : ''
+    };
+  });
+
+  const theoIdRung = {};
+  Object.keys(gpsByIdRung).forEach(function (idRung) {
+    const p = gpsByIdRung[idRung];
+    theoIdRung[idRung] = {
+      toaDo: p.dem ? { lat: p.latTong / p.dem, lng: p.lngTong / p.dem } : null,
+      soDiemGPS: p.dem
+    };
+  });
+
+  return { theoIdHD: theoIdHD, theoIdRung: theoIdRung };
+}
+
 function docToanBoDraftBaoCao_() {
   if (_draftDataCache) return _draftDataCache; // đã đọc rồi trong lượt chạy này -> dùng lại luôn
 
@@ -421,13 +620,19 @@ function docToanBoDraftBaoCao_() {
   const c = DRAFT_BAOCAO_COL;
   _draftDataCache = data.map(function (r) {
     return {
-      idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: r[c.NGAY_KY], tenChuRung: r[c.TEN_CHU_RUNG],
+      idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
       diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
-      ngayCap: r[c.NGAY_CAP], noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: r[c.CCCD_UY_QUYEN],
+      ngayCap: ngayToISO_(r[c.NGAY_CAP]), noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: r[c.CCCD_UY_QUYEN],
       khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], donGiaDuKien: r[c.DON_GIA_DU_KIEN], giaTriHopDong: r[c.GIA_TRI_HOP_DONG],
       khoiLuongThucHien: r[c.KHOI_LUONG_THUC_HIEN], donGiaThucHien: r[c.DON_GIA_THUC_HIEN], giaTriThucHien: r[c.GIA_TRI_THUC_HIEN],
       khoiLuongConLai: r[c.KHOI_LUONG_CON_LAI], giaTriConLai: r[c.GIA_TRI_CON_LAI],
-      thucHienTuNgay: r[c.THUC_HIEN_TU_NGAY] || null, thucHienDenNgay: r[c.THUC_HIEN_DEN_NGAY] || null,
+      // ⚠️ Đã sửa: TRƯỚC ĐÂY trả về Date object thô (r[...] || null) — Date thô lồng
+      // trong mảng object khi trả qua google.script.run có thể khiến CẢ response về
+      // client bị null (đây là nguyên nhân trang "Báo cáo tổng hợp" bị kẹt ở
+      // "Đang tải báo cáo..." mà không có lỗi rõ ràng). Giờ luôn trả chuỗi ISO
+      // ('' nếu trống) — phía frontend đã dùng new Date(...) để hiển thị nên
+      // parse chuỗi ISO vẫn ra đúng ngày, không cần sửa gì ở HTML.
+      thucHienTuNgay: ngayToISO_(r[c.THUC_HIEN_TU_NGAY]), thucHienDenNgay: ngayToISO_(r[c.THUC_HIEN_DEN_NGAY]),
       danhSachSoPhieuCan: r[c.DANH_SACH_SO_PHIEU_CAN],
       tinhTrang: r[c.TINH_TRANG], soLoRung: r[c.SO_LO_RUNG], soTaiKhoan: r[c.SO_TAI_KHOAN],
       coAnh: !!r[c.CO_ANH], daDoGPSDu: !!r[c.DA_DO_GPS_DU], hoSoDu: !!r[c.HO_SO_DU],
@@ -435,6 +640,20 @@ function docToanBoDraftBaoCao_() {
       diaChiRung: r[c.DIA_CHI_RUNG] || ''
     };
   });
+
+  // ---- GHI ĐÈ coAnh/daDoGPSDu/toaDoTrungBinh bằng dữ liệu đọc THẲNG từ
+  // HD_GPS/HD_Picture (xem layCoAnhVaGpsTrucTiep_ ở trên) — đảm bảo báo cáo luôn
+  // khớp với dữ liệu THẬT, không phụ thuộc Draft có được đồng bộ đúng lúc hay
+  // không (vd dữ liệu GPS/ảnh được nhập thẳng vào sheet bằng tay, hoặc 1 hàm
+  // ghi nào đó lỡ quên gọi cập nhật Draft).
+  try {
+    const truc = layCoAnhVaGpsTrucTiep_();
+    _draftDataCache.forEach(function (m) {
+      const tt = truc.theoIdHD[(m.idHD || '').toString().trim()];
+      if (tt) { m.coAnh = tt.coAnh; m.daDoGPSDu = tt.daDoGPSDu; m.toaDoTrungBinh = tt.toaDoTrungBinh; }
+    });
+  } catch (e) { /* nếu đọc lỗi thì giữ nguyên giá trị từ Draft, không làm hỏng cả báo cáo */ }
+
   return _draftDataCache;
 }
 

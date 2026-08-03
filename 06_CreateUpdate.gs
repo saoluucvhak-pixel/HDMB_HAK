@@ -259,7 +259,11 @@ function layDuLieuThucHienTuDNTT_() {
       const soHD = (data[i][colSoHD] || '').toString().trim();
       if (!soHD) continue;
       if (!theoSoHD[soHD]) theoSoHD[soHD] = { khoiLuong: 0, giaTri: 0 };
-      if (colKL !== -1) theoSoHD[soHD].khoiLuong += (Number(data[i][colKL]) || 0) / 1000; // DNTT lưu KG -> quy về TẤN cho khớp đơn vị với HD_RUNG (đã xác nhận HD_RUNG nhập bằng TẤN)
+      // ⚠️ ĐÃ SỬA: cột Khối lượng (cột M) trong DNTT_GK_DN_CT ĐÃ LƯU SẴN ĐƠN VỊ TẤN
+      // (không phải KG như nhận định trước đây) — người dùng xác nhận trực tiếp.
+      // TRƯỚC ĐÂY code chia thêm /1000 khiến khối lượng thực hiện bị nhỏ hơn thực
+      // tế 1000 lần. Giờ lấy nguyên giá trị, KHÔNG chia gì thêm.
+      if (colKL !== -1) theoSoHD[soHD].khoiLuong += (Number(data[i][colKL]) || 0);
       if (colGiaTri !== -1) theoSoHD[soHD].giaTri += Number(data[i][colGiaTri]) || 0;
     }
     return { thanhCong: true, theoSoHD: theoSoHD };
@@ -412,6 +416,19 @@ function layGoiYDiaChi() {
     const rg = (r[DIACHI_COL.DIA_CHI_RUNG] || '').toString().trim();
     if (tt) set[tt] = true;
     if (rg) set[rg] = true;
+  });
+  return Object.keys(set);
+}
+
+/** Gợi ý "Nơi cấp CCCD" — gõ kiểu gợi nhớ, lấy từ các giá trị đã từng nhập trong HD_NCC */
+function layGoiYNoiCap() {
+  const rows = readData_(SHEET_NAME.HD_NCC);
+  const set = {};
+  rows.forEach(function (r) {
+    const nc = (r[NCC_COL.NOI_CAP] || '').toString().trim();
+    const ncUq = (r[NCC_COL.NOI_CAP_UQ] || '').toString().trim();
+    if (nc) set[nc] = true;
+    if (ncUq) set[ncUq] = true;
   });
   return Object.keys(set);
 }
@@ -687,7 +704,8 @@ function chuanHoaToaDo_(input) {
 }
 
 function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
-  // diemGPS: { lat, lng, heToaDo (tùy chọn, không còn bắt buộc — hệ thống tự nhận diện), diaChi (tùy chọn) }
+  // diemGPS: { lat, lng, heToaDo (tùy chọn, không còn bắt buộc — hệ thống tự nhận diện),
+  //            diaChi (tùy chọn), anhUrl (tùy chọn — link Drive ảnh minh chứng cho điểm này) }
   // Luôn CHUẨN HÓA lat/lng về decimal (DD) NGAY TẠI ĐÂY trước khi lưu — dù người dùng
   // nhập định dạng gì (decimal, DMS có ký hiệu, DMS cách khoảng trắng...), dữ liệu lưu
   // vào sheet LUÔN LÀ 1 HỆ DUY NHẤT (decimal), tránh lẫn lộn nhiều hệ tọa độ về sau.
@@ -712,7 +730,7 @@ function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
 
   sh.appendRow([
     idRung, idGPS, latChuan.gia_tri, lngChuan.gia_tri, latChuan.gia_tri + ', ' + lngChuan.gia_tri,
-    diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
+    diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', diemGPS.anhUrl || '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
   ]);
   if (rung) CAP_NHAT_DRAFT_MOT_HOP_DONG(rung[RUNG_COL.ID_KEY_HD]);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
@@ -919,7 +937,7 @@ function CAP_NHAT_HOP_DONG(soDong, patch) {
     ngayCapUyQuyen: NCC_COL.NGAY_CAP_UQ,
     dienTichKy: NCC_COL.DIEN_TICH_KY, hoSoNguonGoc: NCC_COL.HO_SO_NGUON_GOC, soGiayTo: NCC_COL.SO_GIAY_TO,
     uyQuyenTT: NCC_COL.UY_QUYEN_TT, slDuKien: NCC_COL.SL_DU_KIEN, donGia: NCC_COL.DON_GIA,
-    soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG
+    soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG, nhomKH: NCC_COL.NHOM_KH
   };
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
   Object.keys(patch).forEach(function (key) {
@@ -1037,9 +1055,24 @@ function layGPSCuaRung(idRung) {
       const type = r[GPS_COL.HE_TOA_DO];
       const lat = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
       const lng = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
-      return { lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, diaChi: r[GPS_COL.ADDRESS] };
+      return { lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, diaChi: r[GPS_COL.ADDRESS], hinhAnh: r[GPS_COL.HINH_ANH] || '' };
     })
     .filter(function (p) { return p.lat && p.lng; });
+}
+
+/** Tải 1 ảnh minh chứng lên Drive để gắn vào 1 điểm GPS cụ thể (cột HINH_ANH của HD_GPS) */
+function TAI_ANH_GPS_LEN_DRIVE(base64Data, mimeType, tenFileGoc) {
+  if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
+  try {
+    const folder = layHoacTaoThuMucAnh_();
+    const bytes = Utilities.base64Decode(base64Data);
+    const ten = tenFileGoc || ('gps_' + new Date().getTime() + '.jpg');
+    const blob = Utilities.newBlob(bytes, mimeType || 'image/jpeg', ten);
+    const file = folder.createFile(blob);
+    return { thanhCong: true, url: file.getUrl(), ten: file.getName() };
+  } catch (e) {
+    return { thanhCong: false, loi: e.message };
+  }
 }
 
 /** Thêm 1 link ảnh CÓ SẴN (đã có trên Drive, dán trực tiếp) vào HD_Picture của 1 hợp đồng — không qua luồng nháp/EXIF vì đây là link có sẵn, không phải file mới tải lên. */
@@ -1051,6 +1084,11 @@ function THEM_LINK_ANH_HOP_DONG(idHD, url) {
   const row = nccRows.find(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
   ghiAnhVaoHDPicture_(idHD, row ? row[NCC_COL.TEN_CHU_RUNG] : '', url);
   ghiNhatKy_('Thêm link ảnh', idHD, url);
+  // ⚠️ TRƯỚC ĐÂY THIẾU: không gọi cập nhật Draft sau khi ghi ảnh -> cờ "Có ảnh"
+  // trong Draft_BaoCaoHopDong bị CŨ (vẫn hiện "chưa có ảnh" dù ảnh đã lưu vào
+  // HD_Picture) cho tới khi có 1 thao tác KHÁC (sửa hợp đồng/rừng) vô tình kích
+  // hoạt cập nhật Draft. Giờ gọi ngay tại đây để Draft luôn đúng ngay lập tức.
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD);
   return { thanhCong: true };
 }
 
@@ -1087,6 +1125,13 @@ function TAI_LEN_HO_SO_RUNG(idRung, tenFileGoc, base64Data, mimeType) {
 }
 
 function layHoacTaoThuMucAnh_() {
+  // Ưu tiên thư mục đã cấu hình qua trang Thiết lập (Script Properties) — cho
+  // phép trỏ sang thư mục Drive khác (vd dùng lại hệ thống này cho dữ liệu/dự
+  // án khác) mà không cần sửa code.
+  const idDaCauHinh = PropertiesService.getScriptProperties().getProperty('ANH_FOLDER_ID');
+  if (idDaCauHinh) {
+    try { return DriveApp.getFolderById(idDaCauHinh); } catch (e) { /* ID đã lưu không mở được nữa -> rơi về tìm/tạo theo tên bên dưới */ }
+  }
   const ten = 'HD_Picture_Images';
   const it = DriveApp.getFoldersByName(ten);
   if (it.hasNext()) return it.next();
@@ -1252,8 +1297,17 @@ function DUYET_ANH_RUNG(soDong) {
 
   sh.getRange(soDong, DRAFT_ANH_COL.TRANG_THAI + 1).setValue('Đã duyệt');
   ghiNhatKy_('Duyệt ảnh', idHD, 'Lô rừng ' + idRung + ' — file: ' + row[DRAFT_ANH_COL.TEN_FILE]);
+  // ⚠️ TRƯỚC ĐÂY: chỉ cập nhật Draft GIÁN TIẾP qua CAP_NHAT_GPS_RUNG ở trên (chỉ
+  // chạy khi ảnh có tọa độ EXIF). Ảnh KHÔNG có GPS (rất phổ biến — máy ảnh/điện
+  // thoại tắt định vị) thì trước đây KHÔNG có lệnh nào cập nhật Draft cả -> cờ
+  // "Có ảnh" trong báo cáo vẫn hiện "chưa có ảnh" dù ảnh đã duyệt xong. Giờ luôn
+  // gọi lại ở đây (không phụ thuộc có GPS hay không) — nếu GPS đã cập nhật rồi ở
+  // trên thì đây chỉ là ghi đè thêm 1 lần với cùng dữ liệu, không sai gì cả.
+  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD);
+  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
   return { thanhCong: true };
 }
+
 
 /** TỪ CHỐI 1 ảnh nháp: xóa file khỏi Drive luôn (dọn rác), đánh dấu "Đã từ chối" */
 function TU_CHOI_ANH_RUNG(soDong) {
@@ -1275,7 +1329,19 @@ function resolveDriveLink_(value) {
   if (!value) return null;
   const v = value.toString().trim();
   if (!v) return null;
-  if (v.indexOf('http') === 0) return { ten: v.split('/').pop(), url: v };
+  if (v.indexOf('http') === 0) {
+    // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY lấy tên hiển thị bằng cách tách phần cuối URL (vd
+    // "...file/d/ID/view?usp=drivesdk" -> ra chữ "view?usp=drivesdk" rất xấu,
+    // không phải tên file thật). Giờ trích File ID rồi HỎI DRIVE tên thật của
+    // file (getName()) để hiển thị đúng (vd "CCCD_NguyenVanA.pdf"). Chỉ rơi về
+    // cách đoán cũ nếu không lấy được tên thật (file bị xóa/mất quyền xem).
+    const khop = v.match(/\/d\/([a-zA-Z0-9_-]+)/) || v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (khop && khop[1]) {
+      try { return { ten: DriveApp.getFileById(khop[1]).getName(), url: v }; }
+      catch (e) { /* file bị xóa/mất quyền xem -> rơi xuống dùng tạm tên đoán từ URL */ }
+    }
+    return { ten: v.split('/').pop(), url: v };
+  }
   try {
     const tenFile = v.split('/').pop();
     const it = DriveApp.getFilesByName(tenFile);
@@ -1288,16 +1354,56 @@ function resolveDriveLink_(value) {
 }
 
 /** Lấy toàn bộ ảnh (đã duyệt, nằm trong HD_Picture) của 1 hợp đồng, kèm link bấm mở được */
-function layAnhCuaHopDong(idHD) {
+/**
+ * ⚠️ ĐÃ SỬA: phát hiện một số dòng CŨ trong HD_Picture lưu NHẦM giá trị
+ * ID_RUNG vào cột ID_HD (thay vì đúng ID_HD của hợp đồng cha) — do 1 lượt
+ * ghi/import dữ liệu trước đây dùng nhầm định danh (xác nhận qua đối chiếu
+ * trực tiếp: HD_Picture.ID_HD = "HAK2026...-ffa" nhưng ID_HD thật trong
+ * HD_RUNG lại là 1 mã hash khác hẳn, còn "HAK2026...-ffa" chính là ID_RUNG).
+ * Vì không thể chắc TOÀN BỘ dữ liệu cũ đã bị lỗi này hay chỉ một phần, hàm
+ * giờ so khớp theo CẢ HAI khả năng: đúng ID_HD, HOẶC bất kỳ ID_RUNG nào thuộc
+ * về hợp đồng này (tra qua HD_RUNG) — không bỏ sót ảnh dù dữ liệu gốc bị lưu
+ * nhầm kiểu nào.
+ */
+/**
+ * Lấy ảnh trong HD_Picture khớp ĐÚNG 1 định danh cụ thể (có thể là ID_HD thật
+ * HOẶC ID_RUNG — vì dữ liệu xác nhận cột "ID_HD" trong HD_Picture thực chất
+ * lưu ID_RUNG cho các dòng gán riêng theo lô rừng, đây là cách lưu ĐÚNG chủ
+ * định của dữ liệu, không phải lỗi). Dùng làm khối xây dựng chung cho cả
+ * layAnhCuaHopDong() (gộp cả hợp đồng) và layChiTietHoSoMotLoRung() (tách
+ * riêng theo từng lô).
+ */
+function layAnhTheoDinhDanhHDPicture_(dinhDanh) {
+  dinhDanh = (dinhDanh || '').toString().trim();
+  if (!dinhDanh) return [];
   const rows = readData_(SHEET_NAME.HD_PICTURE);
   const ketQua = [];
   rows.forEach(function (r) {
-    if ((r[PICTURE_COL.ID_HD] || '').toString().trim() !== idHD.toString().trim()) return;
+    if ((r[PICTURE_COL.ID_HD] || '').toString().trim() !== dinhDanh) return;
     for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
       const link = resolveDriveLink_(r[c]);
       if (link) ketQua.push(link);
     }
   });
+  return ketQua;
+}
+
+/** Lấy TẤT CẢ ảnh của 1 hợp đồng (không phân biệt lô rừng nào) — gộp cả ảnh
+ *  khớp đúng ID_HD lẫn ảnh khớp ID_RUNG của bất kỳ lô nào thuộc hợp đồng này. */
+function layAnhCuaHopDong(idHD) {
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return [];
+
+  const dinhDanhCanTra = [idHD];
+  readData_(SHEET_NAME.HD_RUNG).forEach(function (r) {
+    if ((r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD) {
+      const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
+      if (idRung) dinhDanhCanTra.push(idRung);
+    }
+  });
+
+  let ketQua = [];
+  dinhDanhCanTra.forEach(function (dd) { ketQua = ketQua.concat(layAnhTheoDinhDanhHDPicture_(dd)); });
   return ketQua;
 }
 
