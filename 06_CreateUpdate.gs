@@ -1433,15 +1433,19 @@ function layAnhCuaHopDong(idHD) {
 
 /** Lấy hồ sơ pháp lý (loại hồ sơ + số giấy tờ + file đính kèm) theo từng lô rừng của 1 hợp đồng */
 function layHoSoCuaHopDong(idHD) {
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return [];
   const rows = readData_(SHEET_NAME.HD_RUNG);
   return rows
-    .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD.toString().trim(); })
+    .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD; })
     .map(function (r) {
+      let dinhKem = null;
+      try { dinhKem = resolveDriveLink_(r[RUNG_COL.DINH_KEM_GIAY_TO]); } catch (e) { /* 1 dòng lỗi không được làm hỏng cả danh sách — bỏ qua link, vẫn trả về hồ sơ nguồn gốc/số giấy tờ */ }
       return {
         idRung: r[RUNG_COL.ID_RUNG],
         hoSoNguonGoc: r[RUNG_COL.HO_SO_NGUON_GOC],
         soGiayTo: r[RUNG_COL.SO_GIAY_TO],
-        dinhKem: resolveDriveLink_(r[RUNG_COL.DINH_KEM_GIAY_TO])
+        dinhKem: dinhKem
       };
     });
 }

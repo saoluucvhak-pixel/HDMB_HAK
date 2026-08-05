@@ -427,8 +427,8 @@
         <div class="field"><label>Kinh độ (Lng)</label><input id="gpsLngTay" placeholder="vd: 108.126"></div>
         <div class="field"><label>&nbsp;</label><button class="btn btn-green" style="width:100%" onclick="themDiemGPSVaoNhap()">➕ Thêm điểm (nháp)</button></div>
       </div>
-      <input type="file" id="fileAnhChoDiemGPS" accept="image/*" style="display:none">
-      <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhChoDiemGPS').click()">📷 Ảnh minh chứng cho điểm này (tùy chọn)...</button>
+      <input type="file" id="fileAnhChoDiemGPS" accept="image/*,application/pdf" style="display:none">
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhChoDiemGPS').click()">📷 Ảnh/PDF minh chứng cho điểm này (tùy chọn)...</button>
       <span id="tenFileAnhChoDiemGPS" class="hint" style="margin-left:8px"></span>
       <input type="file" id="fileAnhLayGPS" accept="image/*" style="display:none">
       <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhLayGPS').click()">📁 Lấy tọa độ từ ảnh (EXIF)...</button>
@@ -441,8 +441,8 @@
     </div>
 
     <div id="tabNoiDungAnh" class="card khoa-khi-thanh-ly" style="display:none">
-      <input type="file" id="fileAnhHienTruong" accept="image/*" style="display:none">
-      <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhHienTruong').click()">📁 Chọn ảnh hiện trường...</button>
+      <input type="file" id="fileAnhHienTruong" accept="image/*,application/pdf" style="display:none">
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhHienTruong').click()">📁 Chọn ảnh/PDF hiện trường...</button>
       <span id="tenFileAnhHienTruong" class="hint" style="margin-left:8px"></span>
       <button class="btn btn-green" style="margin-top:8px" onclick="taiAnhHienTruong()">⬆️ Tải lên (vào hàng chờ duyệt)</button>
       <div id="msgAnh" class="msg" style="display:none;margin-top:8px"></div>
@@ -1037,7 +1037,7 @@
           : '<span class="hint">Chưa đính kèm file nào.</span>';
         el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
       })
-      .withFailureHandler(function () { el.innerHTML = '<p class="hint">Không tải được thông tin hồ sơ đính kèm.</p>'; })
+      .withFailureHandler(function (err) { el.innerHTML = '<p class="hint">❌ Lỗi tải hồ sơ đính kèm: ' + err.message + '</p>'; })
       .layHoSoCuaHopDong(duNhap.idHD);
   }
   function taiAnhHienTruong() {

@@ -409,6 +409,23 @@ function ghiNhatKy_(hanhDong, idHD, chiTiet) {
 }
 
 /**
+ * ⚠️ BỔ SUNG HÀM ĐANG THIẾU: được gọi ở 4 chỗ trong dự án (layTinhHinhThucHien,
+ * layBaoCaoHopDongPhanTrang, layDanhSachThanhLy, TAI_TRANG_BAO_CAO_TONG_HOP)
+ * nhưng CHƯA TỪNG được định nghĩa ở đâu — nghĩa là mỗi khi 1 trong các hàm đó
+ * gặp lỗi thật, gọi hàm không tồn tại này sẽ ném ra 1 lỗi MỚI ("ghiLoiBackend_
+ * is not defined"), CHE MẤT lỗi gốc thật sự đã xảy ra, khiến rất khó chẩn đoán.
+ * Ghi lại lỗi vào NhatKy_SuaDoi (dùng chung ghiNhatKy_ đã có sẵn) + Logger.log
+ * để còn xem lại trong Execution log.
+ */
+function ghiLoiBackend_(tenHam, err) {
+  try {
+    const noiDung = (err && err.message) ? err.message : String(err);
+    Logger.log('[LỖI BACKEND — ' + tenHam + '] ' + noiDung + (err && err.stack ? '\n' + err.stack : ''));
+    ghiNhatKy_('LỖI backend: ' + tenHam, '', noiDung);
+  } catch (e2) { /* không để lỗi ghi log làm hỏng luồng chính */ }
+}
+
+/**
  * ============================================================
  *  CACHE CHO BÁO CÁO NẶNG (Báo cáo hợp đồng / Tình hình thực hiện / Thanh lý)
  * ============================================================
