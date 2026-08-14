@@ -111,9 +111,13 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
   const rowsNCC = nccRows.map(function (r) {
     const coUyQuyen = (r[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
     const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
+    // ⚠️ ĐÃ SỬA: cột "Mã số thuế" giờ ưu tiên dùng đúng MST đã nhập (nếu có, vd
+    // khách hàng là tổ chức/doanh nghiệp) — chỉ fallback về CCCD khi MST bỏ
+    // trống (thông lệ với cá nhân chưa có MST riêng).
+    const masoThue = (r[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     return [
       '', '', cccd, r[NCC_COL.TEN_CHU_RUNG] || '', r[NCC_COL.DIA_CHI_TT] || '',
-      cccd, r[NCC_COL.SDT_CHU_RUNG] || '', '', '', '', r[NCC_COL.NHOM_KH] || '',
+      masoThue, r[NCC_COL.SDT_CHU_RUNG] || '', '', '', '', r[NCC_COL.NHOM_KH] || '',
       cccd, r[NCC_COL.NGAY_CAP] || '', r[NCC_COL.NOI_CAP] || '',
       '', coUyQuyen ? (r[NCC_COL.TEN_UY_QUYEN] || '') : (r[NCC_COL.TEN_CHU_RUNG] || ''), '',
       coUyQuyen ? (r[NCC_COL.DIA_CHI_UQ] || '') : (r[NCC_COL.DIA_CHI_TT] || ''),
@@ -147,6 +151,7 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
 
     const coUyQuyen = (ncc[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
     const cccd = (ncc[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
+    const masoThue = (ncc[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     const nguoiLienHe = coUyQuyen ? (ncc[NCC_COL.TEN_UY_QUYEN] || '') : (ncc[NCC_COL.TEN_CHU_RUNG] || '');
     const soLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
     const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
@@ -155,7 +160,7 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
 
     rowsHDMB.push([
       r[RUNG_COL.SO_HD] || '', r[RUNG_COL.NGAY_KY] || '', '', thietLap.loaiTienMacDinh, '',
-      soLuong * donGia, '', cccd, r[RUNG_COL.THUONG_TRU] || '', cccd, nguoiLienHe, ncc[NCC_COL.TINH_TRANG] || '',
+      soLuong * donGia, '', cccd, r[RUNG_COL.THUONG_TRU] || '', masoThue, nguoiLienHe, ncc[NCC_COL.TINH_TRANG] || '',
       thietLap.maHangMacDinh, thietLap.tenHangMacDinh, thietLap.donViTinhMacDinh, soLuong, donGia, soLuong * donGia,
       Number(r[RUNG_COL.DIEN_TICH_M2]) || 0, toaDo,
       r[RUNG_COL.HO_SO_NGUON_GOC] || '', r[RUNG_COL.SO_GIAY_TO] || '',

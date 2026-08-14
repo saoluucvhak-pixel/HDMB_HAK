@@ -132,10 +132,10 @@
     </div>
   </div>
 
-  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
-  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
     <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
   </a>
   <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
@@ -199,6 +199,26 @@
       <button class="btn btn-green" onclick="batTriggerChuyenDoiAnh()">⏱️ Bật chạy định kỳ (6 tiếng/lần)</button>
       <button class="btn btn-outline" onclick="tatTriggerChuyenDoiAnh()">⏹️ Tắt chạy định kỳ</button>
       <div id="msgChuyenDoiAnh" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🔧 Bảo trì dữ liệu (mồ côi &amp; đồng bộ mẹ-con)</h3>
+      <p class="hint" style="margin-top:-4px">Rà soát ID/Key mồ côi giữa 5 bảng (HD_NCC → HD_RUNG → HD_GPS/HD_Picture, HD_NCC → HD_STK), đồng bộ lại tên chủ rừng lặp lại ở HD_GPS/HD_STK, điền "Địa chỉ" cho các điểm GPS còn trống (lấy theo Địa chỉ rừng của chính lô đó), và trích xuất nốt tọa độ còn ghi dạng chữ trong "Địa chỉ rừng". <b>Không xóa dữ liệu nào.</b></p>
+      <button class="btn btn-outline" onclick="chanDoanMoCoi()">🔍 Chỉ chẩn đoán (xem trước)</button>
+      <button class="btn btn-green" onclick="chayToanBoBaoTri()">🔧 Chạy toàn bộ bảo trì</button>
+      <div id="ketQuaBaoTri" style="margin-top:10px"></div>
+      <div id="msgBaoTri" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">📜 Nhật ký hệ thống</h3>
+      <p class="hint" style="margin-top:-4px">Toàn bộ thao tác quan trọng (tạo/sửa hợp đồng, lỗi backend, bảo trì...) được ghi lại tại đây kèm người thực hiện và thời điểm.</p>
+      <div class="field-row" style="align-items:flex-end">
+        <div class="field"><label>Từ ngày</label><input id="nkTuNgay" type="date"></div>
+        <div class="field"><label>Đến ngày</label><input id="nkDenNgay" type="date"></div>
+        <div class="field" style="flex:none"><button class="btn btn-green" onclick="taiNhatKy()">🔍 Xem nhật ký</button></div>
+      </div>
+      <div id="vungNhatKy" style="margin-top:10px"></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -324,6 +344,85 @@
       .withFailureHandler(function (err) { showMsg('msgKetNoi', '❌ Lỗi: ' + err.message, false); })
       .LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl);
   }
+
+  // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----
+  function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function renderKetQuaMoCoi_(kq) {
+    var el = document.getElementById('ketQuaBaoTri');
+    if (kq.tongSoVanDe === 0) { el.innerHTML = '<div class="msg ok" style="display:block">✅ Không phát hiện ID/Key mồ côi hay bị sót nào.</div>'; return; }
+    var nhom = [
+      { nhan: 'HD_NCC thiếu ID_HD', list: kq.ncc_thieuIdHD, cot: [['dong', 'Dòng'], ['soHD', 'Số HĐ'], ['tenChuRung', 'Chủ rừng']] },
+      { nhan: 'HD_RUNG mồ côi (trỏ hợp đồng không tồn tại)', list: kq.rung_moCoi, cot: [['dong', 'Dòng'], ['maRung', 'Mã rừng'], ['soHD', 'Số HĐ'], ['idKeyHDSai', 'ID_HD đang trỏ (sai)']] },
+      { nhan: 'HD_RUNG thiếu ID_RUNG', list: kq.rung_thieuIdRung, cot: [['dong', 'Dòng'], ['maRung', 'Mã rừng'], ['soHD', 'Số HĐ']] },
+      { nhan: 'HD_STK mồ côi', list: kq.stk_moCoi, cot: [['dong', 'Dòng'], ['soTK', 'Số TK'], ['tenChuRung', 'Tên (ghi trên STK)'], ['idHDSai', 'ID_HD đang trỏ (sai)']] },
+      { nhan: 'HD_GPS mồ côi', list: kq.gps_moCoi, cot: [['dong', 'Dòng'], ['idGps', 'ID GPS'], ['tenChuRung', 'Tên (ghi trên GPS)'], ['idRungSai', 'ID_RUNG đang trỏ (sai)']] },
+      { nhan: 'HD_Picture mồ côi', list: kq.picture_moCoi, cot: [['dong', 'Dòng'], ['idPicture', 'ID ảnh'], ['tenChuRung', 'Tên (ghi trên ảnh)'], ['idSai', 'ID đang trỏ (sai)']] }
+    ];
+    var h = '<table class="mecon-table" style="margin-top:6px"><thead><tr><th>Loại vấn đề</th><th>Số dòng</th></tr></thead><tbody>';
+    nhom.forEach(function (n) { h += '<tr><td>' + n.nhan + '</td><td>' + n.list.length + '</td></tr>'; });
+    h += '</tbody></table>';
+    nhom.forEach(function (n) {
+      if (!n.list.length) return;
+      h += '<h4 style="margin:14px 0 4px">📋 Chi tiết — ' + n.nhan + ' (' + n.list.length + ' dòng)</h4>';
+      h += '<table class="mecon-table"><thead><tr>' + n.cot.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+      n.list.forEach(function (r) {
+        h += '<tr>' + n.cot.map(function (c) { return '<td>' + escHtmlBT_(r[c[0]]) + '</td>'; }).join('') + '</tr>';
+      });
+      h += '</tbody></table>';
+    });
+    h += '<p class="hint" style="margin-top:10px">⚠️ Bảo trì KHÔNG tự sửa mồ côi thật (dữ liệu trỏ sai cần xem tay để biết đúng ý định ban đầu — vd sửa lại ID trỏ đúng, hoặc xóa dòng nếu đúng là dữ liệu rác) — chỉ đồng bộ thông tin lặp lại và điền dữ liệu còn thiếu. Cột "Dòng" là số dòng thật trong đúng Sheet tương ứng (tính cả dòng tiêu đề = dòng 1).</p>';
+    el.innerHTML = h;
+  }
+  function chanDoanMoCoi() {
+    document.getElementById('msgBaoTri').style.display = 'block';
+    document.getElementById('msgBaoTri').textContent = '⌛ Đang chẩn đoán...';
+    document.getElementById('ketQuaBaoTri').innerHTML = '';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgBaoTri').style.display = 'none'; renderKetQuaMoCoi_(kq); })
+      .withFailureHandler(function (err) { document.getElementById('msgBaoTri').textContent = '❌ Lỗi: ' + err.message; })
+      .CHAN_DOAN_MO_COI_TOAN_HE_THONG();
+  }
+  function chayToanBoBaoTri() {
+    if (!confirm('Chạy toàn bộ bảo trì: chẩn đoán + đồng bộ thông tin lặp lại + điền địa chỉ GPS trống + trích tọa độ còn sót + chuyển ảnh/hồ sơ pháp lý sang URL thật. Không xóa dữ liệu nào. Tiếp tục?')) return;
+    document.getElementById('msgBaoTri').style.display = 'block';
+    document.getElementById('msgBaoTri').textContent = '⌛ Đang chạy toàn bộ bảo trì (có thể mất một lúc)...';
+    document.getElementById('ketQuaBaoTri').innerHTML = '';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgBaoTri').textContent = '✅ Hoàn tất. ' + kq.dongBo.thongBao + ' Tọa độ trích xuất thêm: ' + kq.toaDoDaTrichXuat.soDaGhi + '/' + kq.toaDoDaTrichXuat.tongSoLo + ' lô. Ảnh chuyển URL: ' + kq.anhDaChuyen.soDaChuyen + (kq.anhDaChuyen.xongHet ? '' : ' (còn dở, chạy lại để tiếp tục)') + '. Hồ sơ pháp lý chuyển URL: ' + kq.hoSoDaChuyen.soDaChuyen + (kq.hoSoDaChuyen.xongHet ? '' : ' (còn dở, chạy lại để tiếp tục)') + '.';
+        renderKetQuaMoCoi_(kq.chiTietMoCoiConLai);
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgBaoTri').textContent = '❌ Lỗi: ' + err.message; })
+      .CHAY_TOAN_BO_BAO_TRI();
+  }
+
+  // ---- Nhật ký hệ thống (lọc theo khoảng ngày) ----
+  (function datNgayMacDinhNhatKy_() {
+    var homNay = new Date();
+    function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    document.getElementById('nkTuNgay').value = ymd(homNay);
+    document.getElementById('nkDenNgay').value = ymd(homNay);
+  })();
+  function taiNhatKy() {
+    var tuNgay = document.getElementById('nkTuNgay').value;
+    var denNgay = document.getElementById('nkDenNgay').value;
+    var el = document.getElementById('vungNhatKy');
+    el.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    google.script.run
+      .withSuccessHandler(function (list) {
+        if (!list || !list.length) { el.innerHTML = '<div class="msg" style="display:block">Không có nhật ký nào trong khoảng ngày đã chọn.</div>'; return; }
+        var h = '<table class="mecon-table"><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Hành động</th><th>ID_HD</th><th>Chi tiết</th></tr></thead><tbody>';
+        list.forEach(function (r) {
+          h += '<tr><td>' + (r.ngay ? new Date(r.ngay).toLocaleString('vi-VN') : '') + '</td><td>' + escHtmlBT_(r.email) + '</td><td>' + escHtmlBT_(r.hanhDong) + '</td><td>' + escHtmlBT_(r.idHD) + '</td><td>' + escHtmlBT_(r.chiTiet) + '</td></tr>';
+        });
+        h += '</tbody></table>';
+        if (list.length >= 500) h += '<p class="hint">⚠️ Chỉ hiện tối đa 500 dòng gần nhất trong khoảng đã lọc — thu hẹp khoảng ngày nếu cần xem đủ.</p>';
+        el.innerHTML = h;
+      })
+      .withFailureHandler(function (err) { el.innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + err.message + '</div>'; })
+      .LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay);
+  }
+  taiNhatKy(); // tự tải sẵn 7 ngày gần nhất lúc mở trang
 
   // ---- Chuyển tên file ảnh/hồ sơ pháp lý sang URL thật + chạy định kỳ ----
   function renderTrangThaiTriggerAnh_(kq) {

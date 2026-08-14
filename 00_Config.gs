@@ -65,7 +65,8 @@ const NCC_COL = {
   DIA_CHI_RUNG: 18, DIEN_TICH_KY: 19, LOCATION: 20, HO_SO_NGUON_GOC: 21,
   SO_GIAY_TO: 22, DIEN_TICH_GPS: 23, UY_QUYEN_TT: 24, SL_DU_KIEN: 25,
   DON_GIA: 26, NHOM_KH: 27, CHI_NHANH_NH: 28, ID_HD: 29, TINH_TRANG: 30,
-  NGAY_CAP_UQ: 31 // CỘT MỞ RỘNG (không có sẵn trong file gốc) — "Ngày cấp CCCD người được ủy quyền"
+  NGAY_CAP_UQ: 31, // CỘT MỞ RỘNG (không có sẵn trong file gốc) — "Ngày cấp CCCD người được ủy quyền"
+  MA_SO_THUE: 32 // CỘT MỞ RỘNG — Mã số thuế của khách hàng (nếu là tổ chức/doanh nghiệp; cá nhân thường để trống, dùng CCCD thay thế khi xuất MISA)
 };
 
 // ---- HD_RUNG (con 1 - từng lô rừng của hợp đồng) ----
@@ -406,6 +407,28 @@ function ghiNhatKy_(hanhDong, idHD, chiTiet) {
     try { email = Session.getActiveUser().getEmail(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
     sh.appendRow([new Date(), email, hanhDong, idHD || '', chiTiet || '']);
   } catch (e) { /* không để lỗi ghi log làm hỏng thao tác chính */ }
+}
+
+/** Đọc Nhật ký hệ thống (NhatKy_SuaDoi), lọc theo khoảng ngày [tuNgay, denNgay] —
+ *  để trống 1 trong 2 nghĩa là không giới hạn phía đó. Mới nhất hiện trước. */
+function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
+  const sh = getOrCreateNhatKySheet_();
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  const rows = sh.getRange(2, 1, lastRow - 1, 5).getValues();
+  const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
+  const denNgayDate = denNgay ? new Date(denNgay) : null;
+  if (denNgayDate) denNgayDate.setHours(23, 59, 59, 999); // lấy trọn ngày kết thúc, không cắt mất log trong ngày đó
+  return rows
+    .filter(function (r) {
+      const ngay = new Date(r[0]);
+      if (tuNgayDate && ngay < tuNgayDate) return false;
+      if (denNgayDate && ngay > denNgayDate) return false;
+      return true;
+    })
+    .map(function (r) { return { ngay: r[0] ? new Date(r[0]).toISOString() : '', email: r[1], hanhDong: r[2], idHD: r[3], chiTiet: r[4] }; })
+    .sort(function (a, b) { return new Date(b.ngay || 0) - new Date(a.ngay || 0); })
+    .slice(0, 500); // giới hạn 500 dòng gần nhất trong khoảng lọc, tránh trả về quá nặng nếu log rất dài
 }
 
 /**

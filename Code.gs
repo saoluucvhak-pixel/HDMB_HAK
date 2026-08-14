@@ -32,6 +32,16 @@ function doGet(e) {
     }
   }
 
+  if (page === "map") {
+    var tmplMapRieng = HtmlService.createTemplateFromFile('MapContainer');
+    tmplMapRieng.baseUrl = ScriptApp.getService().getUrl();
+    tmplMapRieng.currentPage = 'map';
+    return tmplMapRieng.evaluate()
+      .setTitle('🗺️ Bản đồ GPS HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   if (page === "form") {
     var tmplForm = HtmlService.createTemplateFromFile('11_Page_NhapLieu');
     tmplForm.baseUrl = ScriptApp.getService().getUrl();
@@ -82,11 +92,34 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  var tmplMap = HtmlService.createTemplateFromFile('MapContainer');
-  tmplMap.baseUrl = ScriptApp.getService().getUrl();
-  tmplMap.currentPage = '';
-  return tmplMap.evaluate()
-    .setTitle('HAK GROUP 2026')
+  if (page === "meconn") {
+    var tmplMeCon = HtmlService.createTemplateFromFile('26_Page_QuanLyMeCon');
+    tmplMeCon.baseUrl = ScriptApp.getService().getUrl();
+    tmplMeCon.currentPage = 'meconn';
+    return tmplMeCon.evaluate()
+      .setTitle('🗂️ Quản lý mẹ-con HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (page === "hopdongmc") {
+    var tmplHopDongMC = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
+    tmplHopDongMC.baseUrl = ScriptApp.getService().getUrl();
+    tmplHopDongMC.currentPage = 'hopdongmc';
+    return tmplHopDongMC.evaluate()
+      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // ⚠️ ĐÃ SỬA: trước đây mở webapp KHÔNG kèm tham số ?page= sẽ mặc định vào
+  // MapContainer (Bản đồ GPS) — giờ mặc định thẳng vào trang Nhập liệu HĐ/Rừng/TK
+  // (trang mẹ-con mới), đúng nhu cầu dùng chính của phần mềm.
+  var tmplHopDongMCMacDinh = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
+  tmplHopDongMCMacDinh.baseUrl = ScriptApp.getService().getUrl();
+  tmplHopDongMCMacDinh.currentPage = 'hopdongmc';
+  return tmplHopDongMCMacDinh.evaluate()
+    .setTitle('📝 Thêm/Sửa hợp đồng HAK')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

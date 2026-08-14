@@ -39,6 +39,12 @@ function onOpen() {
     .addItem('⚡ Chuyển tên file ảnh sang URL thật (khắc phục "Xem chi tiết" chậm/treo — chạy 1 lần)', 'CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU')
     .addItem('⚡ Chuyển hồ sơ pháp lý (DinhKemGiayTo) sang URL thật — chạy 1 lần', 'CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_TU_MENU')
     .addItem('⏱️ Bật chạy định kỳ chuyển ảnh/hồ sơ sang URL (6 tiếng/lần)', 'THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL')
+    .addItem('🔎 Xem trước tọa độ ghi tạm trong Địa chỉ rừng', 'XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_TU_MENU')
+    .addItem('⚡ Ghi tọa độ từ Địa chỉ rừng vào HD_GPS', 'GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_TU_MENU')
+    .addSeparator()
+    .addItem('🔍 Chẩn đoán ID/Key mồ côi toàn hệ thống', 'CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU')
+    .addItem('🔄 Đồng bộ thông tin lặp lại + điền địa chỉ GPS trống', 'DONG_BO_THONG_TIN_MO_RONG_TU_MENU')
+    .addItem('🔧 Chạy TOÀN BỘ bảo trì (chẩn đoán + đồng bộ + trích tọa độ)', 'CHAY_TOAN_BO_BAO_TRI_TU_MENU')
     .addToUi();
 }
 

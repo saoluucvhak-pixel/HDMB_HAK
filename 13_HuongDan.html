@@ -125,6 +125,7 @@
   .app-main h1 { font-size: 20px; border-bottom: 3px solid var(--active-green); padding-bottom: 8px; margin-top: 0; }
   .app-main h2 { font-size: 16px; color: var(--active-green); margin-top: 24px; }
   .app-main h3 { font-size: 13px; color: var(--heading); margin-top: 14px; }
+  .app-main h4 { font-size: 12.5px; color: var(--active-green); margin-top: 12px; margin-bottom: 4px; }
   .app-main table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
   .app-main table th, .app-main table td { border: 1px solid var(--border-light); padding: 6px 8px; text-align: left; vertical-align: top; }
   .app-main table th { background: var(--sidebar-bg); color: #fff; }
@@ -145,10 +146,10 @@
     </div>
   </div>
 
-  <a class="nav-item <?= currentPage === '' ? 'active' : '' ?>" href="<?= baseUrl ?>">
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
-  <a class="nav-item <?= currentPage === 'form' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=form">
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
     <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
   </a>
   <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
@@ -181,34 +182,57 @@
 <h1>📖 Hướng dẫn sử dụng — Hệ thống Quản lý Hợp đồng Gỗ Keo</h1>
 
 <h2>1. Tổng quan hệ thống</h2>
-<pre>HD_NCC (Hợp đồng - bảng cha)
-  ├── HD_RUNG (Lô rừng - con 1, 1 hợp đồng nhiều lô rừng)
-  │     ├── HD_GPS      (Tọa độ GPS - con của rừng, 1 rừng nhiều điểm)
-  │     └── HD_Picture  (Ảnh hiện trường - con của rừng, tối đa 10 ảnh/dòng)
-  └── HD_STK (Tài khoản nhận tiền - con 2, 1 hợp đồng nhiều số TK)</pre>
+<pre>👤 Khách hàng (nhóm theo Số CCCD — KHÔNG phải 1 bảng riêng, chỉ nhóm ảo từ HD_NCC)
+  └── 📋 Hợp đồng (HD_NCC — 1 khách hàng có thể có NHIỀU hợp đồng)
+        ├── 🌲 Lô rừng (HD_RUNG — 1 hợp đồng nhiều lô rừng)
+        │     ├── 📍 Tọa độ GPS (HD_GPS — 1 rừng nhiều điểm)
+        │     └── 🖼️ Ảnh hiện trường (HD_Picture — tối đa 10 ảnh/dòng)
+        └── 💳 Số tài khoản (HD_STK — 1 hợp đồng nhiều số TK)</pre>
 <p>Dữ liệu <b>bên ngoài</b> (chỉ đọc): <b>Báo giá gỗ keo</b> (tra đơn giá theo ngày), <b>DNTT_GK_DN_CT</b> (khối lượng/giá trị đã thực hiện + thanh toán), <b>PhieuCan_DN</b> (phiếu cân).</p>
 
-<h2>2. Quy trình nhập liệu — từng bước</h2>
-<h3>Bước 1 — Tạo hợp đồng mới</h3>
-<p>Trang <b>📝 Nhập liệu</b> → "➕ Tạo hợp đồng mới" → điền Họ tên/CCCD/Ngày ký *(bắt buộc)* → có thể dùng "📄 Nhập nhanh từ bản scan" để tự đọc CCCD/giấy ủy quyền (luôn kiểm tra lại) → "💾 Lưu thông tin hợp đồng".</p>
+<h2>2. Quy trình nhập liệu (trang "📝 Nhập liệu HĐ / Rừng / TK")</h2>
+<p>Trang gốc là <b>👤 Khách hàng</b> (không phải danh sách hợp đồng phẳng) — bấm 1 khách hàng để xem toàn bộ hợp đồng họ đã ký, mỗi hợp đồng 1 dòng riêng.</p>
+
+<h3>Bước 1 — Tạo hợp đồng mới (wizard 3 bước)</h3>
+<p>"➕ Thêm khách hàng" (ở trang gốc) hoặc "➕ Thêm hợp đồng cho khách hàng này" (khi đã ở trong 1 khách hàng — bỏ qua bước nhập lại thông tin cá nhân):</p>
+<ol>
+  <li><b>Bước 1 — Khách hàng</b>: tìm khách hàng đã ký trước đó (gõ tên/CCCD), hoặc "➕ Khách hàng mới".</li>
+  <li><b>Bước 2 — Thông tin hợp đồng</b>: Ngày ký, Số HĐ (để trống tự sinh), Ủy quyền thanh toán (Không → người nhận là chính chủ rừng; Có → nhập thêm thông tin người ủy quyền), Số tài khoản/Ngân hàng (nhập luôn ở đây, ghi vào <code>HD_STK</code>).</li>
+  <li><b>Bước 3 — Xác nhận</b>: xem lại tóm tắt → "💾 Lưu hợp đồng".</li>
+</ol>
 <ul>
-  <li><b>Địa chỉ thường trú</b> và <b>Nơi cấp CCCD</b>: gõ vài ký tự sẽ hiện gợi ý từ các giá trị đã từng nhập trước đó (đỡ gõ lại từ đầu, tránh sai chính tả giữa các lần).</li>
-  <li><b>Nhóm KH/NCC</b>: chọn 31121 hoặc 31122 — dùng khi xuất báo cáo sang phần mềm MISA (cột "Nhóm KH/NCC" trong <code>Update_DM_NCC</code>). Nếu không chắc chọn mã nào, để trống và điền tay sau khi xuất file.</li>
+  <li><b>Mã số thuế</b>: tự điền theo Số CCCD (thông lệ với cá nhân) — gõ đè lại nếu khách hàng có MST riêng (tổ chức/doanh nghiệp).</li>
+  <li><b>Nơi cấp CCCD</b>: gõ vài ký tự sẽ hiện gợi ý từ các giá trị đã từng nhập trước đó.</li>
 </ul>
 
-<h3>Bước 2 — Thêm lô rừng</h3>
-<p>"➕ Thêm hợp đồng rừng" → điền Địa chỉ/Diện tích/Đơn giá (KL tự tính = 120 tấn/ha × DT) → "💾 Lưu lô rừng" → form mở thêm khu vực <b>Hồ sơ/GPS/Ảnh</b>:</p>
-<ul>
-  <li><b>Tọa độ GPS</b>: nhập tay (decimal hoặc độ-phút-giây, hệ thống tự nhận diện) hoặc tải ảnh có định vị</li>
-  <li><b>Ảnh hiện trường</b>: tải lên → nháp chờ duyệt → "✅ Duyệt"</li>
-  <li><b>Hồ sơ pháp lý</b>: đính kèm PDF/ảnh</li>
-</ul>
+<h3>Bước 2 — Trạng thái hợp đồng &amp; quy trình duyệt</h3>
+<p>Hợp đồng mới tạo <b>luôn bắt đầu ở "Chờ thực hiện"</b> — không tự động nhảy sang trạng thái khác. Chỉ được chuyển <b>ĐÚNG bước kế tiếp</b>, không nhảy cóc:</p>
+<pre>Chờ thực hiện ──✅ Duyệt──▶ Đang thực hiện ──✅ Duyệt──▶ Đã hoàn thành ──✅ Duyệt──▶ Đã thanh lý
+      │
+      └──❌ Hủy──▶ Đã hủy</pre>
+<div class="warn">🔒 <b>Chỉ "Chờ thực hiện" và "Đang thực hiện" mới được Sửa thông tin / Thêm-Sửa-Xóa Lô rừng / Số tài khoản / Tọa độ GPS / Ảnh.</b> Từ "Đã hoàn thành" trở đi, hợp đồng chuyển sang CHỈ XEM — muốn sửa phải duyệt lùi lại bằng tay trên Sheet (không có nút lùi trên webapp, tránh sửa nhầm dữ liệu đã chốt).</div>
+<p>Nút duyệt nằm ngay đầu trang chi tiết hợp đồng (chỉ hiện đúng bước hợp lệ tiếp theo). Muốn duyệt NHIỀU hợp đồng cùng lúc: vào danh sách hợp đồng của 1 khách hàng → lọc đúng 1 tab trạng thái (vd "Chờ thực hiện") → tick chọn nhiều dòng → bấm nút duyệt hàng loạt hiện ra.</p>
 
-<h3>Bước 3 — Thêm tài khoản nhận tiền</h3>
-<p>"➕ Thêm tài khoản" → Số TK, Ngân hàng, Ủy quyền TT (Không → mặc định người nhận là chủ rừng) → "💾 Lưu tài khoản".</p>
+<h3>Bước 3 — Thêm lô rừng</h3>
+<p>Trong 1 hợp đồng → tab "🌲 Lô rừng" → "➕ Thêm lô rừng": Địa chỉ/Diện tích/Đơn giá — gõ Diện tích tự tính luôn Khối lượng dự kiến (=120 tấn/ha × DT), có nút "💰 Xem gợi ý đơn giá bình quân theo Báo giá" để lấy nhanh giá tham khảo theo đúng tháng ký hợp đồng.</p>
+<p>Bấm "Xem chi tiết →" trên 1 lô rừng để vào 2 tab con: <b>📍 Tọa độ GPS</b> và <b>🖼️ Ảnh</b> (xem định dạng tọa độ hỗ trợ ở mục 2b bên dưới). Ảnh tải lên ở đây <b>tự động duyệt luôn</b>, không cần bước duyệt riêng.</p>
 
-<h3>Bước 4-7</h3>
-<p>Theo dõi qua Báo cáo tổng hợp → Kiểm tra & Đối chiếu định kỳ → Sửa/Xóa khi cần → Thanh lý khi hoàn thành.</p>
+<h4>2b. Định dạng tọa độ GPS được hỗ trợ khi nhập tay</h4>
+<p>Chỉ có 2 ô để gõ — <b>Vĩ độ (Lat)</b> và <b>Kinh độ (Lng)</b>. <b>Không cần chọn hay khai báo trước</b> đang nhập hệ nào — gõ nguyên giá trị đo được, hệ thống tự dò định dạng theo thứ tự sau (thử lần lượt, dùng đúng kiểu đầu tiên khớp):</p>
+<table>
+<tr><th>Thứ tự</th><th>Định dạng</th><th>Ví dụ</th><th>Ghi chú</th></tr>
+<tr><td>1</td><td>DMS có ký hiệu độ/phút/giây (°'")</td><td><code>108°3'14.857"E</code></td><td>Kiểu copy trực tiếp từ Google Maps/app đo GPS</td></tr>
+<tr><td>2</td><td>Decimal (thập phân thường)</td><td><code>108.054127</code></td><td>Cho phép dùng dấu phẩy kiểu VN: <code>108,054127</code></td></tr>
+<tr><td>3</td><td>DMS chuỗi cách nhau dấu chấm</td><td><code>108.3.14.857E</code></td><td>Độ.Phút.Giây + ký tự hướng N/S/E/W ở cuối</td></tr>
+</table>
+<p>Dù nhập theo kiểu nào ở trên, khi bấm "➕ Thêm điểm" hệ thống luôn quy đổi về <b>1 số thập phân (DD)</b> duy nhất trước khi ghi vào <code>HD_GPS</code> — mọi báo cáo/tính toán về sau chỉ đọc số thập phân đã quy đổi sẵn, không dò định dạng lại.</p>
+<div class="warn">⚠️ <b>Chưa hỗ trợ hệ tọa độ phẳng (VN-2000, UTM...)</b> — các hệ đo bằng mét (không phải độ) hiện <b>chưa</b> nhận diện được. Nếu cần dùng, phải báo trước để bổ sung công thức quy đổi riêng theo từng khu vực/kinh tuyến trục.</div>
+
+<h3>Bước 4 — Thêm số tài khoản (nếu cần thêm ngoài số đã nhập lúc tạo)</h3>
+<p>Tab "💳 Số tài khoản" trong hợp đồng → "➕ Thêm tài khoản" — 1 hợp đồng có thể có nhiều số tài khoản.</p>
+
+<h3>Bước 5 — Theo dõi &amp; xử lý</h3>
+<p>Theo dõi qua "📊 Báo cáo tổng hợp" (tab "👤 Theo dõi hợp đồng theo khách hàng" xem nhanh theo cấu trúc mẹ-con, hoặc các tab báo cáo khác) → Kiểm tra &amp; Đối chiếu định kỳ → Duyệt lần lượt qua các trạng thái → Thanh lý khi hoàn thành.</p>
 
 <h2>3. Các báo cáo có sẵn</h2>
 <table>
@@ -218,6 +242,7 @@
 <tr><td>Thanh lý hợp đồng</td><td>Báo cáo tổng hợp</td><td>Danh sách hợp đồng chưa thanh lý</td></tr>
 <tr><td>Hồ sơ rừng</td><td>Báo cáo tổng hợp</td><td>Chi tiết từng lô rừng + xem tọa độ/ảnh</td></tr>
 <tr><td>Thanh toán</td><td>Báo cáo tổng hợp</td><td>Tổng hợp theo tài khoản/chủ rừng</td></tr>
+<tr><td>Theo dõi hợp đồng theo khách hàng</td><td>Báo cáo tổng hợp</td><td>Xem cấu trúc mẹ-con: Khách hàng → Hợp đồng → Lô rừng/STK → GPS/Hồ sơ (chỉ xem)</td></tr>
 <tr><td>BaoCao_KiemTra</td><td>Sheet file chính</td><td>Kết quả kiểm tra hồ sơ pháp lý từng lô rừng</td></tr>
 </table>
 
@@ -256,13 +281,7 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 </table>
 
 
-<h2>5. Nhập nhanh từ bản scan (OCR)</h2>
-<p>Ở form Nhập liệu, khu vực "📄 Nhập nhanh từ bản scan" cho phép chọn ảnh/PDF CCCD hoặc giấy ủy quyền, hệ thống tự đọc chữ trong ảnh (OCR thật, không phải đọc thuộc tính file) rồi điền tạm vào nháp.</p>
-<div class="warn">
-  ⚠️ <b>Luôn xem lại kết quả trước khi "Lưu chính thức"</b> — độ chính xác phụ thuộc ảnh có rõ nét, đủ sáng, không nghiêng hay không. Nếu gặp lỗi <code>"OCR is not supported for files of type application/vnd.google-apps.document"</code>, vào Google Drive (đúng tài khoản đang chạy web app, xem ở Deploy → Manage deployments → "Execute as") → ⚙️ Cài đặt → mục "Tải lên" → tắt "Chuyển đổi các bản tải lên sang định dạng trình chỉnh sửa Google".
-</div>
-
-<h2>6. Xem chi tiết lô rừng (tọa độ + hồ sơ + ảnh)</h2>
+<h2>5. Xem chi tiết lô rừng (tọa độ + hồ sơ + ảnh)</h2>
 <p>Ở tab <b>🌲 Hồ sơ rừng</b> (Báo cáo tổng hợp), bấm "🔄 Tải báo cáo" rồi bấm "📍 Xem chi tiết" trên dòng cần xem — hiện lên khung nổi giữa màn hình (đóng bằng nút ✕, bấm ra ngoài, hoặc phím Esc), gồm:</p>
 <ul>
   <li><b>Tọa độ GPS</b> — từng điểm đã đo, có link mở Google Maps</li>
@@ -270,8 +289,11 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
   <li><b>Ảnh hiện trường</b> — tách 2 nhóm: "Ảnh riêng của lô rừng này" (chắc chắn đúng lô) và "Ảnh chung của cả hợp đồng" (chưa rõ thuộc lô nào cụ thể nếu hợp đồng có nhiều lô)</li>
 </ul>
 
-<h2>7. Tab Thanh toán</h2>
+<h2>6. Tab Thanh toán</h2>
 <p>Bấm "🔄 Tải báo cáo" để xem tổng hợp thanh toán theo từng Số tài khoản (gộp từ DNTT_GK_DN_CT). 3 ô lọc phía trên (Người nhận tiền / Số hợp đồng / Tên chủ rừng) vừa gõ tìm tự do, vừa bấm vào ô sẽ hiện gợi ý có sẵn để chọn nhanh.</p>
+
+<h2>7. Tab "👤 Theo dõi hợp đồng theo khách hàng" (Báo cáo tổng hợp)</h2>
+<p>Xem NHANH cấu trúc mẹ-con ngay trong Báo cáo tổng hợp — Khách hàng → Hợp đồng → (tab) Lô rừng/Số tài khoản → (tab) Tọa độ GPS/Hồ sơ pháp lý — bấm 1 dòng để mở rộng xem con NGAY TẠI CHỖ (không chuyển trang). <b>Chỉ để xem</b> — muốn Thêm/Sửa/Xóa, dùng trang "📝 Nhập liệu HĐ / Rừng / TK".</p>
 
 <h2>8. Công cụ hệ thống (menu "🚀 HỆ THỐNG HAK" trên Google Sheet)</h2>
 <table>
