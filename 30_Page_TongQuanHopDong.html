@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+<style>
+
+  :root {
+    --sidebar-bg: #14231b;
+    --sidebar-bg-2: #182a20;
+    --active-green: #2f7d52;
+    --accent-gold: #c9973f;
+    --accent-purple: #6b4a63;
+    --text-light: #cdd6d0;
+    --text-muted: #7d8c84;
+    --card-bg: #ffffff;
+    --page-bg: #f2f3f1;
+    --border-light: #e5e7e5;
+    --heading: #1c2a22;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; display: flex; min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--page-bg); color: var(--heading);
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .app-sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
+  }
+  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
+
+  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
+    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
+  .tab-bar a, .tab-bar span {
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  /* Modal "Xem chi tiết lô rừng" — nổi giữa màn hình, không phụ thuộc vị trí
+     cuộn trang, vì bảng Hồ sơ rừng có thể rất dài (hàng trăm dòng) khiến card
+     cũ (nằm ngay sau bảng, theo dòng chảy trang bình thường) bị đẩy xuống tít
+     dưới, người dùng phải cuộn rất xa mới thấy. */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,35,27,0.55);
+    z-index: 1000; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.mo { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: 12px; padding: 22px 24px;
+    max-width: 640px; width: 100%; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-purple { background: var(--accent-purple); color: #fff; }
+  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
+  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+    .brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
+  }
+  #chatbotNut { position: fixed; bottom: 20px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: var(--active-green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 999; }
+  #chatbotHop { display: none; position: fixed; bottom: 84px; right: 20px; width: 340px; max-width: calc(100vw - 40px); height: 440px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 999; flex-direction: column; overflow: hidden; }
+  #chatbotHop.mo { display: flex; }
+  #chatbotDauTrang { background: var(--sidebar-bg); color: #fff; padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  #chatbotDong { cursor: pointer; opacity: .8; }
+  #chatbotNoiDung { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
+  .chatbot-tin { padding: 8px 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12.5px; line-height: 1.4; max-width: 85%; white-space: pre-wrap; }
+  .chatbot-tin-bot { background: #f0f4f1; align-self: flex-start; }
+  .chatbot-tin-nguoi { background: var(--active-green); color: #fff; margin-left: auto; }
+  #chatbotGoNhap { display: flex; border-top: 1px solid var(--border-light); padding: 8px; gap: 6px; }
+  #chatbotGoNhap input { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 12.5px; }
+  #chatbotGoNhap button { background: var(--active-green); color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; }
+  #chatbotAnhDinhKem { padding: 6px 10px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-light); background: #f7faf8; }
+  #chatbotAnhDinhKem a { color: #c0392b; cursor: pointer; margin-left: 4px; }
+  #chatbotNutAnh { background: #f0f4f1; color: #333; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
+</style>
+<style>
+  .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .the-thongke { flex: 1; min-width: 140px; background: #fff; border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .the-thongke:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+  .the-thongke.active { border-color: var(--active-green); background: #f2f8f4; }
+  .the-thongke .so { font-size: 26px; font-weight: 700; color: var(--heading); }
+  .the-thongke.active .so { color: var(--active-green); }
+  .the-thongke .nhan { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+  table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
+  table.mecon-table tr:hover td { background: #f7faf8; }
+  a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
+  a.lnk-hd:hover { text-decoration: underline; }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #eef7f1; color: var(--active-green); }
+  .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+
+  <div class="nav-group-label">Khác</div>
+  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
+    <span class="icon">📖</span> Hướng dẫn sử dụng
+  </a>
+  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
+    <span class="icon">⚙️</span> Thiết lập
+  </a>
+</div>
+
+  <div class="app-main">
+    <div class="page-title">📊 Tổng quan hợp đồng</div>
+    <div class="page-subtitle">Bấm vào 1 thẻ trạng thái để lọc danh sách theo đúng trạng thái đó. Số liệu ban đầu là TẤT CẢ — chọn bộ lọc rồi bấm "Lọc" để dashboard cập nhật theo.</div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="field-row" style="align-items:flex-end">
+        <div class="field"><label>Số hợp đồng</label><input id="locSoHD" placeholder="vd 20260710010"></div>
+        <div class="field"><label>Họ tên chủ rừng</label><input id="locTenChuRung" placeholder="vd Nguyễn Văn A"></div>
+        <div class="field"><label>Từ ngày ký</label><input id="locTuNgay" type="date"></div>
+        <div class="field"><label>Đến ngày ký</label><input id="locDenNgay" type="date"></div>
+        <div class="field" style="flex:none"><button class="btn btn-green" onclick="apDungBoLoc_(1)">🔍 Lọc</button></div>
+        <div class="field" style="flex:none"><button class="btn btn-outline" onclick="xoaBoLoc_()">✕ Bỏ lọc</button></div>
+      </div>
+    </div>
+
+    <div class="the-thongke-row" id="vungKpiTien">
+      <div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>
+    </div>
+
+    <div class="the-thongke-row" id="vungTheThongKe">
+      <div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>
+    </div>
+
+    <div class="card">
+      <div id="tieuDeDanhSach" style="font-weight:700;margin-bottom:10px;font-size:14px">📋 Tất cả hợp đồng (mới ký trước)</div>
+      <div id="vungBangHD"><p class="hint">⌛ Đang tải...</p></div>
+      <div id="phanTrangHD" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+<script>
+  function escHtmlTQ_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function formatTienTQ_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
+  function formatSoTQ_(v) { return (Number(v) || 0).toLocaleString('vi-VN'); }
+  var tinhTrangDangLoc_ = ''; // rỗng = Tất cả
+
+  window.addEventListener('DOMContentLoaded', function () {
+    // Điền sẵn khoảng ngày mặc định (Từ = đầu tháng hiện hành, Đến = hôm nay) để
+    // người dùng chỉnh nhanh nếu muốn — nhưng KHÔNG tự áp dụng lọc ngay, số liệu
+    // load ban đầu vẫn là TẤT CẢ (không giới hạn ngày) cho tới khi bấm "Lọc".
+    var homNay = new Date();
+    var dauThang = new Date(homNay.getFullYear(), homNay.getMonth(), 1);
+    function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    document.getElementById('locTuNgay').value = ymd(dauThang);
+    document.getElementById('locDenNgay').value = ymd(homNay);
+    taiDashboard_(1); // load ban đầu = tất cả, KHÔNG đọc giá trị ô ngày ở trên
+  });
+
+  function layBoLocHienTai_(apDungNgay) {
+    return {
+      soHD: document.getElementById('locSoHD').value.trim(),
+      tenChuRung: document.getElementById('locTenChuRung').value.trim(),
+      tuNgay: apDungNgay ? document.getElementById('locTuNgay').value : '',
+      denNgay: apDungNgay ? document.getElementById('locDenNgay').value : '',
+      tinhTrangLoc: tinhTrangDangLoc_
+    };
+  }
+  var boLocDaApDungNgay_ = false; // chỉ true sau khi người dùng bấm "Lọc" ít nhất 1 lần
+  function apDungBoLoc_(trang) { boLocDaApDungNgay_ = true; taiDashboard_(trang || 1); }
+  function xoaBoLoc_() {
+    document.getElementById('locSoHD').value = ''; document.getElementById('locTenChuRung').value = '';
+    boLocDaApDungNgay_ = false; tinhTrangDangLoc_ = '';
+    taiDashboard_(1);
+  }
+
+  function taiDashboard_(trang) {
+    var boLoc = layBoLocHienTai_(boLocDaApDungNgay_);
+    boLoc.trang = trang; boLoc.kichThuoc = 20;
+    document.getElementById('vungKpiTien').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
+    document.getElementById('vungTheThongKe').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
+    document.getElementById('vungBangHD').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        renderKpiTien_(kq);
+        renderTheThongKe_(kq);
+        renderBangHD_(kq);
+      })
+      .withFailureHandler(function (err) {
+        document.getElementById('vungKpiTien').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>';
+        document.getElementById('vungTheThongKe').innerHTML = '';
+        document.getElementById('vungBangHD').innerHTML = '';
+      })
+      .LAY_TONG_QUAN_HOP_DONG(boLoc);
+  }
+
+  function renderKpiTien_(kq) {
+    var el = document.getElementById('vungKpiTien'); el.innerHTML = '';
+    [
+      { nhan: 'TỔNG GIÁ TRỊ HỢP ĐỒNG', gia: formatTienTQ_(kq.tongGiaTriHopDong) + ' đ' },
+      { nhan: 'TỔNG KHỐI LƯỢNG ĐÃ THỰC HIỆN', gia: formatSoTQ_(kq.tongKhoiLuongThucHien) + ' Tấn' },
+      { nhan: 'TỔNG GIÁ TRỊ ĐÃ THỰC HIỆN', gia: formatTienTQ_(kq.tongGiaTriThucHien) + ' đ' }
+    ].forEach(function (t) {
+      var div = document.createElement('div'); div.className = 'the-thongke'; div.style.cursor = 'default';
+      div.innerHTML = '<div class="so" style="font-size:19px">' + t.gia + '</div><div class="nhan">' + t.nhan + '</div>';
+      el.appendChild(div);
+    });
+  }
+
+  function renderTheThongKe_(kq) {
+    var elThe = document.getElementById('vungTheThongKe');
+    var dsThe = [{ ma: '', nhan: 'Tất cả', so: kq.tongSoHopDong }].concat(
+      ['Chờ thực hiện', 'Đang thực hiện', 'Đã hoàn thành', 'Đã hủy', 'Đã thanh lý'].map(function (tt) {
+        return { ma: tt, nhan: tt, so: kq.theoTrangThai[tt] || 0 };
+      })
+    );
+    elThe.innerHTML = '';
+    dsThe.forEach(function (t) {
+      var div = document.createElement('div');
+      div.className = 'the-thongke' + (t.ma === tinhTrangDangLoc_ ? ' active' : '');
+      div.innerHTML = '<div class="so">' + t.so + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
+      div.addEventListener('click', function () {
+        tinhTrangDangLoc_ = t.ma;
+        document.getElementById('tieuDeDanhSach').textContent = '📋 ' + (t.ma ? 'Hợp đồng "' + t.ma + '"' : 'Tất cả hợp đồng') + ' (mới ký trước)';
+        taiDashboard_(1);
+      });
+      elThe.appendChild(div);
+    });
+  }
+
+  function renderBangHD_(kq) {
+    var elBang = document.getElementById('vungBangHD');
+    if (!kq.items || !kq.items.length) { elBang.innerHTML = '<div class="empty-hint">Không có hợp đồng nào khớp bộ lọc.</div>'; document.getElementById('phanTrangHD').innerHTML = ''; return; }
+    var table = document.createElement('table'); table.className = 'mecon-table';
+    table.innerHTML = '<thead><tr><th>Số HĐ</th><th>Chủ rừng</th><th>Ngày ký</th><th>Trạng thái</th><th></th></tr></thead>';
+    var tbody = document.createElement('tbody');
+    kq.items.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><a class="lnk-hd">' + escHtmlTQ_(r.soHD) + '</a></td><td>' + escHtmlTQ_(r.tenChuRung) + '</td>' +
+        '<td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td><td><span class="badge-trang-thai">' + escHtmlTQ_(r.tinhTrang) + '</span></td><td></td>';
+      tr.querySelector('a').addEventListener('click', function () { moHopDong_(r.idHD); });
+      var tdNut = tr.lastElementChild;
+      var lnkXem = document.createElement('a'); lnkXem.className = 'lnk-hd'; lnkXem.style.fontWeight = '400'; lnkXem.textContent = 'Xem/Sửa →';
+      lnkXem.addEventListener('click', function () { moHopDong_(r.idHD); });
+      tdNut.appendChild(lnkXem);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody); elBang.innerHTML = ''; elBang.appendChild(table);
+
+    var elTrang = document.getElementById('phanTrangHD'); elTrang.innerHTML = '';
+    var bT = document.createElement('button'); bT.className = 'btn btn-outline'; bT.textContent = '‹ Trước'; bT.disabled = kq.trang <= 1;
+    bT.addEventListener('click', function () { taiDashboard_(kq.trang - 1); });
+    var sp = document.createElement('span'); sp.style.margin = '0 10px'; sp.textContent = 'Trang ' + kq.trang + '/' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)';
+    var bS = document.createElement('button'); bS.className = 'btn btn-outline'; bS.textContent = 'Sau ›'; bS.disabled = kq.trang >= kq.tongTrang;
+    bS.addEventListener('click', function () { taiDashboard_(kq.trang + 1); });
+    elTrang.appendChild(bT); elTrang.appendChild(sp); elTrang.appendChild(bS);
+  }
+
+  function moHopDong_(idHD) {
+    window.open('<?= baseUrl ?>?page=hopdongmc&idHD=' + encodeURIComponent(idHD), '_blank');
+  }
+
+  // ============ WIDGET CHATBOT (nổi, dùng chung mọi trang có nhúng) ============
+  function toggleChatbot() { document.getElementById('chatbotHop').classList.toggle('mo'); }
+  var chatbotAnhChon_ = null; // { base64, mimeType, tenFile } hoặc null nếu chưa chọn ảnh
+
+  window.addEventListener('DOMContentLoaded', function khoiTaoChatbotWidget_() {
+    var elGui = document.getElementById('chatbotNutGui');
+    var elInput = document.getElementById('chatbotOInput');
+    var elNutAnh = document.getElementById('chatbotNutAnh');
+    var elOAnh = document.getElementById('chatbotOAnh');
+    var elBoAnh = document.getElementById('chatbotBoAnhBtn');
+    if (!elGui) return; // trang chưa nhúng widget này thì bỏ qua
+    elGui.addEventListener('click', chatbotGuiCauHoi);
+    elInput.addEventListener('keyup', function (e) { if (e.key === 'Enter') chatbotGuiCauHoi(); });
+    elNutAnh.addEventListener('click', function () { elOAnh.click(); });
+    elBoAnh.addEventListener('click', chatbotBoAnh_);
+    var elXoaNguCanh = document.getElementById('chatbotXoaNguCanh');
+    if (elXoaNguCanh) elXoaNguCanh.addEventListener('click', chatbotXoaNguCanh_);
+    elOAnh.addEventListener('change', function () {
+      var file = elOAnh.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        chatbotAnhChon_ = { base64: e.target.result.split(',')[1], mimeType: file.type, tenFile: file.name };
+        document.getElementById('chatbotTenAnh').textContent = file.name;
+        document.getElementById('chatbotAnhDinhKem').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  function chatbotXoaNguCanh_() {
+    chatbotCccdGoiY_ = []; chatbotLichSu_ = [];
+    var vungTin = document.getElementById('chatbotNoiDung');
+    var tinBao = document.createElement('div'); tinBao.className = 'chatbot-tin chatbot-tin-bot'; tinBao.textContent = '🔄 Đã xóa ngữ cảnh — mọi câu hỏi tiếp theo sẽ tính là câu hỏi HOÀN TOÀN MỚI, không còn nhớ khách hàng/hợp đồng đã hỏi trước đó.';
+    vungTin.appendChild(tinBao);
+    vungTin.scrollTop = vungTin.scrollHeight;
+  }
+  function chatbotBoAnh_() {
+    chatbotAnhChon_ = null;
+    document.getElementById('chatbotAnhDinhKem').style.display = 'none';
+    document.getElementById('chatbotOAnh').value = '';
+  }
+
+  // ⚠️ NÂNG CẤP: nhớ CCCD đã khớp + vài lượt hỏi-đáp gần nhất, gửi kèm mỗi câu
+  // hỏi mới -> chatbot hiểu được câu hỏi NỐI TIẾP (vd "còn thanh toán thì sao?")
+  // mà không cần gõ lại tên khách hàng mỗi lần.
+  var chatbotCccdGoiY_ = [];
+  var chatbotLichSu_ = [];
+  function chatbotGuiCauHoi() {
+    var input = document.getElementById('chatbotOInput');
+    var cauHoi = input.value.trim();
+    var anhDangGui = chatbotAnhChon_;
+    if (!cauHoi && !anhDangGui) return;
+    var vungTin = document.getElementById('chatbotNoiDung');
+    var tinNguoi = document.createElement('div'); tinNguoi.className = 'chatbot-tin chatbot-tin-nguoi';
+    tinNguoi.textContent = (anhDangGui ? '📷 [' + anhDangGui.tenFile + '] ' : '') + cauHoi;
+    vungTin.appendChild(tinNguoi);
+    input.value = ''; chatbotBoAnh_();
+    var tinCho = document.createElement('div'); tinCho.className = 'chatbot-tin chatbot-tin-bot'; tinCho.textContent = anhDangGui ? '⌛ Đang đọc ảnh...' : '⌛ Đang tra cứu...';
+    vungTin.appendChild(tinCho);
+    vungTin.scrollTop = vungTin.scrollHeight;
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        var traLoi = kq.thanhCong ? (kq.khongDungAI ? '🔧 ' : '') + kq.traLoi : '❌ ' + kq.loi;
+        tinCho.textContent = traLoi;
+        vungTin.scrollTop = vungTin.scrollHeight;
+        if (kq.thanhCong) {
+          if (kq.cccdDaKhop && kq.cccdDaKhop.length) chatbotCccdGoiY_ = kq.cccdDaKhop;
+          chatbotLichSu_.push({ vaiTro: 'nguoi', noiDung: cauHoi }, { vaiTro: 'bot', noiDung: kq.traLoi });
+          chatbotLichSu_ = chatbotLichSu_.slice(-8);
+        }
+      })
+      .withFailureHandler(function (err) { tinCho.textContent = '❌ Lỗi: ' + err.message; vungTin.scrollTop = vungTin.scrollHeight; })
+      .TRA_LOI_CHATBOT(cauHoi, chatbotCccdGoiY_, chatbotLichSu_, anhDangGui ? { base64: anhDangGui.base64, mimeType: anhDangGui.mimeType } : null);
+  }
+
+</script>
+
+  <div id="chatbotNut" onclick="toggleChatbot()" title="Hỏi chatbot tra cứu dữ liệu">🤖</div>
+  <div id="chatbotHop">
+    <div id="chatbotDauTrang">🤖 Chatbot tra cứu dữ liệu <span><span id="chatbotXoaNguCanh" title="Xóa ngữ cảnh, hỏi câu hoàn toàn mới" style="cursor:pointer;margin-right:10px">🔄</span><span id="chatbotDong" onclick="toggleChatbot()">✕</span></span></div>
+    <div id="chatbotNoiDung">
+      <div class="chatbot-tin chatbot-tin-bot">Xin chào! Hỏi mình về hợp đồng, khách hàng, lô rừng, hoặc dán tọa độ (vd "15.733975, 108.126 là rừng ai?") để tra ngược ra đúng lô rừng gần đó. Bấm 📷 để gửi kèm ảnh (CCCD, giấy tờ, phiếu cân...) nhờ đọc/OCR.</div>
+    </div>
+    <div id="chatbotAnhDinhKem" style="display:none">
+      📷 <span id="chatbotTenAnh"></span> <a id="chatbotBoAnhBtn">✕ bỏ</a>
+    </div>
+    <div id="chatbotGoNhap">
+      <input type="file" id="chatbotOAnh" accept="image/*" style="display:none">
+      <button id="chatbotNutAnh" title="Đính kèm ảnh để đọc/OCR">📷</button>
+      <input id="chatbotOInput" placeholder="Gõ câu hỏi...">
+      <button id="chatbotNutGui">Gửi</button>
+    </div>
+  </div>
+
+</body>
+</html>

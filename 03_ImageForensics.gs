@@ -176,24 +176,16 @@ function khoangCachMet_(lat1, lng1, lat2, lng2) {
  * Dùng OCR (ocrFile_ ở 04_Reconciliation.gs) đọc chữ trên ảnh rồi dò mẫu tọa độ
  * dạng độ-phút-giây (vd: 15°44'4.872" N 108°4'57.026" E).
  */
+/** ⚠️ ĐÃ SỬA: trước đây tự OCR rồi bóc tách bằng regex CHỈ bắt đúng 1 định dạng
+ *  độ-phút-giây (°'") — nhiều tem tọa độ của app GPS Map Camera lại in dạng
+ *  thập phân thường hoặc bố cục khác, regex không bắt được. Giờ dùng lại
+ *  docToaDoTuTemAnhBangGemini_() (đã viết ở 06_CreateUpdate.gs cho luồng "Tải
+ *  ảnh mới") — nhờ Gemini đọc trực tiếp, không phụ thuộc đúng 1 định dạng chữ. */
 function docToaDoTuChuTrenAnh_(fileId) {
   try {
-    const text = ocrFile_(fileId);
-    const regex = /(\d{1,3})\s*[°º]\s*(\d{1,2})\s*['′]\s*([\d.]+)\s*[""″]?\s*([NS])[^\d]{0,15}(\d{1,3})\s*[°º]\s*(\d{1,2})\s*['′]\s*([\d.]+)\s*[""″]?\s*([EW])/i;
-    const m = text.match(regex);
-    let toaDo = null;
-    if (m) {
-      let lat = Number(m[1]) + Number(m[2]) / 60 + Number(m[3]) / 3600;
-      if (m[4].toUpperCase() === 'S') lat = -lat;
-      let lng = Number(m[5]) + Number(m[6]) / 60 + Number(m[7]) / 3600;
-      if (m[8].toUpperCase() === 'W') lng = -lng;
-      toaDo = { lat: lat, lng: lng };
-    }
-    // Địa chỉ: heuristic lấy vài dòng cuối của chữ in trên ảnh (thường là tên đường/xã/huyện/tỉnh,
-    // in ở dưới cùng ảnh) — không chắc chắn tuyệt đối, chỉ mang tính tham khảo thêm.
-    const dong = text.split('\n').map(function (d) { return d.trim(); }).filter(Boolean);
-    const diaChi = dong.length ? dong.slice(-3).join(', ') : '';
-    return { toaDo: toaDo, diaChi: diaChi, vanBanGoc: text };
+    const blob = DriveApp.getFileById(fileId).getBlob();
+    const kq = docToaDoTuTemAnhBangGemini_(blob);
+    return { toaDo: kq ? { lat: kq.lat, lng: kq.lng } : null, diaChi: kq ? kq.diaChi : '', vanBanGoc: '' };
   } catch (e) {
     return { toaDo: null, diaChi: '', vanBanGoc: '', loi: e.message };
   }

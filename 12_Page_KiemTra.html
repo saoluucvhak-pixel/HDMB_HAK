@@ -126,6 +126,9 @@
     </div>
   </div>
 
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
@@ -229,7 +232,7 @@
     <div class="panel2" id="pAnhMoi">
       <div class="card">
         <h3>📷 Tải ảnh lên kiểm tra (chưa cần biết thuộc hợp đồng nào)</h3>
-        <p class="hint" style="margin-top:-8px">Dùng khi cần kiểm tra nhanh 1 ảnh hiện trường (đọc tọa độ GPS, dấu hiệu chỉnh sửa) trước khi quyết định gán vào hồ sơ hợp đồng nào.</p>
+        <p class="hint" style="margin-top:-8px">Dùng khi cần kiểm tra nhanh 1 ảnh hiện trường trước khi quyết định gán vào hồ sơ hợp đồng nào. Tự đọc tọa độ GPS theo 2 cách: EXIF ảnh (nếu máy có bật định vị lúc chụp), hoặc tem tọa độ in sẵn trên ảnh kiểu app "GPS Map Camera" (đọc bằng Gemini — cần đã cấu hình API key ở Thiết lập).</p>
         <input type="file" id="fileAnhMoi" accept="image/*" style="display:none">
         <button type="button" class="btn btn-outline" onclick="document.getElementById('fileAnhMoi').click()">📁 Chọn ảnh từ máy...</button>
         <span id="tenFileDaChonAnhMoi" class="hint" style="margin-left:8px"></span>
@@ -258,14 +261,15 @@
     <div class="panel2" id="pOCR">
       <div class="card">
         <h3>🔎 Đối chiếu OCR file gốc (DinhKemGiayTo) với dữ liệu đã nhập</h3>
-        <p class="hint" style="margin-top:-8px">OCR file PDF/ảnh minh chứng, so khớp số CCCD/số giấy tờ với dữ liệu trong Sheet. Cần đã bật Drive API (Advanced Service). Chạy khá chậm — nên chạy vào cuối ngày hoặc để trigger tự động.</p>
+        <p class="hint" style="margin-top:-8px">OCR file PDF/ảnh minh chứng bằng Gemini, so khớp số CCCD/số giấy tờ với dữ liệu trong Sheet. Cần đã cấu hình API key Gemini ở trang Thiết lập → 🤖 Chatbot (dùng chung, không cần nhập lại). Chạy khá chậm — nên chạy vào cuối ngày hoặc để trigger tự động.</p>
         <div class="field-row">
           <div class="field"><label>Lọc theo Số HĐ / ID_HD</label><input id="locOCRSoHD" onkeyup="renderBangOCR()"></div>
           <div class="field"><label>Lọc theo tên chủ rừng</label><input id="locOCRTen" list="dlTenChuRungOCR" onkeyup="renderBangOCR()"></div>
           <datalist id="dlTenChuRungOCR"></datalist>
         </div>
-        <button class="btn btn-gold" style="margin-top:8px" onclick="chayOCRTatCa()">⚙️ Chạy đối chiếu OCR toàn bộ (ghi vào sheet BaoCao_DoiChieuOCR)</button>
-        <button class="btn btn-outline" style="margin-top:8px" onclick="chayOCRDaLoc()">▶️ Chỉ đối chiếu các dòng đang hiện (theo bộ lọc trên)</button>
+        <button class="btn btn-gold" style="margin-top:8px" onclick="chayOCRTatCa()">⚙️ Chạy đối chiếu OCR toàn bộ — chỉ ghi vào Sheet (KHÔNG hiện lên bảng dưới)</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="chayOCRDaLoc()">▶️ Đối chiếu các dòng đang hiện — hiện kết quả ngay ở cột "Kết quả" bên dưới</button>
+        <p class="hint" style="margin-top:6px">💡 Muốn XEM kết quả ngay trên trang này (cột "Kết quả" bên dưới) → dùng nút "▶️" bên phải. Nút "⚙️" bên trái chỉ ghi vào Sheet <code>BaoCao_DoiChieuOCR</code> để lưu trữ/đối chiếu số lượng lớn định kỳ — bảng dưới đây sẽ KHÔNG tự cập nhật, phải mở Sheet đó ra xem.</p>
         <div id="msgOCR" class="msg" style="display:none"></div>
         <div style="overflow-x:auto;margin-top:12px">
           <table class="data-table" id="tblOCR">
@@ -461,13 +465,14 @@
     google.script.run
       .withSuccessHandler(function (list) {
         showMsg('msgAnhLuu', '✅ Đã kiểm tra ' + list.length + ' ảnh.', true);
-        var html = '<table class="small"><tr><th>Ảnh</th><th>Chủ rừng</th><th>Địa chỉ rừng (đăng ký)</th><th>Tọa độ ảnh</th><th>Nguồn tọa độ</th><th>Địa chỉ đọc từ ảnh</th><th>Kết luận</th><th>Dấu hiệu</th></tr>';
+        var html = '<table class="small"><tr><th>Ảnh</th><th>Chủ rừng</th><th>Địa chỉ rừng (đăng ký)</th><th>Tọa độ ĐỌC ĐƯỢC TỪ ẢNH</th><th>Nguồn tọa độ</th><th>Tọa độ rừng (đăng ký, để so sánh)</th><th>Địa chỉ đọc từ ảnh</th><th>Kết luận</th><th>Dấu hiệu</th></tr>';
         list.forEach(function (r) {
-          var toaDoText = r.toaDo ? '<a href="#" onclick="xemToaDoAnh(' + r.toaDo.lat + ',' + r.toaDo.lng + ');return false;">' + r.toaDo.lat.toFixed(5) + ', ' + r.toaDo.lng.toFixed(5) + '</a>' : '<span class="hint">Chưa có</span>';
+          var toaDoAnhText = r.gpsAnh ? '<a href="#" onclick="xemToaDoAnh(' + r.gpsAnh.lat + ',' + r.gpsAnh.lng + ');return false;">' + r.gpsAnh.lat.toFixed(5) + ', ' + r.gpsAnh.lng.toFixed(5) + '</a>' : '<span class="hint">Không đọc được</span>';
+          var toaDoDangKyText = r.toaDoDangKy ? r.toaDoDangKy.lat.toFixed(5) + ', ' + r.toaDoDangKy.lng.toFixed(5) : '<span class="hint">Chưa có</span>';
           html += '<tr' + (r.ketLuan !== 'Bình thường' ? ' class="row-vang"' : '') + '>' +
             '<td><a href="' + r.url + '" target="_blank">' + (r.tenFile || 'xem ảnh') + '</a></td>' +
-            '<td>' + (r.chuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td><td>' + toaDoText + '</td>' +
-            '<td>' + (r.nguonToaDo || '<span class="hint">Không có</span>') + '</td><td>' + (r.diaChiTrenAnh || '') + '</td>' +
+            '<td>' + (r.chuRung || '<span class="hint">Không tra được</span>') + '</td><td>' + (r.diaChiRung || '') + '</td><td>' + toaDoAnhText + '</td>' +
+            '<td>' + (r.nguonToaDo || '<span class="hint">Không có</span>') + '</td><td>' + toaDoDangKyText + '</td><td>' + (r.diaChiTrenAnh || '') + '</td>' +
             '<td>' + r.ketLuan + '</td><td>' + r.dauHieu + '</td></tr>';
         });
         html += '</table>';
@@ -537,8 +542,8 @@
         .withSuccessHandler(function (kq) {
           if (!kq.thanhCong) { showMsg('msgAnhMoi', '❌ ' + kq.loi, false); return; }
           showMsg('msgAnhMoi', kq.gpsDaThem
-            ? '✅ Đã lưu "' + kq.tenFile + '" vào danh sách chờ xử lý — đọc được GPS: ' + kq.gpsDaThem.lat.toFixed(6) + ', ' + kq.gpsDaThem.lng.toFixed(6) + '. Xem bên dưới để gán vào hợp đồng.'
-            : '✅ Đã lưu "' + kq.tenFile + '" vào danh sách chờ xử lý — ảnh KHÔNG có GPS. Xem bên dưới để gán vào hợp đồng.', true);
+            ? '✅ Đã lưu "' + kq.tenFile + '" vào danh sách chờ xử lý — đọc được GPS (' + kq.nguonGps + '): ' + kq.gpsDaThem.lat.toFixed(6) + ', ' + kq.gpsDaThem.lng.toFixed(6) + '. Xem bên dưới để gán vào hợp đồng.'
+            : '✅ Đã lưu "' + kq.tenFile + '" vào danh sách chờ xử lý — không đọc được GPS (không có EXIF, cũng không thấy tem tọa độ trên ảnh). Xem bên dưới để gán vào hợp đồng.', true);
           fileInput.value = ''; document.getElementById('ghiChuAnhMoi').value = '';
           taiTatCaDraft();
         })
@@ -551,56 +556,105 @@
     reader.readAsDataURL(file);
   }
 
+  var mapHopDongGanChung_ = null; // "Tên — Số HĐ" -> idHD, tải 1 LẦN DUY NHẤT dùng chung cho mọi ảnh
+  function damBaoDaTaiHopDongGan_(khiXong) {
+    if (mapHopDongGanChung_) { khiXong(); return; }
+    google.script.run.withSuccessHandler(function (kq) {
+      mapHopDongGanChung_ = {};
+      var dl = document.getElementById('dlHopDongGanChung');
+      (kq.items || []).forEach(function (hd) {
+        var nhan = hd.tenChuRung + ' — ' + hd.soHD;
+        mapHopDongGanChung_[nhan] = hd.idHD;
+        var o = document.createElement('option'); o.value = nhan; dl.appendChild(o);
+      });
+      khiXong();
+    }).layDanhSachHopDong(1, 5000, '', '');
+  }
+
   function taiTatCaDraft() {
     google.script.run.withSuccessHandler(function (list) {
       var el = document.getElementById('dsTatCaDraft');
       if (!list.length) { el.innerHTML = '<p class="hint">Không có ảnh nào.</p>'; return; }
-      var html = '';
+      el.innerHTML = '<datalist id="dlHopDongGanChung"></datalist>';
+      var canTaiHopDongGan = list.some(function (a) { return a.trangThai === 'Chờ duyệt' && !(a.idHD && a.idRung); });
+      if (canTaiHopDongGan) damBaoDaTaiHopDongGan_(function () {});
+
       list.forEach(function (a, i) {
         var mau = a.trangThai === 'Đã duyệt' ? '#196f3d' : (a.trangThai === 'Đã từ chối' ? '#c0392b' : '#a67c1f');
         var daGan = a.idHD && a.idRung;
-        html += '<div class="card" style="padding:12px;margin-bottom:10px">' +
+        var box = document.createElement('div');
+        box.className = 'card'; box.style.padding = '12px'; box.style.marginBottom = '10px';
+        box.innerHTML =
           '<div class="data-row"><span>' + (a.url ? '<a href="' + a.url + '" target="_blank">🖼️ ' + a.tenFile + '</a>' : a.tenFile) + '</span>' +
           '<b style="color:' + mau + '">' + a.trangThai + '</b></div>' +
-          (a.gpsLat ? '<div class="hint">GPS: ' + Number(a.gpsLat).toFixed(6) + ', ' + Number(a.gpsLng).toFixed(6) + '</div>' : '<div class="hint">Không có GPS trong ảnh</div>') +
+          (a.gpsLat ? '<div class="hint">GPS: ' + Number(a.gpsLat).toFixed(6) + ', ' + Number(a.gpsLng).toFixed(6) + ' — sẽ ghi vào HD_GPS khi duyệt</div>' : '<div class="hint">Không có GPS trong ảnh</div>') +
           (a.diaChiRung ? '<div class="hint">Địa chỉ ghi chú: ' + a.diaChiRung + '</div>' : '') +
           (a.ghiChu ? '<div class="hint">Ghi chú: ' + a.ghiChu + '</div>' : '') +
           (daGan ? '<div class="hint">Đã gán: HĐ ' + a.idHD + ' — Rừng ' + a.idRung + '</div>' : '');
 
         if (a.trangThai === 'Chờ duyệt') {
           if (!daGan) {
-            html += '<div class="field-row" style="margin-top:8px">' +
-              '<div class="field"><label>ID_HD hoặc Số HĐ</label><input id="ganIdHD_' + i + '"></div>' +
-              '<div class="field"><label>ID_RUNG</label><input id="ganIdRung_' + i + '" placeholder="vd: HAK293_1"></div></div>' +
-              '<button class="btn btn-outline" style="margin-top:6px" onclick="ganVaDuyet(' + a.soDong + ',' + i + ')">📎 Gán vào rừng &amp; Duyệt luôn</button> ';
-          } else {
-            html += '<button class="btn btn-green" style="margin-top:6px" onclick="duyetDraftChung(' + a.soDong + ')">✅ Duyệt</button> ';
-          }
-          html += '<button class="btn" style="margin-top:6px;background:#e74c3c;color:#fff" onclick="tuChoiDraftChung(' + a.soDong + ')">❌ Từ chối</button>';
-        }
-        html += '</div>';
-      });
-      el.innerHTML = html;
-    }).layTatCaDraftAnh();
-  }
+            var vungGan = document.createElement('div');
+            vungGan.style.marginTop = '8px';
+            vungGan.innerHTML =
+              '<div class="field-row">' +
+              '<div class="field"><label>Chủ rừng / Số hợp đồng</label><input id="ganHD_' + i + '" list="dlHopDongGanChung" placeholder="Gõ tên hoặc số HĐ..."></div>' +
+              '<div class="field"><label>Mã rừng (lô rừng)</label><input id="ganRung_' + i + '" list="dlRungGan_' + i + '" placeholder="Chọn hợp đồng trước" disabled></div>' +
+              '</div><datalist id="dlRungGan_' + i + '"></datalist>' +
+              '<div id="msgGan_' + i + '" class="hint"></div>' +
+              '<button class="btn btn-outline" style="margin-top:6px" type="button">📎 Gán vào rừng &amp; Duyệt luôn (ghi cả HD_Picture + HD_GPS)</button>';
+            box.appendChild(vungGan);
+            var nutGan = vungGan.querySelector('button');
 
-  function ganVaDuyet(soDong, i) {
-    var idHD = document.getElementById('ganIdHD_' + i).value;
-    var idRung = document.getElementById('ganIdRung_' + i).value;
-    if (!idHD || !idRung) { alert('Nhập đủ ID_HD và ID_RUNG.'); return; }
-    google.script.run
-      .withSuccessHandler(function (kqTim) {
-        if (!kqTim) { alert('Không tìm thấy hợp đồng: ' + idHD); return; }
-        google.script.run
-          .withSuccessHandler(function (kqGan) {
-            if (!kqGan.thanhCong) { alert(kqGan.loi); return; }
-            google.script.run.withSuccessHandler(function (kqDuyet) {
-              if (kqDuyet.thanhCong) taiTatCaDraft(); else alert(kqDuyet.loi);
-            }).DUYET_ANH_RUNG(soDong);
-          })
-          .GAN_ANH_VAO_RUNG(soDong, kqTim.idHD, idRung);
-      })
-      .timHopDongTheoId(idHD);
+            var mapRungGan_ = {}; // "Mã rừng — địa chỉ" -> idRung, riêng theo từng ảnh (phụ thuộc hợp đồng đã chọn)
+            var oHD = vungGan.querySelector('#ganHD_' + i);
+            var oRung = vungGan.querySelector('#ganRung_' + i);
+            oHD.addEventListener('change', function () {
+              damBaoDaTaiHopDongGan_(function () {
+                var idHDKhop = mapHopDongGanChung_[oHD.value];
+                if (!idHDKhop) { oRung.disabled = true; oRung.placeholder = 'Chọn đúng 1 hợp đồng ở gợi ý trên'; return; }
+                oRung.disabled = false; oRung.placeholder = 'Đang tải danh sách lô rừng...'; oRung.value = '';
+                document.getElementById('dlRungGan_' + i).innerHTML = ''; mapRungGan_ = {};
+                google.script.run.withSuccessHandler(function (dsRung) {
+                  oRung.placeholder = 'Chọn mã rừng...';
+                  (dsRung || []).forEach(function (r) {
+                    var nhan = (r.maRung || r.idRung) + ' — ' + (r.diaChiRung || '');
+                    mapRungGan_[nhan] = r.idRung;
+                    var o = document.createElement('option'); o.value = nhan;
+                    document.getElementById('dlRungGan_' + i).appendChild(o);
+                  });
+                }).layDanhSachRung(idHDKhop);
+              });
+            });
+
+            nutGan.addEventListener('click', function () {
+              var idHDKhop = mapHopDongGanChung_ ? mapHopDongGanChung_[oHD.value] : null;
+              var idRungKhop = mapRungGan_[oRung.value];
+              var msg = document.getElementById('msgGan_' + i);
+              if (!idHDKhop || !idRungKhop) { msg.textContent = '❌ Chọn đúng 1 hợp đồng và 1 mã rừng từ danh sách gợi ý (không gõ tự do).'; return; }
+              msg.textContent = '⌛ Đang gán và duyệt...';
+              google.script.run
+                .withSuccessHandler(function (kqGan) {
+                  if (!kqGan.thanhCong) { msg.textContent = '❌ ' + kqGan.loi; return; }
+                  google.script.run.withSuccessHandler(function (kqDuyet) {
+                    if (kqDuyet.thanhCong) taiTatCaDraft(); else msg.textContent = '❌ ' + kqDuyet.loi;
+                  }).DUYET_ANH_RUNG(a.soDong);
+                })
+                .withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; })
+                .GAN_ANH_VAO_RUNG(a.soDong, idHDKhop, idRungKhop);
+            });
+          } else {
+            var nutDuyet = document.createElement('button'); nutDuyet.className = 'btn btn-green'; nutDuyet.style.marginTop = '6px'; nutDuyet.textContent = '✅ Duyệt';
+            nutDuyet.addEventListener('click', function () { duyetDraftChung(a.soDong); });
+            box.appendChild(nutDuyet);
+          }
+          var nutTuChoi = document.createElement('button'); nutTuChoi.style.marginTop = '6px'; nutTuChoi.style.marginLeft = '6px'; nutTuChoi.style.background = '#e74c3c'; nutTuChoi.style.color = '#fff'; nutTuChoi.className = 'btn'; nutTuChoi.textContent = '❌ Từ chối';
+          nutTuChoi.addEventListener('click', function () { tuChoiDraftChung(a.soDong); });
+          box.appendChild(nutTuChoi);
+        }
+        el.appendChild(box);
+      });
+    }).layTatCaDraftAnh();
   }
 
   function duyetDraftChung(soDong) {
@@ -672,8 +726,10 @@
   }
 
   function hienThiKetQuaOCR_(i, kq) {
-    var html = kq.loi ? '<span class="hint">' + kq.loi + '</span>' :
-      'CCCD: ' + (kq.khopCCCD === null ? 'N/A' : (kq.khopCCCD ? '✅' : '❌')) + ' — Số giấy tờ: ' + (kq.khopSoGiayTo === null ? 'N/A' : (kq.khopSoGiayTo ? '✅' : '❌'));
+    if (kq.loi) { document.getElementById('ocrKq_' + i).innerHTML = '<span class="hint">' + kq.loi + '</span>'; return; }
+    var kh = function (v) { return v === null ? 'N/A' : (v ? '✅' : '❌'); };
+    var html = 'CCCD: ' + kh(kq.khopCCCD) + ' — Tên chủ rừng: ' + kh(kq.khopTenChuRung) + ' — Số giấy tờ: ' + kh(kq.khopSoGiayTo) +
+      ' — Loại hồ sơ: ' + kh(kq.khopLoaiHoSo) + ' — Diện tích: ' + kh(kq.khopDienTich) + (kq.dienTichOCR ? ' (OCR đọc: ' + Number(kq.dienTichOCR).toLocaleString('vi-VN') + ' m²)' : '');
     document.getElementById('ocrKq_' + i).innerHTML = html;
   }
 
@@ -688,7 +744,7 @@
   function chayOCRTatCa() {
     showMsg('msgOCR', '⌛ Đang chạy (có thể mất nhiều phút)...', true);
     google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msgOCR', '✅ ' + kq, true); })
+      .withSuccessHandler(function (kq) { showMsg('msgOCR', '✅ ' + kq + ' — ⚠️ Bảng dưới đây KHÔNG tự cập nhật, mở Sheet "BaoCao_DoiChieuOCR" để xem chi tiết.', true); })
       .withFailureHandler(function (err) { showMsg('msgOCR', '❌ Lỗi: ' + err.message, false); })
       .DOI_CHIEU_HO_SO_DINH_KY();
   }

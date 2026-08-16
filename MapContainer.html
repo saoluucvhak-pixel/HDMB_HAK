@@ -73,9 +73,8 @@
 <div id="panel">
   <h2>🗺️ Bản đồ GPS Rừng</h2>
   <div id="navMenu">
-    <a href="<?= baseUrl ?>" class="active">🗺️ Bản đồ</a>
-    <a href="<?= baseUrl ?>?page=form">📝 Nhập liệu</a>
-    <a href="<?= baseUrl ?>?page=baocao">📊 Báo cáo</a>
+    <a href="<?= baseUrl ?>?page=tongquan">🏠 Menu chính</a>
+    <a href="<?= baseUrl ?>?page=map" class="active">🗺️ Bản đồ</a>
     <a href="<?= baseUrl ?>?page=kiemtra">🔎 Kiểm tra</a>
   </div>
   <div id="timestamp"></div>
@@ -98,11 +97,11 @@
 
   var lopVeTinh = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Tiles © Esri', maxZoom: 19 }
+    { attribution: 'Tiles © Esri', maxZoom: 19, maxNativeZoom: 17 } // ⚠️ maxNativeZoom: nhiều vùng rừng ở xa không có ảnh vệ tinh Esri độ phân giải cao — nếu để Leaflet tự tải tile vượt mức ảnh gốc thực tế sẽ vỡ/lỗi hiển thị khi phóng to; giới hạn ở 17 để Leaflet TỰ PHÓNG TO MƯỢT từ ảnh gốc thay vì cố tải tile không tồn tại
   ).addTo(map);
 
   var lopOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
+    attribution: '© OpenStreetMap', maxZoom: 19, maxNativeZoom: 18 // OSM có độ phủ tốt hơn nhưng vẫn giới hạn dưới maxZoom 1 mức để an toàn
   });
 
   L.control.layers({ 'Ảnh vệ tinh': lopVeTinh, 'Bản đồ đường': lopOSM }).addTo(map);

@@ -177,6 +177,67 @@ function layBaoCaoHopDongDonGian() {
  * đạc GPS thực tế, đã có ảnh hiện trường chưa, hồ sơ pháp lý đã đủ chưa —
  * cho từng hợp đồng, kèm số liệu tổng hợp để hiển thị KPI trên webapp.
  */
+/**
+ * Dashboard "Tổng quan hợp đồng" — 1 lượt gọi duy nhất trả đủ: thẻ đếm theo
+ * trạng thái, tổng giá trị hợp đồng, tổng khối lượng đã thực hiện, VÀ danh
+ * sách phân trang — tất cả đã áp dụng ĐÚNG bộ lọc (số HĐ / tên chủ rừng /
+ * khoảng ngày ký / trạng thái). Đọc từ cache Draft_BaoCaoHopDong (đã có sẵn
+ * giá trị/khối lượng tính trước) — KHÔNG tính lại từ HD_RUNG mỗi lần lọc.
+ */
+function LAY_TONG_QUAN_HOP_DONG(boLoc) {
+  boLoc = boLoc || {};
+  const trang = boLoc.trang || 1, kichThuoc = boLoc.kichThuoc || 20;
+  const soHDLoc = (boLoc.soHD || '').toString().trim().toLowerCase();
+  const tenLoc = (boLoc.tenChuRung || '').toString().trim().toLowerCase();
+  const tinhTrangLoc = (boLoc.tinhTrangLoc || '').toString().trim();
+  const tuNgay = boLoc.tuNgay ? new Date(boLoc.tuNgay) : null;
+  const denNgay = boLoc.denNgay ? new Date(boLoc.denNgay) : null;
+  if (denNgay) denNgay.setHours(23, 59, 59, 999); // lấy trọn ngày kết thúc
+
+  const list = docToanBoDraftBaoCao_();
+  const locChung = list.filter(function (m) {
+    if (soHDLoc && (m.soHD || '').toString().toLowerCase().indexOf(soHDLoc) === -1) return false;
+    if (tenLoc && (m.tenChuRung || '').toString().toLowerCase().indexOf(tenLoc) === -1) return false;
+    if (tuNgay || denNgay) {
+      const ngay = m.ngayKy ? new Date(m.ngayKy) : null;
+      if (!ngay) return false;
+      if (tuNgay && ngay < tuNgay) return false;
+      if (denNgay && ngay > denNgay) return false;
+    }
+    return true;
+  });
+
+  // Đếm theo trạng thái + tổng giá trị/khối lượng -> tính trên TOÀN BỘ tập đã lọc theo
+  // số HĐ/tên/ngày (CHƯA áp trạng thái) để 5 thẻ trạng thái luôn phản ánh đúng phần còn
+  // lại của mỗi trạng thái trong đúng khoảng đang xem, thẻ nào cũng bấm lọc tiếp được.
+  const theoTrangThai = {};
+  locChung.forEach(function (m) { const tt = m.tinhTrang || 'Đang thực hiện'; theoTrangThai[tt] = (theoTrangThai[tt] || 0) + 1; });
+
+  const locDuTrangThai = tinhTrangLoc && tinhTrangLoc !== 'Tất cả' ? locChung.filter(function (m) { return (m.tinhTrang || 'Đang thực hiện') === tinhTrangLoc; }) : locChung;
+
+  let tongGiaTriHopDong = 0, tongKhoiLuongThucHien = 0, tongGiaTriThucHien = 0;
+  locDuTrangThai.forEach(function (m) {
+    tongGiaTriHopDong += Number(m.giaTriHopDong) || 0;
+    tongKhoiLuongThucHien += Number(m.khoiLuongThucHien) || 0;
+    tongGiaTriThucHien += Number(m.giaTriThucHien) || 0;
+  });
+
+  const daSapXep = locDuTrangThai.slice().sort(function (a, b) { return new Date(b.ngayKy || 0) - new Date(a.ngayKy || 0); });
+  const tongSo = daSapXep.length;
+  const tongTrang = Math.max(1, Math.ceil(tongSo / kichThuoc));
+  const trangChuan = Math.min(Math.max(1, trang), tongTrang);
+  const batDau = (trangChuan - 1) * kichThuoc;
+  const items = daSapXep.slice(batDau, batDau + kichThuoc).map(function (m) {
+    return { idHD: m.idHD, soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang };
+  });
+
+  return {
+    tongSoHopDong: locChung.length, theoTrangThai: theoTrangThai,
+    tongGiaTriHopDong: tongGiaTriHopDong, tongKhoiLuongThucHien: tongKhoiLuongThucHien, tongGiaTriThucHien: tongGiaTriThucHien,
+    items: items, trang: trangChuan, tongTrang: tongTrang, tongSo: tongSo
+  };
+}
+
 function layTinhHinhThucHien() {
   try {
     // ĐỌC CACHE Draft_BaoCaoHopDong — đã có sẵn coAnh/daDoGPSDu/hoSoDu (tính khi
@@ -243,7 +304,7 @@ function layChiTietHoSoMotLoRung(idRung) {
   // Chỉ ảnh khớp ID_HD thật của hợp đồng, hoặc khớp ID_RUNG của MỘT LÔ KHÁC
   // (không phải lô đang xem), mới thật sự là "ảnh chung/mơ hồ, chưa rõ của lô nào".
   const anhTuHDPictureTheoDungLoNay = layAnhTheoDinhDanhHDPicture_(idRung);
-  const anhRiengCuaLo = layDraftAnhChoRung(idRung).filter(function (a) { return a.trangThai === 'Đã duyệt'; }).concat(anhTuHDPictureTheoDungLoNay);
+  const anhRiengCuaLo = layDraftAnhChoRung(idRung, idHD).filter(function (a) { return a.trangThai === 'Đã duyệt'; }).concat(anhTuHDPictureTheoDungLoNay);
 
   let anhChungMoHo = idHD ? layAnhTheoDinhDanhHDPicture_(idHD) : [];
   rungCungHopDong.forEach(function (r) {
@@ -645,7 +706,25 @@ function THIET_LAP_TRIGGER_ONEDIT_DRAFT() {
     if (t.getHandlerFunction() === 'xuLyOnEditDraft_') ScriptApp.deleteTrigger(t); // xóa trigger cũ tránh tạo trùng
   });
   ScriptApp.newTrigger('xuLyOnEditDraft_').forSpreadsheet(getSS_()).onEdit().create();
-  SpreadsheetApp.getUi().alert('✅ Đã thiết lập bẫy nhật ký tự động — mọi sửa đổi trực tiếp trên HD_NCC/HD_RUNG/HD_STK/HD_GPS/HD_Picture sẽ tự cập nhật Draft báo cáo ngay lập tức.');
+  return { thanhCong: true, thongBao: 'Đã bật bẫy nhật ký tự động — mọi sửa đổi trực tiếp trên HD_NCC/HD_RUNG/HD_STK/HD_GPS/HD_Picture sẽ tự cập nhật Draft báo cáo ngay lập tức.' };
+}
+/** Gọi từ menu Sheet — hiện popup alert (khác bản trên chỉ trả object cho webapp) */
+function THIET_LAP_TRIGGER_ONEDIT_DRAFT_TU_MENU() {
+  const kq = THIET_LAP_TRIGGER_ONEDIT_DRAFT();
+  SpreadsheetApp.getUi().alert('✅ ' + kq.thongBao);
+}
+/** Tắt bẫy nhật ký tự động */
+function TAT_TRIGGER_ONEDIT_DRAFT() {
+  let daXoa = false;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'xuLyOnEditDraft_') { ScriptApp.deleteTrigger(t); daXoa = true; }
+  });
+  return { thanhCong: true, thongBao: daXoa ? 'Đã tắt bẫy nhật ký tự động.' : 'Chưa từng bật, không có gì để tắt.' };
+}
+/** Kiểm tra đã bật hay chưa — dùng để hiện trạng thái trên webapp */
+function KIEM_TRA_TRIGGER_ONEDIT_DRAFT() {
+  const daBat = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'xuLyOnEditDraft_'; });
+  return { daBat: daBat };
 }
 
 function xuLyOnEditDraft_(e) {

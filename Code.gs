@@ -112,14 +112,24 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
+  if (page === "tongquan") {
+    var tmplTongQuan = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
+    tmplTongQuan.baseUrl = ScriptApp.getService().getUrl();
+    tmplTongQuan.currentPage = 'tongquan';
+    return tmplTongQuan.evaluate()
+      .setTitle('📊 Tổng quan hợp đồng HAK')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   // ⚠️ ĐÃ SỬA: trước đây mở webapp KHÔNG kèm tham số ?page= sẽ mặc định vào
-  // MapContainer (Bản đồ GPS) — giờ mặc định thẳng vào trang Nhập liệu HĐ/Rừng/TK
-  // (trang mẹ-con mới), đúng nhu cầu dùng chính của phần mềm.
-  var tmplHopDongMCMacDinh = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
-  tmplHopDongMCMacDinh.baseUrl = ScriptApp.getService().getUrl();
-  tmplHopDongMCMacDinh.currentPage = 'hopdongmc';
-  return tmplHopDongMCMacDinh.evaluate()
-    .setTitle('📝 Thêm/Sửa hợp đồng HAK')
+  // Nhập liệu HĐ/Rừng/TK — giờ mặc định thẳng vào "Tổng quan hợp đồng" (dashboard),
+  // đúng màn hình tổng quan đầu tiên khi vào phần mềm.
+  var tmplTongQuanMacDinh = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
+  tmplTongQuanMacDinh.baseUrl = ScriptApp.getService().getUrl();
+  tmplTongQuanMacDinh.currentPage = 'tongquan';
+  return tmplTongQuanMacDinh.evaluate()
+    .setTitle('📊 Tổng quan hợp đồng HAK')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -249,7 +259,28 @@ function layThoiGianCapNhatBanDo() {
   return gia || null;
 }
 
+/**
+ * ⚠️ ĐÃ THÊM CACHE: trước đây đọc lại TOÀN BỘ 3 sheet (HD_RUNG, HD_GPS, HD_NCC)
+ * mỗi lần mở trang Bản đồ GPS — không sao khi dữ liệu còn ít, nhưng sẽ chậm
+ * dần khi HD_GPS/HD_RUNG nhiều lên. Giờ cache lại 15 phút — mở lại trang trong
+ * khoảng đó dùng ngay dữ liệu cũ, không đọc lại sheet. Bấm "⚡ TẢI DỮ LIỆU HỆ
+ * THỐNG" vẫn gọi đúng hàm này nên sau 15 phút sẽ tự làm mới, không cần thêm nút
+ * "xóa cache" riêng.
+ */
 function getMapData() {
+  const cache = CacheService.getScriptCache();
+  const daCache = cache.get('MAP_DATA_CACHE');
+  if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }
+
+  const ketQua = getMapData_ThucThi_();
+  try {
+    const chuoi = JSON.stringify(ketQua);
+    if (chuoi.length < 95000) cache.put('MAP_DATA_CACHE', chuoi, 900); // 900s = 15 phút; CacheService giới hạn ~100KB/key nên bỏ qua an toàn nếu dữ liệu vượt ngưỡng, không cache được thì vẫn trả kết quả bình thường, chỉ là lần sau phải tính lại
+  } catch (e) { /* không cache được thì thôi, không ảnh hưởng kết quả trả về */ }
+  return ketQua;
+}
+
+function getMapData_ThucThi_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const rungSh = ss.getSheetByName("HD_RUNG");
   const gpsSh = ss.getSheetByName("HD_GPS");

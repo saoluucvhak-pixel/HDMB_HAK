@@ -5,77 +5,85 @@
  *  giấy xác nhận, giấy ủy quyền) rồi so khớp số CCCD / số giấy tờ
  *  trích xuất được với dữ liệu đã nhập trong HD_NCC / HD_RUNG.
  *
- *  YÊU CẦU CẤU HÌNH TRƯỚC KHI DÙNG:
- *  Apps Script > Dịch vụ (Services) > bật "Drive API" (Advanced Drive Service)
- *  — dùng để OCR file qua Drive.Files.insert với ocr:true.
- *  Nếu chưa bật, hàm ocrFile_() sẽ trả lỗi rõ ràng để bạn biết cần bật.
+ *  ⚠️ OCR DÙNG GEMINI (không còn dùng Drive Advanced Service như trước — cách
+ *  cũ hay lỗi vì Google đã hạn chế Drive.Files.insert(ocr:true) cho phần lớn
+ *  tài khoản). YÊU CẦU: đã cấu hình API key Gemini ở trang Thiết lập →
+ *  🤖 Chatbot (dùng CHUNG cấu hình đó, không cần nhập lại API key riêng).
  * ============================================================
  */
 
 /**
- * OCR 1 file (ảnh hoặc PDF) bằng Drive Advanced Service, trả về text thuần.
- * Tạo 1 Google Doc tạm trong thư mục gốc rồi xóa ngay sau khi lấy text xong.
+ * OCR 1 file (ảnh hoặc PDF) bằng GEMINI (dùng chung API key/model đã cấu hình
+ * ở trang Thiết lập → 🤖 Chatbot — KHÔNG cần bật Advanced Drive Service nữa).
+ * ⚠️ ĐÃ THAY: cách cũ dùng Drive.Files.insert(ocr:true) bị Google hạn chế cho
+ * phần lớn tài khoản (đặc biệt Gmail cá nhân), thường xuyên báo lỗi. Gemini
+ * đọc ảnh/PDF trực tiếp, ổn định hơn nhiều và không cần bật thêm dịch vụ nào.
  */
 function ocrFile_(fileId) {
-  if (typeof Drive === 'undefined') {
-    throw new Error('Chưa bật Advanced Drive Service. Vào Services (biểu tượng +) > Drive API > Add, rồi thử lại.');
+  const p = PropertiesService.getScriptProperties();
+  const apiKey = p.getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập (OCR giờ dùng chung API key này).');
+  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  const MODEL_DU_PHONG_OCR_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
+
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  const mimeGoc = blob.getContentType();
+  // Nếu file GỐC đã bị Google Drive tự động chuyển thành Google Doc/Sheet, đọc
+  // thẳng nội dung văn bản có sẵn (đã là text, không cần OCR gì cả)
+  if (mimeGoc === MimeType.GOOGLE_DOCS) return DocumentApp.openById(fileId).getBody().getText();
+  if (mimeGoc === MimeType.GOOGLE_SHEETS) return SpreadsheetApp.openById(fileId).getDataRange().getValues().map(function (r) { return r.join(' '); }).join('\n');
+
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  const promptOCR = 'Đọc và trích xuất TOÀN BỘ chữ/số trong ảnh hoặc file PDF này, giữ nguyên định dạng xuống dòng như trong ảnh, không tóm tắt, không diễn giải thêm — chỉ trả về đúng nguyên văn chữ đọc được.';
+  const payload = { contents: [{ parts: [{ text: promptOCR }, { inline_data: { mime_type: mimeGoc, data: base64 } }] }] };
+  const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
+
+  function goiGemini_(tenModel) {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
+    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
   }
 
-  // Nếu file GỐC đã bị Google Drive tự động chuyển thành Google Doc/Sheet (do cài đặt tài
-  // khoản "Convert uploads to Google Docs editor format" đang bật), OCR sẽ báo lỗi vì input
-  // KHÔNG PHẢI ảnh/PDF nữa. Trường hợp này, đọc thẳng nội dung văn bản (đã có sẵn dạng text).
-  const mimeGoc = DriveApp.getFileById(fileId).getMimeType();
-  if (mimeGoc === MimeType.GOOGLE_DOCS) {
-    return DocumentApp.openById(fileId).getBody().getText();
+  let json = goiGemini_(model);
+  for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_OCR_.length; i++) {
+    if (MODEL_DU_PHONG_OCR_[i] === model) continue;
+    model = MODEL_DU_PHONG_OCR_[i];
+    json = goiGemini_(model);
   }
-  if (mimeGoc === MimeType.GOOGLE_SHEETS) {
-    return SpreadsheetApp.openById(fileId).getDataRange().getValues().map(function (r) { return r.join(' '); }).join('\n');
-  }
-
-  const resource = { title: 'OCR_TEMP_' + fileId, mimeType: MimeType.GOOGLE_DOCS };
-  let file;
-  try {
-    file = Drive.Files.insert(resource, DriveApp.getFileById(fileId).getBlob(), { ocr: true, ocrLanguage: 'vi' });
-  } catch (e) {
-    // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY chỉ đoán 1 nguyên nhân duy nhất (Convert uploads to
-    // Google Docs) rồi hiện lời khuyên cố định, CHE MẤT lỗi gốc thật từ Google.
-    // Nếu bạn đã bỏ tick cài đặt đó mà vẫn lỗi, nghĩa là nguyên nhân thật có thể
-    // KHÁC (vd file quá lớn, định dạng ảnh không được OCR hỗ trợ, quyền
-    // OAuth/API bị giới hạn...). Giờ LUÔN hiện đúng câu lỗi gốc từ Google trước,
-    // kèm gợi ý CÓ THỂ ĐÚNG (không chắc chắn) ngay sau — để không bị bế tắc nếu
-    // đoán sai.
-    const loiGoc = (e && e.message) ? e.message : e.toString();
-    let goiY = '';
-    if (loiGoc.indexOf('OCR is not supported') !== -1) {
-      goiY = ' 👉 Gợi ý (chưa chắc đúng, cần xác nhận): có thể do file đã bị Google Drive tự động chuyển sang định dạng Google Docs khi tải lên — kiểm tra cài đặt "Convert uploads to Google Docs" ở ĐÚNG tài khoản đang chạy web app (executeAs), không phải tài khoản bạn đang xem trang.';
-    }
-    throw new Error('Lỗi OCR gốc từ Google: "' + loiGoc + '".' + goiY);
-  }
-  const doc = DocumentApp.openById(file.id);
-  const text = doc.getBody().getText();
-  DriveApp.getFileById(file.id).setTrashed(true); // dọn file tạm
-  return text;
+  if (json.error) throw new Error('Lỗi Gemini OCR: ' + json.error.message);
+  const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+  return text || '';
 }
 
 /**
  * ============================================================
  *  ĐỌC BẢN SCAN ĐỂ TỰ ĐỘNG ĐIỀN FORM
  * ============================================================
- * Nhận ảnh/PDF scan (CCCD, hồ sơ nguồn gốc đất, giấy ủy quyền), chạy OCR, rồi
- * dùng các mẫu regex thông dụng của giấy tờ Việt Nam để tách ra từng trường dữ
- * liệu cụ thể. Người dùng chọn TRƯỚC loại tài liệu (loaiTaiLieu) để áp đúng bộ
- * quy tắc trích xuất — không cố đoán loại tài liệu tự động vì dễ sai.
+ * Nhận ảnh/PDF scan (CCCD, hồ sơ nguồn gốc đất, giấy ủy quyền), gửi thẳng cho
+ * GEMINI trích xuất trực tiếp ra từng trường dữ liệu — KHÔNG còn dùng regex
+ * dò chữ như trước (quá cứng, dễ đọc sai/thiếu khi giấy tờ có nhãn song ngữ
+ * hoặc bố cục khác mẫu). Người dùng chọn TRƯỚC loại tài liệu cần lấy để Gemini
+ * biết đúng trường cần tìm — NHƯNG 1 file scan có thể gồm NHIỀU giấy tờ gộp
+ * chung (vd 1 ảnh chụp cả CCCD lẫn giấy ủy quyền), Gemini vẫn tự lọc đúng
+ * phần cần trong file, bỏ qua phần không liên quan.
  *
- * LƯU Ý QUAN TRỌNG: đây là trích xuất "đoán theo mẫu phổ biến", KHÔNG chính xác
- * 100% với mọi loại giấy tờ/mọi chất lượng ảnh scan. Người dùng LUÔN cần xem lại
- * và sửa tay các trường trích xuất sai trước khi lưu — form sẽ hiện rõ từng
- * trường đọc được để xác nhận, không tự động lưu thẳng vào hồ sơ.
+ * LƯU Ý QUAN TRỌNG: đây là trích xuất tự động, KHÔNG chính xác 100% với mọi
+ * loại giấy tờ/mọi chất lượng ảnh scan. Người dùng LUÔN cần xem lại và sửa
+ * tay các trường trích xuất sai trước khi lưu — form sẽ hiện rõ từng trường
+ * đọc được để xác nhận, không tự động lưu thẳng vào hồ sơ.
  *
  * loaiTaiLieu: 'cccd_chu_rung' | 'cccd_uy_quyen' | 'ho_so_rung' | 'giay_uy_quyen'
- * Trả về { thanhCong, vanBanGoc, truong: {...}, urlFileGoc, tenFileGoc, loi }
+ * Trả về { thanhCong, truong: {...}, urlFileGoc, tenFileGoc, loi }
  */
 function OCR_TU_BAN_SCAN(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu file' };
+  const p = PropertiesService.getScriptProperties();
+  const apiKey = p.getProperty('GEMINI_API_KEY');
+  if (!apiKey) return { thanhCong: false, loi: 'Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập.' };
+  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  const MODEL_DU_PHONG_SCAN_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
+
   let file = null;
   try {
     const bytes = Utilities.base64Decode(base64Data);
@@ -84,78 +92,64 @@ function OCR_TU_BAN_SCAN(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
     const folder = layHoacTaoThuMucHoSo_();
     file = folder.createFile(blob);
 
-    const text = ocrFile_(file.getId());
-    const truong = trichXuatTheoLoai_(loaiTaiLieu, text);
+    const prompt = xayPromptTrichXuatScan_(loaiTaiLieu);
+    const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64Data } }] }] };
+    const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
+    function goiGemini_(tenModel) {
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
+      return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+    }
+    let json = goiGemini_(model);
+    for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_SCAN_.length; i++) {
+      if (MODEL_DU_PHONG_SCAN_[i] === model) continue;
+      model = MODEL_DU_PHONG_SCAN_[i];
+      json = goiGemini_(model);
+    }
+    if (json.error) throw new Error('Lỗi Gemini: ' + json.error.message);
+    const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+    if (!text) throw new Error('Gemini không đọc được nội dung file này (có thể do bộ lọc an toàn hoặc ảnh không rõ).');
+    const khop = text.match(/\{[\s\S]*\}/); // lấy đúng khối {...} kể cả khi Gemini lỡ bọc thêm ```json...``` hoặc giải thích thừa
+    if (!khop) throw new Error('Gemini không trả về đúng định dạng — thử lại hoặc chụp ảnh rõ hơn.');
+    let truong;
+    try { truong = JSON.parse(khop[0]); } catch (e) { throw new Error('Không đọc được kết quả Gemini trả về.'); }
+    // Bỏ các trường Gemini trả về là chuỗi rỗng/"không có"/"không đọc được" — để dienNeuTrongScan_ ở webapp không điền rác vào ô
+    Object.keys(truong).forEach(function (k) {
+      const v = (truong[k] || '').toString().trim().toLowerCase();
+      if (!v || v === 'không có' || v === 'không đọc được' || v === 'n/a' || v === 'không rõ') delete truong[k];
+    });
 
-    return {
-      thanhCong: true, vanBanGoc: text, truong: truong,
-      urlFileGoc: file.getUrl(), tenFileGoc: file.getName()
-    };
+    return { thanhCong: true, truong: truong, urlFileGoc: file.getUrl(), tenFileGoc: file.getName() };
   } catch (e) {
     if (file) { try { file.setTrashed(true); } catch (e2) {} }
     return { thanhCong: false, loi: 'Lỗi đọc bản scan: ' + e.message };
   }
 }
 
-/** Áp bộ quy tắc regex trích xuất theo từng loại giấy tờ Việt Nam phổ biến */
-function trichXuatTheoLoai_(loaiTaiLieu, text) {
-  const truong = {};
-  const layDong = function (regex) {
-    const m = text.match(regex);
-    return m ? m[1].replace(/\s+/g, ' ').trim() : '';
-  };
+/** Soạn prompt đúng bộ trường cần trích xuất theo từng loại tài liệu — luôn
+ *  nhắc rõ file có thể gồm NHIỀU giấy tờ gộp chung, chỉ lấy đúng phần cần. */
+function xayPromptTrichXuatScan_(loaiTaiLieu) {
+  const chung =
+    'Bạn đọc ảnh/PDF scan giấy tờ tiếng Việt cho hệ thống quản lý hợp đồng thu mua gỗ keo. ' +
+    'LƯU Ý: file này CÓ THỂ chứa NHIỀU giấy tờ gộp chung trong 1 ảnh/nhiều trang (vd vừa có CCCD vừa có giấy ủy quyền) — ' +
+    'CHỈ lấy đúng phần dữ liệu được yêu cầu bên dưới, bỏ qua các giấy tờ khác không liên quan trong cùng file. ' +
+    'CHỈ trả về đúng 1 khối JSON, không kèm chữ giải thích, không bọc ```json. Trường nào không tìm thấy thì để chuỗi rỗng "".\n\n';
 
-  if (loaiTaiLieu === 'cccd_chu_rung' || loaiTaiLieu === 'cccd_uy_quyen') {
-    const cccdMatch = text.match(/\b\d{12}\b/);
-    const cccd = cccdMatch ? cccdMatch[0] : '';
-    const hoTen = layDong(/(?:Họ và tên|Full name|Ho va ten)[\s:\/]*\n?\s*([A-ZÀ-Ỹ][A-ZÀ-Ỹ\s]{4,60})/i);
-    const ngaySinh = layDong(/(?:Ngày sinh|Date of birth)[\s:\/]*\n?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i);
-    const diaChi = layDong(/(?:Nơi thường trú|Place of residence|Thường trú)[\s:\/]*\n?\s*([^\n]{8,120})/i);
-    const ngayCap = layDong(/(?:Ngày cấp|Date of issue)[\s:\/]*\n?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i);
-    const noiCap = layDong(/(?:Nơi cấp|Place of issue)[\s:\/]*\n?\s*([^\n]{5,80})/i) || (cccd ? 'Cục Cảnh sát QLHC về TTXH' : '');
-
-    if (loaiTaiLieu === 'cccd_chu_rung') {
-      if (cccd) truong.cccdChuRung = cccd;
-      if (hoTen) truong.tenChuRung = hoTen;
-      if (ngaySinh) truong.ngaySinhChuRung = ngaySinh;
-      if (diaChi) truong.diaChiThuongTru = diaChi;
-      if (ngayCap) truong.ngayCap = chuyenNgayVeISO_(ngayCap);
-      if (noiCap) truong.noiCap = noiCap;
-    } else {
-      if (cccd) truong.cccdUyQuyen = cccd;
-      if (hoTen) truong.tenUyQuyen = hoTen;
-      if (diaChi) truong.diaChiUyQuyen = diaChi;
-      if (ngayCap) truong.ngayCapUyQuyen = chuyenNgayVeISO_(ngayCap);
-      if (noiCap) truong.noiCapUyQuyen = noiCap;
-    }
+  if (loaiTaiLieu === 'cccd_chu_rung') {
+    return chung + 'Tìm THẺ CĂN CƯỚC CÔNG DÂN của CHỦ RỪNG (người bán/chủ sở hữu chính, không phải người được ủy quyền) trong file, trả về JSON:\n' +
+      '{"tenChuRung": "họ tên đầy đủ, chữ hoa như trên thẻ", "cccdChuRung": "đúng 12 số CCCD", "diaChiThuongTru": "nơi thường trú đầy đủ", "ngayCap": "yyyy-mm-dd", "noiCap": "nơi cấp"}';
   }
-
-  if (loaiTaiLieu === 'ho_so_rung') {
-    const soGiayTo = layDong(/(?:Số|So)[\s:.]*\n?\s*([A-Za-z0-9\/\.\-]{3,25})/i);
-    if (soGiayTo) truong.soGiayTo = soGiayTo;
-
-    if (/giấy chứng nhận quyền sử dụng đất|GCNQSDĐ|sổ đỏ/i.test(text)) truong.hoSoNguonGoc = 'Giấy chứng nhận QSDĐ';
-    else if (/xác nhận.*ủy ban|UBND.*xác nhận/i.test(text)) truong.hoSoNguonGoc = 'Đơn xác nhận của UBNN Xã/Phường';
-    else if (/giấy xác nhận/i.test(text)) truong.hoSoNguonGoc = 'Giấy xác nhận';
-    else if (/chuyển nhượng/i.test(text)) truong.hoSoNguonGoc = 'Hợp đồng chuyển nhượng';
-
-    const ngayGiayTo = layDong(/(?:ngày|Ngày)[\s:.]*\n?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
-    if (ngayGiayTo) truong.ngayGiayTo = chuyenNgayVeISO_(ngayGiayTo);
-
-    const dienTichMatch = text.match(/(\d[\d.,]{2,10})\s*(?:m2|m²|ha)/i);
-    if (dienTichMatch) truong.dienTichM2 = dienTichMatch[1].replace(/[.,]/g, '');
+  if (loaiTaiLieu === 'cccd_uy_quyen') {
+    return chung + 'Tìm THẺ CĂN CƯỚC CÔNG DÂN của NGƯỜI ĐƯỢC ỦY QUYỀN (không phải chủ rừng) trong file, trả về JSON:\n' +
+      '{"tenUyQuyen": "họ tên đầy đủ, chữ hoa như trên thẻ", "cccdUyQuyen": "đúng 12 số CCCD", "diaChiUyQuyen": "nơi thường trú đầy đủ", "ngayCapUyQuyen": "yyyy-mm-dd", "noiCapUyQuyen": "nơi cấp"}';
   }
-
   if (loaiTaiLieu === 'giay_uy_quyen') {
-    const cccdList = text.match(/\b\d{12}\b/g) || [];
-    if (cccdList.length >= 1) truong.cccdChuRung = cccdList[0];
-    if (cccdList.length >= 2) truong.cccdUyQuyen = cccdList[1];
-    const tenNguoiUyQuyen = layDong(/(?:ủy quyền cho|Uỷ quyền cho)[\s:]*\n?\s*(?:Ông|Bà)?\s*([A-ZÀ-Ỹ][A-ZÀ-Ỹ\s]{4,60})/i);
-    if (tenNguoiUyQuyen) truong.tenUyQuyen = tenNguoiUyQuyen;
-    truong.uyQuyenTT = 'Có';
+    return chung + 'Tìm GIẤY ỦY QUYỀN trong file (văn bản chủ rừng ủy quyền cho người khác nhận tiền/thay mặt giao dịch), trả về JSON:\n' +
+      '{"tenUyQuyen": "tên người ĐƯỢC ủy quyền (người nhận ủy quyền, không phải người ủy quyền)", "cccdUyQuyen": "CCCD người được ủy quyền nếu có ghi trong giấy", "diaChiUyQuyen": "địa chỉ người được ủy quyền nếu có ghi"}';
   }
-
-  return truong;
+  // 'ho_so_rung' — GCN QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận
+  return chung + 'Tìm giấy tờ chứng minh nguồn gốc đất/rừng (Giấy chứng nhận QSDĐ, Hợp đồng mua bán, Giấy xác nhận, hoặc Đơn xác nhận của UBND xã/phường) trong file, trả về JSON:\n' +
+    '{"hoSoNguonGoc": "ĐÚNG 1 trong 4 giá trị: Giấy chứng nhận QSDĐ | Hợp đồng mua bán | Giấy xác nhận | Đơn xác nhận của UBNN Xã/Phường — chọn đúng loại theo tiêu đề văn bản đọc được", ' +
+    '"soGiayTo": "số hiệu/số văn bản ghi trên giấy tờ", "dienTichM2": "diện tích, quy đổi ra m² dạng số nguyên không có dấu phẩy/chấm (nếu ghi bằng ha thì nhân 10000), để trống nếu không tìm thấy diện tích"}';
 }
 
 /** Chuyển ngày dạng dd/mm/yyyy (OCR đọc được) về yyyy-mm-dd để đổ thẳng vào input type="date" */
@@ -176,24 +170,21 @@ function timCCCDTrongText_(text) {
  * Đối chiếu 1 lô rừng: OCR file DinhKemGiayTo, kiểm tra số CCCD chủ rừng
  * và số giấy tờ (SoGiayTo) trong hồ sơ có xuất hiện trong nội dung OCR không.
  */
+/**
+ * Đối chiếu 1 lô rừng: đọc file DinhKemGiayTo bằng Gemini (trích xuất trực
+ * tiếp ra JSON — đồng bộ cách làm với OCR_TU_BAN_SCAN, không còn dò text thô
+ * bằng .indexOf() như trước), rồi so khớp ĐỦ 5 trường với dữ liệu đã nhập
+ * trong Sheet: CCCD chủ rừng, Tên chủ rừng, Số giấy tờ, Loại hồ sơ, Diện tích.
+ */
 function doiChieuMotLoRung_(row) {
   const ketQua = {
-    idKeyHD: row[RUNG_COL.ID_KEY_HD],
-    maRung: row[RUNG_COL.MA_RUNG],
-    khopCCCD: null,
-    khopSoGiayTo: null,
+    idKeyHD: row[RUNG_COL.ID_KEY_HD], maRung: row[RUNG_COL.MA_RUNG],
+    khopCCCD: null, khopTenChuRung: null, khopSoGiayTo: null, khopLoaiHoSo: null, khopDienTich: null,
     loi: null
   };
   const duongDan = (row[RUNG_COL.DINH_KEM_GIAY_TO] || '').toString().trim();
   if (!duongDan) { ketQua.loi = 'Không có file đính kèm để đối chiếu'; return ketQua; }
 
-  // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY luôn giả định duongDan là TÊN FILE đơn giản, tách phần
-  // sau dấu "/" cuối rồi tìm theo tên (DriveApp.getFilesByName). Sau khi dữ
-  // liệu DinhKemGiayTo được chuyển sang LINK DRIVE ĐẦY ĐỦ, cách tách cũ lấy
-  // nhầm phần cuối URL (vd chữ "view") làm "tên file" -> luôn báo "Không tìm
-  // thấy file". Giờ nếu là URL thì trích đúng FILE ID để mở trực tiếp bằng
-  // getFileById() — chính xác tuyệt đối; nếu không phải URL (dữ liệu cũ còn
-  // sót) thì vẫn tra theo tên file như trước.
   let fileId = null;
   if (duongDan.indexOf('http') === 0) {
     const khop = duongDan.match(/\/d\/([a-zA-Z0-9_-]+)/) || duongDan.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -206,17 +197,78 @@ function doiChieuMotLoRung_(row) {
   if (!fileId) { ketQua.loi = 'Không tìm thấy file trên Drive: ' + duongDan; return ketQua; }
 
   try {
-    const text = ocrFile_(fileId);
-    const cccdOCR = timCCCDTrongText_(text);
+    const truong = trichXuatDoiChieuBangGemini_(fileId);
+    if (!truong) { ketQua.loi = 'Gemini không đọc được nội dung file (ảnh mờ, chưa cấu hình API key, hoặc lỗi tạm thời).'; return ketQua; }
+
     const cccdSheet = (row[RUNG_COL.CCCD] || '').toString().trim();
-    ketQua.khopCCCD = cccdSheet ? cccdOCR.indexOf(cccdSheet) !== -1 : null;
+    ketQua.khopCCCD = cccdSheet ? (truong.cccd && truong.cccd.indexOf(cccdSheet) !== -1) : null;
+
+    const tenSheet = (row[RUNG_COL.TEN_CHU_RUNG] || '').toString().trim().toLowerCase();
+    ketQua.khopTenChuRung = tenSheet && truong.tenChuRung ? soSanhTenKhongDauOCR_(truong.tenChuRung, tenSheet) : null;
 
     const soGiayToSheet = (row[RUNG_COL.SO_GIAY_TO] || '').toString().trim();
-    ketQua.khopSoGiayTo = soGiayToSheet ? text.indexOf(soGiayToSheet) !== -1 : null;
+    ketQua.khopSoGiayTo = soGiayToSheet ? (truong.soGiayTo && truong.soGiayTo.indexOf(soGiayToSheet) !== -1) : null;
+
+    const loaiHoSoSheet = (row[RUNG_COL.HO_SO_NGUON_GOC] || '').toString().trim();
+    ketQua.khopLoaiHoSo = loaiHoSoSheet ? (truong.hoSoNguonGoc === loaiHoSoSheet) : null;
+
+    const dienTichSheet = Number(row[RUNG_COL.DIEN_TICH_M2]) || 0;
+    const dienTichOCR = Number(truong.dienTichM2) || 0;
+    // Cho phép lệch 5% (đo đạc/làm tròn khác nhau giữa giấy tờ và Sheet là bình thường, không coi là sai lệch)
+    ketQua.khopDienTich = (dienTichSheet && dienTichOCR) ? (Math.abs(dienTichOCR - dienTichSheet) / dienTichSheet <= 0.05) : null;
+    ketQua.dienTichOCR = dienTichOCR || null;
   } catch (e) {
-    ketQua.loi = 'Lỗi OCR: ' + e.message;
+    ketQua.loi = 'Lỗi đọc/đối chiếu: ' + e.message;
   }
   return ketQua;
+}
+
+/** Trích xuất bằng Gemini phục vụ ĐỐI CHIẾU (khác OCR_TU_BAN_SCAN ở chỗ lấy ĐỦ
+ *  5 trường trong 1 lượt gọi, không tách theo loaiTaiLieu — file hồ sơ pháp lý
+ *  luôn chỉ có 1 loại giấy tờ, không cần lọc nhiều giấy tờ gộp chung như CCCD). */
+function trichXuatDoiChieuBangGemini_(fileId) {
+  const p = PropertiesService.getScriptProperties();
+  const apiKey = p.getProperty('GEMINI_API_KEY');
+  if (!apiKey) return null;
+  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  const MODEL_DU_PHONG_DC_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
+
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  const prompt =
+    'Đọc giấy tờ chứng minh nguồn gốc đất/rừng trong file này (Giấy chứng nhận QSDĐ, Hợp đồng mua bán, Giấy xác nhận, hoặc Đơn xác nhận UBND). ' +
+    'CHỈ trả về đúng 1 khối JSON, không kèm chữ giải thích, không bọc ```json:\n' +
+    '{"cccd": "toàn bộ số CCCD 12 số xuất hiện trong văn bản, cách nhau dấu phẩy nếu có nhiều số", ' +
+    '"tenChuRung": "tên chủ đất/bên bán/bên được cấp giấy, chữ hoa", ' +
+    '"soGiayTo": "số hiệu/số văn bản ghi trên giấy tờ", ' +
+    '"hoSoNguonGoc": "ĐÚNG 1 trong 4 giá trị: Giấy chứng nhận QSDĐ | Hợp đồng mua bán | Giấy xác nhận | Đơn xác nhận của UBNN Xã/Phường", ' +
+    '"dienTichM2": "diện tích quy đổi ra m² dạng số nguyên không dấu phẩy/chấm (ha thì nhân 10000), để trống nếu không có"}. ' +
+    'Trường nào không tìm thấy để chuỗi rỗng "".';
+  const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: blob.getContentType(), data: base64 } }] }] };
+  const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
+  function goiGemini_(tenModel) {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
+    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+  }
+  let json = goiGemini_(model);
+  for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_DC_.length; i++) {
+    if (MODEL_DU_PHONG_DC_[i] === model) continue;
+    model = MODEL_DU_PHONG_DC_[i];
+    json = goiGemini_(model);
+  }
+  if (json.error) return null;
+  const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+  if (!text) return null;
+  const khop = text.match(/\{[\s\S]*\}/);
+  if (!khop) return null;
+  try { return JSON.parse(khop[0]); } catch (e) { return null; }
+}
+
+/** So sánh 2 tên (bỏ dấu, không phân biệt hoa/thường) — dùng chung logic bỏ dấu đã có ở 29_Chatbot.gs */
+function soSanhTenKhongDauOCR_(ten1, ten2) {
+  const boDau = function (s) { return s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim(); };
+  return boDau(ten1) === boDau(ten2);
 }
 
 /**
@@ -240,20 +292,18 @@ function DOI_CHIEU_HO_SO_DINH_KY() {
   let sh = ss.getSheetByName(sheetName);
   if (sh) sh.clear(); else sh = ss.insertSheet(sheetName);
 
-  const header = ['ID_KEY_HD', 'Mã Rừng', 'CCCD khớp OCR?', 'Số giấy tờ khớp OCR?', 'Ghi chú lỗi'];
+  const header = ['ID_KEY_HD', 'Mã Rừng', 'CCCD khớp OCR?', 'Tên chủ rừng khớp OCR?', 'Số giấy tờ khớp OCR?', 'Loại hồ sơ khớp OCR?', 'Diện tích khớp OCR? (±5%)', 'Diện tích đọc từ OCR (m²)', 'Ghi chú lỗi'];
   sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
+  const kyHieu = function (v) { return v === null ? 'N/A' : (v ? '✅' : '❌'); };
   const rows = baoCao.map(function (b) {
-    return [b.idKeyHD, b.maRung,
-      b.khopCCCD === null ? 'N/A' : (b.khopCCCD ? '✅' : '❌'),
-      b.khopSoGiayTo === null ? 'N/A' : (b.khopSoGiayTo ? '✅' : '❌'),
-      b.loi || ''];
+    return [b.idKeyHD, b.maRung, kyHieu(b.khopCCCD), kyHieu(b.khopTenChuRung), kyHieu(b.khopSoGiayTo), kyHieu(b.khopLoaiHoSo), kyHieu(b.khopDienTich), b.dienTichOCR || '', b.loi || ''];
   });
   if (rows.length) sh.getRange(2, 1, rows.length, header.length).setValues(rows);
   sh.autoResizeColumns(1, header.length);
 
-  const soLech = baoCao.filter(function (b) { return b.khopCCCD === false || b.khopSoGiayTo === false; }).length;
+  const soLech = baoCao.filter(function (b) { return b.khopCCCD === false || b.khopTenChuRung === false || b.khopSoGiayTo === false || b.khopLoaiHoSo === false || b.khopDienTich === false; }).length;
   return 'Đã đối chiếu ' + baoCao.length + ' lô rừng' + (dungSom ? ' (dừng sớm do giới hạn thời gian, chạy lại để tiếp tục)' : '') +
-    ' — ' + soLech + ' hồ sơ CÓ SAI LỆCH giữa Sheet và file gốc. Xem sheet "' + sheetName + '"';
+    ' — ' + soLech + ' hồ sơ CÓ SAI LỆCH (ở ít nhất 1 trong 5 trường) giữa Sheet và file gốc. Xem sheet "' + sheetName + '"';
 }
 
 /**

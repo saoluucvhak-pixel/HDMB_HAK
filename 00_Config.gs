@@ -76,9 +76,10 @@ const RUNG_COL = {
   DIEN_TICH_M2: 9, DON_GIA: 10, KHOI_LUONG_DK: 11, DIEN_TICH_GPS: 12,
   HO_SO_NGUON_GOC: 13, SO_GIAY_TO: 14, NGAY_GIAY_TO: 15,
   DINH_KEM_GIAY_TO: 16, TIMESTAMP: 17,
-  KHOI_LUONG_THUC_HIEN: 18 // CỘT MỞ RỘNG (không có sẵn trong file gốc) — Apps Script tự thêm cột khi ghi lần đầu.
+  KHOI_LUONG_THUC_HIEN: 18, // CỘT MỞ RỘNG (không có sẵn trong file gốc) — Apps Script tự thêm cột khi ghi lần đầu.
                            // Dùng để theo dõi khối lượng gỗ đã thực tế thu mua/giao nhận cho lô rừng này,
                            // phục vụ báo cáo "tình hình thực hiện". Nếu chưa nhập, coi như = 0 (chưa thực hiện).
+  NAM_TRONG: 19 // CỘT MỞ RỘNG — năm trồng rừng (vd 2018), dùng để chatbot tự tính "tuổi rừng" = năm hiện tại - năm trồng. Để trống nếu chưa rõ.
 };
 
 // ---- HD_STK (con 2 - số tài khoản của hợp đồng) ----

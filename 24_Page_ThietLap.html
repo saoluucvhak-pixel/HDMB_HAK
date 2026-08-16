@@ -132,6 +132,9 @@
     </div>
   </div>
 
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
@@ -165,6 +168,19 @@
   <div class="app-main">
     <div class="page-title">Thiết lập</div>
     <div class="page-subtitle">Cấu hình vùng (Locale) và dữ liệu xuất báo cáo MISA — áp dụng chung cho toàn hệ thống.</div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🤖 Chatbot tra cứu dữ liệu (Gemini)</h3>
+      <p class="hint" style="margin-top:-4px">Chatbot tự tra đúng dữ liệu thật trong hệ thống (khách hàng/hợp đồng/lô rừng được nhắc trong câu hỏi), rồi nhờ Gemini diễn giải thành câu trả lời tự nhiên — không tự bịa số liệu.</p>
+      <p class="hint" style="margin-top:-4px">✅ <b>Không bắt buộc phải có API key</b> — không cấu hình (hoặc Gemini đang lỗi/quá tải) thì chatbot vẫn tra được dữ liệu và tự trả lời theo luật cứng (đánh dấu 🔧), chỉ là câu trả lời không "văn vẻ" bằng khi có AI hỗ trợ.</p>
+      <p id="chatbotTrangThai" class="hint">Đang kiểm tra cấu hình...</p>
+      <div class="field-row">
+        <div class="field"><label>API key Gemini <span class="hint">(để trống nếu không đổi)</span></label><input id="oGeminiApiKey" type="password" placeholder="AIzaSy..."></div>
+        <div class="field"><label>Model</label><input id="oGeminiModel" value="gemini-3.5-flash-lite"></div>
+      </div>
+      <button class="btn btn-green" style="margin-top:10px" onclick="luuCaiDatChatbot()">💾 Lưu cấu hình chatbot</button>
+      <div id="msgChatbot" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
 
     <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🔗 Kết nối dữ liệu</h3>
@@ -208,6 +224,76 @@
       <button class="btn btn-green" onclick="chayToanBoBaoTri()">🔧 Chạy toàn bộ bảo trì</button>
       <div id="ketQuaBaoTri" style="margin-top:10px"></div>
       <div id="msgBaoTri" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🔄 Xây dựng lại cache Báo cáo (Draft_BaoCaoHopDong)</h3>
+      <p class="hint" style="margin-top:-4px">Dùng khi có hợp đồng/lô rừng bị THÊM TRỰC TIẾP vào Sheet (không qua webapp) — cache báo cáo sẽ KHÔNG tự biết, khiến hợp đồng đó "biến mất" khỏi các tab Báo cáo dù dữ liệu gốc vẫn còn nguyên. Chạy lại lệnh này để quét lại toàn bộ từ đầu. Dữ liệu nhiều có thể cần bấm lại vài lần (tự tiếp tục từ chỗ dừng, không tính lại từ đầu).</p>
+      <button class="btn btn-gold" onclick="xayDungLaiDraft()">🔄 Xây dựng lại (có thể mất vài phút)</button>
+      <div id="msgXayDungDraft" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🌲 Xây dựng lại cache Hồ sơ rừng (Draft_HoSoRung)</h3>
+      <p class="hint" style="margin-top:-4px">⚠️ ĐÂY LÀ CACHE RIÊNG, KHÁC với cache Báo cáo ở trên — tab "Hồ sơ rừng" đọc từ đây. Cũng cần chạy lại nếu có lô rừng thêm trực tiếp vào Sheet mà không thấy hiện ở tab "Hồ sơ rừng". Đọc thẳng từ HD_RUNG nên bắt được cả những lô có ID_HD không khớp hợp đồng nào (mồ côi).</p>
+      <button class="btn btn-gold" onclick="xayDungLaiDraftHoSoRung()">🔄 Xây dựng lại Hồ sơ rừng</button>
+      <div id="msgXayDungHoSoRung" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🤖 Bot Telegram (hỏi-đáp + thông báo cho cả nhóm)</h3>
+      <p class="hint" style="margin-top:-4px">Cả nhóm cùng vào 1 group Telegram, nhắn tin hỏi tra cứu dữ liệu y hệt chatbot trên webapp, kèm nhận thông báo tự động (ảnh chờ duyệt, dữ liệu mồ côi...).</p>
+      <details style="margin:8px 0">
+        <summary style="cursor:pointer;font-weight:600;font-size:12.5px">📖 Hướng dẫn cài đặt (bấm để xem)</summary>
+        <ol class="hint" style="margin-top:8px;padding-left:20px;line-height:1.8">
+          <li>Trên Telegram, tìm <b>@BotFather</b>, nhắn <code>/newbot</code>, đặt tên/username theo hướng dẫn → nhận được 1 <b>Bot Token</b> (dạng <code>123456:ABC-xyz...</code>) — dán vào ô "Bot Token" bên dưới.</li>
+          <li>Tạo 1 <b>nhóm (group)</b> Telegram mới, thêm bot vừa tạo vào nhóm, thêm mọi nhân viên cần dùng vào nhóm.</li>
+          <li>Lấy <b>Chat ID</b> của nhóm: nhắn thử 1 tin bất kỳ vào nhóm (vd "test"), rồi bấm nút <b>"🔍 Tự động lấy Chat ID"</b> bên dưới — không cần tự mở link/đọc mã gì cả.</li>
+          <li>Sau khi có Chat ID, bấm "💾 Lưu cấu hình" → "🔌 Bật Webhook" → "✉️ Gửi thử" để kiểm tra.</li>
+        </ol>
+      </details>
+      <div class="field-row">
+        <div class="field"><label>Bot Token <span class="hint">(để trống nếu không đổi)</span></label><input id="oTelegramToken" type="password" placeholder="123456:ABC-xyz..."></div>
+        <div class="field"><label>Chat ID (nhóm)</label><input id="oTelegramChatId" placeholder="vd -1001234567890"></div>
+      </div>
+      <p id="trangThaiTelegram" class="hint">Đang kiểm tra cấu hình...</p>
+      <button class="btn btn-green" onclick="luuCaiDatTelegram()">💾 Lưu cấu hình</button>
+      <button class="btn btn-outline" onclick="tuDongLayChatId()">🔍 Tự động lấy Chat ID</button>
+      <div id="dsChatIdTimDuoc" style="margin-top:8px"></div>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light)">
+        <p class="hint" style="margin:0 0 6px"><b>✅ Khuyến nghị: Chế độ Polling</b> — Apps Script tự hỏi Telegram mỗi phút xem có tin mới không, không bị vướng lỗi kỹ thuật "302" cố hữu của webapp Apps Script (xem giải thích ở nút Webhook bên dưới nếu tò mò). Trả lời có thể chậm tới ~1 phút thay vì tức thì, nhưng CHẮC CHẮN chạy được.</p>
+        <p id="trangThaiPollingTelegram" class="hint">Đang kiểm tra...</p>
+        <button class="btn btn-green" id="btnBatPollingTelegram" onclick="batPollingTelegram()">⚡ Bật Polling (khuyến nghị)</button>
+        <button class="btn btn-outline" id="btnTatPollingTelegram" onclick="tatPollingTelegram()">✕ Tắt Polling</button>
+      </div>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light)">
+        <p class="hint" style="margin:0 0 6px">⚠️ <b>Webhook (trả lời tức thì, nhưng THƯỜNG bị lỗi)</b> — Telegram gọi thẳng vào webapp mỗi khi có tin mới. Về lý thuyết nhanh hơn Polling, NHƯNG Google Apps Script có giới hạn cố hữu: webapp luôn trả về "302 chuyển hướng" trước khi chạy code thật — trình duyệt tự đi theo redirect này nên không thấy vấn đề, nhưng Telegram KHÔNG đi theo, nên hay báo lỗi "Wrong response...302 Found" dù cấu hình Deploy đúng "Anyone" rồi. Chỉ dùng nếu đã thử và thấy chạy ổn ở máy bạn.</p>
+        <button class="btn btn-outline" onclick="batWebhookTelegram()">🔌 Bật Webhook</button>
+        <button class="btn btn-outline" onclick="kiemTraWebhookTelegram()">🩺 Kiểm tra Webhook</button>
+        <button class="btn" style="background:#e74c3c;color:#fff" onclick="tatWebhookTelegram()">⏸️ Tắt Webhook</button>
+        <div id="ketQuaKiemTraWebhook" style="margin-top:10px"></div>
+      </div>
+
+      <button class="btn btn-outline" style="margin-top:14px" onclick="guiThuTelegram()">✉️ Gửi thử tin nhắn</button>
+      <div id="msgTelegram" class="msg" style="display:none;margin-top:10px"></div>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light)">
+        <p class="hint" style="margin:0 0 6px">🌅 Thông báo tự động hàng ngày (8h sáng) — gồm 5 loại: ảnh chờ duyệt, dữ liệu mồ côi, hợp đồng quá hạn 3 tháng chưa hoàn thành, hợp đồng sắp vượt khối lượng (còn dưới 10 Tấn), hợp đồng đã vượt khối lượng dự kiến. Chỉ gửi khi có việc thật, không gửi tin "không có gì" mỗi ngày.</p>
+        <p id="trangThaiTriggerTelegram" class="hint">Đang kiểm tra...</p>
+        <button class="btn btn-green" id="btnBatTriggerTelegram" onclick="batTriggerTelegram()">⚡ Bật thông báo hàng ngày</button>
+        <button class="btn btn-outline" id="btnTatTriggerTelegram" onclick="tatTriggerTelegram()">✕ Tắt</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">⚡ Bẫy nhật ký tự động (khi sửa tay trực tiếp trên Sheet)</h3>
+      <p class="hint" style="margin-top:-4px">Bật lên: mỗi khi có ai sửa/thêm trực tiếp vào HD_NCC/HD_RUNG/HD_STK/HD_GPS/HD_Picture (không qua webapp), hệ thống <b>tự động cập nhật cache báo cáo ngay lập tức</b> — không cần chờ bấm "Xây dựng lại" tay như 2 khối phía trên nữa. Nên bật nếu có ai thường sửa dữ liệu trực tiếp trên Sheet.</p>
+      <p id="trangThaiTriggerOnEdit" class="hint">Đang kiểm tra trạng thái...</p>
+      <button class="btn btn-green" id="btnBatTriggerOnEdit" onclick="batTriggerOnEdit()">⚡ Bật</button>
+      <button class="btn btn-outline" id="btnTatTriggerOnEdit" onclick="tatTriggerOnEdit()">✕ Tắt</button>
+      <div id="msgTriggerOnEdit" class="msg" style="display:none;margin-top:10px"></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -311,6 +397,28 @@
       .DINH_DANG_TEXT_CHO_COT_QUAN_TRONG();
   }
 
+  // ---- Chatbot (Gemini) ----
+  google.script.run.withSuccessHandler(function (kq) {
+    document.getElementById('chatbotTrangThai').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), model: ' + kq.model : '🔓 Chưa cấu hình API key — chatbot chưa dùng được.';
+    document.getElementById('oGeminiModel').value = kq.model;
+  }).LAY_CAI_DAT_CHATBOT();
+  function luuCaiDatChatbot() {
+    var apiKey = document.getElementById('oGeminiApiKey').value.trim();
+    var model = document.getElementById('oGeminiModel').value.trim();
+    document.getElementById('msgChatbot').style.display = 'block';
+    document.getElementById('msgChatbot').textContent = '⌛ Đang lưu...';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgChatbot').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('oGeminiApiKey').value = '';
+        google.script.run.withSuccessHandler(function (kq2) {
+          document.getElementById('chatbotTrangThai').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), model: ' + kq2.model : '🔓 Chưa cấu hình API key.';
+        }).LAY_CAI_DAT_CHATBOT();
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgChatbot').textContent = '❌ Lỗi: ' + err.message; })
+      .LUU_CAI_DAT_CHATBOT(apiKey, model);
+  }
+
   // ---- Kết nối dữ liệu (file Draft + thư mục Drive) ----
   function renderKetNoi_(kq) {
     var dong1 = kq.draftLoi ? '❌ File Draft báo cáo: ' + kq.draftLoi : '✅ File Draft báo cáo: "' + kq.draftTen + '" — <a href="' + kq.draftUrl + '" target="_blank">mở file</a>';
@@ -382,6 +490,216 @@
       .withFailureHandler(function (err) { document.getElementById('msgBaoTri').textContent = '❌ Lỗi: ' + err.message; })
       .CHAN_DOAN_MO_COI_TOAN_HE_THONG();
   }
+  // ---- Xây dựng lại cache Draft báo cáo ----
+  function xayDungLaiDraft() {
+    if (!confirm('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache báo cáo (KHÔNG đụng vào dữ liệu gốc HD_NCC/HD_RUNG). Tiếp tục?')) return;
+    document.getElementById('msgXayDungDraft').style.display = 'block';
+    document.getElementById('msgXayDungDraft').textContent = '⌛ Đang xây dựng lại (có thể mất vài phút)...';
+    guiLenhXayDungDraft_();
+  }
+  function guiLenhXayDungDraft_() {
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgXayDungDraft').textContent = kq;
+        if (kq.indexOf('⏸️') === 0) { setTimeout(guiLenhXayDungDraft_, 500); } // còn dở dang -> tự gọi lại luôn, khỏi phải tự bấm nhiều lần
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgXayDungDraft').textContent = '❌ Lỗi: ' + err.message; })
+      .XAY_DUNG_LAI_TOAN_BO_DRAFT();
+  }
+
+  function xayDungLaiDraftHoSoRung() {
+    if (!confirm('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache "Hồ sơ rừng" (KHÔNG đụng vào dữ liệu gốc HD_RUNG). Tiếp tục?')) return;
+    document.getElementById('msgXayDungHoSoRung').style.display = 'block';
+    document.getElementById('msgXayDungHoSoRung').textContent = '⌛ Đang xây dựng lại (có thể mất vài phút)...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgXayDungHoSoRung').textContent = '✅ Đã xây dựng lại cache cho ' + kq.soLoRungDaXuLy + ' lô rừng.'; })
+      .withFailureHandler(function (err) { document.getElementById('msgXayDungHoSoRung').textContent = '❌ Lỗi: ' + err.message; })
+      .XAY_DUNG_LAI_DRAFT_HOSORUNG();
+  }
+
+  // ---- Bẫy nhật ký tự động ----
+  function capNhatTrangThaiTriggerOnEdit_() {
+    google.script.run.withSuccessHandler(function (kq) {
+      document.getElementById('trangThaiTriggerOnEdit').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
+      document.getElementById('btnBatTriggerOnEdit').style.display = kq.daBat ? 'none' : 'inline-block';
+      document.getElementById('btnTatTriggerOnEdit').style.display = kq.daBat ? 'inline-block' : 'none';
+    }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
+  }
+  // ---- Bot Telegram ----
+  google.script.run.withSuccessHandler(function (kq) {
+    document.getElementById('trangThaiTelegram').textContent = kq.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq.tokenRutGon + '), Chat ID: ' + (kq.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
+    if (kq.chatId) document.getElementById('oTelegramChatId').value = kq.chatId;
+  }).LAY_CAI_DAT_TELEGRAM();
+  google.script.run.withSuccessHandler(function (kq) {
+    document.getElementById('trangThaiTriggerTelegram').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
+    document.getElementById('btnBatTriggerTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
+    document.getElementById('btnTatTriggerTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
+  }).KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM();
+
+  function luuCaiDatTelegram() {
+    var token = document.getElementById('oTelegramToken').value.trim();
+    var chatId = document.getElementById('oTelegramChatId').value.trim();
+    document.getElementById('msgTelegram').style.display = 'block';
+    document.getElementById('msgTelegram').textContent = '⌛ Đang lưu...';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('oTelegramToken').value = '';
+        google.script.run.withSuccessHandler(function (kq2) {
+          document.getElementById('trangThaiTelegram').textContent = kq2.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq2.tokenRutGon + '), Chat ID: ' + (kq2.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
+        }).LAY_CAI_DAT_TELEGRAM();
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
+      .LUU_CAI_DAT_TELEGRAM(token, chatId);
+  }
+  function tuDongLayChatId() {
+    document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">⌛ Đang tìm...</p>';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ ' + kq.loi + '</p>'; return; }
+        var html = '<p class="hint">Bấm đúng nhóm bên dưới để tự điền vào ô "Chat ID":</p>';
+        kq.list.forEach(function (c) {
+          html += '<button type="button" class="btn btn-outline" style="margin:2px 4px 2px 0;padding:5px 10px;font-size:11.5px" data-chatid="' + c.chatId + '">' +
+            (c.loai === 'private' ? '👤 ' : '👥 ') + escHtmlBT_(c.ten) + ' (' + c.chatId + ')</button>';
+        });
+        document.getElementById('dsChatIdTimDuoc').innerHTML = html;
+        document.querySelectorAll('#dsChatIdTimDuoc button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            document.getElementById('oTelegramChatId').value = btn.dataset.chatid;
+            document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">✅ Đã điền Chat ID — nhớ bấm "💾 Lưu cấu hình" để lưu lại.</p>';
+          });
+        });
+      })
+      .withFailureHandler(function (err) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ Lỗi: ' + err.message + '</p>'; })
+      .TU_DONG_LAY_CHAT_ID_TELEGRAM();
+  }
+
+  google.script.run.withSuccessHandler(function (kq) {
+    document.getElementById('trangThaiPollingTelegram').textContent = kq.daBat ? '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).' : '🔓 Đang TẮT.';
+    document.getElementById('btnBatPollingTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
+    document.getElementById('btnTatPollingTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
+  }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
+
+  function batPollingTelegram() {
+    document.getElementById('msgTelegram').style.display = 'block';
+    document.getElementById('msgTelegram').textContent = '⌛ Đang bật Polling...';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi;
+        if (kq.thanhCong) {
+          document.getElementById('trangThaiPollingTelegram').textContent = '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).';
+          document.getElementById('btnBatPollingTelegram').style.display = 'none';
+          document.getElementById('btnTatPollingTelegram').style.display = 'inline-block';
+        }
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
+      .BAT_POLLING_TELEGRAM();
+  }
+  function tatPollingTelegram() {
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTelegram').style.display = 'block';
+        document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('trangThaiPollingTelegram').textContent = '🔓 Đang TẮT.';
+        document.getElementById('btnBatPollingTelegram').style.display = 'inline-block';
+        document.getElementById('btnTatPollingTelegram').style.display = 'none';
+      })
+      .TAT_POLLING_TELEGRAM();
+  }
+
+  function kiemTraWebhookTelegram() {
+    document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<p class="hint">⌛ Đang kiểm tra...</p>';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ ' + kq.loi + '</div>'; return; }
+        var h = '<table class="mecon-table"><tbody>';
+        h += '<tr><td>URL webhook đang đăng ký với Telegram</td><td>' + escHtmlBT_(kq.urlDaDangKy) + '</td></tr>';
+        h += '<tr><td>URL webapp hiện tại (sau khi Deploy)</td><td>' + escHtmlBT_(kq.urlWebappHienTai) + '</td></tr>';
+        h += '<tr><td>2 URL có khớp nhau?</td><td>' + (kq.khopUrl ? '✅ Khớp' : '❌ KHÔNG khớp — đây là nguyên nhân chính!') + '</td></tr>';
+        h += '<tr><td>Lỗi gần nhất Telegram ghi nhận</td><td>' + (kq.loiGanNhat ? '❌ ' + escHtmlBT_(kq.loiGanNhat) + ' (lúc ' + kq.thoiDiemLoi + ')' : '✅ Không có lỗi') + '</td></tr>';
+        h += '<tr><td>Số tin nhắn đang chờ xử lý</td><td>' + kq.soTinDangCho + '</td></tr>';
+        h += '</tbody></table>';
+        if (!kq.khopUrl) {
+          h += '<div class="msg" style="display:block;margin-top:8px">⚠️ <b>Nguyên nhân rất có thể:</b> URL webapp đã đổi (do Deploy phiên bản mới) nhưng webhook vẫn trỏ về URL CŨ. Bấm lại nút "🔌 Bật Webhook" ở trên để đăng ký lại đúng URL mới nhất.</div>';
+        } else if (kq.loiGanNhat && /403|Forbidden/i.test(kq.loiGanNhat)) {
+          h += '<div class="msg" style="display:block;margin-top:8px">⚠️ <b>Nguyên nhân rất có thể:</b> Lúc Deploy, mục "Who has access" (Ai có quyền truy cập) chưa để "Anyone" (Bất kỳ ai) — Telegram cần gửi được request tới webapp mà không cần đăng nhập Google. Vào Deploy → Manage deployments → sửa quyền truy cập thành "Anyone", rồi bấm lại "🔌 Bật Webhook".</div>';
+        } else if (kq.loiGanNhat) {
+          h += '<div class="msg" style="display:block;margin-top:8px">⚠️ Có lỗi ghi nhận, xem dòng "Lỗi gần nhất" ở trên để biết chi tiết.</div>';
+        } else {
+          h += '<div class="msg ok" style="display:block;margin-top:8px">✅ Webhook có vẻ đang hoạt động bình thường. Nếu vẫn không thấy trả lời, thử nhắn lại 1 câu hỏi mới vào đúng nhóm đã cấu hình.</div>';
+        }
+        document.getElementById('ketQuaKiemTraWebhook').innerHTML = h;
+      })
+      .withFailureHandler(function (err) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + err.message + '</div>'; })
+      .KIEM_TRA_WEBHOOK_TELEGRAM();
+  }
+
+  function batWebhookTelegram() {
+    document.getElementById('msgTelegram').style.display = 'block';
+    document.getElementById('msgTelegram').textContent = '⌛ Đang bật webhook...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
+      .BAT_WEBHOOK_TELEGRAM();
+  }
+  function tatWebhookTelegram() {
+    if (!confirm('Tắt webhook — bot sẽ ngừng trả lời tin nhắn (thông báo tự động vẫn hoạt động bình thường nếu đang bật riêng). Tiếp tục?')) return;
+    document.getElementById('msgTelegram').style.display = 'block';
+    document.getElementById('msgTelegram').textContent = '⌛ Đang tắt...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
+      .TAT_WEBHOOK_TELEGRAM();
+  }
+  function guiThuTelegram() {
+    document.getElementById('msgTelegram').style.display = 'block';
+    document.getElementById('msgTelegram').textContent = '⌛ Đang gửi...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
+      .GUI_THU_TELEGRAM();
+  }
+  function batTriggerTelegram() {
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTelegram').style.display = 'block';
+        document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('trangThaiTriggerTelegram').textContent = '✅ Đang BẬT.';
+        document.getElementById('btnBatTriggerTelegram').style.display = 'none';
+        document.getElementById('btnTatTriggerTelegram').style.display = 'inline-block';
+      })
+      .BAT_TRIGGER_THONG_BAO_TELEGRAM();
+  }
+  function tatTriggerTelegram() {
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTelegram').style.display = 'block';
+        document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('trangThaiTriggerTelegram').textContent = '🔓 Đang TẮT.';
+        document.getElementById('btnBatTriggerTelegram').style.display = 'inline-block';
+        document.getElementById('btnTatTriggerTelegram').style.display = 'none';
+      })
+      .TAT_TRIGGER_THONG_BAO_TELEGRAM();
+  }
+
+  function batTriggerOnEdit() {
+    document.getElementById('msgTriggerOnEdit').style.display = 'block';
+    document.getElementById('msgTriggerOnEdit').textContent = '⌛ Đang bật...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgTriggerOnEdit').textContent = '✅ ' + kq.thongBao; capNhatTrangThaiTriggerOnEdit_(); })
+      .withFailureHandler(function (err) { document.getElementById('msgTriggerOnEdit').textContent = '❌ Lỗi: ' + err.message; })
+      .THIET_LAP_TRIGGER_ONEDIT_DRAFT();
+  }
+  function tatTriggerOnEdit() {
+    document.getElementById('msgTriggerOnEdit').style.display = 'block';
+    document.getElementById('msgTriggerOnEdit').textContent = '⌛ Đang tắt...';
+    google.script.run
+      .withSuccessHandler(function (kq) { document.getElementById('msgTriggerOnEdit').textContent = '✅ ' + kq.thongBao; capNhatTrangThaiTriggerOnEdit_(); })
+      .withFailureHandler(function (err) { document.getElementById('msgTriggerOnEdit').textContent = '❌ Lỗi: ' + err.message; })
+      .TAT_TRIGGER_ONEDIT_DRAFT();
+  }
+  capNhatTrangThaiTriggerOnEdit_();
+
   function chayToanBoBaoTri() {
     if (!confirm('Chạy toàn bộ bảo trì: chẩn đoán + đồng bộ thông tin lặp lại + điền địa chỉ GPS trống + trích tọa độ còn sót + chuyển ảnh/hồ sơ pháp lý sang URL thật. Không xóa dữ liệu nào. Tiếp tục?')) return;
     document.getElementById('msgBaoTri').style.display = 'block';

@@ -735,6 +735,7 @@ function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
   ]);
   if (rung) CAP_NHAT_DRAFT_MOT_HOP_DONG(rung[RUNG_COL.ID_KEY_HD]);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ } // xóa cache Bản đồ GPS để thấy điểm mới ngay, không phải chờ hết 15 phút cache
   return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien } };
 }
 
@@ -1020,7 +1021,8 @@ function CAP_NHAT_HOP_DONG(soDong, patch) {
     ngayCapUyQuyen: NCC_COL.NGAY_CAP_UQ,
     dienTichKy: NCC_COL.DIEN_TICH_KY, hoSoNguonGoc: NCC_COL.HO_SO_NGUON_GOC, soGiayTo: NCC_COL.SO_GIAY_TO,
     uyQuyenTT: NCC_COL.UY_QUYEN_TT, slDuKien: NCC_COL.SL_DU_KIEN, donGia: NCC_COL.DON_GIA,
-    soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG, nhomKH: NCC_COL.NHOM_KH, maSoThue: NCC_COL.MA_SO_THUE
+    soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG, nhomKH: NCC_COL.NHOM_KH, maSoThue: NCC_COL.MA_SO_THUE,
+    ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD // ⚠️ BỔ SUNG: trước đây thiếu — sửa Ngày ký/Số HĐ ở trang mẹ-con bị âm thầm bỏ qua, không ghi vào Sheet
   };
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
   Object.keys(patch).forEach(function (key) {
@@ -1288,6 +1290,71 @@ function ghiAnhVaoHDPicture_(idHD, tenChuRung, tenFile) {
  * params = { idHD, idRung, diaChiRung, ghiChu, tenFileGoc, base64Data, mimeType }
  * Trả về { thanhCong, tenFile, gpsDaThem: {lat,lng} | null, soDongDraft, loi }
  */
+/**
+ * Đọc tem tọa độ GPS hiển thị NGAY TRÊN ảnh (dạng app "GPS Map Camera" phổ
+ * biến khi đi thực địa — thường in vĩ độ/kinh độ, địa chỉ, ngày giờ ở góc/dưới
+ * ảnh) bằng Gemini — dùng khi ảnh KHÔNG có tọa độ trong EXIF. Dùng chung cấu
+ * hình API key/model đã cấu hình ở Thiết lập → 🤖 Chatbot.
+ * @return {{lat:number,lng:number}|null} null nếu không đọc được/không có tem
+ */
+/** Bản gọi được từ webapp (nhận base64 trực tiếp, dùng ở form "Thêm điểm GPS"
+ *  để tự đọc tọa độ từ ảnh minh chứng vừa chọn — không cần đã lưu vào Drive trước). */
+function DOC_TOA_DO_TU_ANH_WEBAPP(base64Data, mimeType) {
+  if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
+  try {
+    const bytes = Utilities.base64Decode(base64Data);
+    const blob = Utilities.newBlob(bytes, mimeType || 'image/jpeg', 'tam.jpg');
+    const toaDo = docToaDoTuTemAnhBangGemini_(blob);
+    if (!toaDo) return { thanhCong: false, loi: 'Không tìm thấy tem tọa độ trên ảnh này (hoặc chưa cấu hình API key Gemini ở Thiết lập).' };
+    return { thanhCong: true, lat: toaDo.lat, lng: toaDo.lng, diaChi: toaDo.diaChi || '' };
+  } catch (e) {
+    return { thanhCong: false, loi: 'Lỗi đọc tọa độ: ' + e.message };
+  }
+}
+
+function docToaDoTuTemAnhBangGemini_(blob) {
+  const p = PropertiesService.getScriptProperties();
+  const apiKey = p.getProperty('GEMINI_API_KEY');
+  if (!apiKey) return null; // chưa cấu hình API key -> im lặng bỏ qua, không chặn việc lưu ảnh
+  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
+
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  const prompt =
+    'Ảnh này có thể có TEM TỌA ĐỘ GPS in sẵn trên ảnh (kiểu ứng dụng "GPS Map Camera" — thường ở góc dưới ảnh, gồm vĩ độ/kinh độ dạng số, có thể kèm địa chỉ/ngày giờ). ' +
+    'Nếu tìm thấy, CHỈ trả về đúng 1 dòng JSON dạng {"lat": <số thập phân>, "lng": <số thập phân>, "diaChi": "<địa chỉ ghi trên tem nếu có, để chuỗi rỗng nếu không có>"} — lat/lng là số thập phân thường (không phải độ-phút-giây), không kèm chữ giải thích gì khác. ' +
+    'Nếu KHÔNG tìm thấy tem tọa độ nào trên ảnh, trả về đúng {"lat": null, "lng": null, "diaChi": ""}.';
+  const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: blob.getContentType(), data: base64 } }] }] };
+  const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
+  function goiGeminiToaDo_(tenModel) {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
+    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+  }
+  // ⚠️ ĐỒNG BỘ với OCR_TU_BAN_SCAN: thử ngay model dự phòng nếu model chính báo
+  // quá tải, tránh âm thầm bỏ qua chỉ vì đúng lúc 1 model bị quá tải.
+  const MODEL_DU_PHONG_TOADO_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+  let json = goiGeminiToaDo_(model);
+  for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_TOADO_.length; i++) {
+    if (MODEL_DU_PHONG_TOADO_[i] === model) continue;
+    model = MODEL_DU_PHONG_TOADO_[i];
+    json = goiGeminiToaDo_(model);
+  }
+  if (json.error) return null; // lỗi Gemini (quá tải, model sai...) -> im lặng bỏ qua, không chặn việc lưu ảnh
+  const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+  if (!text) return null;
+  // Gemini đôi khi bọc JSON trong ```json ... ``` -> tách phần {...} ra trước khi parse
+  const khop = text.match(/\{[^{}]*\}/);
+  if (!khop) return null;
+  let obj;
+  try { obj = JSON.parse(khop[0]); } catch (e) { return null; }
+  if (obj.lat === null || obj.lat === undefined || obj.lng === null || obj.lng === undefined) return null;
+  const lat = Number(obj.lat), lng = Number(obj.lng);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  // Kiểm tra hợp lý trong phạm vi Việt Nam (giống điều kiện đã dùng ở nơi khác trong project) — tránh nhận nhầm số không phải tọa độ
+  if (lat < 8 || lat > 24 || lng < 102 || lng > 110) return null;
+  return { lat: lat, lng: lng, diaChi: obj.diaChi || '' };
+}
+
 function THEM_ANH_RUNG(params) {
   if (!params || !params.base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
 
@@ -1302,13 +1369,27 @@ function THEM_ANH_RUNG(params) {
 
     // Đọc EXIF (hàm docExifTuBytes_ đã có sẵn trong 03_ImageForensics.gs, dùng chung được vì cùng project)
     let gpsDaThem = null;
+    let nguonGps = '';
     try {
       const exif = docExifTuBytes_(blob);
       if (exif.hasExif && exif.gpsLat && exif.gpsLng) {
         gpsDaThem = { lat: exif.gpsLat, lng: exif.gpsLng };
+        nguonGps = 'EXIF';
       }
     } catch (e) {
-      // Không đọc được EXIF thì bỏ qua, vẫn lưu ảnh vào draft bình thường
+      // Không đọc được EXIF thì bỏ qua, thử cách khác bên dưới
+    }
+    // ⚠️ MỚI: nhiều ảnh hiện trường KHÔNG có EXIF GPS (do máy tắt định vị, ảnh
+    // đã qua chỉnh sửa/nén lại...) nhưng CÓ SẴN tem tọa độ hiển thị ngay trên
+    // ảnh (kiểu app "GPS Map Camera" rất phổ biến khi đi thực địa) — dùng
+    // Gemini đọc tem đó khi EXIF không có, không cần người dùng gõ tay.
+    if (!gpsDaThem) {
+      try {
+        const toaDoTuTem = docToaDoTuTemAnhBangGemini_(blob);
+        if (toaDoTuTem) { gpsDaThem = toaDoTuTem; nguonGps = 'Tem tọa độ trên ảnh (đọc bằng Gemini)'; }
+      } catch (e) {
+        // Không đọc được (chưa cấu hình API key, ảnh không có tem, Gemini lỗi...) thì bỏ qua, vẫn lưu ảnh bình thường
+      }
     }
 
     const shDraft = getOrCreateDraftAnhSheet_();
@@ -1319,24 +1400,55 @@ function THEM_ANH_RUNG(params) {
       params.diaChiRung || '', params.ghiChu || '', 'Chờ duyệt', new Date()
     ]);
 
-    return { thanhCong: true, tenFile: tenFileLuu, gpsDaThem: gpsDaThem, soDongDraft: shDraft.getLastRow() };
+    return { thanhCong: true, tenFile: tenFileLuu, gpsDaThem: gpsDaThem, nguonGps: nguonGps, soDongDraft: shDraft.getLastRow() };
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi lưu ảnh: ' + e.message };
   }
 }
 
 /** Lấy danh sách ảnh nháp (chờ duyệt / đã xử lý) của 1 lô rừng cụ thể, mới nhất trước */
-function layDraftAnhChoRung(idRung) {
+/**
+ * Lấy ảnh của 1 lô rừng để hiện ở tab "🖼️ Ảnh" (chi tiết lô rừng) — GỘP 2 NGUỒN:
+ * (1) Draft_AnhRung (ảnh tải qua hệ thống mới, đã duyệt) — có gán đúng idRung.
+ * (2) HD_Picture (ảnh cũ/nhập từ nguồn khác, KHÔNG qua Draft_AnhRung) — không
+ *     phân biệt theo lô cụ thể, chỉ theo hợp đồng, nên hiện kèm ghi chú rõ.
+ * ⚠️ ĐÃ SỬA: trước đây CHỈ đọc Draft_AnhRung — ảnh cũ nằm thẳng trong HD_Picture
+ * (đã tồn tại trước khi có luồng upload mới) sẽ KHÔNG hiện ở đây dù ảnh vẫn có
+ * thật (thấy được ở tab "Kiểm tra ảnh (đã lưu)" vì tab đó đọc thẳng HD_Picture).
+ */
+function layDraftAnhChoRung(idRung, idHD) {
   const sh = getOrCreateDraftAnhSheet_();
   const lastRow = sh.getLastRow();
-  if (lastRow < 2) return [];
-  const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
   const ketQua = [];
-  data.forEach(function (r, i) {
-    if ((r[DRAFT_ANH_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim()) {
-      ketQua.push(chuyenDoiDongDraft_(r, i + 2));
-    }
-  });
+  if (lastRow >= 2) {
+    const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+    data.forEach(function (r, i) {
+      if ((r[DRAFT_ANH_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim()) {
+        ketQua.push(Object.assign({ nguon: 'moi' }, chuyenDoiDongDraft_(r, i + 2)));
+      }
+    });
+  }
+  // ---- Gộp thêm ảnh cũ nằm thẳng trong HD_Picture (nếu có truyền idHD) ----
+  if (idHD) {
+    const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
+    const idHDChuan = idHD.toString().trim();
+    pictureRows.forEach(function (r) {
+      const idThoTrongSheet = (r[PICTURE_COL.ID_HD] || '').toString().trim();
+      // Đối chiếu kép: khớp đúng ID_HD, HOẶC (dữ liệu cũ lỡ lưu ID_RUNG vào cột này) khớp đúng idRung đang xem
+      if (idThoTrongSheet !== idHDChuan && idThoTrongSheet !== idRung.toString().trim()) return;
+      for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
+        const giaTri = r[c];
+        if (!giaTri) continue;
+        const link = resolveDriveLink_(giaTri);
+        ketQua.push({
+          nguon: 'cu', trangThai: 'Đã duyệt', // ảnh cũ trong HD_Picture coi như đã ở trạng thái chính thức từ trước
+          tenFile: link ? link.ten : giaTri.toString().split('/').pop(),
+          url: link ? link.url : (giaTri.toString().indexOf('http') === 0 ? giaTri : ''),
+          gpsLat: '', gpsLng: '', diaChiRung: '', ghiChu: 'Ảnh cũ (có sẵn trong hồ sơ trước khi dùng luồng tải ảnh mới) — không phân biệt theo từng lô cụ thể'
+        });
+      }
+    });
+  }
   return ketQua.reverse();
 }
 

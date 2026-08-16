@@ -397,16 +397,32 @@ function KIEM_TRA_ANH_DA_CHON(duongDanList) {
     const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
     if (idHD) nccById[idHD] = r;
   });
+  // ⚠️ MỚI: HD_Picture.ID_HD đôi khi lưu nhầm ID_RUNG thay vì ID_HD thật (lỗi
+  // đã biết trong project — xem layCoAnhVaGpsTrucTiep_) khiến tra thẳng theo
+  // nccById[idHDChuan] bị trống Chủ rừng/Địa chỉ. Đối chiếu KÉP: thử ID_HD
+  // trước, không có thì coi idHDChuan là ID_RUNG, tìm ngược ra đúng hợp đồng.
+  const idRungToIdHD = {};
+  rungRows.forEach(function (r) {
+    const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
+    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
+    if (idRung && idHD) idRungToIdHD[idRung] = idHD;
+  });
+  function timHopDongDungCach_(idThoGoc) {
+    if (nccById[idThoGoc]) return nccById[idThoGoc];
+    const idHDSuyRa = idRungToIdHD[idThoGoc];
+    return idHDSuyRa ? nccById[idHDSuyRa] : null;
+  }
 
   return duongDanList.map(function (item) {
     const idHDChuan = (item.idHD || '').toString().trim();
-    const toaDo = toaDoTrungBinhCuaHD(idHDChuan);
-    const kq = kiemTraMotAnh(item.url, toaDo ? toaDo.lat : null, toaDo ? toaDo.lng : null);
-    const rowNCC = nccById[idHDChuan];
+    const toaDoDangKy = toaDoTrungBinhCuaHD(idHDChuan);
+    const kq = kiemTraMotAnh(item.url, toaDoDangKy ? toaDoDangKy.lat : null, toaDoDangKy ? toaDoDangKy.lng : null);
+    const rowNCC = timHopDongDungCach_(idHDChuan);
     return {
       url: item.url, idHD: item.idHD, tenFile: item.tenFile || item.url.split('/').pop(),
       chuRung: rowNCC ? rowNCC[NCC_COL.TEN_CHU_RUNG] : '', diaChiRung: rowNCC ? rowNCC[NCC_COL.DIA_CHI_RUNG] : '',
-      toaDo: toaDo, nguonToaDo: kq.nguonToaDo, diaChiTrenAnh: kq.diaChiTrenAnh, ketLuan: kq.ketLuan, dauHieu: kq.dauHieu.join(' | ')
+      gpsAnh: kq.gpsAnh, // ⚠️ MỚI: tọa độ THẬT đọc được từ ảnh (EXIF hoặc tem in trên ảnh) — trước đây webapp lỡ hiện nhầm toaDoDangKy (tọa độ rừng đã đăng ký, chỉ dùng để SO SÁNH khoảng cách) khiến hiện "Chưa có" dù đã đọc được tọa độ
+      toaDoDangKy: toaDoDangKy, nguonToaDo: kq.nguonToaDo, diaChiTrenAnh: kq.diaChiTrenAnh, ketLuan: kq.ketLuan, dauHieu: kq.dauHieu.join(' | ')
     };
   });
 }
