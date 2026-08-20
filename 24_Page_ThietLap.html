@@ -241,6 +241,18 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🏦 Tra cứu tên chủ tài khoản ngân hàng</h3>
+      <p class="hint" style="margin-top:-4px">Đối chiếu tên chủ tài khoản THẬT trước khi lưu số TK nhận tiền, tránh chuyển nhầm. Dịch vụ tra cứu miễn phí của VietQR đã ngừng cung cấp — cần đăng ký 1 dịch vụ trung gian trả phí theo lượt (vd tracuubank.com), đăng ký online là có API key ngay, không cần giấy tờ doanh nghiệp.</p>
+      <div class="field-row">
+        <div class="field"><label>API Key <span class="hint">(để trống nếu không đổi)</span></label><input id="oTraCuuNhApiKey" type="password" placeholder="dán API key đã đăng ký"></div>
+        <div class="field"><label>URL dịch vụ</label><input id="oTraCuuNhApiUrl" value="https://tracuubank.com/api/lookup"></div>
+      </div>
+      <p id="trangThaiTraCuuNh" class="hint">Đang kiểm tra cấu hình...</p>
+      <button class="btn btn-green" onclick="luuCaiDatTraCuuNh()">💾 Lưu cấu hình</button>
+      <div id="msgTraCuuNh" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🤖 Bot Telegram (hỏi-đáp + thông báo cho cả nhóm)</h3>
       <p class="hint" style="margin-top:-4px">Cả nhóm cùng vào 1 group Telegram, nhắn tin hỏi tra cứu dữ liệu y hệt chatbot trên webapp, kèm nhận thông báo tự động (ảnh chờ duyệt, dữ liệu mồ côi...).</p>
       <details style="margin:8px 0">
@@ -336,6 +348,13 @@
       <h3 style="margin-bottom:6px">🔧 Thiết lập dữ liệu xuất báo cáo MISA</h3>
       <p class="hint" style="margin-top:-4px">Các giá trị mặc định điền vào cột "Mã hàng/Tên hàng/Đơn vị tính/Loại tiền" của sheet <code>Update_HDMB</code> khi xuất báo cáo MISA (áp dụng cho MỌI dòng, vì dữ liệu hiện có không phân loại chi tiết theo từng lô rừng).</p>
       <div class="field-row">
+        <div class="field full">
+          <label>URL Sheet cố định "Update_Hopdong_NCC_DN" <span class="hint">(bắt buộc — nơi đồng bộ dữ liệu, xuất MISA sẽ đọc từ đây)</span></label>
+          <input id="tlMasterSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+          <p class="hint" style="margin-top:4px">Mỗi lần "Đồng bộ"/"Xuất báo cáo": tự động cập nhật đúng dòng đã có, thêm dòng mới, dọn sạch dòng trống/trùng khóa — không tính lại từ đầu mỗi lần.</p>
+        </div>
+      </div>
+      <div class="field-row">
         <div class="field"><label>Mã hàng mặc định</label><input id="tlMaHang" value="GK"></div>
         <div class="field"><label>Tên hàng mặc định</label><input id="tlTenHang" value="Gỗ tròn keo"></div>
       </div>
@@ -358,7 +377,9 @@
         </div>
       </div>
       <button class="btn btn-green" onclick="luuThietLapMisa()">💾 Lưu thiết lập</button>
+      <button class="btn btn-outline" onclick="donFileTamMisa()">🧹 Dọn file tạm còn sót lại (từ bản cũ trước đây)</button>
       <div id="msgThietLapMisa" class="msg" style="display:none;margin-top:10px"></div>
+      <div id="msgDonFileTam" class="msg" style="display:none;margin-top:10px"></div>
       <p class="hint" style="margin-top:10px">👉 Nút <b>xuất báo cáo MISA</b> (kèm bộ lọc theo Ngày ký) đã chuyển sang tab "📤 Báo cáo phần mềm MISA" trong <a href="<?= baseUrl ?>?page=baocao">📊 Báo cáo tổng hợp</a>.</p>
     </div>
   </div>
@@ -511,8 +532,18 @@
     if (!confirm('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache "Hồ sơ rừng" (KHÔNG đụng vào dữ liệu gốc HD_RUNG). Tiếp tục?')) return;
     document.getElementById('msgXayDungHoSoRung').style.display = 'block';
     document.getElementById('msgXayDungHoSoRung').textContent = '⌛ Đang xây dựng lại (có thể mất vài phút)...';
+    guiLenhXayDungHoSoRung_();
+  }
+  function guiLenhXayDungHoSoRung_() {
     google.script.run
-      .withSuccessHandler(function (kq) { document.getElementById('msgXayDungHoSoRung').textContent = '✅ Đã xây dựng lại cache cho ' + kq.soLoRungDaXuLy + ' lô rừng.'; })
+      .withSuccessHandler(function (kq) {
+        if (kq.dungSom) {
+          document.getElementById('msgXayDungHoSoRung').textContent = '⏸️ ' + kq.thongBao;
+          setTimeout(guiLenhXayDungHoSoRung_, 500); // còn dở dang -> tự gọi lại luôn, khỏi phải tự bấm nhiều lần
+        } else {
+          document.getElementById('msgXayDungHoSoRung').textContent = '✅ Đã xây dựng lại cache cho ' + kq.soLoRungDaXuLy + ' lô rừng.';
+        }
+      })
       .withFailureHandler(function (err) { document.getElementById('msgXayDungHoSoRung').textContent = '❌ Lỗi: ' + err.message; })
       .XAY_DUNG_LAI_DRAFT_HOSORUNG();
   }
@@ -525,6 +556,28 @@
       document.getElementById('btnTatTriggerOnEdit').style.display = kq.daBat ? 'inline-block' : 'none';
     }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
   }
+  // ---- Tra cứu ngân hàng ----
+  google.script.run.withSuccessHandler(function (kq) {
+    document.getElementById('trangThaiTraCuuNh').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), URL: ' + kq.apiUrl : '🔓 Chưa cấu hình API key.';
+    document.getElementById('oTraCuuNhApiUrl').value = kq.apiUrl;
+  }).LAY_CAI_DAT_TRA_CUU_NH();
+  function luuCaiDatTraCuuNh() {
+    var apiKey = document.getElementById('oTraCuuNhApiKey').value.trim();
+    var apiUrl = document.getElementById('oTraCuuNhApiUrl').value.trim();
+    document.getElementById('msgTraCuuNh').style.display = 'block';
+    document.getElementById('msgTraCuuNh').textContent = '⌛ Đang lưu...';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        document.getElementById('msgTraCuuNh').textContent = '✅ ' + kq.thongBao;
+        document.getElementById('oTraCuuNhApiKey').value = '';
+        google.script.run.withSuccessHandler(function (kq2) {
+          document.getElementById('trangThaiTraCuuNh').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), URL: ' + kq2.apiUrl : '🔓 Chưa cấu hình API key.';
+        }).LAY_CAI_DAT_TRA_CUU_NH();
+      })
+      .withFailureHandler(function (err) { document.getElementById('msgTraCuuNh').textContent = '❌ Lỗi: ' + err.message; })
+      .LUU_CAI_DAT_TRA_CUU_NH(apiKey, apiUrl);
+  }
+
   // ---- Bot Telegram ----
   google.script.run.withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTelegram').textContent = kq.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq.tokenRutGon + '), Chat ID: ' + (kq.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
@@ -810,6 +863,7 @@
     document.getElementById('tlTenHang').value = kq.tenHangMacDinh;
     document.getElementById('tlDonViTinh').value = kq.donViTinhMacDinh;
     document.getElementById('tlLoaiTien').value = kq.loaiTienMacDinh;
+    document.getElementById('tlMasterSheetUrl').value = kq.masterSheetUrl || '';
     var sel = document.getElementById('tlVungMisa');
     for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === kq.vungDinhDangMisa) { sel.selectedIndex = i; break; } }
   }).LAY_THIET_LAP_MISA();
@@ -820,13 +874,22 @@
       tenHangMacDinh: document.getElementById('tlTenHang').value,
       donViTinhMacDinh: document.getElementById('tlDonViTinh').value,
       loaiTienMacDinh: document.getElementById('tlLoaiTien').value,
-      vungDinhDangMisa: document.getElementById('tlVungMisa').value
+      vungDinhDangMisa: document.getElementById('tlVungMisa').value,
+      masterSheetUrl: document.getElementById('tlMasterSheetUrl').value.trim()
     };
     showMsg('msgThietLapMisa', '⌛ Đang lưu...', true);
     google.script.run
       .withSuccessHandler(function (kq) { showMsg('msgThietLapMisa', '✅ ' + kq.thongBao, true); })
       .withFailureHandler(function (err) { showMsg('msgThietLapMisa', '❌ Lỗi: ' + err.message, false); })
       .LUU_THIET_LAP_MISA(thietLap);
+  }
+
+  function donFileTamMisa() {
+    showMsg('msgDonFileTam', '⌛ Đang quét và dọn...', true);
+    google.script.run
+      .withSuccessHandler(function (kq) { showMsg('msgDonFileTam', '✅ ' + kq.thongBao, true); })
+      .withFailureHandler(function (err) { showMsg('msgDonFileTam', '❌ Lỗi: ' + err.message, false); })
+      .DON_FILE_TAM_MISA_CON_SOT();
   }
 </script>
 </body>

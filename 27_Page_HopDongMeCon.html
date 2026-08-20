@@ -243,7 +243,7 @@
 <script>
   // ============ TIỆN ÍCH DÙNG CHUNG ============
   function escHtml_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-  function formatSo_(v) { return (Number(v) || 0).toLocaleString('vi-VN'); }
+  function formatSo_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
   function formatTien_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
   function chuyenNgay_(v) { return v ? v.toString().split('T')[0] : ''; }
   function moModal(html) { document.getElementById('modalChungNoiDung').innerHTML = html; document.getElementById('modalChung').classList.add('mo'); }
@@ -257,20 +257,21 @@
     return Number(s) || 0;
   }
   /** Gắn định dạng số có phân cách hàng nghìn cho 1 ô nhập — hiện số thô lúc đang gõ
-   *  (dễ sửa), tự thêm dấu phân cách khi rời ô (dễ đọc) */
+   *  (dễ sửa), tự thêm dấu phân cách khi rời ô (dễ đọc). ⚠️ MỚI: làm tròn SỐ NGUYÊN
+   *  (bỏ số lẻ) — áp dụng cho diện tích/đơn giá/khối lượng/giá trị theo yêu cầu thống nhất định dạng. */
   function ganDinhDangSoKhiGo_(id) {
     var el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('blur', function () {
       var so = layGiaTriSoTuChuoi_(el.value);
-      el.value = so ? so.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '';
+      el.value = so ? Math.round(so).toLocaleString('vi-VN') : '';
     });
     el.addEventListener('focus', function () {
       var so = layGiaTriSoTuChuoi_(el.value);
-      el.value = so || '';
+      el.value = so ? Math.round(so) : '';
     });
     // Nếu ô đã có sẵn giá trị lúc vừa dựng form (vd đang Sửa) -> định dạng luôn từ đầu
-    if (el.value) { var so0 = layGiaTriSoTuChuoi_(el.value); el.value = so0 ? so0.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : ''; }
+    if (el.value) { var so0 = layGiaTriSoTuChuoi_(el.value); el.value = so0 ? Math.round(so0).toLocaleString('vi-VN') : ''; }
   }
   var khachHangCoSan_ = [];
   var timerTim_ = null;
@@ -579,11 +580,12 @@
       truong_('wNoiCap', 'Nơi cấp CCCD', d.noiCap, 'list="dlNoiCapW"') +
       truong_('wDiaChiTT', 'Địa chỉ thường trú', d.thuongTru, '', true) +
       truong_('wMaSoThue', 'Mã số thuế', d.maSoThue) +
-      truong_('wNhomKH', 'Nhóm KH', d.nhomKH) +
-      '</div><datalist id="dlNoiCapW"></datalist>' +
+      truong_('wNhomKH', 'Nhóm KH', d.nhomKH, 'list="dlNhomKHW"') +
+      '</div><datalist id="dlNoiCapW"></datalist><datalist id="dlNhomKHW"></datalist>' +
       '<div class="wizard-nut-hang"><button class="btn btn-outline" id="btnQuayLaiBuoc1">‹ Quay lại</button>' +
       '<button class="btn btn-green" id="btnTiepBuoc2">Tiếp tục →</button></div>');
     moModal(html);
+    google.script.run.withSuccessHandler(function (list) { var dl = document.getElementById('dlNhomKHW'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).layDanhSachNhomKH();
     google.script.run.withSuccessHandler(function (list) {
       var dl = document.getElementById('dlNoiCapW'); list.forEach(function (nc) { var o = document.createElement('option'); o.value = nc; dl.appendChild(o); });
     }).layGoiYNoiCap();
@@ -641,7 +643,7 @@
           .withSuccessHandler(function (kq) {
             elNut.disabled = false; elNut.textContent = nhanGoc; elFile.value = '';
             if (!kq.thanhCong) { alert('❌ ' + kq.loi); return; }
-            xuLyKetQua(kq.truong);
+            xuLyKetQua(kq.truong, kq);
           })
           .withFailureHandler(function (err) { elNut.disabled = false; elNut.textContent = nhanGoc; alert('❌ Lỗi đọc scan: ' + err.message); })
           .OCR_TU_BAN_SCAN(loaiTaiLieu, base64, file.type, file.name);
@@ -651,6 +653,61 @@
   }
   /** Điền vào 1 ô CHỈ KHI đang trống — không ghi đè dữ liệu người dùng đã gõ tay trước đó */
   function dienNeuTrongScan_(id, giaTri) { var el = document.getElementById(id); if (el && giaTri && !el.value) el.value = giaTri; }
+
+  /** Gắn nút "Kiểm tra tên chủ TK" — đối chiếu tên chủ tài khoản thật với tên chủ rừng đã nhập */
+  function themNutKiemTraChuTK_(idNutTrigger, idSoTK, idNganHang, idKetQua, tenChuRungThamChieu) {
+    var elNut = document.getElementById(idNutTrigger);
+    if (!elNut) return;
+    elNut.addEventListener('click', function () {
+      var soTK = document.getElementById(idSoTK).value.trim();
+      var nganHang = document.getElementById(idNganHang).value.trim();
+      if (!soTK || !nganHang) { alert('Nhập đủ Số tài khoản và Ngân hàng trước khi kiểm tra.'); return; }
+      var elKQ = document.getElementById(idKetQua);
+      elKQ.textContent = '⌛ Đang tra cứu...';
+      google.script.run
+        .withSuccessHandler(function (kq) {
+          if (!kq.thanhCong) { elKQ.innerHTML = '<span style="color:#c0392b">❌ ' + kq.loi + '</span>'; return; }
+          var mau = kq.khopTen === null ? '#a67c1f' : (kq.khopTen ? '#196f3d' : '#c0392b');
+          var dongKhop = kq.khopTen === null ? '' : (kq.khopTen ? ' ✅ Khớp tên chủ rừng đã nhập' : ' ⚠️ KHÔNG khớp tên chủ rừng đã nhập — kiểm tra lại!');
+          elKQ.innerHTML = '<span style="color:' + mau + '">✅ Chủ TK thật: <b>' + kq.tenChuTKThat + '</b> (' + kq.nganHangDaNhanDien + ')' + dongKhop + '</span>';
+        })
+        .withFailureHandler(function (err) { elKQ.innerHTML = '<span style="color:#c0392b">❌ Lỗi: ' + err.message + '</span>'; })
+        .TRA_CUU_TEN_CHU_TK(soTK, nganHang, tenChuRungThamChieu || '');
+    });
+  }
+  /** ⚠️ ĐÃ THAY: trước dùng <datalist> (gợi ý ẩn, nhìn giống ô nhập chữ bình
+   *  thường — người dùng không biết là có thể chọn được, tưởng không hoạt
+   *  động). Giờ dùng hẳn <select> (ô chọn rõ ràng, có mũi tên sổ xuống). */
+  function truongChonNganHang_(id, nhan, giaTriHienTai) {
+    return '<div><label class="flabel">' + nhan + '</label>' +
+      '<select class="finput" id="' + id + '"><option value="">⌛ Đang tải danh sách ngân hàng...</option></select></div>';
+  }
+  function napChonNganHang_(idSelect, giaTriHienTai) {
+    var elSelect = document.getElementById(idSelect);
+    if (!elSelect) return;
+    google.script.run
+      .withSuccessHandler(function (list) {
+        elSelect.innerHTML = '<option value="">-- Chọn ngân hàng --</option>';
+        var daKhopSan = false;
+        list.forEach(function (b) {
+          var o = document.createElement('option'); o.value = b.ten; o.textContent = b.ten + ' — ' + b.tenDayDu;
+          if (giaTriHienTai && b.ten.toLowerCase() === giaTriHienTai.toLowerCase()) { o.selected = true; daKhopSan = true; }
+          elSelect.appendChild(o);
+        });
+        // Giá trị cũ đã lưu không khớp đúng tên chuẩn nào (dữ liệu cũ gõ tự do trước đây) -> vẫn giữ nguyên, thêm làm 1 lựa chọn riêng để không mất dữ liệu
+        if (giaTriHienTai && !daKhopSan) {
+          var oCu = document.createElement('option'); oCu.value = giaTriHienTai; oCu.textContent = giaTriHienTai + ' (đã lưu trước đây)'; oCu.selected = true;
+          elSelect.insertBefore(oCu, elSelect.children[1]);
+        }
+      })
+      .withFailureHandler(function (err) {
+        // Tải danh sách lỗi (vd mất mạng) -> đổi tạm sang ô nhập chữ bình thường, không chặn người dùng thao tác tiếp
+        var elCha = elSelect.parentElement;
+        elCha.innerHTML = '<label class="flabel">Ngân hàng</label><input class="finput" id="' + idSelect + '" value="' + escHtml_(giaTriHienTai || '') + '">' +
+          '<div class="hint" style="color:#c0392b">⚠️ Không tải được danh sách ngân hàng chuẩn (' + err.message + ') — gõ tay tên ngân hàng, không dùng được nút "Kiểm tra tên chủ TK" lúc này.</div>';
+      })
+      .LAY_DANH_SACH_NGAN_HANG_VIETQR();
+  }
 
   function noiMSTTheoCccd_(idCccd, idMst) {
     var elCccd = document.getElementById(idCccd), elMst = document.getElementById(idMst);
@@ -683,10 +740,15 @@
       truong_('wDiaChiUyQuyen', 'Địa chỉ người ủy quyền', wz.diaChiUyQuyen) +
       '</div></div>' +
       '<label class="flabel" style="margin-top:12px">Số tài khoản nhận tiền <span class="hint">(để trống nếu chưa có)</span></label>' +
-      '<div class="form2col">' + truong_('wSoTK', 'Số tài khoản', wz.soTK) + truong_('wNganHang', 'Ngân hàng', wz.nganHang) + '</div>' +
+      '<div class="form2col">' + truong_('wSoTK', 'Số tài khoản', wz.soTK) + truongChonNganHang_('wNganHang', 'Ngân hàng', wz.nganHang) + '</div>' +
+      '<p class="hint" style="margin:6px 0 0">💡 Chọn đúng Ngân hàng, nhập Số tài khoản, rồi bấm nút dưới để tra tên chủ tài khoản THẬT — đối chiếu tránh chuyển nhầm.</p>' +
+      '<button type="button" class="btn btn-outline" id="btnKiemTraChuTKW" style="margin-top:4px;padding:5px 10px;font-size:11.5px">🔍 Kiểm tra tên chủ TK</button>' +
+      '<div id="ketQuaChuTKW" class="hint" style="margin-top:4px"></div>' +
       '<div class="wizard-nut-hang"><button class="btn btn-outline" id="btnQuayLaiBuoc1b">‹ Quay lại</button>' +
       '<button class="btn btn-green" id="btnTiepBuoc3">Tiếp tục →</button></div>');
     moModal(html);
+    napChonNganHang_('wNganHang', wz.nganHang);
+    themNutKiemTraChuTK_('btnKiemTraChuTKW', 'wSoTK', 'wNganHang', 'ketQuaChuTKW', wz.tenChuRung);
     document.getElementById('wUyQuyenTT').addEventListener('change', function () { document.getElementById('vungUyQuyenW').style.display = this.value === 'Có' ? 'block' : 'none'; });
     themNutDocScan_('btnScanCccdUyQuyen', 'oScanCccdUyQuyen', 'cccd_uy_quyen', function (truong) {
       dienNeuTrongScan_('wTenUyQuyen', truong.tenUyQuyen);
@@ -902,8 +964,11 @@
     var html = '<h3 style="margin-top:0">' + (laSua ? '✏️ Sửa tài khoản' : '➕ Thêm tài khoản') + '</h3>' +
       '<div class="form2col">' +
       truong_('mfSoTK', 'Số tài khoản *', r ? r.soTK : '') +
-      truong_('mfNganHang', 'Ngân hàng', r ? r.nganHang : '') +
+      truongChonNganHang_('mfNganHang', 'Ngân hàng', r ? r.nganHang : '') +
       '</div>' +
+      '<p class="hint" style="margin:6px 0 0">💡 Chọn đúng Ngân hàng ở ô trên, nhập Số tài khoản, rồi bấm nút dưới đây để tra tên chủ tài khoản THẬT — đối chiếu tránh chuyển nhầm.</p>' +
+      '<button type="button" class="btn btn-outline" id="btnKiemTraChuTKMF" style="margin-top:4px;padding:5px 10px;font-size:11.5px">🔍 Kiểm tra tên chủ TK</button>' +
+      '<div id="ketQuaChuTKMF" class="hint" style="margin-top:4px"></div>' +
       '<label class="flabel">Ủy quyền thanh toán</label>' +
       '<select class="finput" id="mfUyQuyenTT"><option value="Không"' + (!r || r.uyQuyenTT !== 'Có' ? ' selected' : '') + '>Không (người nhận là chủ rừng)</option>' +
       '<option value="Có"' + (r && r.uyQuyenTT === 'Có' ? ' selected' : '') + '>Có</option></select>' +
@@ -911,6 +976,8 @@
       '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuSTK">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
+    napChonNganHang_('mfNganHang', r ? r.nganHang : '');
+    themNutKiemTraChuTK_('btnKiemTraChuTKMF', 'mfSoTK', 'mfNganHang', 'ketQuaChuTKMF', h.tenChuRung);
     document.getElementById('btnLuuSTK').addEventListener('click', function () {
       var soTK = document.getElementById('mfSoTK').value.trim();
       if (!soTK) { showMsgModal_('❌ Cần nhập Số tài khoản.'); return; }
@@ -936,9 +1003,10 @@
       truong_('wNoiCap', 'Nơi cấp CCCD', h.noiCap) +
       truong_('wDiaChiTT', 'Địa chỉ thường trú', h.diaChiThuongTru, '', true) +
       truong_('wMaSoThue', 'Mã số thuế', h.maSoThue) +
-      truong_('wNhomKH', 'Nhóm KH', h.nhomKH) +
+      truong_('wNhomKH', 'Nhóm KH', h.nhomKH, 'list="dlNhomKHSua"') +
       truong_('wNgayKy', 'Ngày ký hợp đồng *', chuyenNgay_(h.ngayKy), 'type="date"') +
       truong_('wSoHD', 'Số hợp đồng', h.soHD) +
+      '<datalist id="dlNhomKHSua"></datalist>' +
       '</div>' +
       '<label class="flabel">Ủy quyền thanh toán</label>' +
       '<select class="finput" id="wUyQuyenTT"><option value="Không"' + (h.uyQuyenTT !== 'Có' ? ' selected' : '') + '>Không</option><option value="Có"' + (h.uyQuyenTT === 'Có' ? ' selected' : '') + '>Có</option></select>' +
@@ -947,10 +1015,12 @@
       truong_('wSdtUyQuyen', 'SĐT người ủy quyền', h.sdtUyQuyen) + truong_('wDiaChiUyQuyen', 'Địa chỉ người ủy quyền', h.diaChiUyQuyen) +
       '</div></div>' +
       '<label class="flabel" style="margin-top:12px">Số tài khoản nhận tiền</label>' +
-      '<div class="form2col">' + truong_('wSoTK', 'Số tài khoản', h.soTK) + truong_('wNganHang', 'Ngân hàng', h.nganHang) + '</div>' +
+      '<div class="form2col">' + truong_('wSoTK', 'Số tài khoản', h.soTK) + truongChonNganHang_('wNganHang', 'Ngân hàng', h.nganHang) + '</div>' +
       '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuSuaHD">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
+    google.script.run.withSuccessHandler(function (list) { var dl = document.getElementById('dlNhomKHSua'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).layDanhSachNhomKH();
+    napChonNganHang_('wNganHang', h.nganHang);
     document.getElementById('wUyQuyenTT').addEventListener('change', function () { document.getElementById('vungUyQuyenW').style.display = this.value === 'Có' ? 'block' : 'none'; });
     noiMSTTheoCccd_('wCccd', 'wMaSoThue');
     document.getElementById('btnLuuSuaHD').addEventListener('click', function () {
@@ -1027,30 +1097,49 @@
       .withFailureHandler(function (err) { document.getElementById('vungBangRung').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; })
       .layDanhSachRung(h.idHD);
   }
+  /** ⚠️ MỚI: gợi ý Năm trồng mặc định = Ngày ký hợp đồng trừ 42 tháng (3,5 năm
+   *  — thời gian trung bình gỗ keo trước khi khai thác). Chỉ là GỢI Ý, vẫn sửa
+   *  tay được bình thường trên ô nhập — không tự động khóa/ép buộc gì cả. */
+  function tinhNamTrongGoiY_(ngayKyISO) {
+    if (!ngayKyISO) return '';
+    var d = new Date(ngayKyISO);
+    if (isNaN(d.getTime())) return '';
+    d.setMonth(d.getMonth() - 42);
+    return d.getFullYear();
+  }
   function moModalThemSuaRung_(h, r) {
     var laSua = !!r;
+    var urlDinhKemHienCo = (r && r.dinhKem && r.dinhKem.url) ? r.dinhKem.url : '';
     var html = '<h3 style="margin-top:0">' + (laSua ? '✏️ Sửa lô rừng' : '➕ Thêm lô rừng') + '</h3>' +
+      '<div class="card" style="background:#f2f8f4;padding:8px 10px;margin-bottom:10px">' +
+      '<p style="margin:0;font-size:11.5px"><b>📎 Đính kèm hồ sơ tài liệu</b> — Giấy chứng nhận QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận (giấy tờ CHỨNG MINH NGUỒN GỐC đất/rừng). Khác với <b>Ảnh hiện trạng rừng</b> ở tab "Ảnh" (chụp thực tế cây/lô rừng) và <b>tọa độ GPS</b> ở tab "Tọa độ" — 3 loại khác nhau, xem thêm ở 📖 Hướng dẫn sử dụng.</p>' +
+      (urlDinhKemHienCo ? '<p style="margin:4px 0 0;font-size:11.5px">📄 File hiện có: <a href="' + urlDinhKemHienCo + '" target="_blank">' + escHtml_(r.dinhKem.ten || 'xem file') + '</a> — quét file mới bên dưới sẽ THAY THẾ file này.</p>' : '<p style="margin:4px 0 0;font-size:11.5px;color:#a67c1f">⚠️ Chưa có file đính kèm nào.</p>') +
+      '</div>' +
       '<input type="file" id="oScanHoSoRung" accept="image/*,application/pdf" style="display:none">' +
-      '<button type="button" class="btn btn-outline" id="btnScanHoSoRung" style="margin-bottom:10px">📷 Đọc hồ sơ pháp lý (GCN QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận — tự nhận diện loại)</button>' +
+      '<button type="button" class="btn btn-outline" id="btnScanHoSoRung" style="margin-bottom:10px">📷 Đọc &amp; đính kèm hồ sơ pháp lý (GCN QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận — tự nhận diện loại)</button>' +
       '<div class="form2col">' +
       truong_('mfDiaChiRung', 'Địa chỉ rừng', r ? r.diaChiRung : '', '', true) +
       truong_('mfDienTich', 'Diện tích (m²)', r ? r.dienTichM2 : '', 'type="text" inputmode="decimal" oninput="tuTinhKLRungMC()"') +
       truong_('mfDonGia', 'Đơn giá (đ/Tấn)', r ? r.donGia : '', 'type="text" inputmode="decimal"') +
       truong_('mfKhoiLuong', 'Khối lượng dự kiến (Tấn)', r ? r.khoiLuongDuKien : '', 'type="text" inputmode="decimal"') +
+      truong_('mfDinhMuc', 'Định mức (Tấn/ha, để tính tự động)', DINH_MUC_TAN_TREN_HA, 'type="text" inputmode="decimal" oninput="tuTinhKLRungMC()"') +
       truong_('mfHoSoNguonGoc', 'Loại hồ sơ nguồn gốc', r ? r.hoSoNguonGoc : '', 'list="dlHoSoMC"') +
       truong_('mfSoGiayTo', 'Số giấy tờ', r ? r.soGiayTo : '') +
-      truong_('mfNamTrong', 'Năm trồng rừng', r ? r.namTrong : '', 'type="number" placeholder="vd 2018 — để trống nếu chưa rõ" min="1990" max="' + new Date().getFullYear() + '"') +
+      truong_('mfNamTrong', 'Năm trồng rừng', r ? r.namTrong : tinhNamTrongGoiY_(h.ngayKy), 'type="number" placeholder="vd 2018 — để trống nếu chưa rõ" min="1990" max="' + new Date().getFullYear() + '"') +
       '</div><datalist id="dlHoSoMC"></datalist>' +
+      (!r ? '<p class="hint" style="margin-top:-6px">💡 "Năm trồng rừng" tự gợi ý = Ngày ký hợp đồng trừ 3,5 năm (thời gian trung bình gỗ keo trước khai thác) — sửa lại thoải mái nếu biết đúng năm thật.</p>' : '') +
       '<p class="hint" id="goiYDonGiaMC" style="margin-top:6px"><a onclick="goiYDonGiaMC(\'' + (h.ngayKy ? h.ngayKy.split('T')[0] : '') + '\')" style="cursor:pointer;color:var(--active-green)">💰 Xem gợi ý đơn giá bình quân theo Báo giá</a></p>' +
       '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuRung">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
     google.script.run.withSuccessHandler(function (list) { var dl = document.getElementById('dlHoSoMC'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).layDanhSachLoaiHoSo();
-    themNutDocScan_('btnScanHoSoRung', 'oScanHoSoRung', 'ho_so_rung', function (truong) {
+    var urlDinhKemMoiDocDuoc_ = null; // ⚠️ MỚI: giữ lại link file OCR vừa tải lên, để lưu đúng vào dinhKemGiayTo (trước đây bị bỏ sót hoàn toàn)
+    themNutDocScan_('btnScanHoSoRung', 'oScanHoSoRung', 'ho_so_rung', function (truong, ketQuaDayDu) {
       dienNeuTrongScan_('mfHoSoNguonGoc', truong.hoSoNguonGoc);
       dienNeuTrongScan_('mfSoGiayTo', truong.soGiayTo);
       if (truong.dienTichM2) dienNeuTrongScan_('mfDienTich', truong.dienTichM2);
-      alert('✅ Đã đọc xong hồ sơ pháp lý — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc;
+      alert('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
     });
     ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong');
     document.getElementById('btnLuuRung').addEventListener('click', function () {
@@ -1059,7 +1148,8 @@
         dienTichM2: layGiaTriSoTuChuoi_(document.getElementById('mfDienTich').value), donGia: layGiaTriSoTuChuoi_(document.getElementById('mfDonGia').value),
         khoiLuongDuKien: layGiaTriSoTuChuoi_(document.getElementById('mfKhoiLuong').value),
         hoSoNguonGoc: document.getElementById('mfHoSoNguonGoc').value.trim(), soGiayTo: document.getElementById('mfSoGiayTo').value.trim(),
-        namTrong: document.getElementById('mfNamTrong').value
+        namTrong: document.getElementById('mfNamTrong').value,
+        dinhKemGiayTo: urlDinhKemMoiDocDuoc_ || urlDinhKemHienCo // mới quét thì dùng file mới, không thì giữ nguyên file cũ (không xóa mất)
       };
       showMsgModal_('⌛ Đang lưu...');
       if (laSua) {
@@ -1071,8 +1161,10 @@
   }
   function tuTinhKLRungMC() {
     var dt = layGiaTriSoTuChuoi_(document.getElementById('mfDienTich').value);
-    var kl = Math.round((DINH_MUC_TAN_TREN_HA * dt / 10000) * 100) / 100;
-    document.getElementById('mfKhoiLuong').value = kl ? kl.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '';
+    var elDinhMuc = document.getElementById('mfDinhMuc');
+    var dinhMuc = elDinhMuc ? (layGiaTriSoTuChuoi_(elDinhMuc.value) || DINH_MUC_TAN_TREN_HA) : DINH_MUC_TAN_TREN_HA;
+    var kl = Math.round(dinhMuc * dt / 10000); // ⚠️ MỚI: làm tròn số nguyên, không còn lẻ
+    document.getElementById('mfKhoiLuong').value = kl ? kl.toLocaleString('vi-VN') : '';
   }
   function goiYDonGiaMC(ngayKy) {
     if (!ngayKy) { alert('Hợp đồng chưa có Ngày ký.'); return; }
@@ -1108,7 +1200,7 @@
   function renderTabGPS_(idRung) {
     var el = document.getElementById('vungTabRung');
     var coTheSua = coTheSuaHopDong_(ctxRung.h.tinhTrang);
-    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>Tọa độ GPS</h4><p>Các điểm đã đo cho lô rừng này.</p></div></div><div class="vung-bang-gps"><p class="hint">⌛ Đang tải...</p></div></div>' +
+    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>📍 Tọa độ GPS</h4><p>Điểm tọa độ đã đo cho lô rừng này. Ảnh đính kèm ở đây (nếu có) là ẢNH CÓ TEM TỌA ĐỘ (kiểu app "GPS Map Camera") — KHÁC với ảnh hiện trạng rừng ở tab "Ảnh" và file hồ sơ pháp lý ở tab "Lô rừng".</p></div></div><div class="vung-bang-gps"><p class="hint">⌛ Đang tải...</p></div></div>' +
       (coTheSua ? '<div class="card-con" style="margin-top:12px">' +
       '<label class="flabel" style="margin-top:0">Thêm điểm mới</label><div class="form2col">' +
       '<input class="finput" id="oGpsLat" placeholder="Vĩ độ (vd 15.733975)"><input class="finput" id="oGpsLng" placeholder="Kinh độ (vd 108.126)"></div>' +
@@ -1182,7 +1274,7 @@
   function renderTabAnhRung_(idHD, idRung) {
     var el = document.getElementById('vungTabRung');
     var coTheSua = coTheSuaHopDong_(ctxRung.h.tinhTrang);
-    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>Ảnh hiện trường</h4><p>Ảnh minh chứng cho lô rừng này.</p></div></div><div class="vung-bang-anh"><p class="hint">⌛ Đang tải...</p></div></div>' +
+    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>🖼️ Ảnh hiện trạng rừng &amp; khai thác</h4><p>Ảnh chụp THỰC TẾ cây/lô rừng (hiện trạng trước khi khai thác, quá trình khai thác...) — KHÁC với file hồ sơ pháp lý (giấy tờ) ở tab "Lô rừng" và ảnh có tọa độ ở tab "Tọa độ GPS".</p></div></div><div class="vung-bang-anh"><p class="hint">⌛ Đang tải...</p></div></div>' +
       (coTheSua ? '<div class="card-con" style="margin-top:12px">' +
       '<input type="file" id="oAnhRung" accept="image/*,application/pdf" style="display:none">' +
       '<button class="btn btn-outline" id="btnChonAnhRung" type="button" style="padding:5px 10px;font-size:11.5px">📁 Chọn ảnh/PDF...</button>' +
@@ -1255,6 +1347,17 @@
       reader.readAsDataURL(file);
     });
   });
+  /** Thoát HTML an toàn RỒI MỚI biến URL (http/https) thành link bấm mở tab mới
+   *  — thứ tự bắt buộc: thoát HTML trước để tránh lỗi hiển thị/XSS nếu văn bản
+   *  có ký tự đặc biệt, sau đó mới chèn thẻ <a> (không thoát lại các thẻ <a>
+   *  vừa tự chèn). */
+  function chatbotTaoLinkBamDuoc_(text) {
+    var thoatHtml = (text || '').toString()
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return thoatHtml.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+      return '<a href="' + url + '" target="_blank" style="color:#2e7d32;text-decoration:underline">🔗 mở link</a>';
+    }).replace(/\n/g, '<br>');
+  }
   function chatbotXoaNguCanh_() {
     chatbotCccdGoiY_ = []; chatbotLichSu_ = [];
     var vungTin = document.getElementById('chatbotNoiDung');
@@ -1289,7 +1392,7 @@
     google.script.run
       .withSuccessHandler(function (kq) {
         var traLoi = kq.thanhCong ? (kq.khongDungAI ? '🔧 ' : '') + kq.traLoi : '❌ ' + kq.loi;
-        tinCho.textContent = traLoi;
+        tinCho.innerHTML = chatbotTaoLinkBamDuoc_(traLoi); // ⚠️ MỚI: trước đây .textContent hiện link dạng chữ thô, không bấm được — giờ tự nhận diện URL trong câu trả lời và biến thành link bấm mở tab mới, tải/xem ảnh và hồ sơ pháp lý ngay
         vungTin.scrollTop = vungTin.scrollHeight;
         if (kq.thanhCong) {
           if (kq.cccdDaKhop && kq.cccdDaKhop.length) chatbotCccdGoiY_ = kq.cccdDaKhop;

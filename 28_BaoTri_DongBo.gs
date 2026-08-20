@@ -92,6 +92,27 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU() {
 
 /** ============ 2. ĐỒNG BỘ THÔNG TIN LẶP LẠI + ĐIỀN ĐỊA CHỈ GPS CÒN TRỐNG ============ */
 function DONG_BO_THONG_TIN_MO_RONG() {
+  damBaoTieuDeCotMoRongRung_(); // ⚠️ MỚI: điền tiêu đề 2 cột mở rộng (Khối lượng thực hiện, Năm trồng) nếu còn thiếu — chạy ngay khi bảo trì, không cần đợi thêm lô rừng mới mới tự điền
+
+  // ⚠️ MỚI: định dạng TEXT cho toàn bộ cột định danh HIỆN CÓ trong HD_NCC/HD_STK
+  // (CCCD/SĐT/Số TK/MST) — phòng ngừa MẤT SỐ 0 ĐẦU nếu sau này ai đó SỬA TAY
+  // trực tiếp trên Sheet. LƯU Ý: KHÔNG cứu lại được số 0 đã bị mất từ trước
+  // (dữ liệu đã bị cắt thật sự, không có cách khôi phục) — chỉ ngăn KHÔNG mất
+  // THÊM nữa từ nay về sau.
+  try {
+    const shNCCĐinhDang = getSheet_(SHEET_NAME.HD_NCC);
+    const soDongNCC = shNCCĐinhDang.getLastRow();
+    if (soDongNCC >= 2) {
+      [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
+        .forEach(function (c) { shNCCĐinhDang.getRange(2, c + 1, soDongNCC - 1, 1).setNumberFormat('@'); });
+    }
+    const shSTKĐinhDang = getSheet_(SHEET_NAME.HD_STK);
+    const soDongSTK = shSTKĐinhDang.getLastRow();
+    if (soDongSTK >= 2) {
+      [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shSTKĐinhDang.getRange(2, c + 1, soDongSTK - 1, 1).setNumberFormat('@'); });
+    }
+  } catch (e) { /* không để lỗi định dạng chặn phần đồng bộ chính bên dưới */ }
+
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
 

@@ -377,6 +377,17 @@
       reader.readAsDataURL(file);
     });
   });
+  /** Thoát HTML an toàn RỒI MỚI biến URL (http/https) thành link bấm mở tab mới
+   *  — thứ tự bắt buộc: thoát HTML trước để tránh lỗi hiển thị/XSS nếu văn bản
+   *  có ký tự đặc biệt, sau đó mới chèn thẻ <a> (không thoát lại các thẻ <a>
+   *  vừa tự chèn). */
+  function chatbotTaoLinkBamDuoc_(text) {
+    var thoatHtml = (text || '').toString()
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return thoatHtml.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+      return '<a href="' + url + '" target="_blank" style="color:#2e7d32;text-decoration:underline">🔗 mở link</a>';
+    }).replace(/\n/g, '<br>');
+  }
   function chatbotXoaNguCanh_() {
     chatbotCccdGoiY_ = []; chatbotLichSu_ = [];
     var vungTin = document.getElementById('chatbotNoiDung');
@@ -411,7 +422,7 @@
     google.script.run
       .withSuccessHandler(function (kq) {
         var traLoi = kq.thanhCong ? (kq.khongDungAI ? '🔧 ' : '') + kq.traLoi : '❌ ' + kq.loi;
-        tinCho.textContent = traLoi;
+        tinCho.innerHTML = chatbotTaoLinkBamDuoc_(traLoi); // ⚠️ MỚI: trước đây .textContent hiện link dạng chữ thô, không bấm được — giờ tự nhận diện URL trong câu trả lời và biến thành link bấm mở tab mới, tải/xem ảnh và hồ sơ pháp lý ngay
         vungTin.scrollTop = vungTin.scrollHeight;
         if (kq.thanhCong) {
           if (kq.cccdDaKhop && kq.cccdDaKhop.length) chatbotCccdGoiY_ = kq.cccdDaKhop;

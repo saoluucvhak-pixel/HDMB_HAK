@@ -217,8 +217,18 @@
 <p>Nút duyệt nằm ngay đầu trang chi tiết hợp đồng (chỉ hiện đúng bước hợp lệ tiếp theo). Muốn duyệt NHIỀU hợp đồng cùng lúc: vào danh sách hợp đồng của 1 khách hàng → lọc đúng 1 tab trạng thái (vd "Chờ thực hiện") → tick chọn nhiều dòng → bấm nút duyệt hàng loạt hiện ra.</p>
 
 <h3>Bước 3 — Thêm lô rừng</h3>
-<p>Trong 1 hợp đồng → tab "🌲 Lô rừng" → "➕ Thêm lô rừng": Địa chỉ/Diện tích/Đơn giá — gõ Diện tích tự tính luôn Khối lượng dự kiến (=120 tấn/ha × DT), có nút "💰 Xem gợi ý đơn giá bình quân theo Báo giá" để lấy nhanh giá tham khảo theo đúng tháng ký hợp đồng.</p>
+<p>Trong 1 hợp đồng → tab "🌲 Lô rừng" → "➕ Thêm lô rừng": Địa chỉ/Diện tích/Đơn giá — gõ Diện tích tự tính luôn Khối lượng dự kiến (=<b>Định mức</b> × DT, mặc định 120 tấn/ha nhưng <b>sửa được ngay trên form</b> — chỉ dùng để tính, không lưu vào Sheet), có nút "💰 Xem gợi ý đơn giá bình quân theo Báo giá" để lấy nhanh giá tham khảo theo đúng tháng ký hợp đồng.</p>
 <p>Bấm "Xem chi tiết →" trên 1 lô rừng để vào 2 tab con: <b>📍 Tọa độ GPS</b> và <b>🖼️ Ảnh</b> (xem định dạng tọa độ hỗ trợ ở mục 2b bên dưới). Ảnh tải lên ở đây <b>tự động duyệt luôn</b>, không cần bước duyệt riêng.</p>
+
+<h4>2a. Phân biệt RÕ 3 loại đính kèm — rất hay bị nhầm, đọc kỹ mục này</h4>
+<p>Hệ thống có 3 chỗ đính kèm file/ảnh khác nhau hoàn toàn, ứng với 3 mục đích khác nhau — đính kèm nhầm chỗ sẽ khiến báo cáo/đối chiếu bị sai:</p>
+<table>
+<tr><th>Đính kèm ở đâu</th><th>Là gì</th><th>Ví dụ cụ thể</th></tr>
+<tr><td><b>📄 "Đính kèm hồ sơ tài liệu"</b><br>(ngay trong form "Thêm/Sửa lô rừng", nút "📷 Đọc &amp; đính kèm hồ sơ pháp lý")</td><td>File GIẤY TỜ chứng minh nguồn gốc đất/rừng — KHÔNG phải ảnh chụp cây/rừng</td><td>Giấy chứng nhận QSDĐ (sổ đỏ), Hợp đồng mua bán đất, Giấy xác nhận, Đơn xác nhận của UBND xã/phường. Bấm nút này sẽ <b>tự đọc luôn nội dung</b> (OCR) để điền sẵn "Loại hồ sơ"/"Số giấy tờ".</td></tr>
+<tr><td><b>🖼️ Tab "Ảnh"</b><br>(trong chi tiết 1 lô rừng)</td><td>Ảnh chụp THỰC TẾ hiện trường — KHÔNG phải giấy tờ</td><td>Ảnh cây/lô rừng hiện trạng trước khi khai thác, ảnh trong quá trình khai thác/thu mua thực tế tại vườn.</td></tr>
+<tr><td><b>📍 Tab "Tọa độ GPS"</b><br>(trong chi tiết 1 lô rừng, mục "Ảnh minh chứng" khi thêm điểm)</td><td>Ảnh có TEM TỌA ĐỘ in sẵn — dùng để CHỨNG MINH đúng vị trí đo</td><td>Ảnh chụp bằng app "GPS Map Camera" hoặc tương tự (có in vĩ độ/kinh độ, địa chỉ, ngày giờ ngay trên ảnh). Hệ thống tự đọc tọa độ từ tem này để điền sẵn Vĩ độ/Kinh độ nếu có.</td></tr>
+</table>
+<p>Riêng CCCD/giấy tờ tùy thân của chủ rừng và người ủy quyền đính kèm ở <b>Bước 1 và Bước 2</b> của wizard tạo hợp đồng (nút "📷 Đọc CCCD"), không phải ở đây.</p>
 
 <h4>2b. Định dạng tọa độ GPS được hỗ trợ khi nhập tay</h4>
 <p>Chỉ có 2 ô để gõ — <b>Vĩ độ (Lat)</b> và <b>Kinh độ (Lng)</b>. <b>Không cần chọn hay khai báo trước</b> đang nhập hệ nào — gõ nguyên giá trị đo được, hệ thống tự dò định dạng theo thứ tự sau (thử lần lượt, dùng đúng kiểu đầu tiên khớp):</p>
@@ -285,11 +295,12 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 
 
 <h2>5. Xem chi tiết lô rừng (tọa độ + hồ sơ + ảnh)</h2>
+<p><i>(3 loại đính kèm dưới đây khác nhau hoàn toàn — xem bảng phân biệt đầy đủ ở mục 2a phía trên nếu chưa rõ.)</i></p>
 <p>Ở tab <b>🌲 Hồ sơ rừng</b> (Báo cáo tổng hợp), bấm "🔄 Tải báo cáo" rồi bấm "📍 Xem chi tiết" trên dòng cần xem — hiện lên khung nổi giữa màn hình (đóng bằng nút ✕, bấm ra ngoài, hoặc phím Esc), gồm:</p>
 <ul>
   <li><b>Tọa độ GPS</b> — từng điểm đã đo, có link mở Google Maps</li>
-  <li><b>Hồ sơ pháp lý</b> — loại hồ sơ, số giấy tờ, link file đính kèm (bấm mở trực tiếp)</li>
-  <li><b>Ảnh hiện trường</b> — tách 2 nhóm: "Ảnh riêng của lô rừng này" (chắc chắn đúng lô) và "Ảnh chung của cả hợp đồng" (chưa rõ thuộc lô nào cụ thể nếu hợp đồng có nhiều lô)</li>
+  <li><b>Hồ sơ pháp lý</b> — loại hồ sơ, số giấy tờ, link file đính kèm (bấm mở trực tiếp) — đây là GIẤY TỜ (sổ đỏ, hợp đồng mua bán...), không phải ảnh chụp rừng</li>
+  <li><b>Ảnh hiện trường</b> — ảnh chụp THỰC TẾ hiện trạng rừng/khai thác, tách 2 nhóm: "Ảnh riêng của lô rừng này" (chắc chắn đúng lô) và "Ảnh chung của cả hợp đồng" (chưa rõ thuộc lô nào cụ thể nếu hợp đồng có nhiều lô)</li>
 </ul>
 
 <h2>6. Tab Thanh toán</h2>

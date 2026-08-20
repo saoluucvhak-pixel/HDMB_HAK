@@ -507,7 +507,16 @@ function TAO_HOP_DONG_MOI(d) {
     row[NCC_COL.ID_HD] = idHD;
     row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện'; // ⚠️ ĐÃ SỬA: trước đây ghi cứng "Đang thực hiện" ngay khi tạo — giờ LUÔN mặc định "Chờ thực hiện", chỉ chuyển sang "Đang thực hiện" sau khi ai đó duyệt tay (qua nút "✅ Duyệt" ở trang Thêm/Sửa hợp đồng)
 
-    getSheet_(SHEET_NAME.HD_NCC).appendRow(row);
+    // ⚠️ MỚI: định dạng TEXT các cột định danh (CCCD/SĐT/Số TK/MST) TRƯỚC KHI
+    // GHI giá trị — Google Sheets tự động cắt mất số 0 đầu ngay lúc ghi nếu ô
+    // đang ở định dạng mặc định (Automatic), định dạng SAU khi ghi không cứu
+    // lại được số đã mất. Đổi appendRow() -> getLastRow()+1 + setValues() để
+    // định dạng được TRƯỚC khi ghi (appendRow không cho làm việc này).
+    const shNCC = getSheet_(SHEET_NAME.HD_NCC);
+    const soDongMoiNCC = shNCC.getLastRow() + 1;
+    [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
+      .forEach(function (c) { shNCC.getRange(soDongMoiNCC, c + 1).setNumberFormat('@'); });
+    shNCC.getRange(soDongMoiNCC, 1, 1, row.length).setValues([row]);
   } finally {
     lock.releaseLock();
   }
@@ -542,7 +551,23 @@ function TAO_HOP_DONG_MOI(d) {
  * `d` cần có idHD (bắt buộc), các trường còn lại tùy chọn.
  * STT lô rừng tự động tính = số lô rừng hiện có của hợp đồng đó + 1.
  */
+/**
+ * ⚠️ MỚI: 2 cột mở rộng của HD_RUNG (KHOI_LUONG_THUC_HIEN cột S, NAM_TRONG cột
+ * T) trước giờ chỉ được GHI GIÁ TRỊ, chưa từng có ai ghi TIÊU ĐỀ dòng 1 — mở
+ * Sheet trực tiếp sẽ thấy 2 cột này trống tiêu đề, dễ nhầm. Hàm này tự kiểm
+ * tra và điền tiêu đề nếu còn thiếu — gọi 1 lần đầu THEM_LO_RUNG_MOI (rẻ, chỉ
+ * đọc 2 ô rồi bỏ qua nếu đã có sẵn).
+ */
+function damBaoTieuDeCotMoRongRung_() {
+  const sh = getSheet_(SHEET_NAME.HD_RUNG);
+  const oS1 = sh.getRange(1, RUNG_COL.KHOI_LUONG_THUC_HIEN + 1);
+  const oT1 = sh.getRange(1, RUNG_COL.NAM_TRONG + 1);
+  if (!oS1.getValue()) oS1.setValue('Khối lượng thực hiện').setFontWeight('bold');
+  if (!oT1.getValue()) oT1.setValue('Năm trồng').setFontWeight('bold');
+}
+
 function THEM_LO_RUNG_MOI(d) {
+  damBaoTieuDeCotMoRongRung_();
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
 
   const lock = LockService.getScriptLock();
@@ -583,6 +608,7 @@ function THEM_LO_RUNG_MOI(d) {
     row[RUNG_COL.NGAY_GIAY_TO] = d.ngayGiayTo || '';
     row[RUNG_COL.DINH_KEM_GIAY_TO] = d.dinhKemGiayTo || '';
     row[RUNG_COL.TIMESTAMP] = new Date();
+    row[RUNG_COL.NAM_TRONG] = d.namTrong ? Number(d.namTrong) : '';
 
     getSheet_(SHEET_NAME.HD_RUNG).appendRow(row);
 
@@ -624,7 +650,10 @@ function THEM_TAI_KHOAN_MOI(d) {
   row[STK_COL.TIMESTAMP] = new Date();
 
   const shTK = getSheet_(SHEET_NAME.HD_STK);
-  shTK.appendRow(row);
+  // ⚠️ MỚI: định dạng TEXT TRƯỚC khi ghi (xem giải thích ở TAO_HOP_DONG_MOI) — tránh mất số 0 đầu ở Số TK/CCCD
+  const soDongMoiSTK = shTK.getLastRow() + 1;
+  [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shTK.getRange(soDongMoiSTK, c + 1).setNumberFormat('@'); });
+  shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([row]);
   CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
   return { thanhCong: true, soDong: shTK.getLastRow() };
 }
@@ -641,7 +670,8 @@ function CAP_NHAT_LO_RUNG(idRung, patch) {
   const map = {
     dienTichM2: RUNG_COL.DIEN_TICH_M2, donGia: RUNG_COL.DON_GIA, khoiLuongDuKien: RUNG_COL.KHOI_LUONG_DK,
     hoSoNguonGoc: RUNG_COL.HO_SO_NGUON_GOC, soGiayTo: RUNG_COL.SO_GIAY_TO, ngayGiayTo: RUNG_COL.NGAY_GIAY_TO,
-    dinhKemGiayTo: RUNG_COL.DINH_KEM_GIAY_TO, diaChiRung: RUNG_COL.DIA_CHI_RUNG, thuongTru: RUNG_COL.THUONG_TRU
+    dinhKemGiayTo: RUNG_COL.DINH_KEM_GIAY_TO, diaChiRung: RUNG_COL.DIA_CHI_RUNG, thuongTru: RUNG_COL.THUONG_TRU,
+    namTrong: RUNG_COL.NAM_TRONG
   };
   Object.keys(patch).forEach(function (key) {
     if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(patch[key]);
@@ -751,7 +781,10 @@ function CAP_NHAT_TAI_KHOAN(soDong, patch) {
     soTK: STK_COL.SO_TK, nganHang: STK_COL.NGAN_HANG, uyQuyenTT: STK_COL.UY_QUYEN_TT, tenUyQuyen: STK_COL.TEN_UY_QUYEN
   };
   Object.keys(patch).forEach(function (key) {
-    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(patch[key]);
+    if (!map.hasOwnProperty(key)) return;
+    const oCell = sh.getRange(soDong, map[key] + 1);
+    if (map[key] === STK_COL.SO_TK) oCell.setNumberFormat('@'); // ⚠️ MỚI: tránh mất số 0 đầu (xem giải thích ở TAO_HOP_DONG_MOI)
+    oCell.setValue(patch[key]);
   });
   const idHDCuaTK = sh.getRange(soDong, STK_COL.ID_HD + 1).getValue();
   CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaTK);
@@ -883,6 +916,7 @@ function layDanhSachRung(idHD) {
         dienTichGPS: r[RUNG_COL.DIEN_TICH_GPS], hoSoNguonGoc: r[RUNG_COL.HO_SO_NGUON_GOC],
         soGiayTo: r[RUNG_COL.SO_GIAY_TO],
         ngayGiayTo: r[RUNG_COL.NGAY_GIAY_TO] ? Utilities.formatDate(new Date(r[RUNG_COL.NGAY_GIAY_TO]), Session.getScriptTimeZone() || 'GMT+7', 'yyyy-MM-dd') : '',
+        namTrong: r[RUNG_COL.NAM_TRONG] || '',
         dinhKem: resolveDriveLink_(r[RUNG_COL.DINH_KEM_GIAY_TO])
       };
     });
@@ -1025,10 +1059,14 @@ function CAP_NHAT_HOP_DONG(soDong, patch) {
     ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD // ⚠️ BỔ SUNG: trước đây thiếu — sửa Ngày ký/Số HĐ ở trang mẹ-con bị âm thầm bỏ qua, không ghi vào Sheet
   };
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
+  // ⚠️ MỚI: các cột định danh cần định dạng TEXT TRƯỚC khi setValue (xem giải thích ở TAO_HOP_DONG_MOI) — tránh mất số 0 đầu khi SỬA giá trị
+  const cotCanDinhDangText_ = [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE];
   Object.keys(patch).forEach(function (key) {
     if (map.hasOwnProperty(key)) {
       const value = truong_so.indexOf(key) !== -1 ? Number(patch[key]) : patch[key];
-      sh.getRange(soDong, map[key] + 1).setValue(value);
+      const oCell = sh.getRange(soDong, map[key] + 1);
+      if (cotCanDinhDangText_.indexOf(map[key]) !== -1) oCell.setNumberFormat('@');
+      oCell.setValue(value);
     }
   });
 

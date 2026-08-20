@@ -1,28 +1,29 @@
 /**
  * ============================================================
  *  22_XuatBaoCaoMisa.gs
- *  Xuất báo cáo "Update_Hopdong_NCC_DN.xlsx" đúng khuôn nhập liệu của phần mềm
- *  MISA — gồm 2 sheet:
- *    - Update_DM_NCC: Danh mục Nhà cung cấp (1 dòng / hợp đồng, lấy từ HD_NCC)
- *    - Update_HDMB:   Hợp đồng mua bán (1 dòng / lô rừng, lấy từ HD_RUNG)
+ *  Đồng bộ dữ liệu vào Google Sheet CỐ ĐỊNH "Update_Hopdong_NCC_DN" (2 sheet
+ *  con Update_DM_NCC + Update_HDMB, đúng khuôn nhập liệu MISA), rồi xuất
+ *  chính Sheet đó thành file .xlsx.
+ *
+ *  ⚠️ ĐÃ ĐỔI KIẾN TRÚC (theo yêu cầu người dùng):
+ *  - TRƯỚC: mỗi lần xuất tạo 1 Google Sheet TẠM, tính lại từ đầu, xuất .xlsx
+ *    rồi XÓA sheet tạm — không có nơi lưu trữ cố định nào, không đồng bộ được
+ *    với hệ thống MISA đang dùng 1 Sheet Google riêng để theo dõi.
+ *  - GIỜ: đồng bộ (UPSERT — cập nhật nếu đã có, thêm mới nếu chưa có, LOẠI
+ *    TRÙNG theo khóa) vào ĐÚNG 1 Sheet CỐ ĐỊNH (cấu hình 1 lần), rồi xuất
+ *    CHÍNH Sheet đó thành .xlsx — không cần tính lại từ đầu, không tạo/xóa
+ *    sheet tạm nữa. Khóa upsert: ID_HD (Update_DM_NCC), KEY_HD=ID_RUNG (Update_HDMB).
  *
  *  QUY TẮC ĐÃ XÁC NHẬN VỚI NGƯỜI DÙNG:
- *  - Cột "Người liên hệ" (Họ và tên NLH / Địa chỉ / ĐT di động / Email người
- *    liên hệ ở Update_DM_NCC; "Người liên hệ" ở Update_HDMB): nếu hợp đồng CÓ
- *    ủy quyền thanh toán → lấy thông tin người ỦY QUYỀN; nếu KHÔNG → lấy chính
- *    thông tin CHỦ RỪNG.
- *  - Cột "Mã hàng" (Update_HDMB): luôn điền cố định "GK" (chưa có cơ chế phân
- *    loại mã hàng chi tiết hơn trong dữ liệu hiện có).
+ *  - Cột "Người liên hệ": có ủy quyền thanh toán → lấy thông tin NGƯỜI ỦY
+ *    QUYỀN; không → lấy thông tin CHỦ RỪNG.
+ *  - Cột "Mã hàng": cố định theo Thiết lập (mặc định "GK").
  *  - Xuất TẤT CẢ hợp đồng, không phân biệt tình trạng.
- *  - "Mã số thuế"/"Mã nhà cung cấp"/"Mã NCC": dùng chính Số CCCD (thông lệ kế
- *    toán VN với cá nhân chưa có MST riêng).
- *
- *  Các cột "Trigger Export"/"Link_file"/"KEY_NCC"/"KEY_HD" giữ lại trong file
- *  xuất để đúng cấu trúc cột với khuôn mẫu MISA gốc, nhưng để TRỐNG (không
- *  phục vụ mục đích gì trong hệ thống này, chỉ để không lệch số cột nếu MISA
- *  yêu cầu đúng khuôn).
+ *  - "Mã số thuế"/"Mã nhà cung cấp"/"Mã NCC": ưu tiên MST đã nhập, fallback CCCD.
+ *  - CCCD/SĐT/Số TK/MST luôn định dạng TEXT — tránh mất số 0 đầu.
  * ============================================================
  */
+
 /** Đọc thiết lập xuất báo cáo MISA hiện tại (Script Properties) — có mặc định an toàn nếu chưa cấu hình lần nào */
 function LAY_THIET_LAP_MISA() {
   const p = PropertiesService.getScriptProperties();
@@ -31,7 +32,8 @@ function LAY_THIET_LAP_MISA() {
     tenHangMacDinh: p.getProperty('MISA_TEN_HANG_MAC_DINH') || 'Gỗ tròn keo',
     donViTinhMacDinh: p.getProperty('MISA_DON_VI_TINH_MAC_DINH') || 'Tấn',
     loaiTienMacDinh: p.getProperty('MISA_LOAI_TIEN_MAC_DINH') || 'VNĐ',
-    vungDinhDangMisa: p.getProperty('MISA_VUNG_DINH_DANG') || 'vi_VN' // ⚠️ MỚI: vùng định dạng RIÊNG cho file xuất MISA, ĐỘC LẬP với vùng của hệ thống chính (vd hệ thống dùng vi_VN nhưng MISA yêu cầu định dạng khác)
+    vungDinhDangMisa: p.getProperty('MISA_VUNG_DINH_DANG') || 'vi_VN',
+    masterSheetUrl: p.getProperty('MISA_MASTER_SHEET_ID') ? ('https://docs.google.com/spreadsheets/d/' + p.getProperty('MISA_MASTER_SHEET_ID') + '/edit') : ''
   };
 }
 
@@ -43,12 +45,17 @@ function LUU_THIET_LAP_MISA(thietLap) {
   p.setProperty('MISA_DON_VI_TINH_MAC_DINH', (thietLap.donViTinhMacDinh || 'Tấn').toString().trim());
   p.setProperty('MISA_LOAI_TIEN_MAC_DINH', (thietLap.loaiTienMacDinh || 'VNĐ').toString().trim());
   p.setProperty('MISA_VUNG_DINH_DANG', (thietLap.vungDinhDangMisa || 'vi_VN').toString().trim());
+  // ⚠️ MỚI: URL/ID của Sheet CỐ ĐỊNH "Update_Hopdong_NCC_DN" — chấp nhận dán
+  // nguyên URL, tự tách ra đúng ID để lưu.
+  if (thietLap.masterSheetUrl !== undefined) {
+    const url = (thietLap.masterSheetUrl || '').toString().trim();
+    const khop = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    p.setProperty('MISA_MASTER_SHEET_ID', khop ? khop[1] : url); // nếu dán thẳng ID (không phải URL đầy đủ) thì dùng luôn
+  }
   return { thanhCong: true, thongBao: 'Đã lưu thiết lập xuất báo cáo MISA.' };
 }
 
-/** Lấy (hoặc tạo mới) thư mục Drive dùng để lưu các file báo cáo MISA đã xuất —
- *  ưu tiên thư mục đã cấu hình qua trang Thiết lập (Script Property MISA_FOLDER_ID),
- *  chỉ tự tạo/tìm theo tên cố định "BaoCao_MISA" nếu chưa từng cấu hình. */
+/** Lấy (hoặc tạo mới) thư mục Drive dùng để lưu các file báo cáo MISA đã xuất */
 function layThuMucXuatMisa_() {
   const idDaCauHinh = PropertiesService.getScriptProperties().getProperty('MISA_FOLDER_ID');
   if (idDaCauHinh) {
@@ -60,14 +67,32 @@ function layThuMucXuatMisa_() {
   return DriveApp.createFolder(ten);
 }
 
-function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
+const MISA_HEADER_NCC_ = [
+  'Là tổ chức/cá nhân', 'Là khách hàng', 'Mã nhà cung cấp (*)', 'Tên nhà cung cấp (*)', 'Địa chỉ',
+  'Mã số thuế', 'Điện thoại', 'Fax', 'Email', 'Website', 'Nhóm KH/NCC', 'Số CCCD', 'Ngày cấp', 'Nơi cấp',
+  'Xưng hô', 'Họ và tên NLH', 'Chức danh', 'Địa chỉ người liên hệ', 'ĐT di động', 'ĐT cơ quan',
+  'ĐT di động khác', 'Email người liên hệ', 'Số tài khoản', 'Tên ngân hàng', 'Chi nhánh',
+  'Tỉnh/TP TK ngân hàng', 'ID_HD', 'KEY_NCC', 'Trigger Export', 'Link_file'
+];
+const MISA_HEADER_HDMB_ = [
+  'Số hợp đồng (*)', 'Ngày ký (*)', 'Trích yếu', 'Loại tiền', 'Tỷ giá', 'Giá trị HĐ', 'Giá trị HĐ quy đổi',
+  'Mã NCC', 'Địa chỉ', 'Mã số thuế', 'Người liên hệ', 'Tình trạng', 'Mã hàng', 'Tên hàng', 'Đơn vị tính',
+  'Số lượng', 'Đơn giá', 'Thành tiền', 'Diện tích_m2', 'Tọa độ (Kinh độ/Vĩ độ)', 'Hồ sơ pháp lý',
+  'Số giấy tờ', 'ID_HD', 'KEY_HD', 'Trigger Export', 'Link_File'
+];
+// Cột (1-indexed) cần định dạng TEXT — tránh mất số 0 đầu
+const MISA_COT_TEXT_NCC_ = [3, 6, 7, 12, 19, 20, 21, 23];
+const MISA_COT_TEXT_HDMB_ = [1, 8, 10];
+// Cột dùng làm KHÓA khi upsert (0-indexed, khớp header ở trên)
+const MISA_COT_KHOA_NCC_ = 26; // "ID_HD"
+const MISA_COT_KHOA_HDMB_ = 23; // "KEY_HD" (= idRung)
+
+/** Tính dữ liệu MISA MỚI NHẤT từ HD_NCC/HD_RUNG/HD_GPS — KHÔNG ghi gì cả, chỉ trả về mảng dòng để nơi khác dùng (đồng bộ hoặc xem trước) */
+function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   let nccRows = readData_(SHEET_NAME.HD_NCC);
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const thietLap = LAY_THIET_LAP_MISA(); // ⚠️ ĐÃ SỬA: trước đây "Mã hàng"/"Tên hàng"/"Đơn vị tính"/"Loại tiền" hard-code cứng trong code — giờ đọc từ thiết lập có thể chỉnh trong webapp (trang "⚙️ Thiết lập"), có giá trị mặc định an toàn nếu chưa từng cấu hình.
+  const thietLap = LAY_THIET_LAP_MISA();
 
-  // ---- Lọc theo khoảng Ngày ký (nếu có truyền vào) — chỉ áp dụng cho hợp đồng,
-  // rồi lọc lô rừng theo ĐÚNG các hợp đồng còn lại sau khi lọc (không lọc lô rừng
-  // theo ngày ký riêng, vì lô rừng dùng chung ngày ký với hợp đồng cha).
   const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
   const denNgayDate = denNgay ? new Date(denNgay) : null;
   if (tuNgayDate || denNgayDate) {
@@ -82,38 +107,12 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
     rungRows = rungRows.filter(function (r) { return idHopLe[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()]; });
   }
 
-  // Đọc GPS 1 LẦN DUY NHẤT cho toàn bộ, tránh đọc lại HD_GPS theo từng dòng
-  // (dùng lại hàm đã có sẵn ở 00_Config.gs)
   let theoIdRung = {};
-  try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* không có GPS thì để trống, không chặn xuất báo cáo */ }
-
-  // ---- Tạo spreadsheet TẠM để dựng 2 sheet đúng khuôn, sau đó xuất .xlsx rồi xóa file tạm ----
-  const ssTam = SpreadsheetApp.create('TAM_XUAT_MISA_' + new Date().getTime());
-  const shNCC = ssTam.getSheets()[0];
-  shNCC.setName('Update_DM_NCC');
-  const shHDMB = ssTam.insertSheet('Update_HDMB');
-
-  // ============ SHEET 1: Update_DM_NCC ============
-  const headerNCC = [
-    'Là tổ chức/cá nhân', 'Là khách hàng', 'Mã nhà cung cấp (*)', 'Tên nhà cung cấp (*)', 'Địa chỉ',
-    'Mã số thuế', 'Điện thoại', 'Fax', 'Email', 'Website', 'Nhóm KH/NCC', 'Số CCCD', 'Ngày cấp', 'Nơi cấp',
-    'Xưng hô', 'Họ và tên NLH', 'Chức danh', 'Địa chỉ người liên hệ', 'ĐT di động', 'ĐT cơ quan',
-    'ĐT di động khác', 'Email người liên hệ', 'Số tài khoản', 'Tên ngân hàng', 'Chi nhánh',
-    'Tỉnh/TP TK ngân hàng', 'ID_HD', 'KEY_NCC', 'Trigger Export', 'Link_file'
-  ];
-  shNCC.getRange(1, 1, 1, headerNCC.length).setValues([headerNCC]);
-  // Cột Mã nhà cung cấp/Mã số thuế/Số CCCD/Điện thoại/Số tài khoản đều là số dễ
-  // mất số 0 đầu -> đặt TEXT trước khi ghi. ⚠️ ĐÃ SỬA: trước đây thiếu cột
-  // "Điện thoại" (7), "ĐT di động" (19), "ĐT cơ quan" (20), "ĐT di động khác" (21),
-  // "Số tài khoản" (23) — các cột này bị Excel tự chuyển thành số khi xuất.
-  [3, 6, 7, 12, 19, 20, 21, 23].forEach(function (c) { shNCC.getRange(2, c, Math.max(nccRows.length, 1), 1).setNumberFormat('@'); });
+  try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* không có GPS thì để trống, không chặn */ }
 
   const rowsNCC = nccRows.map(function (r) {
     const coUyQuyen = (r[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
     const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
-    // ⚠️ ĐÃ SỬA: cột "Mã số thuế" giờ ưu tiên dùng đúng MST đã nhập (nếu có, vd
-    // khách hàng là tổ chức/doanh nghiệp) — chỉ fallback về CCCD khi MST bỏ
-    // trống (thông lệ với cá nhân chưa có MST riêng).
     const masoThue = (r[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     return [
       '', '', cccd, r[NCC_COL.TEN_CHU_RUNG] || '', r[NCC_COL.DIA_CHI_TT] || '',
@@ -127,17 +126,6 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
       r[NCC_COL.ID_HD] || '', '', '', ''
     ];
   });
-  if (rowsNCC.length) shNCC.getRange(2, 1, rowsNCC.length, headerNCC.length).setValues(rowsNCC);
-
-  // ============ SHEET 2: Update_HDMB (1 dòng / lô rừng) ============
-  const headerHDMB = [
-    'Số hợp đồng (*)', 'Ngày ký (*)', 'Trích yếu', 'Loại tiền', 'Tỷ giá', 'Giá trị HĐ', 'Giá trị HĐ quy đổi',
-    'Mã NCC', 'Địa chỉ', 'Mã số thuế', 'Người liên hệ', 'Tình trạng', 'Mã hàng', 'Tên hàng', 'Đơn vị tính',
-    'Số lượng', 'Đơn giá', 'Thành tiền', 'Diện tích_m2', 'Tọa độ (Kinh độ/Vĩ độ)', 'Hồ sơ pháp lý',
-    'Số giấy tờ', 'ID_HD', 'KEY_HD', 'Trigger Export', 'Link_File'
-  ];
-  shHDMB.getRange(1, 1, 1, headerHDMB.length).setValues([headerHDMB]);
-  [1, 8, 10].forEach(function (c) { shHDMB.getRange(2, c, Math.max(rungRows.length, 1), 1).setNumberFormat('@'); });
 
   const nccByIdHD = {};
   nccRows.forEach(function (r) { nccByIdHD[(r[NCC_COL.ID_HD] || '').toString().trim()] = r; });
@@ -147,7 +135,7 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
     const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
     const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
     const ncc = nccByIdHD[idHD];
-    if (!ncc) return; // lô rừng mồ côi (không tìm thấy hợp đồng cha) — bỏ qua, không tự đoán dữ liệu
+    if (!ncc) return; // lô rừng mồ côi — bỏ qua, không tự đoán dữ liệu
 
     const coUyQuyen = (ncc[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
     const cccd = (ncc[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
@@ -167,43 +155,141 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
       idHD, idRung, '', ''
     ]);
   });
-  if (rowsHDMB.length) shHDMB.getRange(2, 1, rowsHDMB.length, headerHDMB.length).setValues(rowsHDMB);
 
-  // ============ Áp dụng Vùng định dạng RIÊNG cho file xuất MISA ============
-  // ⚠️ ĐỘC LẬP với vùng của hệ thống chính (đặt ở trang Thiết lập, mục "Cài đặt
-  // Vùng") — vì MISA có thể yêu cầu 1 định dạng cụ thể khác với vùng bạn đang
-  // dùng cho HD_NCC/HD_RUNG hàng ngày. Đặt Locale cho chính spreadsheet tạm này,
-  // rồi định dạng rõ ràng cột Ngày ký/Ngày cấp và các cột số tiền/số lượng,
-  // trước khi xuất ra .xlsx — vì Locale chỉ ảnh hưởng đến HIỂN THỊ trong Google
-  // Sheets, khi xuất file .xlsx thật, định dạng số/ngày đã áp trên ô mới là thứ
-  // được giữ lại nguyên trong file Excel.
-  try {
-    const vungMisa = thietLap.vungDinhDangMisa || 'vi_VN';
-    ssTam.setSpreadsheetLocale(vungMisa);
-    const mauNgayMisa = (typeof MAU_NGAY_THEO_VUNG_ !== 'undefined' && MAU_NGAY_THEO_VUNG_[vungMisa]) || 'dd/mm/yyyy';
-    shNCC.getRange(2, 13, Math.max(rowsNCC.length, 1), 1).setNumberFormat(mauNgayMisa); // cột M = "Ngày cấp"
-    shHDMB.getRange(2, 2, Math.max(rowsHDMB.length, 1), 1).setNumberFormat(mauNgayMisa); // cột B = "Ngày ký (*)"
-    const mauSoMisa = (typeof MAU_SO_CHUAN_ !== 'undefined') ? MAU_SO_CHUAN_ : '#,##0.###';
-    shHDMB.getRange(2, 6, Math.max(rowsHDMB.length, 1), 2).setNumberFormat(mauSoMisa); // cột F,G = "Giá trị HĐ", "Giá trị HĐ quy đổi"
-    shHDMB.getRange(2, 16, Math.max(rowsHDMB.length, 1), 3).setNumberFormat(mauSoMisa); // cột P,Q,R = "Số lượng", "Đơn giá", "Thành tiền"
-    shHDMB.getRange(2, 19, Math.max(rowsHDMB.length, 1), 1).setNumberFormat(mauSoMisa); // cột S = "Diện tích_m2"
-  } catch (e) {
-    // Không chặn việc xuất báo cáo nếu bước định dạng riêng này lỗi — file vẫn xuất được, chỉ là định dạng có thể chưa như ý
+  return { headerNCC: MISA_HEADER_NCC_, headerHDMB: MISA_HEADER_HDMB_, rowsNCC: rowsNCC, rowsHDMB: rowsHDMB, thietLap: thietLap };
+}
+
+/**
+ * Đồng bộ (UPSERT + LOẠI TRÙNG) vào Sheet CỐ ĐỊNH đã cấu hình — không xóa/tạo
+ * lại từ đầu, chỉ CẬP NHẬT đúng dòng đã có (theo khóa) hoặc THÊM dòng mới.
+ * Dòng trùng khóa CÓ SẴN trong Sheet (nếu có, do nhập tay/lỗi trước đây) sẽ bị
+ * GIẢM CÒN 1 DÒNG (giữ dòng đầu tiên, xóa các dòng trùng phía sau).
+ */
+function DONG_BO_VAO_MISA_MASTER(tuNgay, denNgay) {
+  const masterId = PropertiesService.getScriptProperties().getProperty('MISA_MASTER_SHEET_ID');
+  if (!masterId) return { thanhCong: false, loi: 'Chưa cấu hình Sheet cố định "Update_Hopdong_NCC_DN". Vào Thiết lập → 📊 Báo cáo MISA để dán URL.' };
+
+  let ssMaster;
+  try { ssMaster = SpreadsheetApp.openById(masterId); } catch (e) { return { thanhCong: false, loi: 'Không mở được Sheet đã cấu hình: ' + e.message }; }
+
+  const duLieu = layDuLieuMisaHienTai_(tuNgay, denNgay);
+  const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_);
+  const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_);
+
+  ghiNhatKy_('Đồng bộ MISA Master', '', 'NCC: +' + kqNCC.soThem + ' /~' + kqNCC.soCapNhat + ' (dọn ' + kqNCC.soDongTrongDaDon + ' dòng trống, gộp ' + kqNCC.soTrungDaGop + ' trùng) — HDMB: +' + kqHDMB.soThem + ' /~' + kqHDMB.soCapNhat + ' (dọn ' + kqHDMB.soDongTrongDaDon + ' dòng trống, gộp ' + kqHDMB.soTrungDaGop + ' trùng)');
+  return { thanhCong: true, ncc: kqNCC, hdmb: kqHDMB, masterUrl: ssMaster.getUrl() };
+}
+
+/**
+ * Upsert 1 sheet con — đọc TOÀN BỘ dữ liệu hiện có, GỘP với dữ liệu mới (mới
+ * luôn ghi đè cũ nếu trùng khóa), rồi GHI LẠI TỪ ĐẦU vùng dữ liệu (dòng 2 trở
+ * đi) — cách này xử lý được ĐỦ 3 vấn đề trong 1 lượt: (1) cập nhật dòng đã có,
+ * (2) thêm dòng mới, (3) DỌN SẠCH dòng trống/dòng trùng khóa còn sót lại từ
+ * trước (thực tế phát hiện: file gốc có hàng trăm dòng trống xen giữa do
+ * template/thao tác cũ để lại — không thể xử lý bằng cách sửa từng dòng riêng lẻ).
+ */
+function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotText) {
+  let sh = ssMaster.getSheetByName(tenSheet);
+  if (!sh) sh = ssMaster.insertSheet(tenSheet);
+  if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, header.length).setValues([header]);
+
+  const lastRow = sh.getLastRow();
+  const duLieuHienCo = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, header.length).getValues() : [];
+
+  const ketQuaTheoKhoa = {}; // khóa -> dòng dữ liệu cuối cùng (mới nhất thắng nếu trùng)
+  const khongCoKhoa = []; // dòng có dữ liệu nhưng thiếu khóa (hiếm, giữ nguyên không đụng tới)
+  let soDongTrongDaDon = 0;
+  duLieuHienCo.forEach(function (r) {
+    const conDuLieu = r.some(function (o) { return o !== '' && o !== null; });
+    if (!conDuLieu) { soDongTrongDaDon++; return; } // dòng trống hoàn toàn -> dọn sạch, không giữ lại
+    const khoa = (r[cotKhoa] || '').toString().trim();
+    if (khoa) ketQuaTheoKhoa[khoa] = r; else khongCoKhoa.push(r);
+  });
+  const soKhoaCuTruocKhiGop = Object.keys(ketQuaTheoKhoa).length;
+  // Số dòng bị "gộp" do trùng khóa NGAY TRONG dữ liệu cũ (trước khi có dữ liệu mới) — nếu có
+  const soTrungKhoaCu = duLieuHienCo.length - soDongTrongDaDon - khongCoKhoa.length - soKhoaCuTruocKhiGop;
+
+  let soThem = 0, soCapNhat = 0;
+  rowsMoi.forEach(function (row) {
+    const khoa = (row[cotKhoa] || '').toString().trim();
+    if (khoa && ketQuaTheoKhoa.hasOwnProperty(khoa)) soCapNhat++; else soThem++;
+    if (khoa) ketQuaTheoKhoa[khoa] = row; // dữ liệu MỚI luôn thắng nếu trùng khóa với dữ liệu cũ
+  });
+
+  const tatCa = khongCoKhoa.concat(Object.values(ketQuaTheoKhoa));
+  if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, header.length).clearContent(); // dọn sạch toàn bộ vùng cũ trước khi ghi lại gọn gàng
+  if (tatCa.length) {
+    cotText.forEach(function (c) { sh.getRange(2, c, tatCa.length, 1).setNumberFormat('@'); }); // định dạng TEXT TRƯỚC khi ghi, tránh mất số 0
+    sh.getRange(2, 1, tatCa.length, header.length).setValues(tatCa);
   }
 
-  // ============ Xuất thành file .xlsx THẬT, xóa Google Sheet tạm ============
-  const ssId = ssTam.getId();
+  return { soThem: soThem, soCapNhat: soCapNhat, soDongTrongDaDon: soDongTrongDaDon, soTrungDaGop: Math.max(0, soTrungKhoaCu), tongSoDongSauCung: tatCa.length };
+}
+
+/**
+ * Đồng bộ vào Sheet cố định XONG rồi xuất CHÍNH Sheet đó thành .xlsx — không
+ * còn tạo/xóa sheet tạm như trước, không tính lại dữ liệu 2 lần.
+ */
+/**
+ * ⚠️ ĐÃ ĐƠN GIẢN HÓA THEO YÊU CẦU (bản trước rắc rối — tạo file tạm lọc riêng
+ * lúc xuất, gây rối): giờ CHỈ 1 quy tắc duy nhất, dễ hiểu —
+ * - Từ ngày/Đến ngày QUYẾT ĐỊNH PHẠM VI ĐỒNG BỘ: có chọn ngày -> chỉ đồng bộ
+ *   (cập nhật hoặc tạo mới) đúng hợp đồng trong khoảng đó; để TRỐNG cả 2 ô ->
+ *   xem như đồng bộ TẤT CẢ.
+ * - XUẤT EXCEL = xuất THẲNG nguyên Sheet cố định sau khi đồng bộ xong — KHÔNG
+ *   còn tạo/xóa file tạm nào nữa. File luôn phản ánh ĐÚNG những gì đang có
+ *   trong Sheet cố định tại thời điểm xuất (kể cả dữ liệu từ các lần đồng bộ
+ *   trước đó, không riêng lần này).
+ */
+function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
+  const kqDongBo = DONG_BO_VAO_MISA_MASTER(tuNgay, denNgay);
+  if (!kqDongBo.thanhCong) return kqDongBo;
+
+  const masterId = PropertiesService.getScriptProperties().getProperty('MISA_MASTER_SHEET_ID');
   SpreadsheetApp.flush();
-  const url = 'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx';
+  const url = 'https://docs.google.com/spreadsheets/d/' + masterId + '/export?format=xlsx';
   const response = UrlFetchApp.fetch(url, { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } });
   const tenFile = 'Update_Hopdong_NCC_DN_' + Utilities.formatDate(new Date(), 'GMT+7', 'yyyyMMdd_HHmm') + '.xlsx';
   const blob = response.getBlob().setName(tenFile);
   const file = layThuMucXuatMisa_().createFile(blob);
-  DriveApp.getFileById(ssId).setTrashed(true); // dọn file Google Sheet tạm, chỉ giữ file .xlsx thật
 
-  ghiNhatKy_('Xuất báo cáo MISA', '', tenFile + ' — ' + rowsNCC.length + ' NCC, ' + rowsHDMB.length + ' dòng HĐMB');
+  ghiNhatKy_('Xuất báo cáo MISA', '', tenFile + ' — ' + kqDongBo.ncc.tongSoDongSauCung + ' NCC, ' + kqDongBo.hdmb.tongSoDongSauCung + ' dòng HĐMB' + ((tuNgay || denNgay) ? ' (đã đồng bộ phạm vi ' + (tuNgay || '?') + ' → ' + (denNgay || '?') + ')' : ' (đã đồng bộ toàn bộ)'));
 
-  return { thanhCong: true, url: file.getUrl(), tenFile: tenFile, soDongNCC: rowsNCC.length, soDongHDMB: rowsHDMB.length, folderUrl: file.getParents().hasNext() ? file.getParents().next().getUrl() : '' };
+  return {
+    thanhCong: true, url: file.getUrl(), tenFile: tenFile,
+    soDongNCC: kqDongBo.ncc.tongSoDongSauCung, soDongHDMB: kqDongBo.hdmb.tongSoDongSauCung,
+    folderUrl: file.getParents().hasNext() ? file.getParents().next().getUrl() : '',
+    masterUrl: kqDongBo.masterUrl, daLocNgay: !!(tuNgay || denNgay)
+  };
+}
+
+/**
+ * ⚠️ CÔNG CỤ DỌN DẸP — các phiên bản code TRƯỚC ĐÂY (kể cả bản gốc trước khi
+ * sửa lần này) từng tạo Google Sheet TẠM tên "TAM_XUAT_MISA_..." ở GỐC Drive
+ * (không phải trong thư mục BaoCao_MISA) rồi xóa sau khi xuất xong — nếu có
+ * lần nào bị lỗi/timeout giữa chừng, file tạm đó KHÔNG kịp xóa, còn sót lại.
+ * Code HIỆN TẠI (từ bản sửa này) KHÔNG còn tạo file tạm nào nữa — hàm này chỉ
+ * để DỌN SẠCH những gì đã lỡ sót lại từ trước, chạy 1 lần là đủ.
+ */
+function DON_FILE_TAM_MISA_CON_SOT() {
+  const itNormal = DriveApp.getFilesByName('TAM_XUAT_MISA'); // tên cũ (không có timestamp) — phòng trường hợp hiếm
+  const itSearch = DriveApp.searchFiles('title contains "TAM_XUAT_MISA_"'); // tên có timestamp, kiểu tìm phổ biến nhất
+  const daXoa = [];
+  const gomLai = function (it) {
+    while (it.hasNext()) {
+      const f = it.next();
+      if (!f.isTrashed()) { f.setTrashed(true); daXoa.push(f.getName()); }
+    }
+  };
+  gomLai(itNormal);
+  gomLai(itSearch);
+  return { thanhCong: true, soDaXoa: daXoa.length, danhSach: daXoa.slice(0, 20), thongBao: daXoa.length ? ('Đã chuyển ' + daXoa.length + ' file tạm còn sót vào Thùng rác.') : 'Không tìm thấy file tạm nào còn sót lại.' };
+}
+
+/** Chạy từ menu Google Sheet */
+function DON_FILE_TAM_MISA_CON_SOT_TU_MENU() {
+  const kq = DON_FILE_TAM_MISA_CON_SOT();
+  SpreadsheetApp.getUi().alert(kq.thongBao + (kq.danhSach.length ? '\n\n' + kq.danhSach.join('\n') : ''));
 }
 
 /** Chạy từ menu Google Sheet — hiện link tải trực tiếp trong hộp thoại */
@@ -211,10 +297,12 @@ function XUAT_BAO_CAO_MISA_TU_MENU() {
   const ui = SpreadsheetApp.getUi();
   try {
     const kq = XUAT_BAO_CAO_MISA();
+    if (!kq.thanhCong) { ui.alert('❌ ' + kq.loi); return; }
     ui.alert(
-      '✅ Đã xuất "' + kq.tenFile + '"\n' +
+      '✅ Đã đồng bộ + xuất "' + kq.tenFile + '"\n' +
       '(' + kq.soDongNCC + ' nhà cung cấp, ' + kq.soDongHDMB + ' dòng hợp đồng mua bán)\n\n' +
-      'Link tải file: ' + kq.url + (kq.folderUrl ? '\nThư mục chứa file: ' + kq.folderUrl : '')
+      'Link tải file: ' + kq.url + (kq.folderUrl ? '\nThư mục chứa file: ' + kq.folderUrl : '') +
+      '\nSheet gốc (Update_Hopdong_NCC_DN): ' + kq.masterUrl
     );
   } catch (e) {
     ui.alert('❌ Lỗi khi xuất báo cáo MISA: ' + e.message);

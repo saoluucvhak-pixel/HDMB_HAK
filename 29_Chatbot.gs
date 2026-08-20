@@ -50,6 +50,7 @@ function LUU_CAI_DAT_CHATBOT(apiKey, model) {
 }
 
 /** ============ HÀM CHÍNH: TRẢ LỜI 1 CÂU HỎI ============ */
+/** Nhận diện câu hỏi kiểu THỐNG KÊ/LỌC THEO ĐIỀU KIỆN (khác tra 1 đối tượng cụ thể theo tên) */
 function TRA_LOI_CHATBOT(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
   // ⚠️ MỚI: có ảnh đính kèm (anh = { base64, mimeType }) — đọc ảnh/OCR BẮT BUỘC
   // phải qua Gemini (không có luật cứng nào đọc được nội dung ảnh), nên tách
@@ -103,7 +104,8 @@ function TRA_LOI_CHATBOT(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
     '3. Trả lời ngắn gọn, tiếng Việt, số tiền/số lượng viết có dấu phân cách hàng nghìn (vd 1.500.000).\n' +
     '4. Nếu JSON có nhiều khách hàng/hợp đồng khớp, liệt kê rõ ràng từng cái, đừng gộp chung.\n' +
     '5. Nếu câu hỏi hiện tại là câu hỏi NỐI TIẾP (không nhắc lại tên khách hàng/hợp đồng), dùng LỊCH SỬ HỎI-ĐÁP để hiểu đang hỏi về ai/hợp đồng nào, nhưng vẫn CHỈ lấy số liệu từ JSON dữ liệu THẬT — không lấy số liệu từ lịch sử.\n' +
-    '6. RIÊNG khi trả lời câu hỏi có "diaDiemTheoToaDo" (tra theo tọa độ): sau khi trả lời đủ dữ liệu THẬT ở trên (lô rừng/chủ rừng/rừng bên cạnh...), CÓ THỂ bổ sung thêm 1 đoạn NGẮN mô tả kiến thức ĐỊA LÝ CHUNG bạn biết về khu vực đó (địa hình, khí hậu, đặc điểm vùng...) — nhưng BẮT BUỘC phải mở đầu đoạn đó bằng "ℹ️ Thông tin tham khảo chung (không phải dữ liệu đã kiểm chứng của hệ thống):" để người đọc phân biệt rõ ràng, không nhầm là dữ liệu thật đã đo đạc. Nếu không chắc/không biết gì về khu vực đó thì bỏ qua, không suy đoán liều.\n';
+    '6. RIÊNG khi trả lời câu hỏi có "diaDiemTheoToaDo" (tra theo tọa độ): sau khi trả lời đủ dữ liệu THẬT ở trên (lô rừng/chủ rừng/rừng bên cạnh...), CÓ THỂ bổ sung thêm 1 đoạn NGẮN mô tả kiến thức ĐỊA LÝ CHUNG bạn biết về khu vực đó (địa hình, khí hậu, đặc điểm vùng...) — nhưng BẮT BUỘC phải mở đầu đoạn đó bằng "ℹ️ Thông tin tham khảo chung (không phải dữ liệu đã kiểm chứng của hệ thống):" để người đọc phân biệt rõ ràng, không nhầm là dữ liệu thật đã đo đạc. Nếu không chắc/không biết gì về khu vực đó thì bỏ qua, không suy đoán liều.\n' +
+    '7. Nếu JSON có trường "toanBoHopDong" (mảng TOÀN BỘ hợp đồng thật trong hệ thống): đây là dữ liệu để bạn TỰ ĐẾM/LỌC/TÍNH TỔNG trực tiếp theo đúng điều kiện trong câu hỏi (vd trạng thái, tên chủ rừng, khoảng ngày ký, "chưa X"/"khác X"...) — đọc kỹ TỪNG phần tử trong mảng, không bỏ sót, không đếm nhầm phạm vi (vd hỏi về 1 người cụ thể thì CHỈ đếm đúng hợp đồng của người đó, không đếm cả mảng). Trả lời kèm SỐ ĐÃ ĐẾM ĐƯỢC rõ ràng.\n';
 
   const payload = { contents: [{ parts: [{ text: promptHeThong + '\n\nCÂU HỎI CỦA NGƯỜI DÙNG: ' + cauHoi }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
@@ -225,6 +227,19 @@ function soanCauTraLoiTheoLuat_(cauHoi, nguCanh) {
       dongRungBenCanh;
   }
   if (!nguCanh.khachHangKhop.length && !nguCanh.hopDongKhopTheoSoHD.length) {
+    // ⚠️ MỚI: Gemini lỗi thì mới rơi vào đây — dùng "công thức cứng" cơ bản
+    // trên toanBoHopDong (nếu câu hỏi trước đó có kèm) thay vì chỉ báo "không
+    // tìm thấy" — không hiểu được điều kiện phức tạp như Gemini, nhưng ít
+    // nhất vẫn đếm được tổng số + liệt kê theo TRẠNG THÁI (chính xác 100%,
+    // không cần hiểu ngôn ngữ tự nhiên).
+    if (nguCanh.toanBoHopDong && nguCanh.toanBoHopDong.length) {
+      const dong = ['🔧 Gemini đang lỗi nên chỉ đếm được cơ bản theo trạng thái (không hiểu được điều kiện phức tạp như tên/ngày/"chưa X"):'];
+      Object.keys(nguCanh.thongKeChung.theoTrangThai).forEach(function (tt) {
+        dong.push('  • ' + tt + ': ' + nguCanh.thongKeChung.theoTrangThai[tt] + ' hợp đồng');
+      });
+      dong.push('Tổng: ' + nguCanh.thongKeChung.tongSoHopDong + ' hợp đồng.');
+      return dong.join('\n');
+    }
     return 'Không tìm thấy khách hàng/hợp đồng nào khớp với câu hỏi trong hệ thống.\n\nThống kê chung: ' + nguCanh.thongKeChung.tongSoHopDong + ' hợp đồng, theo trạng thái: ' + JSON.stringify(nguCanh.thongKeChung.theoTrangThai);
   }
 
@@ -401,6 +416,27 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   nccRows.forEach(function (r) { const tt = (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim(); demTinhTrang[tt] = (demTinhTrang[tt] || 0) + 1; });
   nguCanh.thongKeChung = { tongSoHopDong: nccRows.length, theoTrangThai: demTinhTrang };
 
+  // ⚠️ MỚI (đơn giản hóa theo yêu cầu): câu hỏi có vẻ cần THỐNG KÊ/LỌC/LIỆT KÊ
+  // (đếm, tổng, danh sách, điều kiện...) hoặc KHÔNG khớp đúng 1 khách hàng cụ
+  // thể nào -> gửi kèm TOÀN BỘ danh sách hợp đồng (rút gọn, đọc từ cache có
+  // sẵn — không tính lại từ đầu) để GEMINI TỰ ĐỌC VÀ PHÂN TÍCH TRỰC TIẾP, giống
+  // hệt việc tải file lên trang Gemini chính thức rồi hỏi — không còn bước
+  // trung gian "dịch câu hỏi thành JSON điều kiện rồi code tự tính" phức tạp
+  // như trước (dễ làm rớt thông tin qua từng bước dịch).
+  const CAN_TOAN_BO_HOP_DONG_ = /(bao nhiêu|tổng|liệt kê|danh sách|thống kê|có mấy|đếm|hợp đồng nào|những hợp đồng|các hợp đồng|toàn bộ|tất cả|còn (bao nhiêu|mấy)|quá hạn|sắp (hết hạn|vượt)|đã vượt|chưa|khác)/i;
+  if (CAN_TOAN_BO_HOP_DONG_.test(cauHoi)) {
+    try {
+      nguCanh.toanBoHopDong = docToanBoDraftBaoCao_().map(function (m) {
+        return {
+          soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
+          khoiLuongDuKien: m.khoiLuongDuKien, khoiLuongThucHien: m.khoiLuongThucHien,
+          giaTriHopDong: m.giaTriHopDong, giaTriThucHien: m.giaTriThucHien, soLoRung: m.soLoRung
+        };
+      });
+      nguCanh._tomTat.push('Đã đính kèm toàn bộ ' + nguCanh.toanBoHopDong.length + ' hợp đồng để phân tích/thống kê trực tiếp');
+    } catch (e) { /* không lấy được thì thôi, vẫn còn thongKeChung ở trên làm dự phòng tối thiểu */ }
+  }
+
   // ---- Dò số hợp đồng được nhắc trực tiếp (dãy số dài, kiểu 2026xxxxxxx) ----
   const khopSoHD = cauHoi.match(/\b\d{8,}\b/);
   if (khopSoHD) {
@@ -507,7 +543,8 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
         return {
           maRung: r.maRung, diaChi: r.diaChiRung, dienTichM2: r.dienTichM2, donGia: r.donGia, khoiLuongDuKien: r.khoiLuongDuKien,
           soDiemGPS: dsGps.length, toaDoGPS: dsGps.map(function (p) { return p.lat.toFixed(6) + ', ' + p.lng.toFixed(6); }),
-          soLuongAnh: dsAnh.length, linkAnh: dsAnh.slice(0, 5).map(function (a) { return a.url; }) // tối đa 5 link/lô, tránh ngữ cảnh quá nặng
+          soLuongAnh: dsAnh.length, linkAnh: dsAnh.slice(0, 5).map(function (a) { return a.url; }), // tối đa 5 link/lô, tránh ngữ cảnh quá nặng
+          linkHoSoPhapLy: (r.dinhKem && r.dinhKem.url) ? r.dinhKem.url : null // ⚠️ MỚI: trước đây hoàn toàn thiếu — chatbot chỉ có link ảnh hiện trường, không có link file giấy tờ (sổ đỏ/hợp đồng mua bán...)
         };
       });
       return {
