@@ -111,7 +111,11 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* không có GPS thì để trống, không chặn */ }
 
   const rowsNCC = nccRows.map(function (r) {
-    const coUyQuyen = (r[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
+    // ⚠️ SỬA: trước so khớp chính xác 'Có' (phân biệt hoa/thường) nên bỏ sót dữ liệu
+    // ghi thường 'có' — giờ dùng đúng cách so khớp đã chuẩn hóa như kiemTraUyQuyenVaTaiKhoan_()
+    // ở 02_DocumentChecker.gs, tránh xuất sai người liên hệ/địa chỉ vào MISA.
+    const uyQuyenChuan = (r[NCC_COL.UY_QUYEN_TT] || '').toString().trim().toLowerCase();
+    const coUyQuyen = uyQuyenChuan === 'có' || uyQuyenChuan === 'co';
     const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     const masoThue = (r[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     return [
