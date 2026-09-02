@@ -143,6 +143,13 @@ function themLoaiHoSoMoi(loaiMoi) {
 // Sai số cho phép (mét) khi đối chiếu tọa độ GPS ảnh với tọa độ rừng đã ghi nhận
 const GPS_TOLERANCE_METERS = 800;
 
+// Giới hạn thời gian chạy an toàn (ms) cho các job xử lý hàng loạt, chạy lâu
+// (đối chiếu OCR định kỳ ở 04_Reconciliation.gs, geocode GPS hàng loạt ở
+// Code.gs...) — Apps Script tự ngắt job sau 6 phút (360000ms) nếu chạy quá
+// lâu, nên các job này phải tự dừng SỚM HƠN mốc đó để kịp lưu phần đã xử lý
+// và thoát an toàn, tránh mất dữ liệu/báo cáo dở dang giữa chừng.
+const MAX_RUNTIME_MS = 5 * 60 * 1000; // 5 phút — chừa ~1 phút an toàn
+
 // Danh sách các phần mềm chỉnh sửa ảnh phổ biến để nhận diện qua tag EXIF "Software"
 const PHAN_MEM_CHINH_SUA_NGHI_VAN = [
   'photoshop', 'gimp', 'snapseed', 'picsart', 'lightroom',

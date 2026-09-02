@@ -434,6 +434,22 @@ function layGoiYNoiCap() {
 }
 
 /**
+ * Danh sách "Nhóm KH" gợi ý (không trùng lặp) cho ô nhập liệu có datalist —
+ * gọi bởi 26/27_Page_...MeCon.html khi mở form thêm/sửa hợp đồng mẹ-con.
+ * Cùng kiểu "gợi nhớ theo giá trị đã từng nhập" như layGoiYNoiCap() ở trên
+ * (không có bảng danh mục riêng — Nhóm KH lưu tự do ngay trên HD_NCC).
+ */
+function layDanhSachNhomKH() {
+  const rows = readData_(SHEET_NAME.HD_NCC);
+  const set = {};
+  rows.forEach(function (r) {
+    const nk = (r[NCC_COL.NHOM_KH] || '').toString().trim();
+    if (nk) set[nk] = true;
+  });
+  return Object.keys(set);
+}
+
+/**
  * TẠO HỢP ĐỒNG MỚI (ghi 1 dòng vào HD_NCC).
  * `d` là object chứa các trường người dùng nhập, ví dụ:
  * {
@@ -1180,7 +1196,9 @@ function layGPSCuaRung(idRung) {
       const lng = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
       return { lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, diaChi: r[GPS_COL.ADDRESS], hinhAnh: r[GPS_COL.HINH_ANH] || '' };
     })
-    .filter(function (p) { return p.lat && p.lng; });
+    // ⚠️ SỬA: trước lọc bằng `p.lat && p.lng` nên vô tình loại luôn điểm có tọa độ
+    // hợp lệ đúng bằng 0 (0 là falsy) — giờ chỉ loại khi thật sự không parse được (null).
+    .filter(function (p) { return p.lat !== null && p.lng !== null; });
 }
 
 /** Tải 1 ảnh minh chứng lên Drive để gắn vào 1 điểm GPS cụ thể (cột HINH_ANH của HD_GPS) */
