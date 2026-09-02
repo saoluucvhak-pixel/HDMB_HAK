@@ -141,7 +141,9 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
     const ncc = nccByIdHD[idHD];
     if (!ncc) return; // lô rừng mồ côi — bỏ qua, không tự đoán dữ liệu
 
-    const coUyQuyen = (ncc[NCC_COL.UY_QUYEN_TT] || '').toString().trim() === 'Có';
+    // ⚠️ SỬA: cùng lỗi phân biệt hoa/thường như ở rowsNCC phía trên — chuẩn hóa lowercase
+    const uyQuyenHDMBChuan = (ncc[NCC_COL.UY_QUYEN_TT] || '').toString().trim().toLowerCase();
+    const coUyQuyen = uyQuyenHDMBChuan === 'có' || uyQuyenHDMBChuan === 'co';
     const cccd = (ncc[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     const masoThue = (ncc[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     const nguoiLienHe = coUyQuyen ? (ncc[NCC_COL.TEN_UY_QUYEN] || '') : (ncc[NCC_COL.TEN_CHU_RUNG] || '');
