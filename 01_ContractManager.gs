@@ -732,34 +732,47 @@ function xuLyOnEditDraft_(e) {
     if (!e || !e.range) return;
     const sh = e.range.getSheet();
     const ten = sh.getName();
-    const hang = e.range.getRow();
-    if (hang < 2) return; // dòng tiêu đề, bỏ qua
+    const cacTenLienQuan = [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE];
+    if (cacTenLienQuan.indexOf(ten) === -1) return; // sheet không liên quan đến Draft báo cáo -> bỏ qua
 
-    let idHD = null;
-    if (ten === SHEET_NAME.HD_NCC) {
-      idHD = sh.getRange(hang, NCC_COL.ID_HD + 1).getValue();
-      if (idHD) CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD.toString().trim()); // Tình trạng HĐ đổi -> ảnh hưởng mọi lô rừng con
-    } else if (ten === SHEET_NAME.HD_RUNG) {
-      idHD = sh.getRange(hang, RUNG_COL.ID_KEY_HD + 1).getValue();
-      const idRungSua = (sh.getRange(hang, RUNG_COL.ID_RUNG + 1).getValue() || '').toString().trim();
-      if (idRungSua) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRungSua);
-    } else if (ten === SHEET_NAME.HD_STK) {
-      idHD = sh.getRange(hang, STK_COL.ID_HD + 1).getValue();
-    } else if (ten === SHEET_NAME.HD_GPS) {
-      const idRung = (sh.getRange(hang, GPS_COL.ID_KEY_GPS + 1).getValue() || '').toString().trim();
-      if (idRung) {
-        const rungRows = readData_(SHEET_NAME.HD_RUNG);
-        const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
-        idHD = rung ? rung[RUNG_COL.ID_KEY_HD] : null;
-        CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // tọa độ đổi -> cập nhật lại tọa độ TB trong cache
+    // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY chỉ đọc e.range.getRow() (dòng đầu tiên) — nếu người
+    // dùng dán/sửa NHIỀU dòng cùng lúc (vd dán 1 khối ô từ Excel), các dòng còn
+    // lại trong vùng sửa bị bỏ qua hoàn toàn, khiến Draft không cập nhật cho
+    // những hợp đồng/lô rừng đó. Giờ duyệt HẾT các dòng nằm trong e.range.
+    const hangBatDau = e.range.getRow();
+    const soHang = e.range.getNumRows();
+    let rungRowsCache = null; // chỉ đọc HD_RUNG 1 lần cho cả vùng sửa (nếu đang sửa HD_GPS), không đọc lại từng dòng
+    const idsHD = new Set();
+
+    for (let hang = hangBatDau; hang < hangBatDau + soHang; hang++) {
+      if (hang < 2) continue; // dòng tiêu đề, bỏ qua
+
+      let idHD = null;
+      if (ten === SHEET_NAME.HD_NCC) {
+        idHD = sh.getRange(hang, NCC_COL.ID_HD + 1).getValue();
+        if (idHD) CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD.toString().trim()); // Tình trạng HĐ đổi -> ảnh hưởng mọi lô rừng con
+      } else if (ten === SHEET_NAME.HD_RUNG) {
+        idHD = sh.getRange(hang, RUNG_COL.ID_KEY_HD + 1).getValue();
+        const idRungSua = (sh.getRange(hang, RUNG_COL.ID_RUNG + 1).getValue() || '').toString().trim();
+        if (idRungSua) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRungSua);
+      } else if (ten === SHEET_NAME.HD_STK) {
+        idHD = sh.getRange(hang, STK_COL.ID_HD + 1).getValue();
+      } else if (ten === SHEET_NAME.HD_GPS) {
+        const idRung = (sh.getRange(hang, GPS_COL.ID_KEY_GPS + 1).getValue() || '').toString().trim();
+        if (idRung) {
+          if (!rungRowsCache) rungRowsCache = readData_(SHEET_NAME.HD_RUNG);
+          const rung = rungRowsCache.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
+          idHD = rung ? rung[RUNG_COL.ID_KEY_HD] : null;
+          CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // tọa độ đổi -> cập nhật lại tọa độ TB trong cache
+        }
+      } else if (ten === SHEET_NAME.HD_PICTURE) {
+        idHD = sh.getRange(hang, PICTURE_COL.ID_HD + 1).getValue();
       }
-    } else if (ten === SHEET_NAME.HD_PICTURE) {
-      idHD = sh.getRange(hang, PICTURE_COL.ID_HD + 1).getValue();
-    } else {
-      return; // sheet không liên quan đến Draft báo cáo -> bỏ qua
+
+      if (idHD) idsHD.add(idHD.toString().trim());
     }
 
-    if (idHD) CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD.toString().trim());
+    idsHD.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); });
   } catch (err) {
     // Không để lỗi trigger làm gián đoạn việc sửa sheet của người dùng — bỏ qua âm thầm
   }

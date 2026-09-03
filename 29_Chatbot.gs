@@ -443,15 +443,19 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   }
 
   // ---- Dò số hợp đồng được nhắc trực tiếp (dãy số dài, kiểu 2026xxxxxxx) ----
-  const khopSoHD = cauHoi.match(/\b\d{8,}\b/);
-  if (khopSoHD) {
-    const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.SO_HD, khopSoHD[0]);
+  // ⚠️ ĐÃ SỬA: trước đây chỉ lấy DÃY SỐ ĐẦU TIÊN khớp \d{8,} trong câu hỏi — nếu
+  // câu hỏi có số điện thoại (10 số) nhắc TRƯỚC số hợp đồng thật, số hợp đồng
+  // thật phía sau sẽ không bao giờ được kiểm tra (im lặng báo "không tìm thấy").
+  // Giờ dò TẤT CẢ dãy số ≥8 chữ số, thử khớp từng dãy với HD_NCC.
+  const khopSoHDList = cauHoi.match(/\b\d{8,}\b/g) || [];
+  khopSoHDList.forEach(function (soHDUngVien) {
+    const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.SO_HD, soHDUngVien);
     if (soDong !== -1) {
       const chiTiet = layHopDongTheoSoDong_ThucThi_(soDong);
       nguCanh.hopDongKhopTheoSoHD.push(chiTiet);
-      nguCanh._tomTat.push('Khớp trực tiếp Số HĐ ' + khopSoHD[0]);
+      nguCanh._tomTat.push('Khớp trực tiếp Số HĐ ' + soHDUngVien);
     }
-  }
+  });
 
   // ---- MỚI: dò tọa độ GPS trong câu hỏi (vd "rừng nào ở 15.733975, 108.126?")
   // -> tìm điểm GPS đã lưu GẦN NHẤT trong bán kính hợp lý, suy ra đúng lô rừng

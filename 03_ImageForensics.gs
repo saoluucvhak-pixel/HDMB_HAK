@@ -65,17 +65,17 @@ function docExifTuBytes_(blob) {
   const little = (byteOrder === 'II');
 
   function readU16(pos) {
-    return little ? (bytes[pos] | (bytes[pos + 1] << 8)) : ((bytes[pos] << 8) | bytes[pos + 1]);
+    return little ? ((bytes[pos] & 0xFF) | ((bytes[pos + 1] & 0xFF) << 8)) : (((bytes[pos] & 0xFF) << 8) | (bytes[pos + 1] & 0xFF));
   }
   function readU32(pos) {
     return little
-      ? ((bytes[pos]) | (bytes[pos + 1] << 8) | (bytes[pos + 2] << 16) | (bytes[pos + 3] << 24)) >>> 0
-      : ((bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3]) >>> 0;
+      ? ((bytes[pos] & 0xFF) | ((bytes[pos + 1] & 0xFF) << 8) | ((bytes[pos + 2] & 0xFF) << 16) | ((bytes[pos + 3] & 0xFF) << 24)) >>> 0
+      : (((bytes[pos] & 0xFF) << 24) | ((bytes[pos + 1] & 0xFF) << 16) | ((bytes[pos + 2] & 0xFF) << 8) | (bytes[pos + 3] & 0xFF)) >>> 0;
   }
   function readString(pos, len) {
     let s = '';
     for (let i = 0; i < len; i++) {
-      const c = bytes[pos + i];
+      const c = bytes[pos + i] & 0xFF;
       if (c === 0) break;
       s += String.fromCharCode(c);
     }
@@ -200,7 +200,7 @@ function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
   const exif = docExifTuBytes_(blob);
   const dauHieu = [];
   let khoangCach = null;
-  let gpsAnh = exif.hasExif && exif.gpsLat && exif.gpsLng ? { lat: exif.gpsLat, lng: exif.gpsLng } : null;
+  let gpsAnh = exif.hasExif && exif.gpsLat !== null && exif.gpsLng !== null ? { lat: exif.gpsLat, lng: exif.gpsLng } : null;
   let diaChiTrenAnh = '';
   let nguonToaDo = 'EXIF';
 

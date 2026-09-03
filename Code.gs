@@ -195,7 +195,7 @@ function RUN_HAK_SYSTEM_FINAL() {
     let id = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
     let { lat, lng } = getLatLngFromRow(gpsData[i]);
 
-    if (id && !isNaN(lat) && lat !== 0) {
+    if (id && !isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!forestGroups[id]) forestGroups[id] = [];
       forestGroups[id].push({ lat: lat, lng: lng });
       gpsData[i][GPS_COL.LOCATION] = lat.toFixed(6) + ", " + lng.toFixed(6);
@@ -323,7 +323,7 @@ function getMapData_ThucThi_() {
     let { lat, lng } = getLatLngFromRow(gpsData[i]);
     let address = gpsData[i][GPS_COL.ADDRESS] || "Chưa xác định địa chỉ";
 
-    if (!isNaN(lat) && lat !== 0) {
+    if (!isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!mapGroups[idGPS]) {
         mapGroups[idGPS] = { coords: [], details: forestInfo[idGPS] || { maRung: idGPS, soHD: "N/A", ten: "N/A", tinhTrang: "Đang thực hiện" } };
       }
