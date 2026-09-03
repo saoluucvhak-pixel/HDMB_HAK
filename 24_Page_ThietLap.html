@@ -412,7 +412,7 @@
     google.script.run
       .withSuccessHandler(function (kq) {
         showMsg('msgKhoaText', kq.thongBao, kq.thanhCong);
-        google.script.run.withSuccessHandler(renderTrangThaiKhoaText_).KIEM_TRA_TRANG_THAI_KHOA_TEXT();
+        google.script.run.withSuccessHandler(renderTrangThaiKhoaText_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRANG_THAI_KHOA_TEXT:', err); }).KIEM_TRA_TRANG_THAI_KHOA_TEXT();
       })
       .withFailureHandler(function (err) { showMsg('msgKhoaText', '❌ Lỗi: ' + err.message, false); })
       .DINH_DANG_TEXT_CHO_COT_QUAN_TRONG();
@@ -422,7 +422,7 @@
   google.script.run.withSuccessHandler(function (kq) {
     document.getElementById('chatbotTrangThai').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), model: ' + kq.model : '🔓 Chưa cấu hình API key — chatbot chưa dùng được.';
     document.getElementById('oGeminiModel').value = kq.model;
-  }).LAY_CAI_DAT_CHATBOT();
+  }).withFailureHandler(function (err) { document.getElementById('chatbotTrangThai').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_CHATBOT();
   function luuCaiDatChatbot() {
     var apiKey = document.getElementById('oGeminiApiKey').value.trim();
     var model = document.getElementById('oGeminiModel').value.trim();
@@ -434,7 +434,7 @@
         document.getElementById('oGeminiApiKey').value = '';
         google.script.run.withSuccessHandler(function (kq2) {
           document.getElementById('chatbotTrangThai').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), model: ' + kq2.model : '🔓 Chưa cấu hình API key.';
-        }).LAY_CAI_DAT_CHATBOT();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_CHATBOT:', err); }).LAY_CAI_DAT_CHATBOT();
       })
       .withFailureHandler(function (err) { document.getElementById('msgChatbot').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_CHATBOT(apiKey, model);
@@ -467,7 +467,7 @@
         if (kq.thanhCong) {
           document.getElementById('clDraftUrl').value = ''; document.getElementById('clFolderUrl').value = '';
           document.getElementById('clHoSoFolderUrl').value = ''; document.getElementById('clGpsFolderUrl').value = ''; document.getElementById('clMisaFolderUrl').value = '';
-          google.script.run.withSuccessHandler(renderKetNoi_).LAY_CAU_HINH_KET_NOI();
+          google.script.run.withSuccessHandler(renderKetNoi_).withFailureHandler(function (err) { console.error('LAY_CAU_HINH_KET_NOI:', err); }).LAY_CAU_HINH_KET_NOI();
         }
       })
       .withFailureHandler(function (err) { showMsg('msgKetNoi', '❌ Lỗi: ' + err.message, false); })
@@ -554,13 +554,13 @@
       document.getElementById('trangThaiTriggerOnEdit').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
       document.getElementById('btnBatTriggerOnEdit').style.display = kq.daBat ? 'none' : 'inline-block';
       document.getElementById('btnTatTriggerOnEdit').style.display = kq.daBat ? 'inline-block' : 'none';
-    }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
+    }).withFailureHandler(function (err) { document.getElementById('trangThaiTriggerOnEdit').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
   }
   // ---- Tra cứu ngân hàng ----
   google.script.run.withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTraCuuNh').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), URL: ' + kq.apiUrl : '🔓 Chưa cấu hình API key.';
     document.getElementById('oTraCuuNhApiUrl').value = kq.apiUrl;
-  }).LAY_CAI_DAT_TRA_CUU_NH();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTraCuuNh').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_TRA_CUU_NH();
   function luuCaiDatTraCuuNh() {
     var apiKey = document.getElementById('oTraCuuNhApiKey').value.trim();
     var apiUrl = document.getElementById('oTraCuuNhApiUrl').value.trim();
@@ -572,7 +572,7 @@
         document.getElementById('oTraCuuNhApiKey').value = '';
         google.script.run.withSuccessHandler(function (kq2) {
           document.getElementById('trangThaiTraCuuNh').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), URL: ' + kq2.apiUrl : '🔓 Chưa cấu hình API key.';
-        }).LAY_CAI_DAT_TRA_CUU_NH();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_TRA_CUU_NH:', err); }).LAY_CAI_DAT_TRA_CUU_NH();
       })
       .withFailureHandler(function (err) { document.getElementById('msgTraCuuNh').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_TRA_CUU_NH(apiKey, apiUrl);
@@ -582,12 +582,12 @@
   google.script.run.withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTelegram').textContent = kq.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq.tokenRutGon + '), Chat ID: ' + (kq.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
     if (kq.chatId) document.getElementById('oTelegramChatId').value = kq.chatId;
-  }).LAY_CAI_DAT_TELEGRAM();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTelegram').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_TELEGRAM();
   google.script.run.withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTriggerTelegram').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
     document.getElementById('btnBatTriggerTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
     document.getElementById('btnTatTriggerTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
-  }).KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTriggerTelegram').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM();
 
   function luuCaiDatTelegram() {
     var token = document.getElementById('oTelegramToken').value.trim();
@@ -600,7 +600,7 @@
         document.getElementById('oTelegramToken').value = '';
         google.script.run.withSuccessHandler(function (kq2) {
           document.getElementById('trangThaiTelegram').textContent = kq2.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq2.tokenRutGon + '), Chat ID: ' + (kq2.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
-        }).LAY_CAI_DAT_TELEGRAM();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_TELEGRAM:', err); }).LAY_CAI_DAT_TELEGRAM();
       })
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_TELEGRAM(token, chatId);
@@ -631,7 +631,7 @@
     document.getElementById('trangThaiPollingTelegram').textContent = kq.daBat ? '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).' : '🔓 Đang TẮT.';
     document.getElementById('btnBatPollingTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
     document.getElementById('btnTatPollingTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
-  }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiPollingTelegram').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
 
   function batPollingTelegram() {
     document.getElementById('msgTelegram').style.display = 'block';
@@ -657,6 +657,7 @@
         document.getElementById('btnBatPollingTelegram').style.display = 'inline-block';
         document.getElementById('btnTatPollingTelegram').style.display = 'none';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_POLLING_TELEGRAM();
   }
 
@@ -721,6 +722,7 @@
         document.getElementById('btnBatTriggerTelegram').style.display = 'none';
         document.getElementById('btnTatTriggerTelegram').style.display = 'inline-block';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .BAT_TRIGGER_THONG_BAO_TELEGRAM();
   }
   function tatTriggerTelegram() {
@@ -732,6 +734,7 @@
         document.getElementById('btnBatTriggerTelegram').style.display = 'inline-block';
         document.getElementById('btnTatTriggerTelegram').style.display = 'none';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_TRIGGER_THONG_BAO_TELEGRAM();
   }
 
@@ -821,7 +824,7 @@
   function batTriggerChuyenDoiAnh() {
     showMsg('msgChuyenDoiAnh', '⌛ Đang bật...', true);
     google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL:', err); }).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
       .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
       .THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL();
   }
@@ -829,7 +832,7 @@
   function tatTriggerChuyenDoiAnh() {
     showMsg('msgChuyenDoiAnh', '⌛ Đang tắt...', true);
     google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL:', err); }).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
       .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
       .TAT_TRIGGER_CHUYEN_DOI_ANH_URL();
   }
@@ -866,7 +869,7 @@
     document.getElementById('tlMasterSheetUrl').value = kq.masterSheetUrl || '';
     var sel = document.getElementById('tlVungMisa');
     for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === kq.vungDinhDangMisa) { sel.selectedIndex = i; break; } }
-  }).LAY_THIET_LAP_MISA();
+  }).withFailureHandler(function (err) { console.error('LAY_THIET_LAP_MISA:', err); }).LAY_THIET_LAP_MISA();
 
   function luuThietLapMisa() {
     var thietLap = {
