@@ -186,15 +186,20 @@ function LUU_PHU_LUC(d) {
   }
 
   const lastRow = sh.getLastRow();
-  const soLanHienCo = lastRow > 1
-    ? sh.getRange(2, c.ID_HD + 1, lastRow - 1, 1).getValues()
-      .filter(function (r) { return (r[0] || '').toString().trim() === d.idHD.toString().trim(); }).length
-    : 0;
-  const idPhuLuc = 'PL_' + d.idHD + '_' + (soLanHienCo + 1);
+  let lanMax = 0;
+  if (lastRow > 1) {
+    sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues().forEach(function (r) {
+      if ((r[c.ID_HD] || '').toString().trim() === d.idHD.toString().trim()) {
+        const lan = Number(r[c.LAN_PHU_LUC]) || 0;
+        if (lan > lanMax) lanMax = lan;
+      }
+    });
+  }
+  const idPhuLuc = 'PL_' + d.idHD + '_' + (lanMax + 1);
 
   const row = [];
   row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
-  row[c.LAN_PHU_LUC] = soLanHienCo + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
+  row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
   row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
   sh.appendRow(row);
   return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
