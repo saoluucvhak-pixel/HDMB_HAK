@@ -418,13 +418,13 @@
   function goiYDiaChiTheoTen() {
     var ten = val('tenChuRung');
     if (!ten || duNhap.idHD) return;
-    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).traCuuDiaChiThamChieu(ten);
+    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).withFailureHandler(function (err) { console.error('goiYDiaChiTheoTen:', err); }).traCuuDiaChiThamChieu(ten);
   }
   function naptDanhSachDiaChi() {
     google.script.run.withSuccessHandler(function (list) {
       var dl = document.getElementById('dlDiaChi'); dl.innerHTML = '';
       list.forEach(function (dc) { var opt = document.createElement('option'); opt.value = dc; dl.appendChild(opt); });
-    }).layGoiYDiaChi();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachDiaChi:', err); }).layGoiYDiaChi();
   }
   function naptDanhSachLoaiHoSo(giuLaiGiaTri) {
     google.script.run.withSuccessHandler(function (list) {
@@ -435,7 +435,7 @@
       var optKhac = document.createElement('option'); optKhac.value = '__KHAC__'; optKhac.textContent = '+ Thêm loại khác...';
       sel.appendChild(optKhac);
       if (giaTriCu && giaTriCu !== '__KHAC__') sel.value = giaTriCu;
-    }).layDanhSachLoaiHoSo();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachLoaiHoSo:', err); }).layDanhSachLoaiHoSo();
   }
   function xemGoiYDonGiaBaoGia() {
     var ngayKy = val('ngayKy');
@@ -674,7 +674,7 @@
     if (hoSoChon === '__KHAC__') {
       var loaiMoi = prompt('Nhập tên loại hồ sơ mới:');
       if (!loaiMoi) { document.getElementById('rHoSoNguonGoc').value = ''; return; }
-      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).themLoaiHoSoMoi(loaiMoi);
+      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).withFailureHandler(function (err) { alert('❌ Lỗi thêm loại hồ sơ: ' + err.message); }).themLoaiHoSoMoi(loaiMoi);
       return;
     }
     luuLoRungVaoNhapThucHien_(hoSoChon);

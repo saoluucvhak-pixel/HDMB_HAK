@@ -426,7 +426,7 @@
       var tenKhacNhau = [];
       list.forEach(function (a) { if (a.chuRung && tenKhacNhau.indexOf(a.chuRung) === -1) tenKhacNhau.push(a.chuRung); });
       document.getElementById('dlTenChuRungAnh').innerHTML = tenKhacNhau.map(function (t) { return '<option value="' + t + '">'; }).join('');
-    }).layDuLieuAnhWebapp();
+    }).withFailureHandler(function (err) { showMsg('msgAnhLuu', '❌ Lỗi tải danh sách ảnh: ' + err.message, false); }).layDuLieuAnhWebapp();
   }
 
   function renderBangAnhLuu() {
@@ -514,7 +514,7 @@
       var dl = document.getElementById('dlDiaChiKT');
       dl.innerHTML = '';
       list.forEach(function (dc) { var o = document.createElement('option'); o.value = dc; dl.appendChild(o); });
-    }).layGoiYDiaChi();
+    }).withFailureHandler(function (err) { console.error('naptDiaChiKT:', err); }).layGoiYDiaChi();
   }
 
   function kiemTraAnhTuLink() {
@@ -568,7 +568,7 @@
         var o = document.createElement('option'); o.value = nhan; dl.appendChild(o);
       });
       khiXong();
-    }).layDanhSachHopDong(1, 5000, '', '');
+    }).withFailureHandler(function (err) { alert('❌ Lỗi tải danh sách hợp đồng: ' + err.message); }).layDanhSachHopDong(1, 5000, '', '');
   }
 
   function taiTatCaDraft() {
@@ -623,7 +623,7 @@
                     var o = document.createElement('option'); o.value = nhan;
                     document.getElementById('dlRungGan_' + i).appendChild(o);
                   });
-                }).layDanhSachRung(idHDKhop);
+                }).withFailureHandler(function (err) { oRung.placeholder = '❌ Lỗi tải danh sách lô rừng'; console.error('layDanhSachRung:', err); }).layDanhSachRung(idHDKhop);
               });
             });
 
@@ -638,7 +638,7 @@
                   if (!kqGan.thanhCong) { msg.textContent = '❌ ' + kqGan.loi; return; }
                   google.script.run.withSuccessHandler(function (kqDuyet) {
                     if (kqDuyet.thanhCong) taiTatCaDraft(); else msg.textContent = '❌ ' + kqDuyet.loi;
-                  }).DUYET_ANH_RUNG(a.soDong);
+                  }).withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; }).DUYET_ANH_RUNG(a.soDong);
                 })
                 .withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; })
                 .GAN_ANH_VAO_RUNG(a.soDong, idHDKhop, idRungKhop);
@@ -654,15 +654,15 @@
         }
         el.appendChild(box);
       });
-    }).layTatCaDraftAnh();
+    }).withFailureHandler(function (err) { document.getElementById('dsTatCaDraft').innerHTML = '<p class="hint">❌ Lỗi tải danh sách: ' + err.message + '</p>'; }).layTatCaDraftAnh();
   }
 
   function duyetDraftChung(soDong) {
-    google.script.run.withSuccessHandler(function (kq) { if (kq.thanhCong) taiTatCaDraft(); else alert(kq.loi); }).DUYET_ANH_RUNG(soDong);
+    google.script.run.withSuccessHandler(function (kq) { if (kq.thanhCong) taiTatCaDraft(); else alert(kq.loi); }).withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); }).DUYET_ANH_RUNG(soDong);
   }
   function tuChoiDraftChung(soDong) {
     if (!confirm('Từ chối ảnh này?')) return;
-    google.script.run.withSuccessHandler(function () { taiTatCaDraft(); }).TU_CHOI_ANH_RUNG(soDong);
+    google.script.run.withSuccessHandler(function () { taiTatCaDraft(); }).withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); }).TU_CHOI_ANH_RUNG(soDong);
   }
 
   // ============ 4. ĐỐI CHIẾU OCR (MỤC RIÊNG) ============
@@ -675,7 +675,7 @@
       list.forEach(function (r) { if (r.chuRung && tenKhacNhau.indexOf(r.chuRung) === -1) tenKhacNhau.push(r.chuRung); });
       document.getElementById('dlTenChuRungOCR').innerHTML = tenKhacNhau.map(function (t) { return '<option value="' + t + '">'; }).join('');
       renderBangOCR();
-    }).layDuLieuOCRWebapp();
+    }).withFailureHandler(function (err) { showMsg('msgOCR', '❌ Lỗi tải bảng đối chiếu: ' + err.message, false); }).layDuLieuOCRWebapp();
   }
 
   function renderBangOCR() {
@@ -847,7 +847,7 @@
       var el = document.getElementById('dsTrigger');
       el.innerHTML = !list.length ? '<p class="hint">Chưa có lịch tự động nào đang chạy.</p>' :
         list.map(function (t) { return '<div class="data-row"><span>' + t.ten + '</span><span>' + t.tanSuat + '</span></div>'; }).join('');
-    }).layDanhSachTrigger();
+    }).withFailureHandler(function (err) { document.getElementById('dsTrigger').innerHTML = '<p class="hint">❌ Lỗi tải danh sách: ' + err.message + '</p>'; }).layDanhSachTrigger();
   }
 
   // ============ KHỞI TẠO ============
