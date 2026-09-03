@@ -447,7 +447,7 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   // câu hỏi có số điện thoại (10 số) nhắc TRƯỚC số hợp đồng thật, số hợp đồng
   // thật phía sau sẽ không bao giờ được kiểm tra (im lặng báo "không tìm thấy").
   // Giờ dò TẤT CẢ dãy số ≥8 chữ số, thử khớp từng dãy với HD_NCC.
-  const khopSoHDList = cauHoi.match(/\b\d{8,}\b/g) || [];
+  const khopSoHDList = (cauHoi.match(/\b\d{8,}\b/g) || []).filter(function (v, i, arr) { return arr.indexOf(v) === i; });
   khopSoHDList.forEach(function (soHDUngVien) {
     const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.SO_HD, soHDUngVien);
     if (soDong !== -1) {

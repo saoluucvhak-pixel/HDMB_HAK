@@ -227,7 +227,7 @@
         <label>Lọc theo trạng thái</label>
         <select id="locTinhTrangHD" onchange="taiDanhSachHD(1)">
           <option>Tất cả</option><option>Chờ thực hiện</option><option>Đang thực hiện</option>
-          <option>Hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
+          <option>Đã hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
     </div>
@@ -275,7 +275,7 @@
       <div class="field">
         <label>Tình trạng hợp đồng</label>
         <select id="tinhTrang">
-          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Hoàn thành</option>
+          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Đã hoàn thành</option>
           <option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
@@ -694,7 +694,7 @@
           var tbody = document.querySelector('#tblDSHopDong tbody'); tbody.innerHTML = '';
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
-            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Hoàn thành' ? 'badge-hoan' : 'badge-dang');
+            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
             var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
             tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
               '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
