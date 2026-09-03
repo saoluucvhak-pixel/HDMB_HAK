@@ -2077,12 +2077,11 @@ function LUU_HOP_DONG_DAY_DU(payload) {
       row[NCC_COL.MA_SO_THUE] = d.maSoThue || '';
       row[NCC_COL.CHI_NHANH_NH] = d.chiNhanhNH || '';
       row[NCC_COL.ID_HD] = idHD;
-      // Mặc định: "Chờ thực hiện" nếu ngày ký ở tương lai, "Đang thực hiện" nếu ngày ký đã tới/đã qua.
-      // Người dùng vẫn có thể ghi đè bằng d.tinhTrang nếu chọn tay trên form.
-      const homNay = new Date(); homNay.setHours(0, 0, 0, 0);
-      const ngayKyChiNgay = new Date(ngayKyDate); ngayKyChiNgay.setHours(0, 0, 0, 0);
-      const trangThaiMacDinh = ngayKyChiNgay.getTime() > homNay.getTime() ? 'Chờ thực hiện' : 'Đang thực hiện';
-      row[NCC_COL.TINH_TRANG] = d.tinhTrang || trangThaiMacDinh;
+      // ⚠️ ĐÃ SỬA: trước đây tự suy ra "Đang thực hiện" nếu ngày ký đã tới/qua — lệch
+      // với quy trình chính thức (xem 13_HuongDan.html): mọi hợp đồng LUÔN bắt đầu ở
+      // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
+      // TAO_HOP_DONG_MOI() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
+      row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
       const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
       shTaoMoi.appendRow(row);
       soDongVuaTao = shTaoMoi.getLastRow(); // appendRow luôn thêm vào cuối -> đây chính là số dòng thật của hợp đồng vừa tạo

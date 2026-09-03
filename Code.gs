@@ -93,11 +93,18 @@ function doGet(e) {
   }
 
   if (page === "meconn") {
-    var tmplMeCon = HtmlService.createTemplateFromFile('26_Page_QuanLyMeCon');
+    // ⚠️ ĐÃ SỬA: "meconn" (26_Page_QuanLyMeCon) là bản cũ, trùng lặp phần lớn với
+    // "hopdongmc" (27_Page_HopDongMeCon) nhưng thiếu các cải tiến sau này của 27
+    // (chọn ngân hàng theo tên thật, gợi ý năm trồng, chỉ nhận số nguyên...) và
+    // từng có bug mất file đính kèm hồ sơ pháp lý khi lưu. Không còn liên kết
+    // nào trong menu trỏ tới "meconn", nhưng URL cũ (?page=meconn) có thể đã
+    // được người dùng lưu bookmark — thay vì để họ vào thẳng trang lỗi thời,
+    // route sang cùng trang "hopdongmc" đang được bảo trì.
+    var tmplMeCon = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
     tmplMeCon.baseUrl = ScriptApp.getService().getUrl();
-    tmplMeCon.currentPage = 'meconn';
+    tmplMeCon.currentPage = 'hopdongmc';
     return tmplMeCon.evaluate()
-      .setTitle('🗂️ Quản lý mẹ-con HAK')
+      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
