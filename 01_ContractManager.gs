@@ -192,6 +192,11 @@ function LAY_TONG_QUAN_HOP_DONG(boLoc) {
   const tinhTrangLoc = (boLoc.tinhTrangLoc || '').toString().trim();
   const tuNgay = boLoc.tuNgay ? new Date(boLoc.tuNgay) : null;
   const denNgay = boLoc.denNgay ? new Date(boLoc.denNgay) : null;
+  // ⚠️ ĐÃ SỬA: "yyyy-mm-dd" từ ô chọn ngày trên webapp được new Date() hiểu là
+  // 00:00 UTC (= 07:00 giờ VN) — nếu không ép về đúng nửa đêm giờ VN, hợp đồng
+  // ký ĐÚNG ngày tuNgay (lưu mốc 00:00 giờ VN, tức 17:00 UTC hôm trước) sẽ bị
+  // tính là NHỎ HƠN tuNgay và bị loại nhầm khỏi kết quả lọc "từ ngày".
+  if (tuNgay) tuNgay.setHours(0, 0, 0, 0);
   if (denNgay) denNgay.setHours(23, 59, 59, 999); // lấy trọn ngày kết thúc
 
   const list = docToanBoDraftBaoCao_();
