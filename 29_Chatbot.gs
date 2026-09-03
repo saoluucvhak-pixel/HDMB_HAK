@@ -105,7 +105,7 @@ function TRA_LOI_CHATBOT(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
     '4. Nếu JSON có nhiều khách hàng/hợp đồng khớp, liệt kê rõ ràng từng cái, đừng gộp chung.\n' +
     '5. Nếu câu hỏi hiện tại là câu hỏi NỐI TIẾP (không nhắc lại tên khách hàng/hợp đồng), dùng LỊCH SỬ HỎI-ĐÁP để hiểu đang hỏi về ai/hợp đồng nào, nhưng vẫn CHỈ lấy số liệu từ JSON dữ liệu THẬT — không lấy số liệu từ lịch sử.\n' +
     '6. RIÊNG khi trả lời câu hỏi có "diaDiemTheoToaDo" (tra theo tọa độ): sau khi trả lời đủ dữ liệu THẬT ở trên (lô rừng/chủ rừng/rừng bên cạnh...), CÓ THỂ bổ sung thêm 1 đoạn NGẮN mô tả kiến thức ĐỊA LÝ CHUNG bạn biết về khu vực đó (địa hình, khí hậu, đặc điểm vùng...) — nhưng BẮT BUỘC phải mở đầu đoạn đó bằng "ℹ️ Thông tin tham khảo chung (không phải dữ liệu đã kiểm chứng của hệ thống):" để người đọc phân biệt rõ ràng, không nhầm là dữ liệu thật đã đo đạc. Nếu không chắc/không biết gì về khu vực đó thì bỏ qua, không suy đoán liều.\n' +
-    '7. Nếu JSON có trường "toanBoHopDong" (mảng TOÀN BỘ hợp đồng thật trong hệ thống): đây là dữ liệu để bạn TỰ ĐẾM/LỌC/TÍNH TỔNG trực tiếp theo đúng điều kiện trong câu hỏi (vd trạng thái, tên chủ rừng, khoảng ngày ký, "chưa X"/"khác X"...) — đọc kỹ TỪNG phần tử trong mảng, không bỏ sót, không đếm nhầm phạm vi (vd hỏi về 1 người cụ thể thì CHỈ đếm đúng hợp đồng của người đó, không đếm cả mảng). Trả lời kèm SỐ ĐÃ ĐẾM ĐƯỢC rõ ràng.\n';
+    '7. Nếu JSON có trường "toanBoHopDong" (mảng TOÀN BỘ hợp đồng thật trong hệ thống): đây là dữ liệu để bạn TỰ ĐẾM/LỌC/TÍNH TỔNG trực tiếp theo ĐÚNG và ĐỦ mọi điều kiện trong câu hỏi, kể cả khi câu hỏi có NHIỀU điều kiện kết hợp cùng lúc (vd trạng thái, tên chủ rừng, khoảng ngày ký, "chưa X"/"khác X", coAnh=false (chưa có ảnh), daDoGPSDu=false (chưa đủ GPS), hoSoDu=false (thiếu hồ sơ), diaChiRung (theo khu vực/địa chỉ)...) — đọc kỹ TỪNG phần tử trong mảng, đối chiếu ĐỦ TẤT CẢ điều kiện đã nêu (không chỉ điều kiện đầu tiên), không bỏ sót, không đếm nhầm phạm vi (vd hỏi về 1 người cụ thể thì CHỈ đếm đúng hợp đồng của người đó, không đếm cả mảng). Trả lời kèm SỐ ĐÃ ĐẾM ĐƯỢC rõ ràng.\n';
 
   const payload = { contents: [{ parts: [{ text: promptHeThong + '\n\nCÂU HỎI CỦA NGƯỜI DÙNG: ' + cauHoi }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
@@ -428,9 +428,14 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
     try {
       nguCanh.toanBoHopDong = docToanBoDraftBaoCao_().map(function (m) {
         return {
-          soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
+          soHD: m.soHD, tenChuRung: m.tenChuRung, cccdChuRung: m.cccdChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
           khoiLuongDuKien: m.khoiLuongDuKien, khoiLuongThucHien: m.khoiLuongThucHien,
-          giaTriHopDong: m.giaTriHopDong, giaTriThucHien: m.giaTriThucHien, soLoRung: m.soLoRung
+          giaTriHopDong: m.giaTriHopDong, giaTriThucHien: m.giaTriThucHien, soLoRung: m.soLoRung,
+          // ⚠️ MỚI: bổ sung 5 trường này để Gemini lọc/đếm được thêm các điều kiện
+          // về hồ sơ/ảnh/GPS/địa chỉ mà TRƯỚC ĐÂY hoàn toàn không có trong dữ liệu
+          // gửi đi — dữ liệu đã có sẵn trong cache Draft_BaoCaoHopDong, không cần
+          // đọc thêm sheet nào, chỉ là trước chưa được đưa vào JSON gửi cho AI.
+          coAnh: m.coAnh, daDoGPSDu: m.daDoGPSDu, hoSoDu: m.hoSoDu, diaChiRung: m.diaChiRung
         };
       });
       nguCanh._tomTat.push('Đã đính kèm toàn bộ ' + nguCanh.toanBoHopDong.length + ' hợp đồng để phân tích/thống kê trực tiếp');
