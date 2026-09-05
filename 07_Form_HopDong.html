@@ -1,4 +1,49 @@
 <style>
+  /* ⚠️ ĐÃ SỬA: file này hiện qua showSidebar() (không đi qua Code.gs doGet như các
+     trang khác), nên KHÔNG tự động có CSS chung từ 09_Style.html — trước đây
+     thiếu hẳn phần dưới đây, khiến sidebar "Nhập liệu HAK" hiện ra hoàn toàn
+     không có định dạng (không màu, không khung, nút/ô nhập trần trụi) vì mọi
+     class (.card, .btn, .field, .msg...) và biến var(--...) đều không được định
+     nghĩa ở đâu cả. Chép lại từ 09_Style.html (đủ phần thực sự dùng trong file này). */
+  :root {
+    --active-green: #2f7d52;
+    --accent-gold: #c9973f;
+    --card-bg: #ffffff;
+    --page-bg: #f2f3f1;
+    --border-light: #e5e7e5;
+    --heading: #1c2a22;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--page-bg); color: var(--heading); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
+  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: #14231b; color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
   .hint { font-size: 11px; color: #889; }
   .khoa-khi-thanh-ly[disabled] { opacity: .6; }
 
