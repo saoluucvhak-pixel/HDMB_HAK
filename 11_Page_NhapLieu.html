@@ -991,7 +991,10 @@
           .withSuccessHandler(function (kq) {
             fi.value = ''; document.getElementById('tenFileAnhChoDiemGPS').textContent = '';
             ghiDiemGPSVaoNhap_(Number(lat), Number(lng), kq.thanhCong ? kq.url : '');
-            if (!kq.thanhCong) showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng KHÔNG tải được ảnh: ' + kq.loi, false);
+            // ⚠️ ĐÃ SỬA: trước đây khi kq.thanhCong === true không có nhánh else nào cả
+            // -> thông báo "⌛ Đang tải ảnh minh chứng lên..." (đặt ở trên, trước khi gọi
+            // RPC) bị KẸT vĩnh viễn trên màn hình dù điểm + ảnh đã lưu vào nháp thành công.
+            showMsg('msgGPS', kq.thanhCong ? '✅ Đã thêm điểm + ảnh minh chứng vào nháp.' : '⚠️ Đã thêm điểm nhưng KHÔNG tải được ảnh: ' + kq.loi, kq.thanhCong);
           })
           .withFailureHandler(function (err) {
             ghiDiemGPSVaoNhap_(Number(lat), Number(lng), '');
