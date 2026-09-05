@@ -114,6 +114,9 @@
     table.data-table td, table.data-table th { font-size: 12px; }
     .row-do { background: #fdecea; }
     .row-vang { background: #fef9e7; }
+    /* ⚠️ Dùng ở "Ảnh đang chờ xử lý" (tên file/trạng thái) và "Lịch đang hoạt động" (việc/tần suất) —
+       trước đây KHÔNG có định nghĩa CSS cho class này, khiến 2 span dính liền nhau không có khoảng cách. */
+    .data-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   </style>
 </head>
 <body>
@@ -801,7 +804,9 @@
         return;
       }
       showMsg('msgLichNgay', '⌛ Đang chạy (' + (i + 1) + '/' + viec.length + ')...', true);
-      var xuLyKetQua = function (kq) { ketQuaChiTiet.push(kq); chayTiep(i + 1); };
+      // ⚠️ KIEM_TRA_ANH_TOAN_BO() trả về OBJECT {thongBao, ketQua} (khác 2 hàm còn lại trả về STRING) —
+      // phải lấy .thongBao trước khi đẩy vào mảng, nếu không ketQuaChiTiet.join() sẽ in ra "[object Object]".
+      var xuLyKetQua = function (kq) { ketQuaChiTiet.push(kq && kq.thongBao ? kq.thongBao : kq); chayTiep(i + 1); };
       var xuLyLoi = function (err) { showMsg('msgLichNgay', '❌ ' + err.message, false); };
       if (viec[i] === 'hoso') google.script.run.withSuccessHandler(xuLyKetQua).withFailureHandler(xuLyLoi).KIEM_TRA_HO_SO_TOAN_BO(tu || null, den || null);
       else if (viec[i] === 'anh') google.script.run.withSuccessHandler(xuLyKetQua).withFailureHandler(xuLyLoi).KIEM_TRA_ANH_TOAN_BO();
