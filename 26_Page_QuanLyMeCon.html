@@ -499,7 +499,20 @@
           if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
           if (!d.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
           var patchTK = { idHD: kq.idHD, tenChuRung: d.tenChuRung, cccd: d.cccdChuRung, soHD: d.soHD, soTK: d.soTK, nganHang: d.nganHang, uyQuyenTT: d.uyQuyenTT, tenUyQuyen: d.uyQuyenTT === 'Có' ? d.tenUyQuyen : d.tenChuRung };
-          google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).THEM_TAI_KHOAN_MOI(patchTK);
+          // ⚠️ ĐÃ SỬA: TAO_HOP_DONG_MOI ở server đã tự tạo sẵn 1 dòng STK mặc định khi có soTK —
+          // gọi thẳng THEM_TAI_KHOAN_MOI ở đây (như trước) ghi THÊM 1 dòng nữa, sinh TRÙNG LẶP
+          // STK ngay khi vừa tạo hợp đồng. Giờ kiểm tra trước: đã có dòng nào (do server tự tạo)
+          // thì SỬA dòng đó, chưa có mới thêm mới — cùng cách "Sửa hồ sơ" bên dưới đã làm.
+          google.script.run
+            .withSuccessHandler(function (list) {
+              if (list && list.length) {
+                google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).CAP_NHAT_TAI_KHOAN(list[0].soDong, patchTK);
+              } else {
+                google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).THEM_TAI_KHOAN_MOI(patchTK);
+              }
+            })
+            .withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi tải danh sách STK: ' + err.message); })
+            .layDanhSachTaiKhoan(kq.idHD);
         })
         .withFailureHandler(function (err) { showMsgModal_('❌ Lỗi: ' + err.message); })
         .TAO_HOP_DONG_MOI(d);
@@ -783,7 +796,20 @@
         if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
         if (!wz.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
         var patchTK = { idHD: kq.idHD, tenChuRung: wz.tenChuRung, cccd: wz.cccdChuRung, soHD: wz.soHD, soTK: wz.soTK, nganHang: wz.nganHang, uyQuyenTT: wz.uyQuyenTT, tenUyQuyen: wz.uyQuyenTT === 'Có' ? wz.tenUyQuyen : wz.tenChuRung };
-        google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).THEM_TAI_KHOAN_MOI(patchTK);
+        // ⚠️ ĐÃ SỬA: TAO_HOP_DONG_MOI ở server đã tự tạo sẵn 1 dòng STK mặc định khi có soTK —
+        // gọi thẳng THEM_TAI_KHOAN_MOI ở đây (như trước) ghi THÊM 1 dòng nữa, sinh TRÙNG LẶP
+        // STK ngay khi vừa tạo hợp đồng. Giờ kiểm tra trước: đã có dòng nào (do server tự tạo)
+        // thì SỬA dòng đó, chưa có mới thêm mới — cùng cách "Sửa hồ sơ" bên dưới đã làm.
+        google.script.run
+          .withSuccessHandler(function (list) {
+            if (list && list.length) {
+              google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).CAP_NHAT_TAI_KHOAN(list[0].soDong, patchTK);
+            } else {
+              google.script.run.withSuccessHandler(function () { dongModal(); moChiTietHopDong(kq.idHD); }).withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi lưu STK: ' + err.message); }).THEM_TAI_KHOAN_MOI(patchTK);
+            }
+          })
+          .withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi tải danh sách STK: ' + err.message); })
+          .layDanhSachTaiKhoan(kq.idHD);
       })
       .withFailureHandler(function (err) { showMsgModal_('❌ Lỗi: ' + err.message); })
       .TAO_HOP_DONG_MOI(d);
