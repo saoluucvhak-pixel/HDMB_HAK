@@ -15,6 +15,11 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--page-bg); color: var(--heading); }
+  /* ⚠️ ĐÃ SỬA: .page-title/.page-subtitle được dùng ngay trong "Trang 1: Danh sách"
+     bên dưới nhưng bị bỏ sót khi chép CSS từ 09_Style.html ở lần sửa trước — khiến
+     tiêu đề "Hợp đồng" hiện chữ thường trần trụi thay vì tiêu đề lớn/đậm như thiết kế. */
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
 
   .card {
     background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
