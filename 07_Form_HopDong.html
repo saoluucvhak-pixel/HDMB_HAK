@@ -857,7 +857,30 @@
     };
     reader.readAsDataURL(file);
   }
-  function taiDsHoSoRungThat(idRung) { document.getElementById('dsHoSoRung').innerHTML = ''; }
+  // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY hàm này chỉ xóa trắng khu vực hiển thị, KHÔNG hề gọi gì
+  // để lấy hồ sơ đã đính kèm — nên khi mở lại 1 lô rừng đã có sẵn file, khu vực
+  // "Hồ sơ pháp lý đính kèm" luôn trống dù dữ liệu đã lưu (thấy đúng trong Báo
+  // cáo "Xem chi tiết" nhưng không thấy ở đây). Giờ gọi layHoSoCuaHopDong() đã
+  // có sẵn (06_CreateUpdate.gs) để hiện link file thật, bấm mở được trực tiếp.
+  // (Mirror của cùng bản sửa đã áp dụng ở 11_Page_NhapLieu.html.)
+  function taiDsHoSoRungThat(idRung) {
+    var el = document.getElementById('dsHoSoRung');
+    el.innerHTML = '<p class="hint">Đang tải...</p>';
+    if (!duNhap.idHD) { el.innerHTML = ''; return; }
+    google.script.run
+      .withSuccessHandler(function (list) {
+        var hs = (list || []).find(function (x) { return (x.idRung || '').toString().trim() === idRung.toString().trim(); });
+        if (!hs) { el.innerHTML = '<p class="hint">Không tìm thấy thông tin hồ sơ.</p>'; return; }
+        var dongFile = hs.dinhKem
+          ? (hs.dinhKem.url
+            ? '<a href="' + hs.dinhKem.url + '" target="_blank">📎 ' + hs.dinhKem.ten + '</a>'
+            : (hs.dinhKem.ten || '') + ' <span class="hint">(không tìm thấy file trên Drive)</span>')
+          : '<span class="hint">Chưa đính kèm file nào.</span>';
+        el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
+      })
+      .withFailureHandler(function (err) { el.innerHTML = '<p class="hint">❌ Lỗi tải hồ sơ đính kèm: ' + err.message + '</p>'; })
+      .layHoSoCuaHopDong(duNhap.idHD);
+  }
   function taiAnhHienTruong() {
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r || !r.idRung) { showMsg('msgAnh', '❌ Lô rừng chưa có ID thật — Lưu chính thức trước.', false); return; }
