@@ -454,7 +454,12 @@
     });
     if (loai === 'cccd_uy_quyen' || loai === 'giay_uy_quyen') { document.getElementById('uyQuyenTT').value = 'Có'; toggleUyQuyen(); }
     var html = daApDung.length ? '<div class="msg ok">✅ Đã tự động điền ' + daApDung.length + ' mục (đã lưu nháp):<br>• ' + daApDung.join('<br>• ') + '</div>' : '<div class="msg err">⚠️ Không nhận diện được trường nào phù hợp.</div>';
-    html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
+    // ⚠️ ĐÃ SỬA: OCR_TU_BAN_SCAN (04_Reconciliation.gs) KHÔNG trả về trường `vanBanGoc`
+    // (chỉ có thanhCong/truong/urlFileGoc/tenFileGoc) — gọi kq.vanBanGoc.replace(...) luôn
+    // ném TypeError, làm cả hàm dừng giữa chừng: dòng "✅ Đã đọc xong" và debounceLuuNhap()
+    // bên dưới không bao giờ chạy (thông báo bị kẹt mãi ở "⌛ Đang đọc bản scan..." dù đã
+    // điền xong dữ liệu). Chỉ hiện khối này nếu có sẵn văn bản gốc.
+    if (kq.vanBanGoc) html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
     document.getElementById('ketQuaBanScan').innerHTML = html;
     showMsg('msgBanScan', '✅ Đã đọc xong — kiểm tra lại trước khi Lưu chính thức.', true);
     document.getElementById('fileBanScan').value = ''; document.getElementById('tenFileBanScan').textContent = '';
