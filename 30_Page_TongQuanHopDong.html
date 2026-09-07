@@ -259,6 +259,10 @@
   function xoaBoLoc_() {
     document.getElementById('locSoHD').value = ''; document.getElementById('locTenChuRung').value = '';
     boLocDaApDungNgay_ = false; tinhTrangDangLoc_ = '';
+    // ⚠️ ĐÃ SỬA: trước đây chỉ đổi tiêu đề danh sách trong sự kiện click thẻ trạng thái
+    // (renderTheThongKe_) — nếu người dùng bấm 1 thẻ trạng thái rồi bấm "Bỏ lọc", dữ liệu
+    // bảng đã trở lại TẤT CẢ nhưng tiêu đề vẫn đứng yên ở tên trạng thái cũ, gây hiểu lầm.
+    document.getElementById('tieuDeDanhSach').textContent = '📋 Tất cả hợp đồng (mới ký trước)';
     taiDashboard_(1);
   }
 

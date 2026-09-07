@@ -90,7 +90,11 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
     const msg = update.message;
     if (!msg || !msg.text) return;
     const chatIdTinNhan = msg.chat.id.toString().trim();
-    if (chatIdDaCauHinh && chatIdTinNhan !== chatIdDaCauHinh) return; // chỉ trả lời đúng nhóm đã cấu hình
+    // ⚠️ ĐÃ SỬA: trước đây khi CHƯA cấu hình Chat ID (chatIdDaCauHinh rỗng), điều
+    // kiện luôn đúng ("bỏ qua kiểm tra") -> bot trả lời BẤT KỲ chat nào biết được
+    // Bot Token, lộ dữ liệu công ty ngay cả trước khi setup xong. Giờ CHỈ trả lời
+    // khi ĐÃ cấu hình Chat ID và khớp đúng nhóm đó.
+    if (!chatIdDaCauHinh || chatIdTinNhan !== chatIdDaCauHinh) return;
     const cauHoi = msg.text.trim();
     if (!cauHoi || cauHoi.charAt(0) === '/') return; // bỏ qua lệnh hệ thống kiểu /start
 
@@ -239,7 +243,10 @@ function doPost(e) {
     const chatIdTinNhan = msg.chat.id.toString().trim();
     // ⚠️ CHỈ trả lời nếu tin nhắn đến từ ĐÚNG nhóm đã cấu hình — chặn người lạ
     // dù vô tình biết được bot token cũng không tra được dữ liệu công ty.
-    if (chatIdDaCauHinh && chatIdTinNhan !== chatIdDaCauHinh) return ContentService.createTextOutput('ok');
+    // ⚠️ ĐÃ SỬA: trước đây khi CHƯA cấu hình Chat ID thì điều kiện luôn đúng
+    // (bỏ qua kiểm tra hoàn toàn) — đúng lỗ hổng mà comment trên mô tả. Giờ CHỈ
+    // trả lời khi ĐÃ cấu hình Chat ID và khớp đúng nhóm đó.
+    if (!chatIdDaCauHinh || chatIdTinNhan !== chatIdDaCauHinh) return ContentService.createTextOutput('ok');
 
     const cauHoi = msg.text.trim();
     if (cauHoi.charAt(0) === '/') return ContentService.createTextOutput('ok'); // bỏ qua lệnh kiểu /start, /help

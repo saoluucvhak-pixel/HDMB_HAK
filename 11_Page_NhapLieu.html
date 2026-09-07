@@ -131,7 +131,7 @@
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
+  <a class="nav-item <?= (currentPage === 'hopdongmc' || currentPage === 'form') ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
     <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
   </a>
   <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
@@ -192,6 +192,10 @@
   .gps-row.nhap { border-color: var(--accent-gold); background: #fffbf0; }
   .badge-cho-duyet { background: #fff3cd; color: #8a6d1f; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
   .badge-da-duyet { background: #eafaf1; color: #196f3d; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .badge-status { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-status.badge-dang { background: #fdf3e3; color: #8a6d1f; }
+  .badge-status.badge-hoan { background: #eafaf1; color: var(--active-green); }
+  .badge-status.badge-huy { background: #fdecea; color: #c0392b; }
 
   .ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
   .ct-item { background: #f7fbf8; border: 1px solid #dcecdf; border-radius: 8px; padding: 10px 12px; }
@@ -227,7 +231,7 @@
         <label>Lọc theo trạng thái</label>
         <select id="locTinhTrangHD" onchange="taiDanhSachHD(1)">
           <option>Tất cả</option><option>Chờ thực hiện</option><option>Đang thực hiện</option>
-          <option>Hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
+          <option>Đã hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
     </div>
@@ -275,7 +279,7 @@
       <div class="field">
         <label>Tình trạng hợp đồng</label>
         <select id="tinhTrang">
-          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Hoàn thành</option>
+          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Đã hoàn thành</option>
           <option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
@@ -553,7 +557,7 @@
   function goiYDiaChiTheoTen() {
     var ten = val('tenChuRung');
     if (!ten || duNhap.idHD) return;
-    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).traCuuDiaChiThamChieu(ten);
+    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).withFailureHandler(function (err) { console.error('goiYDiaChiTheoTen:', err); }).traCuuDiaChiThamChieu(ten);
   }
   var khachHangCoSan_ = {}; // { cccd: {...} } — nạp 1 lần lúc mở trang
   var khachHangTheoTen_ = {}; // { tenThuongHoa: {...} } — tra theo tên (lưu ý: tên có thể trùng giữa nhiều người, ưu tiên khớp theo CCCD trước)
@@ -573,7 +577,7 @@
         optTen.value = kh.tenChuRung || ''; optTen.label = (kh.tenChuRung || '') + ' — CCCD ' + kh.cccd + (kh.soLuongHopDong > 1 ? ' (' + kh.soLuongHopDong + ' HĐ)' : '');
         dlTen.appendChild(optTen);
       });
-    }).layDanhSachKhachHang(1, 5000, '');
+    }).withFailureHandler(function (err) { console.error('naptDanhSachKhachHangCoSan:', err); }).layDanhSachKhachHang(1, 5000, '');
   }
   /** Khi gõ/chọn xong CCCD ở ô "Tạo hợp đồng mới" — nếu khớp khách hàng ĐÃ CÓ, tự điền
    *  các thông tin cá nhân (chỉ điền vào ô ĐANG TRỐNG, không ghi đè nếu đã có sẵn tự nhập) */
@@ -608,13 +612,13 @@
     google.script.run.withSuccessHandler(function (list) {
       var dl = document.getElementById('dlDiaChi'); dl.innerHTML = '';
       list.forEach(function (dc) { var opt = document.createElement('option'); opt.value = dc; dl.appendChild(opt); });
-    }).layGoiYDiaChi();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachDiaChi:', err); }).layGoiYDiaChi();
   }
   function naptDanhSachNoiCap() {
     google.script.run.withSuccessHandler(function (list) {
       var dl = document.getElementById('dlNoiCap'); dl.innerHTML = '';
       list.forEach(function (nc) { var opt = document.createElement('option'); opt.value = nc; dl.appendChild(opt); });
-    }).layGoiYNoiCap();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachNoiCap:', err); }).layGoiYNoiCap();
   }
   function naptDanhSachLoaiHoSo(giuLaiGiaTri) {
     google.script.run.withSuccessHandler(function (list) {
@@ -625,7 +629,7 @@
       var optKhac = document.createElement('option'); optKhac.value = '__KHAC__'; optKhac.textContent = '+ Thêm loại khác...';
       sel.appendChild(optKhac);
       if (giaTriCu && giaTriCu !== '__KHAC__') sel.value = giaTriCu;
-    }).layDanhSachLoaiHoSo();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachLoaiHoSo:', err); }).layDanhSachLoaiHoSo();
   }
   function xemGoiYDonGiaBaoGia() {
     var ngayKy = val('ngayKy');
@@ -694,7 +698,7 @@
           var tbody = document.querySelector('#tblDSHopDong tbody'); tbody.innerHTML = '';
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
-            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Hoàn thành' ? 'badge-hoan' : 'badge-dang');
+            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
             var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
             tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
               '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
@@ -908,7 +912,7 @@
     if (hoSoChon === '__KHAC__') {
       var loaiMoi = prompt('Nhập tên loại hồ sơ mới:');
       if (!loaiMoi) { document.getElementById('rHoSoNguonGoc').value = ''; return; }
-      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).themLoaiHoSoMoi(loaiMoi);
+      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).withFailureHandler(function (err) { alert('❌ Lỗi thêm loại hồ sơ: ' + err.message); }).themLoaiHoSoMoi(loaiMoi);
       return;
     }
     luuLoRungVaoNhapThucHien_(hoSoChon);
@@ -987,7 +991,10 @@
           .withSuccessHandler(function (kq) {
             fi.value = ''; document.getElementById('tenFileAnhChoDiemGPS').textContent = '';
             ghiDiemGPSVaoNhap_(Number(lat), Number(lng), kq.thanhCong ? kq.url : '');
-            if (!kq.thanhCong) showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng KHÔNG tải được ảnh: ' + kq.loi, false);
+            // ⚠️ ĐÃ SỬA: trước đây khi kq.thanhCong === true không có nhánh else nào cả
+            // -> thông báo "⌛ Đang tải ảnh minh chứng lên..." (đặt ở trên, trước khi gọi
+            // RPC) bị KẸT vĩnh viễn trên màn hình dù điểm + ảnh đã lưu vào nháp thành công.
+            showMsg('msgGPS', kq.thanhCong ? '✅ Đã thêm điểm + ảnh minh chứng vào nháp.' : '⚠️ Đã thêm điểm nhưng KHÔNG tải được ảnh: ' + kq.loi, kq.thanhCong);
           })
           .withFailureHandler(function (err) {
             ghiDiemGPSVaoNhap_(Number(lat), Number(lng), '');

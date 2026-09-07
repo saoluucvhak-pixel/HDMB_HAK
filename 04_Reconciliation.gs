@@ -201,13 +201,13 @@ function doiChieuMotLoRung_(row) {
     if (!truong) { ketQua.loi = 'Gemini không đọc được nội dung file (ảnh mờ, chưa cấu hình API key, hoặc lỗi tạm thời).'; return ketQua; }
 
     const cccdSheet = (row[RUNG_COL.CCCD] || '').toString().trim();
-    ketQua.khopCCCD = cccdSheet ? (truong.cccd && truong.cccd.indexOf(cccdSheet) !== -1) : null;
+    ketQua.khopCCCD = cccdSheet ? !!(truong.cccd && truong.cccd.indexOf(cccdSheet) !== -1) : null;
 
     const tenSheet = (row[RUNG_COL.TEN_CHU_RUNG] || '').toString().trim().toLowerCase();
     ketQua.khopTenChuRung = tenSheet && truong.tenChuRung ? soSanhTenKhongDauOCR_(truong.tenChuRung, tenSheet) : null;
 
     const soGiayToSheet = (row[RUNG_COL.SO_GIAY_TO] || '').toString().trim();
-    ketQua.khopSoGiayTo = soGiayToSheet ? (truong.soGiayTo && truong.soGiayTo.indexOf(soGiayToSheet) !== -1) : null;
+    ketQua.khopSoGiayTo = soGiayToSheet ? !!(truong.soGiayTo && truong.soGiayTo.indexOf(soGiayToSheet) !== -1) : null;
 
     const loaiHoSoSheet = (row[RUNG_COL.HO_SO_NGUON_GOC] || '').toString().trim();
     ketQua.khopLoaiHoSo = loaiHoSoSheet ? (truong.hoSoNguonGoc === loaiHoSoSheet) : null;

@@ -93,11 +93,18 @@ function doGet(e) {
   }
 
   if (page === "meconn") {
-    var tmplMeCon = HtmlService.createTemplateFromFile('26_Page_QuanLyMeCon');
+    // ⚠️ ĐÃ SỬA: "meconn" (26_Page_QuanLyMeCon) là bản cũ, trùng lặp phần lớn với
+    // "hopdongmc" (27_Page_HopDongMeCon) nhưng thiếu các cải tiến sau này của 27
+    // (chọn ngân hàng theo tên thật, gợi ý năm trồng, chỉ nhận số nguyên...) và
+    // từng có bug mất file đính kèm hồ sơ pháp lý khi lưu. Không còn liên kết
+    // nào trong menu trỏ tới "meconn", nhưng URL cũ (?page=meconn) có thể đã
+    // được người dùng lưu bookmark — thay vì để họ vào thẳng trang lỗi thời,
+    // route sang cùng trang "hopdongmc" đang được bảo trì.
+    var tmplMeCon = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
     tmplMeCon.baseUrl = ScriptApp.getService().getUrl();
-    tmplMeCon.currentPage = 'meconn';
+    tmplMeCon.currentPage = 'hopdongmc';
     return tmplMeCon.evaluate()
-      .setTitle('🗂️ Quản lý mẹ-con HAK')
+      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -195,7 +202,7 @@ function RUN_HAK_SYSTEM_FINAL() {
     let id = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
     let { lat, lng } = getLatLngFromRow(gpsData[i]);
 
-    if (id && !isNaN(lat) && lat !== 0) {
+    if (id && !isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!forestGroups[id]) forestGroups[id] = [];
       forestGroups[id].push({ lat: lat, lng: lng });
       gpsData[i][GPS_COL.LOCATION] = lat.toFixed(6) + ", " + lng.toFixed(6);
@@ -323,7 +330,7 @@ function getMapData_ThucThi_() {
     let { lat, lng } = getLatLngFromRow(gpsData[i]);
     let address = gpsData[i][GPS_COL.ADDRESS] || "Chưa xác định địa chỉ";
 
-    if (!isNaN(lat) && lat !== 0) {
+    if (!isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!mapGroups[idGPS]) {
         mapGroups[idGPS] = { coords: [], details: forestInfo[idGPS] || { maRung: idGPS, soHD: "N/A", ten: "N/A", tinhTrang: "Đang thực hiện" } };
       }

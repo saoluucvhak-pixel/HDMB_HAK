@@ -162,7 +162,7 @@
         var txt = phut < 1 ? 'vừa xong' : phut < 60 ? phut + ' phút trước' : Math.floor(phut / 60) + ' giờ trước';
         document.getElementById('timestamp').textContent = '🕓 Cập nhật: ' + txt;
       }
-    }).layThoiGianCapNhatBanDo();
+    }).withFailureHandler(function (err) { console.error('layThoiGianCapNhatBanDo:', err); }).layThoiGianCapNhatBanDo();
   }
 
   /* ---- Tìm kiếm ---- */

@@ -595,10 +595,21 @@ function THEM_LO_RUNG_MOI(d) {
 
   try {
     const rungRows = readData_(SHEET_NAME.HD_RUNG);
-    const soLoHienCo = rungRows.filter(function (r) {
+    const rungCuaHD = rungRows.filter(function (r) {
       return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === d.idHD.toString().trim();
-    }).length;
-    const stt = soLoHienCo + 1;
+    });
+    // ⚠️ ĐÃ SỬA: trước đây STT = SỐ LƯỢNG lô rừng hiện có + 1 — nếu 1 lô ở giữa đã bị xóa
+    // (XOA_LO_RUNG), số lượng còn lại giảm nên STT mới tính ra bị TRÙNG với STT của 1 lô
+    // vẫn đang tồn tại (vd còn lô 1,3 sau khi xóa lô 2 -> STT mới = 2+1 = 3, trùng lô 3),
+    // sinh ra ID_RUNG/MaRung trùng lặp. Giờ lấy MAX STT đã từng dùng (đọc từ ID_RUNG hiện
+    // có) rồi +1, luôn ra STT chưa từng dùng dù có lô đã bị xóa ở giữa.
+    let maxStt = 0;
+    rungCuaHD.forEach(function (r) {
+      const phan = (r[RUNG_COL.ID_RUNG] || '').toString().split('_');
+      const n = parseInt(phan[phan.length - 1], 10);
+      if (!isNaN(n) && n > maxStt) maxStt = n;
+    });
+    const stt = maxStt + 1;
 
     const soHD = d.soHD || d.idHD.toString().split('-')[0];
     const cccd = (d.cccd || '').toString().trim();
@@ -2066,12 +2077,11 @@ function LUU_HOP_DONG_DAY_DU(payload) {
       row[NCC_COL.MA_SO_THUE] = d.maSoThue || '';
       row[NCC_COL.CHI_NHANH_NH] = d.chiNhanhNH || '';
       row[NCC_COL.ID_HD] = idHD;
-      // Mặc định: "Chờ thực hiện" nếu ngày ký ở tương lai, "Đang thực hiện" nếu ngày ký đã tới/đã qua.
-      // Người dùng vẫn có thể ghi đè bằng d.tinhTrang nếu chọn tay trên form.
-      const homNay = new Date(); homNay.setHours(0, 0, 0, 0);
-      const ngayKyChiNgay = new Date(ngayKyDate); ngayKyChiNgay.setHours(0, 0, 0, 0);
-      const trangThaiMacDinh = ngayKyChiNgay.getTime() > homNay.getTime() ? 'Chờ thực hiện' : 'Đang thực hiện';
-      row[NCC_COL.TINH_TRANG] = d.tinhTrang || trangThaiMacDinh;
+      // ⚠️ ĐÃ SỬA: trước đây tự suy ra "Đang thực hiện" nếu ngày ký đã tới/qua — lệch
+      // với quy trình chính thức (xem 13_HuongDan.html): mọi hợp đồng LUÔN bắt đầu ở
+      // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
+      // TAO_HOP_DONG_MOI() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
+      row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
       const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
       shTaoMoi.appendRow(row);
       soDongVuaTao = shTaoMoi.getLastRow(); // appendRow luôn thêm vào cuối -> đây chính là số dòng thật của hợp đồng vừa tạo

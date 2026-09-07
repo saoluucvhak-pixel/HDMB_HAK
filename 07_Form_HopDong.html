@@ -1,4 +1,54 @@
 <style>
+  /* ⚠️ ĐÃ SỬA: file này hiện qua showSidebar() (không đi qua Code.gs doGet như các
+     trang khác), nên KHÔNG tự động có CSS chung từ 09_Style.html — trước đây
+     thiếu hẳn phần dưới đây, khiến sidebar "Nhập liệu HAK" hiện ra hoàn toàn
+     không có định dạng (không màu, không khung, nút/ô nhập trần trụi) vì mọi
+     class (.card, .btn, .field, .msg...) và biến var(--...) đều không được định
+     nghĩa ở đâu cả. Chép lại từ 09_Style.html (đủ phần thực sự dùng trong file này). */
+  :root {
+    --active-green: #2f7d52;
+    --accent-gold: #c9973f;
+    --card-bg: #ffffff;
+    --page-bg: #f2f3f1;
+    --border-light: #e5e7e5;
+    --heading: #1c2a22;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--page-bg); color: var(--heading); }
+  /* ⚠️ ĐÃ SỬA: .page-title/.page-subtitle được dùng ngay trong "Trang 1: Danh sách"
+     bên dưới nhưng bị bỏ sót khi chép CSS từ 09_Style.html ở lần sửa trước — khiến
+     tiêu đề "Hợp đồng" hiện chữ thường trần trụi thay vì tiêu đề lớn/đậm như thiết kế. */
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
+  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: #14231b; color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
   .hint { font-size: 11px; color: #889; }
   .khoa-khi-thanh-ly[disabled] { opacity: .6; }
 
@@ -31,6 +81,10 @@
   .gps-row.nhap { border-color: var(--accent-gold); background: #fffbf0; }
   .badge-cho-duyet { background: #fff3cd; color: #8a6d1f; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
   .badge-da-duyet { background: #eafaf1; color: #196f3d; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .badge-status { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-status.badge-dang { background: #fdf3e3; color: #8a6d1f; }
+  .badge-status.badge-hoan { background: #eafaf1; color: var(--active-green); }
+  .badge-status.badge-huy { background: #fdecea; color: #c0392b; }
 
   .ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
   .ct-item { background: #f7fbf8; border: 1px solid #dcecdf; border-radius: 8px; padding: 10px 12px; }
@@ -65,7 +119,7 @@
         <label>Lọc theo trạng thái</label>
         <select id="locTinhTrangHD" onchange="taiDanhSachHD(1)">
           <option>Tất cả</option><option>Chờ thực hiện</option><option>Đang thực hiện</option>
-          <option>Hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
+          <option>Đã hoàn thành</option><option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
     </div>
@@ -131,7 +185,7 @@
       <div class="field">
         <label>Tình trạng hợp đồng</label>
         <select id="tinhTrang">
-          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Hoàn thành</option>
+          <option>Chờ thực hiện</option><option>Đang thực hiện</option><option>Đã hoàn thành</option>
           <option>Đã hủy</option><option>Đã thanh lý</option>
         </select>
       </div>
@@ -405,7 +459,12 @@
     });
     if (loai === 'cccd_uy_quyen' || loai === 'giay_uy_quyen') { document.getElementById('uyQuyenTT').value = 'Có'; toggleUyQuyen(); }
     var html = daApDung.length ? '<div class="msg ok">✅ Đã tự động điền ' + daApDung.length + ' mục (đã lưu nháp):<br>• ' + daApDung.join('<br>• ') + '</div>' : '<div class="msg err">⚠️ Không nhận diện được trường nào phù hợp.</div>';
-    html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
+    // ⚠️ ĐÃ SỬA: OCR_TU_BAN_SCAN (04_Reconciliation.gs) KHÔNG trả về trường `vanBanGoc`
+    // (chỉ có thanhCong/truong/urlFileGoc/tenFileGoc) — gọi kq.vanBanGoc.replace(...) luôn
+    // ném TypeError, làm cả hàm dừng giữa chừng: dòng "✅ Đã đọc xong" và debounceLuuNhap()
+    // bên dưới không bao giờ chạy (thông báo bị kẹt mãi ở "⌛ Đang đọc bản scan..." dù đã
+    // điền xong dữ liệu). Chỉ hiện khối này nếu có sẵn văn bản gốc.
+    if (kq.vanBanGoc) html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
     document.getElementById('ketQuaBanScan').innerHTML = html;
     showMsg('msgBanScan', '✅ Đã đọc xong — kiểm tra lại trước khi Lưu chính thức.', true);
     document.getElementById('fileBanScan').value = ''; document.getElementById('tenFileBanScan').textContent = '';
@@ -414,13 +473,13 @@
   function goiYDiaChiTheoTen() {
     var ten = val('tenChuRung');
     if (!ten || duNhap.idHD) return;
-    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).traCuuDiaChiThamChieu(ten);
+    google.script.run.withSuccessHandler(function (kq) { if (kq && !val('diaChiThuongTru')) { setVal('diaChiThuongTru', kq.diaChiThuongTru); debounceLuuNhap(); } }).withFailureHandler(function (err) { console.error('goiYDiaChiTheoTen:', err); }).traCuuDiaChiThamChieu(ten);
   }
   function naptDanhSachDiaChi() {
     google.script.run.withSuccessHandler(function (list) {
       var dl = document.getElementById('dlDiaChi'); dl.innerHTML = '';
       list.forEach(function (dc) { var opt = document.createElement('option'); opt.value = dc; dl.appendChild(opt); });
-    }).layGoiYDiaChi();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachDiaChi:', err); }).layGoiYDiaChi();
   }
   function naptDanhSachLoaiHoSo(giuLaiGiaTri) {
     google.script.run.withSuccessHandler(function (list) {
@@ -431,7 +490,7 @@
       var optKhac = document.createElement('option'); optKhac.value = '__KHAC__'; optKhac.textContent = '+ Thêm loại khác...';
       sel.appendChild(optKhac);
       if (giaTriCu && giaTriCu !== '__KHAC__') sel.value = giaTriCu;
-    }).layDanhSachLoaiHoSo();
+    }).withFailureHandler(function (err) { console.error('naptDanhSachLoaiHoSo:', err); }).layDanhSachLoaiHoSo();
   }
   function xemGoiYDonGiaBaoGia() {
     var ngayKy = val('ngayKy');
@@ -500,7 +559,7 @@
           var tbody = document.querySelector('#tblDSHopDong tbody'); tbody.innerHTML = '';
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
-            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Hoàn thành' ? 'badge-hoan' : 'badge-dang');
+            var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
             var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
             tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
               '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
@@ -670,7 +729,7 @@
     if (hoSoChon === '__KHAC__') {
       var loaiMoi = prompt('Nhập tên loại hồ sơ mới:');
       if (!loaiMoi) { document.getElementById('rHoSoNguonGoc').value = ''; return; }
-      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).themLoaiHoSoMoi(loaiMoi);
+      google.script.run.withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).withFailureHandler(function (err) { alert('❌ Lỗi thêm loại hồ sơ: ' + err.message); }).themLoaiHoSoMoi(loaiMoi);
       return;
     }
     luuLoRungVaoNhapThucHien_(hoSoChon);
@@ -798,7 +857,30 @@
     };
     reader.readAsDataURL(file);
   }
-  function taiDsHoSoRungThat(idRung) { document.getElementById('dsHoSoRung').innerHTML = ''; }
+  // ⚠️ ĐÃ SỬA: TRƯỚC ĐÂY hàm này chỉ xóa trắng khu vực hiển thị, KHÔNG hề gọi gì
+  // để lấy hồ sơ đã đính kèm — nên khi mở lại 1 lô rừng đã có sẵn file, khu vực
+  // "Hồ sơ pháp lý đính kèm" luôn trống dù dữ liệu đã lưu (thấy đúng trong Báo
+  // cáo "Xem chi tiết" nhưng không thấy ở đây). Giờ gọi layHoSoCuaHopDong() đã
+  // có sẵn (06_CreateUpdate.gs) để hiện link file thật, bấm mở được trực tiếp.
+  // (Mirror của cùng bản sửa đã áp dụng ở 11_Page_NhapLieu.html.)
+  function taiDsHoSoRungThat(idRung) {
+    var el = document.getElementById('dsHoSoRung');
+    el.innerHTML = '<p class="hint">Đang tải...</p>';
+    if (!duNhap.idHD) { el.innerHTML = ''; return; }
+    google.script.run
+      .withSuccessHandler(function (list) {
+        var hs = (list || []).find(function (x) { return (x.idRung || '').toString().trim() === idRung.toString().trim(); });
+        if (!hs) { el.innerHTML = '<p class="hint">Không tìm thấy thông tin hồ sơ.</p>'; return; }
+        var dongFile = hs.dinhKem
+          ? (hs.dinhKem.url
+            ? '<a href="' + hs.dinhKem.url + '" target="_blank">📎 ' + hs.dinhKem.ten + '</a>'
+            : (hs.dinhKem.ten || '') + ' <span class="hint">(không tìm thấy file trên Drive)</span>')
+          : '<span class="hint">Chưa đính kèm file nào.</span>';
+        el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
+      })
+      .withFailureHandler(function (err) { el.innerHTML = '<p class="hint">❌ Lỗi tải hồ sơ đính kèm: ' + err.message + '</p>'; })
+      .layHoSoCuaHopDong(duNhap.idHD);
+  }
   function taiAnhHienTruong() {
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r || !r.idRung) { showMsg('msgAnh', '❌ Lô rừng chưa có ID thật — Lưu chính thức trước.', false); return; }

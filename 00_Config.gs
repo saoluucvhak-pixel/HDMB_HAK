@@ -426,6 +426,10 @@ function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
   const rows = sh.getRange(2, 1, lastRow - 1, 5).getValues();
   const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
   const denNgayDate = denNgay ? new Date(denNgay) : null;
+  // ⚠️ ĐÃ SỬA: chuỗi "yyyy-mm-dd" được new Date() hiểu là 00:00 UTC (= 07:00 giờ
+  // VN) — nếu không ép về đúng nửa đêm giờ VN, log ghi từ 00:00-07:00 giờ VN của
+  // đúng ngày tuNgay sẽ bị loại nhầm khỏi kết quả lọc "từ ngày".
+  if (tuNgayDate) tuNgayDate.setHours(0, 0, 0, 0);
   if (denNgayDate) denNgayDate.setHours(23, 59, 59, 999); // lấy trọn ngày kết thúc, không cắt mất log trong ngày đó
   return rows
     .filter(function (r) {
