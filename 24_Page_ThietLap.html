@@ -205,6 +205,29 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">📤 Chia sẻ dữ liệu</h3>
+      <p class="hint" style="margin-top:-4px">Cấp quyền truy cập toàn bộ dữ liệu webapp (2 Google Sheet + 4 thư mục Drive ở mục "Kết nối dữ liệu" bên trên) cho 1 email khác — không cần vào từng file trên Google Drive để chia sẻ tay.</p>
+      <div class="field-row">
+        <div class="field"><label>Email cần chia sẻ</label><input id="csEmail" placeholder="vd: ketoan@gmail.com"></div>
+        <div class="field">
+          <label>Mức quyền</label>
+          <select id="csQuyen">
+            <option value="xem">👁️ Chỉ xem</option>
+            <option value="binhluan">💬 Bình luận</option>
+            <option value="sua">✏️ Chỉnh sửa</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="chiaSeDuLieu()">📤 Chia sẻ</button>
+      <div id="msgChiaSe" class="msg" style="display:none;margin-top:10px"></div>
+      <div id="ketQuaChiaSe" style="margin-top:10px"></div>
+
+      <h4 style="margin:18px 0 6px 0">👥 Ai đang có quyền truy cập</h4>
+      <button class="btn btn-outline" onclick="taiDanhSachQuyen()">🔄 Tải danh sách</button>
+      <div id="bangQuyenTruyCap" style="margin-top:10px"><p class="hint">Bấm "Tải danh sách" để xem.</p></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🔒 Khóa định dạng TEXT cho cột quan trọng</h3>
       <p class="hint" style="margin-top:-4px">Giữ nguyên số 0 ở đầu và không cho Google Sheets tự chuyển thành số đối với: Số HĐ, Số CCCD, Số ĐT, Số TK, Mã hợp đồng, Nhóm KH, ID_HD, ID_RUNG, Mã rừng — trong <code>HD_NCC</code>, <code>HD_RUNG</code>, <code>HD_STK</code>. Chỉ áp dụng cho dữ liệu nhập từ lúc bấm trở đi, không tự sửa dữ liệu cũ đã lỡ mất số 0.</p>
       <p id="trangThaiKhoaText" class="hint">Đang kiểm tra trạng thái...</p>
@@ -477,6 +500,63 @@
       })
       .withFailureHandler(function (err) { showMsg('msgKetNoi', '❌ Lỗi: ' + err.message, false); })
       .LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl);
+  }
+
+  // ---- Chia sẻ dữ liệu (2 Sheet + 4 thư mục Drive) cho email khác ----
+  function chiaSeDuLieu() {
+    var email = document.getElementById('csEmail').value.trim();
+    var quyen = document.getElementById('csQuyen').value;
+    if (!email) { showMsg('msgChiaSe', '❌ Vui lòng nhập email.', false); return; }
+    showMsg('msgChiaSe', '⌛ Đang chia sẻ...', true);
+    document.getElementById('ketQuaChiaSe').innerHTML = '';
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (!kq.chiTiet) { showMsg('msgChiaSe', '❌ ' + (kq.loi || 'Lỗi không rõ.'), false); return; }
+        var soOk = kq.chiTiet.filter(function (c) { return c.ok; }).length;
+        showMsg('msgChiaSe', kq.thanhCong ? '✅ Đã chia sẻ ' + soOk + '/' + kq.chiTiet.length + ' tài nguyên cho ' + email + '.' : '❌ Không chia sẻ được tài nguyên nào.', kq.thanhCong);
+        var html = '<table class="mecon-table"><thead><tr><th>Tài nguyên</th><th>Kết quả</th></tr></thead><tbody>';
+        kq.chiTiet.forEach(function (c) {
+          html += '<tr><td>' + escHtmlBT_(c.ten) + '</td><td>' + (c.ok ? '✅ OK' : '❌ ' + escHtmlBT_(c.loi)) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('ketQuaChiaSe').innerHTML = html;
+        if (kq.thanhCong) { document.getElementById('csEmail').value = ''; taiDanhSachQuyen(); }
+      })
+      .withFailureHandler(function (err) { showMsg('msgChiaSe', '❌ Lỗi: ' + err.message, false); })
+      .CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen);
+  }
+
+  function taiDanhSachQuyen() {
+    document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    google.script.run
+      .withSuccessHandler(function (list) {
+        var ds = (list || []).filter(function (r) { return r.permissionId; });
+        var loi = (list || []).filter(function (r) { return r.loi && !r.permissionId; });
+        var html = '';
+        if (!ds.length) html += '<p class="hint">Chưa chia sẻ cho ai (ngoài chủ sở hữu).</p>';
+        else {
+          html += '<table class="mecon-table"><thead><tr><th>Email</th><th>Quyền</th><th>Tài nguyên</th><th></th></tr></thead><tbody>';
+          ds.forEach(function (r) {
+            html += '<tr><td>' + escHtmlBT_(r.email) + '</td><td>' + escHtmlBT_(r.quyen) + '</td><td>' + escHtmlBT_(r.ten) + '</td>' +
+              '<td><button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="thuHoiQuyen(\'' + r.id + '\',\'' + r.permissionId + '\',\'' + escHtmlBT_(r.email) + '\',\'' + escHtmlBT_(r.ten) + '\')">🗑️ Thu hồi</button></td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+        if (loi.length) html += '<p class="hint">⚠️ Không đọc được quyền của: ' + loi.map(function (r) { return escHtmlBT_(r.ten); }).join(', ') + '.</p>';
+        document.getElementById('bangQuyenTruyCap').innerHTML = html;
+      })
+      .withFailureHandler(function (err) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Lỗi: ' + err.message + '</p>'; })
+      .LAY_DANH_SACH_QUYEN_TRUY_CAP();
+  }
+
+  function thuHoiQuyen(id, permissionId, email, ten) {
+    if (!confirm('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.')) return;
+    google.script.run
+      .withSuccessHandler(function (kq) {
+        if (kq.thanhCong) taiDanhSachQuyen(); else alert('❌ Lỗi: ' + kq.loi);
+      })
+      .withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); })
+      .THU_HOI_QUYEN_TRUY_CAP(id, permissionId);
   }
 
   // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----

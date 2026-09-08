@@ -331,6 +331,94 @@ function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl,
   return ketQua;
 }
 
+/**
+ * Liệt kê 6 tài nguyên (2 Google Sheet + 4 thư mục Drive) mà webapp đang dùng,
+ * dùng chung cho cả 3 hàm chia sẻ/xem quyền/thu hồi quyền bên dưới — luôn lấy
+ * ĐÚNG file/thư mục THẬT SỰ đang được dùng (qua các hàm getter đã có sẵn), không
+ * tự suy luận ID để tránh chia sẻ/thu hồi nhầm tài nguyên.
+ */
+function layDanhSachTaiNguyenChiaSe_() {
+  const dsGetter = [
+    { ten: 'Google Sheet chính (dữ liệu hợp đồng)', getter: getSS_ },
+    { ten: 'Google Sheet Draft báo cáo (cache)', getter: getReportSS_ },
+    { ten: 'Thư mục ảnh hiện trường', getter: layHoacTaoThuMucAnh_ },
+    { ten: 'Thư mục hồ sơ pháp lý', getter: layHoacTaoThuMucHoSo_ },
+    { ten: 'Thư mục ảnh GPS', getter: layHoacTaoThuMucAnhGPS_ },
+    { ten: 'Thư mục xuất báo cáo MISA', getter: layThuMucXuatMisa_ }
+  ];
+  return dsGetter.map(function (d) {
+    try {
+      const doiTuong = d.getter();
+      return { ten: d.ten, id: doiTuong.getId(), tenFile: doiTuong.getName(), loi: null };
+    } catch (e) {
+      return { ten: d.ten, id: null, tenFile: null, loi: e.message };
+    }
+  });
+}
+
+const QUYEN_CHIA_SE_MAP_ = { xem: 'reader', binhluan: 'commenter', sua: 'writer' };
+const QUYEN_CHIA_SE_NHAN_ = { reader: 'Xem', commenter: 'Bình luận', writer: 'Chỉnh sửa', owner: 'Chủ sở hữu' };
+
+/**
+ * Cấp quyền truy cập 1 email vào TOÀN BỘ 6 tài nguyên dữ liệu của webapp (2 Sheet
+ * + 4 thư mục Drive) — dùng Drive API v2 (Drive.Permissions.insert) vì đây là
+ * cách DUY NHẤT hỗ trợ cấp quyền "Bình luận" (SpreadsheetApp/DriveApp chỉ có
+ * addViewer/addEditor, không có mức Bình luận).
+ */
+function CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen) {
+  email = (email || '').toString().trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { thanhCong: false, loi: 'Email không hợp lệ: "' + email + '".' };
+  const role = QUYEN_CHIA_SE_MAP_[quyen];
+  if (!role) return { thanhCong: false, loi: 'Mức quyền không hợp lệ.' };
+
+  const chiTiet = layDanhSachTaiNguyenChiaSe_().map(function (tn) {
+    if (tn.loi) return { ten: tn.ten, ok: false, loi: 'Không mở được tài nguyên: ' + tn.loi };
+    try {
+      Drive.Permissions.insert({ role: role, type: 'user', value: email }, tn.id, { sendNotificationEmails: false });
+      return { ten: tn.ten, ok: true };
+    } catch (e) {
+      return { ten: tn.ten, ok: false, loi: e.message };
+    }
+  });
+  ghiNhatKy_('Chia sẻ dữ liệu', '', 'Cấp quyền "' + QUYEN_CHIA_SE_NHAN_[role] + '" cho ' + email + ' — ' + chiTiet.filter(function (c) { return c.ok; }).length + '/' + chiTiet.length + ' tài nguyên thành công.');
+  return { thanhCong: chiTiet.some(function (c) { return c.ok; }), chiTiet: chiTiet };
+}
+
+/**
+ * Đọc danh sách người đang có quyền truy cập trên 6 tài nguyên dữ liệu — gộp
+ * thành 1 bảng phẳng để hiện lên webapp. Bỏ qua quyền "owner" (chủ sở hữu file,
+ * luôn là tài khoản đã tạo file) và quyền không gắn với 1 email cụ thể (chia sẻ
+ * kiểu "Bất kỳ ai có link") vì không có ai để "thu hồi" trong 2 trường hợp đó.
+ */
+function LAY_DANH_SACH_QUYEN_TRUY_CAP() {
+  const ketQua = [];
+  layDanhSachTaiNguyenChiaSe_().forEach(function (tn) {
+    if (tn.loi) { ketQua.push({ ten: tn.ten, id: null, permissionId: null, email: '', quyen: '', loi: tn.loi }); return; }
+    try {
+      const ds = Drive.Permissions.list(tn.id).items || [];
+      ds.forEach(function (p) {
+        if (p.role === 'owner' || p.type !== 'user' || !p.emailAddress) return;
+        ketQua.push({ ten: tn.ten, id: tn.id, permissionId: p.id, email: p.emailAddress, quyen: QUYEN_CHIA_SE_NHAN_[p.role] || p.role, loi: null });
+      });
+    } catch (e) {
+      ketQua.push({ ten: tn.ten, id: null, permissionId: null, email: '', quyen: '', loi: e.message });
+    }
+  });
+  return ketQua;
+}
+
+/** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
+function THU_HOI_QUYEN_TRUY_CAP(id, permissionId) {
+  if (!id || !permissionId) return { thanhCong: false, loi: 'Thiếu thông tin quyền cần thu hồi.' };
+  try {
+    Drive.Permissions.remove(id, permissionId);
+    ghiNhatKy_('Thu hồi quyền truy cập', '', 'Thu hồi 1 quyền truy cập (permissionId: ' + permissionId + ').');
+    return { thanhCong: true };
+  } catch (e) {
+    return { thanhCong: false, loi: e.message };
+  }
+}
+
 function getReportSS_() {
   if (_reportSSCache) return _reportSSCache; // đã mở rồi trong lượt chạy này -> dùng lại luôn, không mở lại
 
