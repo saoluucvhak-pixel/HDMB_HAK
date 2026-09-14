@@ -7,7 +7,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; font-size: 13px; overflow: hidden; height: 100vh; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; overflow: hidden; height: 100vh; }
 
     /* Panel trái cố định */
     #panel {
@@ -18,15 +18,15 @@
     /* Bản đồ chiếm phần còn lại */
     #map { position: fixed; top: 0; left: 320px; right: 0; bottom: 0; }
 
-    h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #1c2a22; }
+    h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #1f2937; }
 
     .btn {
       display: block; width: 100%; padding: 9px 12px; margin-bottom: 8px;
       border: none; border-radius: 6px; font-size: 13px; font-weight: 700;
       cursor: pointer; text-align: center;
     }
-    .btn-green { background: #2e7d32; color: #fff; }
-    .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+    .btn-green { background: #2563eb; color: #fff; }
+    .btn-outline { background: #f3f4f6; color: #1f2937; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
 
     #searchInput {
@@ -40,19 +40,19 @@
     }
 
     #info {
-      background: #f8fdf8; border-left: 4px solid #2e7d32;
+      background: #f8fdf8; border-left: 4px solid #2563eb;
       padding: 10px; border-radius: 4px; font-size: 12px;
       margin-bottom: 10px; line-height: 1.6;
     }
-    #info.err { border-left-color: #c0392b; background: #fdecea; color: #c0392b; }
+    #info.err { border-left-color: #dc2626; background: #fdecea; color: #dc2626; }
 
     .row { display: flex; justify-content: space-between; border-bottom: 1px dashed #eee; padding: 4px 0; }
-    .row b { color: #1c2a22; }
+    .row b { color: #1f2937; }
 
     table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
-    th { background: #1c2a22; color: #fff; padding: 5px; text-align: left; }
+    th { background: #1f2937; color: #fff; padding: 5px; text-align: left; }
     td { border-bottom: 1px solid #eee; padding: 5px; }
-    tr:hover td { background: #eafbf0; cursor: pointer; color: #2e7d32; font-weight: 600; }
+    tr:hover td { background: #eafbf0; cursor: pointer; color: #2563eb; font-weight: 600; }
 
     #chanDoan { font-size: 10px; color: #999; margin-bottom: 6px; }
     #timestamp { font-size: 10px; color: #aaa; margin-bottom: 6px; }
@@ -64,8 +64,8 @@
       background: #f0f0f0; border-radius: 6px; text-decoration: none;
       color: #444; font-size: 11px; font-weight: 600;
     }
-    #navMenu a.active { background: #1c2a22; color: #fff; }
-    #navMenu a:hover { background: #2e7d32; color: #fff; }
+    #navMenu a.active { background: #1f2937; color: #fff; }
+    #navMenu a:hover { background: #2563eb; color: #fff; }
   </style>
 </head>
 <body>
@@ -201,11 +201,11 @@
     var info = document.getElementById('info');
     info.className = '';
     info.innerHTML =
-      '<b style="font-size:14px;color:#2e7d32">' + (d.details.ten || 'N/A') + '</b><br>' +
+      '<b style="font-size:14px;color:#2563eb">' + (d.details.ten || 'N/A') + '</b><br>' +
       '<div class="row"><span>Mã rừng</span><b>' + (d.details.maRung || id) + '</b></div>' +
       '<div class="row"><span>Số HĐ</span><b>' + (d.details.soHD || 'N/A') + '</b></div>' +
-      '<div class="row"><span>DT ký HĐ</span><b style="color:#1565c0">' + fmt(d.details.dtKyHD) + ' m²</b></div>' +
-      '<div class="row"><span>DT GPS</span><b style="color:#c62828">' + fmt(d.details.dtGPS) + ' m²</b></div>';
+      '<div class="row"><span>DT ký HĐ</span><b style="color:#2563eb">' + fmt(d.details.dtKyHD) + ' m²</b></div>' +
+      '<div class="row"><span>DT GPS</span><b style="color:#dc2626">' + fmt(d.details.dtGPS) + ' m²</b></div>';
 
     /* Vẽ đa giác hoặc điểm */
     if (d.coords.length >= 3) {
@@ -223,8 +223,8 @@
     d.coords.forEach(function (p, i) {
       var tr = document.createElement('tr');
       tr.innerHTML = '<td>' + (i + 1) + '</td>' +
-        '<td style="color:#1565c0">' + p.lat.toFixed(6) + '</td>' +
-        '<td style="color:#c62828">' + p.lng.toFixed(6) + '</td>';
+        '<td style="color:#2563eb">' + p.lat.toFixed(6) + '</td>' +
+        '<td style="color:#dc2626">' + p.lng.toFixed(6) + '</td>';
       (function (lat, lng, addr) {
         tr.onclick = function () { focusPoint(lat, lng, i, addr); };
       })(p.lat, p.lng, p.addr || '');

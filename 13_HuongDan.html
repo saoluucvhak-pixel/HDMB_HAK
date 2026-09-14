@@ -6,22 +6,22 @@
 <style>
 
   :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
     --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--page-bg); color: var(--heading);
   }
 
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -105,8 +105,8 @@
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+  .msg.ok { background: #eafaf1; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fdecea; color: #dc2626; border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -132,7 +132,7 @@
   .app-main table tr:nth-child(even) { background: #f7f7f7; }
   .app-main pre { background: #f0fff4; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
   .app-main code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-  .app-main .warn { background: #fdecea; border-left: 4px solid #e74c3c; padding: 8px 12px; margin: 10px 0; }
+  .app-main .warn { background: #fdecea; border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; }
   .app-main a { color: var(--active-green); }
 </style>
 </head>

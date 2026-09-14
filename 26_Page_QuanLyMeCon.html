@@ -6,22 +6,22 @@
 <style>
 
   :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
     --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--page-bg); color: var(--heading);
   }
 
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -105,8 +105,8 @@
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+  .msg.ok { background: #eafaf1; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fdecea; color: #dc2626; border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -133,7 +133,7 @@
   #chatbotGoNhap input { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 12.5px; }
   #chatbotGoNhap button { background: var(--active-green); color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; }
   #chatbotAnhDinhKem { padding: 6px 10px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-light); background: #f7faf8; }
-  #chatbotAnhDinhKem a { color: #c0392b; cursor: pointer; margin-left: 4px; }
+  #chatbotAnhDinhKem a { color: #dc2626; cursor: pointer; margin-left: 4px; }
   #chatbotNutAnh { background: #f0f4f1; color: #333; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
 </style>
 <style>
@@ -155,7 +155,7 @@
   a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
   a.lnk-hd:hover { text-decoration: underline; }
   a.lnk-sua { color: var(--active-green); cursor: pointer; font-size: 12px; }
-  a.lnk-huy { color: #c0392b; cursor: pointer; font-size: 12px; margin-left: 8px; }
+  a.lnk-huy { color: #dc2626; cursor: pointer; font-size: 12px; margin-left: 8px; }
   .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
   .breadcrumb a { color: var(--active-green); cursor: pointer; text-decoration: none; }
   .tabbar2 { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 2px solid var(--border-light); flex-wrap: wrap; }
@@ -407,7 +407,7 @@
       elThanhDuyet.style.display = 'block';
       elThanhDuyet.innerHTML = buocKeTiep.map(function (tt) {
         var laHuy = tt === 'Đã hủy';
-        return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi-hl="' + escHtml_(tt) + '" style="padding:6px 12px;font-size:12px;margin-right:8px' + (laHuy ? ';color:#c0392b;border-color:#c0392b' : '') + '">' + (laHuy ? '❌ Hủy các dòng đã chọn' : '✅ Duyệt các dòng đã chọn (→ ' + escHtml_(tt) + ')') + '</button>';
+        return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi-hl="' + escHtml_(tt) + '" style="padding:6px 12px;font-size:12px;margin-right:8px' + (laHuy ? ';color:#dc2626;border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy các dòng đã chọn' : '✅ Duyệt các dòng đã chọn (→ ' + escHtml_(tt) + ')') + '</button>';
       }).join('') + '<span id="msgDuyetHD" class="hint" style="margin-left:8px"></span>';
       elThanhDuyet.querySelectorAll('[data-tt-moi-hl]').forEach(function (btn) {
         btn.addEventListener('click', function () { duyetTinhTrangHangLoat_(btn.dataset.ttMoiHl); });
@@ -677,12 +677,12 @@
       elKQ.textContent = '⌛ Đang tra cứu...';
       google.script.run
         .withSuccessHandler(function (kq) {
-          if (!kq.thanhCong) { elKQ.innerHTML = '<span style="color:#c0392b">❌ ' + kq.loi + '</span>'; return; }
-          var mau = kq.khopTen === null ? '#a67c1f' : (kq.khopTen ? '#196f3d' : '#c0392b');
+          if (!kq.thanhCong) { elKQ.innerHTML = '<span style="color:#dc2626">❌ ' + kq.loi + '</span>'; return; }
+          var mau = kq.khopTen === null ? '#b45309' : (kq.khopTen ? '#16a34a' : '#dc2626');
           var dongKhop = kq.khopTen === null ? '' : (kq.khopTen ? ' ✅ Khớp tên chủ rừng đã nhập' : ' ⚠️ KHÔNG khớp tên chủ rừng đã nhập — kiểm tra lại!');
           elKQ.innerHTML = '<span style="color:' + mau + '">✅ Chủ TK thật: <b>' + kq.tenChuTKThat + '</b> (' + kq.nganHangDaNhanDien + ')' + dongKhop + '</span>';
         })
-        .withFailureHandler(function (err) { elKQ.innerHTML = '<span style="color:#c0392b">❌ Lỗi: ' + err.message + '</span>'; })
+        .withFailureHandler(function (err) { elKQ.innerHTML = '<span style="color:#dc2626">❌ Lỗi: ' + err.message + '</span>'; })
         .TRA_CUU_TEN_CHU_TK(soTK, nganHang, tenChuRungThamChieu || '');
     });
   }
@@ -836,7 +836,7 @@
         var buocKeTiep = BUOC_KE_TIEP_[h.tinhTrang] || [];
         var htmlNutDuyet = buocKeTiep.map(function (tt, i) {
           var laHuy = tt === 'Đã hủy';
-          return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi="' + escHtml_(tt) + '" style="margin-right:8px' + (laHuy ? ';color:#c0392b;border-color:#c0392b' : '') + '">' + (laHuy ? '❌ Hủy hợp đồng' : '✅ Duyệt (→ ' + escHtml_(tt) + ')') + '</button>';
+          return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi="' + escHtml_(tt) + '" style="margin-right:8px' + (laHuy ? ';color:#dc2626;border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy hợp đồng' : '✅ Duyệt (→ ' + escHtml_(tt) + ')') + '</button>';
         }).join('');
         var html = '<div class="breadcrumb"><a onclick="veDanhSachKhachHang()">👤 Khách hàng</a><span style="margin:0 6px;color:#ccc">/</span>' +
           '<a id="lnkBreadcrumbKH">' + escHtml_(h.tenChuRung) + '</a>' +
