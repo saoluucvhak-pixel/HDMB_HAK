@@ -5,22 +5,22 @@
   <meta charset="UTF-8">
 <style>
   :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
     --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--page-bg); color: var(--heading);
   }
 
@@ -76,7 +76,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -88,8 +88,8 @@
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+  .msg.ok { background: #eafaf1; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fdecea; color: #dc2626; border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -171,14 +171,14 @@
 
   .draft-banner {
     background: #fff9ec; border: 1px solid #f0dfb8; border-left: 4px solid var(--accent-gold);
-    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #8a6d1f;
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #b45309;
     display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
   }
-  .draft-banner b { color: #6b5218; }
+  .draft-banner b { color: #b45309; }
   .draft-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .tab-bar2 { display: flex; gap: 4px; margin: 6px 0 16px 0; border-bottom: 2px solid var(--border-light); flex-wrap: wrap; }
-  .tab-btn2 { padding: 11px 18px; font-size: 13.5px; font-weight: 700; color: #778; background: #f2f3f1; border: none; border-radius: 8px 8px 0 0; cursor: pointer; margin-bottom: -2px; }
+  .tab-btn2 { padding: 11px 18px; font-size: 13.5px; font-weight: 700; color: #778; background: #f3f4f6; border: none; border-radius: 8px 8px 0 0; cursor: pointer; margin-bottom: -2px; }
   .tab-btn2.active { color: #fff; background: var(--active-green); }
   .tab-btn2 .dem { background: rgba(0,0,0,0.15); padding: 1px 7px; border-radius: 10px; font-size: 11px; margin-left: 5px; }
   .tab-btn2.active .dem { background: rgba(255,255,255,0.25); }
@@ -190,12 +190,12 @@
 
   .gps-row, .anh-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px; font-size: 12px; background: #fff; }
   .gps-row.nhap { border-color: var(--accent-gold); background: #fffbf0; }
-  .badge-cho-duyet { background: #fff3cd; color: #8a6d1f; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
-  .badge-da-duyet { background: #eafaf1; color: #196f3d; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .badge-cho-duyet { background: #fff3cd; color: #b45309; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .badge-da-duyet { background: #eafaf1; color: #16a34a; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
   .badge-status { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-status.badge-dang { background: #fdf3e3; color: #8a6d1f; }
-  .badge-status.badge-hoan { background: #eafaf1; color: var(--active-green); }
-  .badge-status.badge-huy { background: #fdecea; color: #c0392b; }
+  .badge-status.badge-dang { background: #fdf3e3; color: #b45309; }
+  .badge-status.badge-hoan { background: #eafaf1; color: #16a34a; }
+  .badge-status.badge-huy { background: #fdecea; color: #dc2626; }
 
   .ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
   .ct-item { background: #f7fbf8; border: 1px solid #dcecdf; border-radius: 8px; padding: 10px 12px; }
@@ -206,7 +206,7 @@
   .modal-box { background: #fff; border-radius: 12px; padding: 22px; max-width: 720px; width: 100%; max-height: 85vh; overflow-y: auto; }
   .modal-box h3 { margin: 0 0 4px 0; }
 
-  .khoa-file-canh-bao { background: #fdecea; border-left: 4px solid #e74c3c; padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #c0392b; }
+  .khoa-file-canh-bao { background: #fdecea; border-left: 4px solid #dc2626; padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #dc2626; }
 </style>
 
 <div id="breadcrumbBar" class="breadcrumb-bar"></div>
@@ -370,10 +370,10 @@
   </div>
 
   <div class="card" id="khoNguyHiem" style="display:none">
-    <label class="lbl" style="color:#c0392b;font-weight:700">⚠️ Vùng nguy hiểm <span class="hint">(áp dụng ngay, không qua nháp)</span></label>
-    <button class="btn btn-outline" style="width:100%;margin-top:8px;color:#c0392b" onclick="huyHopDongForm()">🚫 Hủy hợp đồng (giữ lại dữ liệu)</button>
+    <label class="lbl" style="color:#dc2626;font-weight:700">⚠️ Vùng nguy hiểm <span class="hint">(áp dụng ngay, không qua nháp)</span></label>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;color:#dc2626" onclick="huyHopDongForm()">🚫 Hủy hợp đồng (giữ lại dữ liệu)</button>
     <label style="margin-top:10px;display:block;font-size:12px"><input type="checkbox" id="xacNhanXoaForm" style="width:auto;display:inline-block;margin-right:6px">Tôi hiểu và muốn xóa vĩnh viễn hợp đồng này</label>
-    <button class="btn" style="width:100%;margin-top:8px;background:#e74c3c;color:#fff" onclick="xoaVinhVienForm()">🗑️ Xóa vĩnh viễn</button>
+    <button class="btn" style="width:100%;margin-top:8px;background:#dc2626;color:#fff" onclick="xoaVinhVienForm()">🗑️ Xóa vĩnh viễn</button>
     <div id="msgNguyHiem" class="msg" style="display:none;margin-top:8px"></div>
   </div>
 </div>
@@ -453,7 +453,7 @@
   </div>
 
   <div class="card">
-    <button class="btn" style="background:#e74c3c;color:#fff" onclick="xoaLoRungKhoiNhap()">🗑️ Xóa lô rừng này khỏi nháp</button>
+    <button class="btn" style="background:#dc2626;color:#fff" onclick="xoaLoRungKhoiNhap()">🗑️ Xóa lô rừng này khỏi nháp</button>
   </div>
 </div>
 
@@ -1136,7 +1136,7 @@
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
           var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + a.soDong + ')">✅ Duyệt</button> ' +
-            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#e74c3c;color:#fff" onclick="tuChoiAnh(' + a.soDong + ')">✖ Từ chối</button>';
+            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + a.soDong + ')">✖ Từ chối</button>';
           return '<div class="anh-row"><span>' + (a.tenFile || '') + ' ' + badge + '</span><span><a href="' + a.url + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
         }).join('');
       })
@@ -1186,7 +1186,7 @@
         '<div><b>' + (t.soTK || '') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + (t.nganHang || '') + '<br>' +
         '<span class="hint">Ủy quyền TT: ' + (t.uyQuyenTT || 'Không') + (t.tenUyQuyen ? ' (' + t.tenUyQuyen + ')' : '') + '</span></div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moFormTK(\'' + key + '\')">✏️ Sửa</button> ' +
-        '<button class="btn" style="padding:5px 12px;font-size:12px;background:#e74c3c;color:#fff" onclick="xoaTaiKhoanKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
+        '<button class="btn" style="padding:5px 12px;font-size:12px;background:#dc2626;color:#fff" onclick="xoaTaiKhoanKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
     }).join('');
   }
   function timTKTrongNhap_(key) { return (duNhap.taiKhoan || []).find(function (t) { return t.soDong === key || t.soDong === Number(key) || t.tempId === key; }); }
@@ -1230,7 +1230,7 @@
         '<div><b>Phụ lục ' + (idx + 1) + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — Đơn giá ' + formatSoNhap_(p.donGia) + ' đ · KL ' + formatSoNhap_(p.khoiLuong) + ' tấn · Thành tiền ' + formatSoNhap_(thanhTien) + ' đ' +
         (p.ghiChu ? '<br><span class="hint">' + p.ghiChu + '</span>' : '') + '</div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moFormPhuLuc(\'' + key + '\')">✏️ Sửa</button> ' +
-        '<button class="btn" style="padding:5px 12px;font-size:12px;background:#e74c3c;color:#fff" onclick="xoaPhuLucKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
+        '<button class="btn" style="padding:5px 12px;font-size:12px;background:#dc2626;color:#fff" onclick="xoaPhuLucKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
     }).join('');
   }
   function timPLTrongNhap_(key) { return (duNhap.phuLuc || []).find(function (p) { return p.soDong === key || p.soDong === Number(key) || p.tempId === key; }); }
