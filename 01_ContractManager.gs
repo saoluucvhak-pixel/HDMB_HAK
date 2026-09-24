@@ -551,6 +551,91 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
 }
 
 /**
+ * PHIÊN BẢN HÀNG LOẠT của CAP_NHAT_DRAFT_MOT_HOP_DONG — cập nhật Draft cho NHIỀU
+ * hợp đồng cùng lúc, đọc HD_NCC/HD_RUNG/HD_STK/HD_GPS/HD_Picture + cache thanh
+ * toán CHỈ 1 LẦN DUY NHẤT rồi group trong bộ nhớ (giống XAY_DUNG_LAI_TOAN_BO_DRAFT),
+ * thay vì gọi CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD) N lần trong vòng lặp — mỗi lần tự
+ * đọc lại TOÀN BỘ 5 sheet, là nguyên nhân N+1 khiến LAM_MOI_DRAFT_THEO_THAY_DOI/
+ * dongBoThanhToanNeuCoThayDoi_/CHAY_DONG_BO_THANH_TOAN_NGAY có thể timeout khi số
+ * hợp đồng lớn (PERF-001). Chỉ cập nhật/thêm đúng các dòng của idsHopDong, KHÔNG
+ * đụng tới dòng của các hợp đồng khác (khác XAY_DUNG_LAI_TOAN_BO_DRAFT vốn xóa
+ * sạch và ghi lại toàn bộ).
+ */
+function capNhatDraftHangLoat_(idsHopDong) {
+  idsHopDong = Array.from(new Set((idsHopDong || []).map(function (id) { return (id || '').toString().trim(); }).filter(Boolean)));
+  if (!idsHopDong.length) return;
+  try {
+    const nccRows = readData_(SHEET_NAME.HD_NCC);
+    const nccTheoId = {};
+    nccRows.forEach(function (r) { const id = (r[NCC_COL.ID_HD] || '').toString().trim(); if (id) nccTheoId[id] = r; });
+
+    const rungByHD = {};
+    readData_(SHEET_NAME.HD_RUNG).forEach(function (r) {
+      const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
+      if (!rungByHD[idHD]) rungByHD[idHD] = [];
+      rungByHD[idHD].push(r);
+    });
+    const stkByHD = {};
+    readData_(SHEET_NAME.HD_STK).forEach(function (r) {
+      const idHD = (r[STK_COL.ID_HD] || '').toString().trim();
+      if (!stkByHD[idHD]) stkByHD[idHD] = [];
+      stkByHD[idHD].push(r);
+    });
+    const gpsByIdRung = {};
+    readData_(SHEET_NAME.HD_GPS).forEach(function (g) {
+      const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
+      if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = [];
+      gpsByIdRung[idRung].push(g);
+    });
+    const coAnhByHD = {};
+    readData_(SHEET_NAME.HD_PICTURE).forEach(function (r) {
+      const idHD = (r[PICTURE_COL.ID_HD] || '').toString().trim();
+      if (!idHD || coAnhByHD[idHD]) return;
+      for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
+        if (r[c]) { coAnhByHD[idHD] = true; break; }
+      }
+    });
+    const dntt = docCacheBaoCao_ChiDoc_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_);
+    const ngayCan = docCacheBaoCao_ChiDoc_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_);
+
+    const sh = getOrCreateDraftBaoCaoSheet_();
+    const soCot = Object.keys(DRAFT_BAOCAO_COL).length;
+    const lastRow = sh.getLastRow();
+    const duLieuHienTai = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, soCot).getValues() : [];
+    const chiSoTheoId = {}; // idHD -> chỉ số trong duLieuHienTai
+    duLieuHienTai.forEach(function (r, idx) {
+      const id = (r[DRAFT_BAOCAO_COL.ID_HD] || '').toString().trim();
+      if (id) chiSoTheoId[id] = idx;
+    });
+
+    idsHopDong.forEach(function (idHD) {
+      const row = nccTheoId[idHD];
+      if (!row) {
+        // Hợp đồng đã bị xóa hẳn -> đánh dấu xóa khỏi Draft
+        if (chiSoTheoId.hasOwnProperty(idHD)) duLieuHienTai[chiSoTheoId[idHD]] = null;
+        return;
+      }
+      const dong = tinhDongDraftChoHopDong_(idHD, row, rungByHD[idHD] || [], stkByHD[idHD] || [], gpsByIdRung, !!coAnhByHD[idHD], dntt, ngayCan);
+      const arr = [];
+      for (let k = 0; k < soCot; k++) arr[k] = (dong[k] === undefined ? '' : dong[k]);
+      if (chiSoTheoId.hasOwnProperty(idHD)) {
+        duLieuHienTai[chiSoTheoId[idHD]] = arr;
+      } else {
+        chiSoTheoId[idHD] = duLieuHienTai.length;
+        duLieuHienTai.push(arr);
+      }
+    });
+
+    const duLieuCuoiCung = duLieuHienTai.filter(function (r) { return r !== null; });
+    if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, soCot).clearContent();
+    if (duLieuCuoiCung.length) sh.getRange(2, 1, duLieuCuoiCung.length, soCot).setValues(duLieuCuoiCung);
+    _draftDataCache = null;
+  } catch (e) {
+    ghiNhatKy_('LỖI cập nhật Draft báo cáo hàng loạt', '', e.message);
+  }
+}
+
+/**
  * XÂY DỰNG LẠI TOÀN BỘ Draft_BaoCaoHopDong từ đầu — chạy 1 LẦN DUY NHẤT lúc mới
  * triển khai hệ thống (khi Draft chưa có dữ liệu), hoặc bất cứ khi nào nghi ngờ
  * Draft bị lệch so với dữ liệu gốc. KHÔNG cần chạy định kỳ vì mỗi thao tác ghi
@@ -588,7 +673,8 @@ function LAM_MOI_DRAFT_THEO_THAY_DOI() {
     }
   });
 
-  idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); });
+  capNhatDraftHangLoat_(Array.from(idsCanCapNhat)); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG
+  idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); }); // cache "Hồ sơ rừng" — ngoài phạm vi PERF-001, giữ nguyên
   props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
 
   return {
@@ -818,7 +904,7 @@ function CHAY_DONG_BO_THANH_TOAN_NGAY() {
   luuCacheBaoCao_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_());
 
   const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
-  idsHopDong.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); });
+  capNhatDraftHangLoat_(idsHopDong); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG
 
   const thongBao = '✅ Đã đồng bộ lại "Khối lượng/Giá trị thực hiện" cho ' + idsHopDong.length + ' hợp đồng từ DNTT_GK_DN_CT mới nhất.';
   try { SpreadsheetApp.getUi().alert(thongBao); } catch (e) { /* chạy từ editor thì bỏ qua UI */ }
@@ -859,7 +945,7 @@ function dongBoThanhToanNeuCoThayDoi_() {
     // Sau khi cache đã mới, cập nhật lại phần "đã thực hiện" cho TẤT CẢ hợp đồng —
     // lúc này CAP_NHAT_DRAFT_MOT_HOP_DONG chỉ ĐỌC cache vừa làm mới, không đọc lại sheet ngoài
     const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
-    idsHopDong.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD); });
+    capNhatDraftHangLoat_(idsHopDong); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG
   } catch (e) {
     ghiNhatKy_('LỖI đồng bộ thanh toán định kỳ', '', e.message);
   }
