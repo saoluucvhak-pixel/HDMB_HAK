@@ -360,12 +360,42 @@ const QUYEN_CHIA_SE_MAP_ = { xem: 'reader', binhluan: 'commenter', sua: 'writer'
 const QUYEN_CHIA_SE_NHAN_ = { reader: 'Xem', commenter: 'Bình luận', writer: 'Chỉnh sửa', owner: 'Chủ sở hữu' };
 
 /**
+ * Thiết lập mật khẩu quản trị (ADMIN_TOKEN) cho các thao tác nhạy cảm (chia sẻ/thu
+ * hồi quyền truy cập dữ liệu). Chạy 1 lần thủ công từ trình soạn thảo Apps Script
+ * (Run > SETUP_ADMIN_TOKEN), giống cách SETUP_SYNC_TOKEN() đã làm cho action=run.
+ * Đổi 'DOI_MAT_KHAU_NAY_NGAY' thành mật khẩu thật của bạn trước khi chạy.
+ */
+function SETUP_ADMIN_TOKEN() {
+  PropertiesService.getScriptProperties().setProperty('ADMIN_TOKEN', 'DOI_MAT_KHAU_NAY_NGAY');
+  Logger.log('Đã lưu ADMIN_TOKEN. Vào Project Settings > Script Properties để xem/đổi lại cho chắc chắn.');
+}
+
+/**
+ * Chặn truy cập trái phép vào các hàm chia sẻ/thu hồi quyền — vì webapp deploy với
+ * access=ANYONE_ANONYMOUS nên MỌI hàm global đều gọi được qua google.script.run bởi
+ * bất kỳ ai biết URL, không riêng người mở đúng trang Thiết lập (xem SEC-001).
+ * Trả về chuỗi lỗi nếu bị chặn, null nếu hợp lệ.
+ */
+function kiemTraAdminToken_(adminToken) {
+  const SECRET = PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN');
+  if (!SECRET || SECRET === 'DOI_MAT_KHAU_NAY_NGAY') {
+    return '⚠️ Chưa thiết lập ADMIN_TOKEN (hoặc còn để mặc định). Vào Apps Script > chạy hàm SETUP_ADMIN_TOKEN() sau khi đã đổi mật khẩu trong code, rồi thử lại.';
+  }
+  if (adminToken !== SECRET) {
+    return '❌ Sai mật khẩu quản trị.';
+  }
+  return null;
+}
+
+/**
  * Cấp quyền truy cập 1 email vào TOÀN BỘ 6 tài nguyên dữ liệu của webapp (2 Sheet
  * + 4 thư mục Drive) — dùng Drive API v2 (Drive.Permissions.insert) vì đây là
  * cách DUY NHẤT hỗ trợ cấp quyền "Bình luận" (SpreadsheetApp/DriveApp chỉ có
  * addViewer/addEditor, không có mức Bình luận).
  */
-function CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen) {
+function CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return { thanhCong: false, loi: loiToken };
   email = (email || '').toString().trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { thanhCong: false, loi: 'Email không hợp lệ: "' + email + '".' };
   const role = QUYEN_CHIA_SE_MAP_[quyen];
@@ -390,7 +420,9 @@ function CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen) {
  * luôn là tài khoản đã tạo file) và quyền không gắn với 1 email cụ thể (chia sẻ
  * kiểu "Bất kỳ ai có link") vì không có ai để "thu hồi" trong 2 trường hợp đó.
  */
-function LAY_DANH_SACH_QUYEN_TRUY_CAP() {
+function LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return [{ ten: '', id: null, permissionId: null, email: '', quyen: '', loi: loiToken }];
   const ketQua = [];
   layDanhSachTaiNguyenChiaSe_().forEach(function (tn) {
     if (tn.loi) { ketQua.push({ ten: tn.ten, id: null, permissionId: null, email: '', quyen: '', loi: tn.loi }); return; }
@@ -408,7 +440,9 @@ function LAY_DANH_SACH_QUYEN_TRUY_CAP() {
 }
 
 /** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
-function THU_HOI_QUYEN_TRUY_CAP(id, permissionId) {
+function THU_HOI_QUYEN_TRUY_CAP(adminToken, id, permissionId) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return { thanhCong: false, loi: loiToken };
   if (!id || !permissionId) return { thanhCong: false, loi: 'Thiếu thông tin quyền cần thu hồi.' };
   try {
     Drive.Permissions.remove(id, permissionId);
@@ -493,6 +527,16 @@ function getOrCreateNhatKySheet_() {
     sh.autoResizeColumns(1, header.length);
   }
   return sh;
+}
+
+/**
+ * Xóa cache Bản đồ GPS (getMapData(), TTL 15 phút, xem Code.gs) — gọi ở MỌI điểm
+ * ghi thay đổi HD_GPS/HD_RUNG (thêm/sửa/xóa lô rừng, đồng bộ mở rộng, xóa vĩnh viễn
+ * hợp đồng), không chỉ riêng CAP_NHAT_GPS_RUNG như trước đây, để tránh bản đồ hiện
+ * dữ liệu cũ tới 15 phút sau khi đổi (CACHE-001).
+ */
+function xoaCacheBanDo_() {
+  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
 }
 
 /** Ghi 1 dòng vào nhật ký sửa đổi — gọi mỗi khi tạo/sửa/hủy/xóa/thanh lý hợp đồng */

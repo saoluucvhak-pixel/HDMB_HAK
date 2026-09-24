@@ -73,16 +73,30 @@ function MO_DRAFT_THEO_SO_DONG(soDong) {
  */
 function LAY_DRAFT_THEO_ID_HD(idHD) {
   const sh = getOrCreateDraftHopDongSheet_();
-  const lastRow = sh.getLastRow();
-  if (lastRow >= 2) {
-    const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
-    for (let i = 0; i < data.length; i++) {
-      if ((data[i][DRAFT_HD_COL.ID_HD_GOC] || '').toString().trim() === idHD.toString().trim()) {
-        return { idDraft: data[i][DRAFT_HD_COL.ID_DRAFT], du: JSON.parse(data[i][DRAFT_HD_COL.JSON_DATA]), moiTao: false };
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // chờ tối đa 15s — check-then-insert (kiểm tra đã có nháp chưa rồi mới tạo) không nguyên tử nếu không khóa (LOCK-007)
+  } catch (e) {
+    return null;
+  }
+  try {
+    const lastRow = sh.getLastRow();
+    if (lastRow >= 2) {
+      const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if ((data[i][DRAFT_HD_COL.ID_HD_GOC] || '').toString().trim() === idHD.toString().trim()) {
+          return { idDraft: data[i][DRAFT_HD_COL.ID_DRAFT], du: JSON.parse(data[i][DRAFT_HD_COL.JSON_DATA]), moiTao: false };
+        }
       }
     }
+    return LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh);
+  } finally {
+    lock.releaseLock();
   }
-  // Chưa có nháp -> khởi tạo từ dữ liệu chính thức hiện tại
+}
+
+/** Khởi tạo 1 bản nháp mới từ dữ liệu chính thức hiện tại — tách riêng khỏi LAY_DRAFT_THEO_ID_HD() để hàm đó giữ được khối lock gọn quanh toàn bộ thao tác check-then-insert (LOCK-007). */
+function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
   const hd = layHopDongTheoIdHD_ChoDraft_(idHD);
   if (!hd) return null;
   const idDraft = 'DRAFT_' + idHD;

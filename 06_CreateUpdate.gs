@@ -650,6 +650,7 @@ function THEM_LO_RUNG_MOI(d) {
     CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
     CAP_NHAT_CT_HOPDONG_(d.idHD); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
     CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+    xoaCacheBanDo_(); // lô rừng mới -> thêm dòng khung vào HD_GPS -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
     return { thanhCong: true, idRung: idRung, maRung: maRung, stt: stt };
   } finally {
     lock.releaseLock();
@@ -677,12 +678,23 @@ function THEM_TAI_KHOAN_MOI(d) {
   row[STK_COL.TIMESTAMP] = new Date();
 
   const shTK = getSheet_(SHEET_NAME.HD_STK);
-  // ⚠️ MỚI: định dạng TEXT TRƯỚC khi ghi (xem giải thích ở TAO_HOP_DONG_MOI) — tránh mất số 0 đầu ở Số TK/CCCD
-  const soDongMoiSTK = shTK.getLastRow() + 1;
-  [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shTK.getRange(soDongMoiSTK, c + 1).setNumberFormat('@'); });
-  shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([row]);
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // chờ tối đa 15s nếu có người khác đang ghi HD_STK cùng lúc — tránh 2 dòng ghi đè cùng vị trí (LOCK-002)
+  } catch (e) {
+    return { thanhCong: false, loi: 'Hệ thống đang bận (người khác đang nhập liệu), vui lòng thử lại sau vài giây.' };
+  }
+  let soDongMoiSTK;
+  try {
+    // ⚠️ MỚI: định dạng TEXT TRƯỚC khi ghi (xem giải thích ở TAO_HOP_DONG_MOI) — tránh mất số 0 đầu ở Số TK/CCCD
+    soDongMoiSTK = shTK.getLastRow() + 1;
+    [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shTK.getRange(soDongMoiSTK, c + 1).setNumberFormat('@'); });
+    shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([row]);
+  } finally {
+    lock.releaseLock();
+  }
   CAP_NHAT_DRAFT_MOT_HOP_DONG(d.idHD);
-  return { thanhCong: true, soDong: shTK.getLastRow() };
+  return { thanhCong: true, soDong: soDongMoiSTK };
 }
 
 /**
@@ -712,6 +724,7 @@ function CAP_NHAT_LO_RUNG(idRung, patch) {
   CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
   CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+  xoaCacheBanDo_(); // thông tin lô rừng đổi (địa chỉ/diện tích...) có thể hiện trên popup bản đồ (CACHE-001)
 
   return { thanhCong: true, dong: soDong };
 }
@@ -774,25 +787,41 @@ function CAP_NHAT_GPS_RUNG(idRung, diemGPS, ghiDe) {
   }
 
   const sh = getSheet_(SHEET_NAME.HD_GPS);
+  let lock = null;
   if (ghiDe) {
-    const data = sh.getDataRange().getValues();
-    for (let i = data.length - 1; i >= 1; i--) {
-      if ((data[i][GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim()) {
-        sh.deleteRow(i + 1);
-      }
+    // Chỉ khóa khi ghiDe=true (đọc-xóa-ghi): xóa toàn bộ điểm cũ rồi thêm điểm mới —
+    // không khóa sẽ có nguy cơ 2 request chồng lên nhau làm lệch dòng khi deleteRow (LOCK-005)
+    lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(15000);
+    } catch (e) {
+      return { thanhCong: false, loi: 'Hệ thống đang bận (người khác đang cập nhật GPS), vui lòng thử lại sau vài giây.' };
     }
   }
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
-  const idGPS = rung ? rung[RUNG_COL.SO_HD] + '-' + formatNgay_(rung[RUNG_COL.NGAY_KY]) : idRung;
+  try {
+    if (ghiDe) {
+      const data = sh.getDataRange().getValues();
+      for (let i = data.length - 1; i >= 1; i--) {
+        if ((data[i][GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim()) {
+          sh.deleteRow(i + 1);
+        }
+      }
+    }
+    const rungRows = readData_(SHEET_NAME.HD_RUNG);
+    const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
+    const idGPS = rung ? rung[RUNG_COL.SO_HD] + '-' + formatNgay_(rung[RUNG_COL.NGAY_KY]) : idRung;
 
-  sh.appendRow([
-    idRung, idGPS, latChuan.gia_tri, lngChuan.gia_tri, latChuan.gia_tri + ', ' + lngChuan.gia_tri,
-    diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', diemGPS.anhUrl || '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
-  ]);
-  if (rung) CAP_NHAT_DRAFT_MOT_HOP_DONG(rung[RUNG_COL.ID_KEY_HD]);
+    sh.appendRow([
+      idRung, idGPS, latChuan.gia_tri, lngChuan.gia_tri, latChuan.gia_tri + ', ' + lngChuan.gia_tri,
+      diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', diemGPS.anhUrl || '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
+    ]);
+    var rungChoDraft_ = rung;
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+  if (rungChoDraft_) CAP_NHAT_DRAFT_MOT_HOP_DONG(rungChoDraft_[RUNG_COL.ID_KEY_HD]);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
-  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ } // xóa cache Bản đồ GPS để thấy điểm mới ngay, không phải chờ hết 15 phút cache
+  xoaCacheBanDo_(); // xóa cache Bản đồ GPS để thấy điểm mới ngay, không phải chờ hết 15 phút cache
   return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien } };
 }
 
@@ -1184,6 +1213,7 @@ function XOA_VINH_VIEN_HOP_DONG(idHD, xacNhan) {
 
     ghiNhatKy_('XÓA VĨNH VIỄN', idHD, 'Đã xóa ' + soDongDaXoa + ' dòng dữ liệu liên quan khỏi các sheet.');
     XOA_DRAFT_MOT_HOP_DONG_(idHD);
+    xoaCacheBanDo_(); // đã xóa toàn bộ HD_GPS của hợp đồng này -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
     return { thanhCong: true, soDongDaXoa: soDongDaXoa };
   } finally {
     lock.releaseLock();
@@ -1321,27 +1351,38 @@ function layHoacTaoThuMucAnh_() {
  */
 function ghiAnhVaoHDPicture_(idHD, tenChuRung, tenFile) {
   const sh = getSheet_(SHEET_NAME.HD_PICTURE);
-  const lastRow = sh.getLastRow();
-  const data = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues() : [];
-
-  for (let i = 0; i < data.length; i++) {
-    if ((data[i][PICTURE_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) {
-      for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
-        if (!data[i][c]) {
-          sh.getRange(i + 2, c + 1).setValue(tenFile);
-          return;
-        }
-      }
-      // dòng này đã đủ 10 ảnh -> tạo thêm 1 dòng mới bên dưới cho hợp đồng này
-      break;
-    }
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // chờ tối đa 15s nếu có người khác đang ghi ảnh cùng lúc — đây là read-modify-write (tìm ô Picture trống rồi ghi), không khóa sẽ có thể ghi đè nhau (LOCK-003)
+  } catch (e) {
+    Logger.log('ghiAnhVaoHDPicture_: hệ thống đang bận, không lấy được lock — ' + e.message);
+    return;
   }
-  const row = [];
-  row[PICTURE_COL.ID_HD] = idHD;
-  row[PICTURE_COL.ID_PICTURE] = idHD;
-  row[PICTURE_COL.TEN_CHU_RUNG] = tenChuRung || '';
-  row[PICTURE_COL.PICTURE_START] = tenFile;
-  sh.appendRow(row);
+  try {
+    const lastRow = sh.getLastRow();
+    const data = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues() : [];
+
+    for (let i = 0; i < data.length; i++) {
+      if ((data[i][PICTURE_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) {
+        for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
+          if (!data[i][c]) {
+            sh.getRange(i + 2, c + 1).setValue(tenFile);
+            return;
+          }
+        }
+        // dòng này đã đủ 10 ảnh -> tạo thêm 1 dòng mới bên dưới cho hợp đồng này
+        break;
+      }
+    }
+    const row = [];
+    row[PICTURE_COL.ID_HD] = idHD;
+    row[PICTURE_COL.ID_PICTURE] = idHD;
+    row[PICTURE_COL.TEN_CHU_RUNG] = tenChuRung || '';
+    row[PICTURE_COL.PICTURE_START] = tenFile;
+    sh.appendRow(row);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**
@@ -1892,6 +1933,7 @@ function XOA_LO_RUNG(idRung) {
   CAP_NHAT_DRAFT_MOT_HOP_DONG(idHDCuaRung);
   CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
   XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); // xóa khỏi cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+  xoaCacheBanDo_(); // đã xóa các điểm GPS của lô rừng này -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
   return { thanhCong: true };
 }
 

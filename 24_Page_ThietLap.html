@@ -503,15 +503,31 @@
   }
 
   // ---- Chia sẻ dữ liệu (2 Sheet + 4 thư mục Drive) cho email khác ----
+  // Chỉ hỏi mật khẩu quản trị 1 lần/lần tải trang (không lưu vào localStorage/sessionStorage
+  // để tránh lộ mật khẩu nếu máy dùng chung) — xem SEC-001 trong báo cáo QA Audit.
+  var _adminTokenCache_ = null;
+  function layAdminToken_() {
+    if (_adminTokenCache_ === null) {
+      _adminTokenCache_ = prompt('Nhập mật khẩu quản trị để chia sẻ/thu hồi quyền truy cập dữ liệu:') || '';
+    }
+    return _adminTokenCache_;
+  }
+
   function chiaSeDuLieu() {
     var email = document.getElementById('csEmail').value.trim();
     var quyen = document.getElementById('csQuyen').value;
     if (!email) { showMsg('msgChiaSe', '❌ Vui lòng nhập email.', false); return; }
+    var adminToken = layAdminToken_();
+    if (!adminToken) { showMsg('msgChiaSe', '❌ Cần nhập mật khẩu quản trị.', false); return; }
     showMsg('msgChiaSe', '⌛ Đang chia sẻ...', true);
     document.getElementById('ketQuaChiaSe').innerHTML = '';
     google.script.run
       .withSuccessHandler(function (kq) {
-        if (!kq.chiTiet) { showMsg('msgChiaSe', '❌ ' + (kq.loi || 'Lỗi không rõ.'), false); return; }
+        if (!kq.chiTiet) {
+          showMsg('msgChiaSe', '❌ ' + (kq.loi || 'Lỗi không rõ.'), false);
+          if (kq.loi && kq.loi.indexOf('Sai mật khẩu') !== -1) _adminTokenCache_ = null;
+          return;
+        }
         var soOk = kq.chiTiet.filter(function (c) { return c.ok; }).length;
         showMsg('msgChiaSe', kq.thanhCong ? '✅ Đã chia sẻ ' + soOk + '/' + kq.chiTiet.length + ' tài nguyên cho ' + email + '.' : '❌ Không chia sẻ được tài nguyên nào.', kq.thanhCong);
         var html = '<table class="mecon-table"><thead><tr><th>Tài nguyên</th><th>Kết quả</th></tr></thead><tbody>';
@@ -523,15 +539,22 @@
         if (kq.thanhCong) { document.getElementById('csEmail').value = ''; taiDanhSachQuyen(); }
       })
       .withFailureHandler(function (err) { showMsg('msgChiaSe', '❌ Lỗi: ' + err.message, false); })
-      .CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen);
+      .CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen);
   }
 
   function taiDanhSachQuyen() {
+    var adminToken = layAdminToken_();
+    if (!adminToken) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Cần nhập mật khẩu quản trị.</p>'; return; }
     document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     google.script.run
       .withSuccessHandler(function (list) {
         var ds = (list || []).filter(function (r) { return r.permissionId; });
         var loi = (list || []).filter(function (r) { return r.loi && !r.permissionId; });
+        if (loi.length && loi[0].loi && (loi[0].loi.indexOf('Sai mật khẩu') !== -1 || loi[0].loi.indexOf('Chưa thiết lập ADMIN_TOKEN') !== -1)) {
+          _adminTokenCache_ = null;
+          document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ ' + escHtmlBT_(loi[0].loi) + '</p>';
+          return;
+        }
         var html = '';
         if (!ds.length) html += '<p class="hint">Chưa chia sẻ cho ai (ngoài chủ sở hữu).</p>';
         else {
@@ -546,17 +569,22 @@
         document.getElementById('bangQuyenTruyCap').innerHTML = html;
       })
       .withFailureHandler(function (err) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Lỗi: ' + err.message + '</p>'; })
-      .LAY_DANH_SACH_QUYEN_TRUY_CAP();
+      .LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken);
   }
 
   function thuHoiQuyen(id, permissionId, email, ten) {
     if (!confirm('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.')) return;
+    var adminToken = layAdminToken_();
+    if (!adminToken) { alert('❌ Cần nhập mật khẩu quản trị.'); return; }
     google.script.run
       .withSuccessHandler(function (kq) {
-        if (kq.thanhCong) taiDanhSachQuyen(); else alert('❌ Lỗi: ' + kq.loi);
+        if (kq.thanhCong) taiDanhSachQuyen(); else {
+          alert('❌ Lỗi: ' + kq.loi);
+          if (kq.loi && kq.loi.indexOf('Sai mật khẩu') !== -1) _adminTokenCache_ = null;
+        }
       })
       .withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); })
-      .THU_HOI_QUYEN_TRUY_CAP(id, permissionId);
+      .THU_HOI_QUYEN_TRUY_CAP(adminToken, id, permissionId);
   }
 
   // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----

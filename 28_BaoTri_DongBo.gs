@@ -158,6 +158,8 @@ function DONG_BO_THONG_TIN_MO_RONG() {
     if (coSua) soDaSuaStk++;
   });
 
+  if (soDaSuaGps > 0 || soDaDienDiaChiGps > 0) xoaCacheBanDo_(); // dữ liệu HD_GPS vừa đổi -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
+
   return {
     thanhCong: true, soDaSuaGps: soDaSuaGps, soDaDienDiaChiGps: soDaDienDiaChiGps, soDaSuaStk: soDaSuaStk,
     thongBao: 'Đã đồng bộ lại tên chủ rừng cho ' + soDaSuaGps + ' điểm GPS, điền Địa chỉ còn trống cho ' + soDaDienDiaChiGps + ' điểm GPS, đồng bộ ' + soDaSuaStk + ' số tài khoản.'

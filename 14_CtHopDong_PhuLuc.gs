@@ -185,24 +185,34 @@ function LUU_PHU_LUC(d) {
     return { thanhCong: true, soDong: d.soDong, thanhTien: thanhTien };
   }
 
-  const lastRow = sh.getLastRow();
-  let lanMax = 0;
-  if (lastRow > 1) {
-    sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues().forEach(function (r) {
-      if ((r[c.ID_HD] || '').toString().trim() === d.idHD.toString().trim()) {
-        const lan = Number(r[c.LAN_PHU_LUC]) || 0;
-        if (lan > lanMax) lanMax = lan;
-      }
-    });
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // chờ tối đa 15s nếu có người khác đang lưu phụ lục cùng lúc — tránh trùng "Lần phụ lục" (LOCK-001)
+  } catch (e) {
+    return { thanhCong: false, loi: 'Hệ thống đang bận (người khác đang lưu phụ lục), vui lòng thử lại sau vài giây.' };
   }
-  const idPhuLuc = 'PL_' + d.idHD + '_' + (lanMax + 1);
+  try {
+    const lastRow = sh.getLastRow();
+    let lanMax = 0;
+    if (lastRow > 1) {
+      sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues().forEach(function (r) {
+        if ((r[c.ID_HD] || '').toString().trim() === d.idHD.toString().trim()) {
+          const lan = Number(r[c.LAN_PHU_LUC]) || 0;
+          if (lan > lanMax) lanMax = lan;
+        }
+      });
+    }
+    const idPhuLuc = 'PL_' + d.idHD + '_' + (lanMax + 1);
 
-  const row = [];
-  row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
-  row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
-  row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
-  sh.appendRow(row);
-  return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
+    const row = [];
+    row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
+    row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
+    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
+    sh.appendRow(row);
+    return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc) */
