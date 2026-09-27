@@ -32,7 +32,9 @@ const TRANG_THAI_NGUOI_DUNG = { HOAT_DONG: 'Hoạt động', KHOA: 'Khóa' };
 const NGUOI_DUNG_SHEET = 'SYS_NguoiDung';
 const NGUOI_DUNG_HEADERS = ['Email', 'Họ tên', 'Vai trò', 'Trạng thái', 'Cập nhật lúc', 'Cập nhật bởi'];
 const AUTH_CFG = {
-  PHIEN_TTL_GIAY: 21600,            // tối đa của CacheService (6 giờ)
+  PHIEN_TTL_GIAY: 21600,            // tối đa của CacheService (6 giờ) — phiên không dùng quá 6 giờ thì hết hạn
+  PHIEN_GIA_HAN_SAU_MS: 30 * 60 * 1000,        // đang dùng: cứ sau 30 phút cấp mã phiên mới (gia hạn thêm 6 giờ)
+  PHIEN_TOI_DA_MS: 7 * 24 * 60 * 60 * 1000,    // dù dùng liên tục, sau 7 ngày phải đăng nhập lại
   SSO_HIEU_LUC_MS: 5 * 60 * 1000,   // link từ Cổng đăng nhập chỉ dùng được trong 5 phút
   SSO_NONCE_TTL_GIAY: 900,          // nhớ mã dùng-1-lần lâu hơn hạn link để chặn dùng lại
   CACHE_NGUOI_DUNG_GIAY: 60,        // đổi vai trò/khóa tài khoản có hiệu lực trong ≤ 60 giây
@@ -167,16 +169,28 @@ function _yeuCauQuyenHoacTrigger_(e, quyen) {
 function _taoMaNgauNhien_() {
   return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').toLowerCase();
 }
-function _taoPhien_(email) {
+/** Cấp mã phiên. dangNhapLuc: thời điểm đăng nhập qua Cổng (giữ nguyên khi gia hạn). */
+function _taoPhien_(email, dangNhapLuc) {
   const phien = _taoMaNgauNhien_();
-  CacheService.getScriptCache().put(AUTH_CFG.TIEN_TO_PHIEN + phien, JSON.stringify({ email: email, taoLuc: Date.now() }), AUTH_CFG.PHIEN_TTL_GIAY);
+  const bayGio = Date.now();
+  CacheService.getScriptCache().put(AUTH_CFG.TIEN_TO_PHIEN + phien, JSON.stringify({ email: email, taoLuc: bayGio, dangNhapLuc: dangNhapLuc || bayGio }), AUTH_CFG.PHIEN_TTL_GIAY);
   return phien;
 }
-function _docPhien_(phien) {
-  if (!MAU_MA_PHIEN.test(String(phien || ''))) return '';
+/** Nội dung phiên còn hiệu lực { email, taoLuc, dangNhapLuc } hoặc null. */
+function _docPhienDayDu_(phien) {
+  if (!MAU_MA_PHIEN.test(String(phien || ''))) return null;
   const raw = CacheService.getScriptCache().get(AUTH_CFG.TIEN_TO_PHIEN + phien);
-  if (!raw) return '';
-  try { return _chuanHoaEmail_(JSON.parse(raw).email); } catch (e) { return ''; }
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw);
+    const dangNhapLuc = Number(p.dangNhapLuc || p.taoLuc) || 0;
+    if (Date.now() - dangNhapLuc > AUTH_CFG.PHIEN_TOI_DA_MS) return null; // quá 7 ngày kể từ lần đăng nhập
+    return { email: _chuanHoaEmail_(p.email), taoLuc: Number(p.taoLuc) || 0, dangNhapLuc: dangNhapLuc };
+  } catch (e) { return null; }
+}
+function _docPhien_(phien) {
+  const p = _docPhienDayDu_(phien);
+  return p ? p.email : '';
 }
 
 function _laySsoSecret_() {
@@ -259,12 +273,16 @@ function _maNguonCongDangNhap_(appUrl, secret) {
 
 /** CÔNG KHAI: trạng thái đăng nhập + link Cổng đăng nhập. */
 function thongTinDangNhap(phien) {
-  const emailPhien = _docPhien_(phien);
+  const pd = _docPhienDayDu_(phien);
+  const emailPhien = pd ? pd.email : '';
   let email = emailPhien;
   if (!email) {
     try { email = _chuanHoaEmail_(Session.getActiveUser().getEmail()); } catch (e) { /* ẩn danh */ }
   }
   const vaiTro = email ? _vaiTroCua_(email) : null;
+  // Đang dùng -> gia hạn: cấp mã phiên mới (thêm 6 giờ), giữ mốc đăng nhập để vẫn giới hạn 7 ngày.
+  // Mã cũ để tự hết hạn (không xóa) để các tab khác đang mở không bị đăng xuất giữa chừng.
+  const phienMoi = (pd && vaiTro && Date.now() - pd.taoLuc > AUTH_CFG.PHIEN_GIA_HAN_SAU_MS) ? _taoPhien_(pd.email, pd.dangNhapLuc) : '';
   return {
     daDangNhap: !!vaiTro,
     email: email,
@@ -272,6 +290,7 @@ function thongTinDangNhap(phien) {
     vaiTroNhan: vaiTro ? VAI_TRO_NHAN[vaiTro] : '',
     quyen: vaiTro ? QUYEN_THEO_VAI_TRO[vaiTro].slice() : [],
     quaPhien: !!emailPhien,
+    phienMoi: phienMoi,
     congDangNhapUrl: PropertiesService.getScriptProperties().getProperty(AUTH_CFG.PROP_CONG_DANG_NHAP_URL) || ''
   };
 }

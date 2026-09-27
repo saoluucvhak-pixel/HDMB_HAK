@@ -75,7 +75,7 @@ Chủ dự án chọn **cùng mô hình với HAK_WEBAPP_DNTT_DRAFT (v2026.7)**,
 | SQL Injection | **N/A** — dự án không dùng SQL |
 | Formula Injection | ⚪ LOW — `setValue('=…')` được Google Sheets hiểu là công thức. Người nhập một địa chỉ/ghi chú bắt đầu bằng `=`, `+`, `-`, `@` sẽ tạo công thức trong Sheet (và trong file xuất). Đề xuất: thêm tiền tố `'` cho các trường văn bản tự do trước khi ghi |
 | CSRF | Thấp — `google.script.run` do Google xử lý kèm token chống XSRF; `doGet` chỉ có `action=run` có tác dụng phụ và đã yêu cầu token bí mật |
-| Token / Session / Cookie | Phiên 256 bit ngẫu nhiên trong ScriptCache (6 giờ), giữ ở `sessionStorage` (mất khi đóng tab); không cookie. Link đăng nhập ký HMAC, 5 phút, dùng 1 lần |
+| Token / Session / Cookie | Phiên 256 bit ngẫu nhiên trong ScriptCache: hết hạn nếu bỏ không 6 giờ, tự cấp mã mới mỗi 30 phút khi đang dùng, tối đa 7 ngày kể từ lần đăng nhập; tài khoản bị khóa không được gia hạn. Giữ ở `localStorage` (dùng chung các tab — trên máy dùng chung nhớ bấm Đăng xuất). Trình duyệt chặn bộ nhớ trang nhúng thì mã phiên đi qua link chuyển trang `?ph=` (chỉ nhận mã còn hiệu lực, xóa khỏi thanh địa chỉ ngay khi tải trang). Link đăng nhập ký HMAC, 5 phút, dùng 1 lần |
 | API Key | Không hard-code; Gemini/Telegram key nằm trong Script Properties ✅ |
 | OAuth | Scope rộng (`drive` toàn bộ) là cần thiết cho tính năng hiện tại; xem SCOPE |
 | Permission | 3 vai trò, 1 bảng quyền cho 123 chức năng + kiểm tra quyền ở mọi hàm menu/trigger (SEC-002 ✅) |

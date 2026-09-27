@@ -58,18 +58,58 @@ var HAK_NGUOI_DUNG = null;
 var HAK_QUYEN_TRANG = { tongquan: 'XEM', tracuu: 'XEM', hinhanh: 'XEM', map: 'XEM', baocao: 'XEM', kiemtra: 'XEM', huongdan: 'XEM',
   form: 'NHAP_LIEU', hopdongmc: 'NHAP_LIEU', meconn: 'NHAP_LIEU', thietlap: 'QUAN_TRI' };
 
+// Mã phiên lưu ở localStorage -> dùng chung cho MỌI tab của trình duyệt (trước đây sessionStorage:
+// mở tab mới / đóng trình duyệt là phải đăng nhập lại qua Google). Máy chủ tự gia hạn khi đang dùng
+// (thongTinDangNhap trả phienMoi) và bắt đăng nhập lại sau 7 ngày; Đăng xuất xóa ở mọi tab.
+function hakLuuPhien_(phien) {
+  HAK_PHIEN = phien || '';
+  try { if (HAK_PHIEN) localStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); else localStorage.removeItem(HAK_PHIEN_KHOA); } catch (e) { /* trình duyệt chặn lưu trữ */ }
+  try { if (HAK_PHIEN) sessionStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); else sessionStorage.removeItem(HAK_PHIEN_KHOA); } catch (e) { /* bỏ qua */ }
+}
+/** Mã phiên mới nhất (tab khác có thể vừa gia hạn). */
+function hakPhien_() {
+  // localStorage dùng được -> đó là nguồn duy nhất (tab khác đăng xuất/gia hạn là thấy ngay);
+  // chỉ khi trình duyệt chặn localStorage mới dùng sessionStorage / biến trong trang.
+  try { return localStorage.getItem(HAK_PHIEN_KHOA) || ''; } catch (e) { /* bị chặn */ }
+  try { return sessionStorage.getItem(HAK_PHIEN_KHOA) || HAK_PHIEN; } catch (e) { return HAK_PHIEN; }
+}
+/** Trình duyệt có cho trang lưu dữ liệu không (bị chặn khi tắt "cookie bên thứ ba"). */
+var HAK_CO_LUU_TRU = (function () {
+  try { localStorage.setItem('hak_thu', '1'); localStorage.removeItem('hak_thu'); return true; } catch (e) { return false; }
+})();
 (function hakKhoiTaoPhien_() {
   var el = document.getElementById('hakPhanQuyen');
   var tuServer = el ? (el.getAttribute('data-phien') || '') : '';
   if (tuServer) {
-    HAK_PHIEN = tuServer;
-    try { sessionStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); } catch (e) { /* trình duyệt chặn lưu trữ */ }
-    // Bỏ ?sso=... khỏi địa chỉ (link đăng nhập chỉ dùng được 1 lần — tải lại trang sẽ báo "đã được dùng").
-    try { google.script.history.replace(null, { page: hakTrangHienTai_() }); } catch (e) { /* không có google.script.history */ }
+    hakLuuPhien_(tuServer);
+    // Bỏ ?sso=... / ?ph=... khỏi địa chỉ (link đăng nhập chỉ dùng được 1 lần; mã phiên không nên nằm trong lịch sử duyệt web).
+    try {
+      google.script.url.getLocation(function (loc) {
+        var ts = {}, p = (loc && loc.parameter) || {};
+        Object.keys(p).forEach(function (k) { if (k !== 'sso' && k !== 'ph') ts[k] = p[k]; });
+        if (!ts.page && hakTrangHienTai_()) ts.page = hakTrangHienTai_();
+        google.script.history.replace(null, ts);
+      });
+    } catch (e) { /* không có google.script.url / history */ }
   } else {
-    try { HAK_PHIEN = sessionStorage.getItem(HAK_PHIEN_KHOA) || ''; } catch (e) { HAK_PHIEN = ''; }
+    HAK_PHIEN = hakPhien_();
   }
 })();
+/** Không lưu được phiên trong trình duyệt -> gắn mã phiên vào link chuyển trang của hệ thống. */
+function hakGanPhienVaoLink_(url) {
+  var goc = (document.getElementById('hakPhanQuyen') || { getAttribute: function () { return ''; } }).getAttribute('data-base') || '';
+  var p = hakPhien_();
+  if (HAK_CO_LUU_TRU || !p || !goc || String(url).indexOf(goc) !== 0 || /[?&]ph=/.test(url)) return url;
+  return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'ph=' + encodeURIComponent(p);
+}
+if (!HAK_CO_LUU_TRU) {
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (a && !a.hasAttribute('data-drive-goc')) a.setAttribute('href', hakGanPhienVaoLink_(a.getAttribute('href')));
+  }, true);
+  var hakMoGoc_ = window.open;
+  window.open = function (url) { var ts = Array.prototype.slice.call(arguments); ts[0] = hakGanPhienVaoLink_(String(url || '')); return hakMoGoc_.apply(window, ts); };
+}
 
 function hakTrangHienTai_() {
   var el = document.getElementById('hakPhanQuyen');
@@ -104,7 +144,7 @@ function hakRun_() {
     return function () {
       var thamSo = Array.prototype.slice.call(arguments);
       if (!coXuLyLoi) runner = runner.withFailureHandler(boc(null));
-      return runner.api(HAK_PHIEN, String(ten), thamSo);
+      return runner.api(hakPhien_(), String(ten), thamSo);
     };
   } });
   return p;
@@ -118,8 +158,7 @@ function hakHienDangNhap_(loi, tieuDe) {
   var nen = document.getElementById('hakDangNhapNen');
   if (!nen) return;
   if (!tieuDe) {
-    HAK_PHIEN = '';
-    try { sessionStorage.removeItem(HAK_PHIEN_KHOA); } catch (e) { /* bỏ qua */ }
+    hakLuuPhien_('');
   }
   document.getElementById('hakDangNhapTieuDe').textContent = tieuDe || '🔐 Đăng nhập';
   var elLoi = document.getElementById('hakDangNhapLoi');
@@ -180,15 +219,14 @@ function hakDangNhapCuaSoNho_(cong, trang) {
       if (!kq || (!kq.phien && !kq.loi)) return;
       clearInterval(hakHoiPhien_);
       if (kq.loi) { hakHienDangNhap_(kq.loi); return; }
-      HAK_PHIEN = kq.phien;
-      try { sessionStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); } catch (e) { /* bỏ qua */ }
+      hakLuuPhien_(kq.phien);
       window.location.reload();
     }).withFailureHandler(function (err) { console.error('nhanPhienDangNhap:', err); }).nhanPhienDangNhap(yeuCau);
   }, 2500);
 }
 
 function hakDangXuat_() {
-  var phien = HAK_PHIEN;
+  var phien = hakPhien_();
   google.script.run.withSuccessHandler(function () {}).withFailureHandler(function () {}).dangXuat(phien);
   HAK_NGUOI_DUNG = Object.assign({}, HAK_NGUOI_DUNG || {}, { daDangNhap: false, quyen: [] });
   hakHienDangNhap_('Đã đăng xuất.');
@@ -220,18 +258,28 @@ function hakVeChip_() {
   var chay = function () {
     var elPq = document.getElementById('hakPhanQuyen');
     var loiTuServer = elPq ? (elPq.getAttribute('data-loi') || '') : '';
+    var phienGui = hakPhien_();
     google.script.run.withSuccessHandler(function (nd) {
       HAK_NGUOI_DUNG = nd || null;
-      if (!nd || !nd.daDangNhap) { hakHienDangNhap_(loiTuServer || (HAK_PHIEN ? 'Phiên đăng nhập đã hết hạn - vui lòng đăng nhập lại.' : '')); return; }
+      if (!nd || !nd.daDangNhap) { hakHienDangNhap_(loiTuServer || (phienGui ? 'Phiên đăng nhập đã hết hạn - vui lòng đăng nhập lại.' : '')); return; }
+      if (nd.phienMoi) hakLuuPhien_(nd.phienMoi);
       hakApDungQuyenMenu_();
       hakVeChip_();
       var can = HAK_QUYEN_TRANG[hakTrangHienTai_()];
       if (can && !hakCoQuyen_(can)) hakHienDangNhap_('Tài khoản ' + nd.email + ' (' + nd.vaiTroNhan + ') không có quyền mở trang này.', '⛔ Không đủ quyền');
     }).withFailureHandler(function (err) {
       console.error('thongTinDangNhap:', err);
-    }).thongTinDangNhap(HAK_PHIEN);
+    }).thongTinDangNhap(phienGui);
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', chay); else chay();
+  // Trang để mở lâu: 30 phút hỏi 1 lần để máy chủ gia hạn phiên (không làm gì nếu đăng nhập bằng tài khoản Sheet)
+  setInterval(function () {
+    var p = hakPhien_();
+    if (!p) return;
+    google.script.run.withSuccessHandler(function (nd) {
+      if (nd && nd.daDangNhap && nd.phienMoi && hakPhien_() === p) hakLuuPhien_(nd.phienMoi);
+    }).withFailureHandler(function () { /* mất mạng tạm thời — lần sau thử lại */ }).thongTinDangNhap(p);
+  }, 30 * 60 * 1000);
 })();
 
 // ---------- Xem file Drive ngay trong hệ thống ----------
