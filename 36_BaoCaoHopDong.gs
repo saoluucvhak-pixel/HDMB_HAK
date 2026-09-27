@@ -75,12 +75,17 @@ function _lichSuThanhToan_(soHDs) {
     const bd = function (s) { return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); };
     const tim = function (tuKhoa, macDinh) {
       const h = data[0].map(bd);
-      const i = h.findIndex(function (v) { return tuKhoa.some(function (t) { return v.indexOf(t) !== -1; }); });
-      return i !== -1 ? i : macDinh;
+      for (let k = 0; k < tuKhoa.length; k++) { // ưu tiên theo thứ tự từ khóa
+        const i = h.findIndex(function (v) { return v.indexOf(tuKhoa[k]) !== -1; });
+        if (i !== -1) return i;
+      }
+      return macDinh;
     };
-    // Vị trí cột mặc định = vị trí đang dùng ở báo cáo Thanh toán / Draft (đã xác nhận với dữ liệu thật)
-    const cSoHD = tim(['so hd', 'so hop dong', 'ma hd'], 19), cKL = tim(['khoi luong'], 12), cTien = tim(['thanh tien', 'so tien', 'gia tri'], 16);
-    const cCT = tim(['so ct', 'chung tu', 'so chung tu'], 11), cNhan = tim(['nguoi nhan'], 6), cNgay = tim(['ngay'], -1);
+    // Cột CỐ ĐỊNH — giống báo cáo Thanh toán (01_ContractManager) và Draft (06_CreateUpdate), đã xác nhận với dữ liệu thật:
+    // G Người nhận | L Số CT | M Khối lượng (TẤN) | Q Thành tiền | T Số HĐ.
+    // KHÔNG dò theo chữ trong tiêu đề: sheet có cả cột "khối lượng ... (KG)" / "giá trị ..." đứng trước -> dò sẽ lấy nhầm.
+    const cNhan = 6, cCT = 11, cKL = 12, cTien = 16, cSoHD = 19;
+    const cNgay = tim(['ngay de nghi', 'ngay chung tu', 'ngay ct', 'ngay thanh toan', 'ngay'], -1);
     const dong = [];
     for (let i = 1; i < data.length; i++) {
       const soHD = (data[i][cSoHD] || '').toString().trim();
