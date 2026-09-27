@@ -5,7 +5,7 @@
  *  đoán tiếp qua đọc code. Đo thời gian (mili-giây) từng bước riêng biệt.
  *
  *  CÁCH DÙNG:
- *  1) Trong Apps Script editor, chọn hàm CHAY_CHAN_DOAN_TOC_DO ở thanh chọn hàm
+ *  1) Trong Apps Script editor, chọn hàm CHAY_CHAN_DOAN_TOC_DO_ ở thanh chọn hàm
  *     phía trên, bấm ▶ Run (KHÔNG chạy từ menu Sheet, chạy trực tiếp ở editor
  *     để xem được Logger.log realtime).
  *  2) Xem kết quả ở "Execution log" (Ctrl+Enter hoặc View > Logs).
@@ -16,6 +16,7 @@
  *  Dùng để cô lập: nếu ngay cả hàm này cũng "treo" khi gọi từ webapp, thì lỗi chắc
  *  chắn nằm ở tầng kết nối/deploy của TRANG ĐÓ, không phải do logic đọc dữ liệu. */
 function TEST_KET_NOI_DON_GIAN() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   return '✅ Kết nối OK lúc ' + new Date().toLocaleTimeString('vi-VN');
 }
 
@@ -26,6 +27,7 @@ function TEST_KET_NOI_DON_GIAN() {
  * Chạy 1 lần là xong, không cần chạy lại.
  */
 function XOA_TRIGGER_LOI_GEO_DETECT_LOCATION() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const triggers = ScriptApp.getProjectTriggers();
   let daXoa = 0;
   const conLai = [];
@@ -44,7 +46,7 @@ function XOA_TRIGGER_LOI_GEO_DETECT_LOCATION() {
   return thongBao;
 }
 
-function CHAY_CHAN_DOAN_TOC_DO() {
+function CHAY_CHAN_DOAN_TOC_DO_() {
   const ketQua = [];
   function do_(ten, hamChay) {
     const bd = new Date().getTime();
@@ -71,10 +73,10 @@ function CHAY_CHAN_DOAN_TOC_DO() {
   do_('6. Đếm dòng Draft_BaoCaoHopDong (file cache)', function () { return getOrCreateDraftBaoCaoSheet_().getLastRow(); });
   do_('7. Đếm dòng Draft_HoSoRung (file cache)', function () { return getOrCreateDraftHoSoRungSheet_().getLastRow(); });
   do_('8. docToanBoDraftBaoCao_() -- đọc cache báo cáo hợp đồng', function () { return docToanBoDraftBaoCao_().length + ' dòng'; });
-  do_('9. layBaoCaoHoSoRung() -- đọc cache hồ sơ rừng', function () { return layBaoCaoHoSoRung().length + ' dòng'; });
-  do_('10. layTinhHinhThucHien() -- KPI tình hình thực hiện', function () { return layTinhHinhThucHien().tongSoHopDong + ' hợp đồng'; });
-  do_('11. layBaoCaoHopDongPhanTrang() -- trang 1, 20 dòng', function () { return layBaoCaoHopDongPhanTrang({}, 1, 20, false).tongSo + ' tổng'; });
-  do_('12. layDanhSachThanhLy() -- trang 1, 20 dòng', function () { return layDanhSachThanhLy(1, 20, {}, false).tongSo + ' tổng'; });
+  do_('9. layBaoCaoHoSoRung_() -- đọc cache hồ sơ rừng', function () { return layBaoCaoHoSoRung_().length + ' dòng'; });
+  do_('10. layTinhHinhThucHien_() -- KPI tình hình thực hiện', function () { return layTinhHinhThucHien_().tongSoHopDong + ' hợp đồng'; });
+  do_('11. layBaoCaoHopDongPhanTrang_() -- trang 1, 20 dòng', function () { return layBaoCaoHopDongPhanTrang_({}, 1, 20, false).tongSo + ' tổng'; });
+  do_('12. layDanhSachThanhLy_() -- trang 1, 20 dòng', function () { return layDanhSachThanhLy_(1, 20, {}, false).tongSo + ' tổng'; });
 
   Logger.log('===== HẾT CHẨN ĐOÁN =====');
   return ketQua.join('\n');
@@ -82,6 +84,7 @@ function CHAY_CHAN_DOAN_TOC_DO() {
 
 /** Gọi từ menu Sheet — hiện kết quả ngay trong 1 hộp thoại, không cần mở Apps Script editor để xem log */
 function CHAY_CHAN_DOAN_TOC_DO_VA_HIEN_KQ() {
-  const ketQua = CHAY_CHAN_DOAN_TOC_DO();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const ketQua = CHAY_CHAN_DOAN_TOC_DO_();
   SpreadsheetApp.getUi().alert('⏱️ Kết quả đo thời gian (từng bước):\n\n' + ketQua);
 }

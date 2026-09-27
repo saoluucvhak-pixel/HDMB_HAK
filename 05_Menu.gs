@@ -36,6 +36,7 @@ function onOpen() {
     .addItem('📅 Đồng bộ định dạng ngày/tháng/năm (dd/mm/yyyy)', 'DINH_DANG_NGAY_THANG_NAM_DONG_BO')
     .addItem('⚙️ Cài đặt Vùng (Locale)...', 'MO_DIALOG_CAI_DAT_VUNG')
     .addItem('📤 Xuất báo cáo MISA (Update_Hopdong_NCC_DN.xlsx)', 'XUAT_BAO_CAO_MISA_TU_MENU')
+    .addItem('🧹 Dọn file tạm MISA còn sót (chuyển vào Thùng rác)', 'DON_FILE_TAM_MISA_CON_SOT_TU_MENU')
     .addItem('⚡ Chuyển tên file ảnh sang URL thật (khắc phục "Xem chi tiết" chậm/treo — chạy 1 lần)', 'CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU')
     .addItem('⚡ Chuyển hồ sơ pháp lý (DinhKemGiayTo) sang URL thật — chạy 1 lần', 'CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_TU_MENU')
     .addItem('⏱️ Bật chạy định kỳ chuyển ảnh/hồ sơ sang URL (6 tiếng/lần)', 'THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL')
@@ -45,11 +46,13 @@ function onOpen() {
     .addItem('🔍 Chẩn đoán ID/Key mồ côi toàn hệ thống', 'CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU')
     .addItem('🔄 Đồng bộ thông tin lặp lại + điền địa chỉ GPS trống', 'DONG_BO_THONG_TIN_MO_RONG_TU_MENU')
     .addItem('🔧 Chạy TOÀN BỘ bảo trì (chẩn đoán + đồng bộ + trích tọa độ)', 'CHAY_TOAN_BO_BAO_TRI_TU_MENU')
+    .addItem('🧱 Xác nhận cấu trúc cột hiện tại (chỉ sau khi CỐ Ý chèn/xóa cột và đã sửa mã)', 'XAC_NHAN_CAU_TRUC_COT_HIEN_TAI')
     .addToUi();
 }
 
 /** Hiện hướng dẫn sử dụng đầy đủ trong 1 cửa sổ dialog ngay trong Google Sheet */
 function HIEN_HUONG_DAN_SU_DUNG() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const html = HtmlService.createHtmlOutputFromFile('13_HuongDan')
     .setWidth(900).setHeight(650);
   SpreadsheetApp.getUi().showModalDialog(html, '📖 Hướng dẫn sử dụng — Hệ thống HAK');
@@ -57,12 +60,14 @@ function HIEN_HUONG_DAN_SU_DUNG() {
 
 /** Hiện link file Google Sheet riêng chứa Draft/Cache báo cáo (tách khỏi file dữ liệu chính) */
 function MO_FILE_BAO_CAO_RIENG() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const url = getReportSS_().getUrl();
   SpreadsheetApp.getUi().alert('File Báo cáo/Cache riêng:\n' + url + '\n\n(Copy link này để mở trong tab mới)');
 }
 
 /** Mở sidebar nhập liệu Tạo hợp đồng / Thêm rừng / Thêm tài khoản / Sửa rừng */
 function moFormNhapLieu() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const html = HtmlService.createTemplateFromFile('07_Form_HopDong')
     .evaluate()
     .setTitle('📝 Nhập liệu HAK')
@@ -72,7 +77,7 @@ function moFormNhapLieu() {
 
 /**
  * Dùng trong các file HTML templated (createTemplateFromFile) để ghép các phần
- * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('09_Style') ?>
+ * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('TenFileHtml') ?>
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();

@@ -16,7 +16,7 @@
  * @param {Array<Array>} rows Dữ liệu — mỗi dòng 1 mảng giá trị, ĐÚNG thứ tự khớp header
  * @param {"xlsx"|"pdf"} dinhDang
  */
-function XUAT_BANG_RA_FILE(tenFile, header, rows, dinhDang) {
+function XUAT_BANG_RA_FILE_(tenFile, header, rows, dinhDang) {
   if (!rows || !rows.length) return { thanhCong: false, loi: 'Không có dữ liệu để xuất (bảng đang trống).' };
   let ssTam;
   try {

@@ -31,7 +31,7 @@ const MODEL_DU_PHONG_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
 const MODEL_DA_NGUNG_HO_TRO_ = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
 /** Đọc cấu hình chatbot (API key ẩn 1 phần khi trả về webapp, không lộ toàn bộ) */
-function LAY_CAI_DAT_CHATBOT() {
+function LAY_CAI_DAT_CHATBOT_() {
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('GEMINI_API_KEY') || '';
   return {
@@ -42,7 +42,7 @@ function LAY_CAI_DAT_CHATBOT() {
 }
 
 /** Lưu API key + model Gemini (Script Properties — không lưu trong code, không ai xem được qua giao diện) */
-function LUU_CAI_DAT_CHATBOT(apiKey, model) {
+function LUU_CAI_DAT_CHATBOT_(apiKey, model) {
   const p = PropertiesService.getScriptProperties();
   if (apiKey) p.setProperty('GEMINI_API_KEY', apiKey.toString().trim());
   p.setProperty('GEMINI_MODEL', (model || GEMINI_MODEL_MAC_DINH_).toString().trim());
@@ -51,7 +51,7 @@ function LUU_CAI_DAT_CHATBOT(apiKey, model) {
 
 /** ============ HÀM CHÍNH: TRẢ LỜI 1 CÂU HỎI ============ */
 /** Nhận diện câu hỏi kiểu THỐNG KÊ/LỌC THEO ĐIỀU KIỆN (khác tra 1 đối tượng cụ thể theo tên) */
-function TRA_LOI_CHATBOT(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
+function TRA_LOI_CHATBOT_(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
   // ⚠️ MỚI: có ảnh đính kèm (anh = { base64, mimeType }) — đọc ảnh/OCR BẮT BUỘC
   // phải qua Gemini (không có luật cứng nào đọc được nội dung ảnh), nên tách
   // riêng luồng: không cần API key thì báo rõ luôn, không cố tra dữ liệu nữa.
@@ -443,15 +443,19 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   }
 
   // ---- Dò số hợp đồng được nhắc trực tiếp (dãy số dài, kiểu 2026xxxxxxx) ----
-  const khopSoHD = cauHoi.match(/\b\d{8,}\b/);
-  if (khopSoHD) {
-    const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.SO_HD, khopSoHD[0]);
+  // ⚠️ ĐÃ SỬA: trước đây chỉ lấy DÃY SỐ ĐẦU TIÊN khớp \d{8,} trong câu hỏi — nếu
+  // câu hỏi có số điện thoại (10 số) nhắc TRƯỚC số hợp đồng thật, số hợp đồng
+  // thật phía sau sẽ không bao giờ được kiểm tra (im lặng báo "không tìm thấy").
+  // Giờ dò TẤT CẢ dãy số ≥8 chữ số, thử khớp từng dãy với HD_NCC.
+  const khopSoHDList = (cauHoi.match(/\b\d{8,}\b/g) || []).filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+  khopSoHDList.forEach(function (soHDUngVien) {
+    const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.SO_HD, soHDUngVien);
     if (soDong !== -1) {
       const chiTiet = layHopDongTheoSoDong_ThucThi_(soDong);
       nguCanh.hopDongKhopTheoSoHD.push(chiTiet);
-      nguCanh._tomTat.push('Khớp trực tiếp Số HĐ ' + khopSoHD[0]);
+      nguCanh._tomTat.push('Khớp trực tiếp Số HĐ ' + soHDUngVien);
     }
-  }
+  });
 
   // ---- MỚI: dò tọa độ GPS trong câu hỏi (vd "rừng nào ở 15.733975, 108.126?")
   // -> tìm điểm GPS đã lưu GẦN NHẤT trong bán kính hợp lý, suy ra đúng lô rừng
@@ -472,7 +476,7 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   }
 
   // ---- Dò khách hàng được nhắc theo tên (so khớp chuỗi con, không phân biệt hoa/thường) ----
-  // ⚠️ ĐÃ SỬA: trước đây gọi layDanhSachKhachHang(1, 5000, '') — hàm này NHÓM
+  // ⚠️ ĐÃ SỬA: trước đây gọi layDanhSachKhachHang_(1, 5000, '') — hàm này NHÓM
   // TOÀN BỘ HD_NCC theo CCCD (nặng, chạy lại mỗi lần hỏi rất chậm). Ở đây chỉ
   // cần dò tên/CCCD nên quét thẳng, nhẹ hơn nhiều — không cần gộp nhóm/đếm số
   // hợp đồng như hàm kia làm (phần đó tính riêng bên dưới, chỉ cho khách hàng
@@ -531,20 +535,20 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
 
   const dsCanLay = (khopTen.length ? khopTen : khopCccd).slice(0, 3); // tối đa 3 khách hàng/lượt hỏi, tránh ngữ cảnh quá nặng
   dsCanLay.forEach(function (kh) {
-    const hopDongs = layHopDongTheoKhachHang(kh.cccd);
+    const hopDongs = layHopDongTheoKhachHang_(kh.cccd);
     const chiTietHopDongs = hopDongs.map(function (hd) {
-      const dsRung = layDanhSachRung(hd.idHD);
+      const dsRung = layDanhSachRung_(hd.idHD);
       let tongDT = 0, tongKL = 0, tongGT = 0;
       dsRung.forEach(function (r) {
         const dt = Number(r.dienTichM2) || 0, kl = Number(r.khoiLuongDuKien) || 0, dg = Number(r.donGia) || 0;
         tongDT += dt; tongKL += kl; tongGT += kl * dg;
       });
-      const dsTK = layDanhSachTaiKhoan(hd.idHD);
+      const dsTK = layDanhSachTaiKhoan_(hd.idHD);
       const thanhToan = layThanhToanTheoSoHD_(hd.soHD);
       const danhSachLoRungDayDu = dsRung.map(function (r) {
         let dsGps = [], dsAnh = [];
-        try { dsGps = layGPSCuaRung(r.idRung); } catch (e) { /* bỏ qua nếu lỗi, không chặn cả câu trả lời */ }
-        try { dsAnh = (layDraftAnhChoRung(r.idRung) || []).filter(function (a) { return a.trangThai === 'Đã duyệt'; }); } catch (e) { /* bỏ qua nếu lỗi */ }
+        try { dsGps = layGPSCuaRung_(r.idRung); } catch (e) { /* bỏ qua nếu lỗi, không chặn cả câu trả lời */ }
+        try { dsAnh = (layDraftAnhChoRung_(r.idRung) || []).filter(function (a) { return a.trangThai === 'Đã duyệt'; }); } catch (e) { /* bỏ qua nếu lỗi */ }
         return {
           maRung: r.maRung, diaChi: r.diaChiRung, dienTichM2: r.dienTichM2, donGia: r.donGia, khoiLuongDuKien: r.khoiLuongDuKien,
           soDiemGPS: dsGps.length, toaDoGPS: dsGps.map(function (p) { return p.lat.toFixed(6) + ', ' + p.lng.toFixed(6); }),

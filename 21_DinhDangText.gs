@@ -16,7 +16,7 @@
  *  được ghi vào (kể cả ghi bằng script qua setValues()).
  * ============================================================
  */
-function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG() {
+function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_() {
   const SO_DONG_DU_PHONG = 5000; // đặt định dạng cho cả các dòng chưa có dữ liệu, để tương lai ghi vào vẫn giữ TEXT
 
   function datTextChoCot(sheet, chiSoCotAr) {
@@ -53,7 +53,8 @@ function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG() {
 /** Bản gọi từ menu Google Sheets (SpreadsheetApp.getUi() chỉ dùng được ở đây,
  *  KHÔNG dùng được nếu gọi từ webapp — vì vậy tách riêng, hàm chính ở trên chỉ trả object). */
 function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_TU_MENU() {
-  const kq = DINH_DANG_TEXT_CHO_COT_QUAN_TRONG();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_();
   SpreadsheetApp.getUi().alert(kq.thongBao);
 }
 
@@ -61,7 +62,7 @@ function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_TU_MENU() {
  *  trang Thiết lập, không cần đoán mò có bấm nút chưa. Chỉ cần xem định dạng
  *  của DÒNG 2 (đại diện) trong mỗi cột quan trọng — vì hàm khóa luôn áp dụng
  *  đồng loạt 1 lần cho cả 5000 dòng, dòng 2 phản ánh đúng trạng thái chung. */
-function KIEM_TRA_TRANG_THAI_KHOA_TEXT() {
+function KIEM_TRA_TRANG_THAI_KHOA_TEXT_() {
   function laText_(sheet, cot) {
     try { return sheet.getRange(2, cot + 1).getNumberFormat() === '@'; } catch (e) { return false; }
   }
@@ -97,21 +98,37 @@ function KIEM_TRA_TRANG_THAI_KHOA_TEXT() {
  * "Việt Nam" cho CẢ file dữ liệu chính (HDMB_GK_DN) LẪN file Draft/Báo cáo
  * riêng — chỉ cần làm 1 lần, không cần script.
  */
-/** Nút menu Sheets nhanh (chỉ Việt Nam) — thực chất chỉ gọi thẳng DAT_VUNG_HE_THONG('vi_VN')
+/** Nút menu Sheets nhanh (chỉ Việt Nam) — thực chất chỉ gọi thẳng DAT_VUNG_HE_THONG_('vi_VN')
  *  để dùng chung logic với dialog/trang webapp, tránh 2 nơi làm 2 kiểu khác nhau. */
 function DINH_DANG_NGAY_THANG_NAM_DONG_BO() {
-  const kq = DAT_VUNG_HE_THONG('vi_VN');
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = DAT_VUNG_HE_THONG_('vi_VN');
   SpreadsheetApp.getUi().alert('✅ ' + kq.thongBao);
 }
 
 /** Mở dialog cài đặt Vùng (Locale) — cho phép chọn vùng bất kỳ, không chỉ cố định Việt Nam */
 function MO_DIALOG_CAI_DAT_VUNG() {
-  const html = HtmlService.createHtmlOutputFromFile('23_CaiDatVung').setWidth(480).setHeight(420);
-  SpreadsheetApp.getUi().showModalDialog(html, '⚙️ Cài đặt Vùng (Locale)');
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const ui = SpreadsheetApp.getUi();
+  let html = null;
+  try {
+    html = HtmlService.createHtmlOutputFromFile('23_CaiDatVung').setWidth(480).setHeight(420);
+  } catch (e) {
+    // ⚠️ File 23_CaiDatVung.html không có trong bản mã nguồn trên GitHub -> trước đây mục menu
+    // này luôn báo lỗi "No HTML file named 23_CaiDatVung". Dự phòng: hỏi mã vùng bằng hộp nhập.
+  }
+  if (html) { ui.showModalDialog(html, '⚙️ Cài đặt Vùng (Locale)'); return; }
+  const dsVung = Object.keys(MAU_NGAY_THEO_VUNG_);
+  const tl = ui.prompt('⚙️ Cài đặt Vùng (Locale)',
+    'Nhập mã vùng (một trong: ' + dsVung.join(', ') + '). Mặc định Việt Nam: vi_VN', ui.ButtonSet.OK_CANCEL);
+  if (tl.getSelectedButton() !== ui.Button.OK) return;
+  const locale = (tl.getResponseText() || 'vi_VN').trim();
+  if (dsVung.indexOf(locale) === -1) { ui.alert('❌ Mã vùng không hợp lệ: "' + locale + '".'); return; }
+  ui.alert('✅ ' + DAT_VUNG_HE_THONG_(locale).thongBao);
 }
 
 /** Đọc Locale hiện tại của cả 2 file — dùng để hiện sẵn lựa chọn đúng trong dialog */
-function LAY_VUNG_HIEN_TAI() {
+function LAY_VUNG_HIEN_TAI_() {
   let locChinh = '', locDraft = '';
   try { locChinh = getSS_().getSpreadsheetLocale(); } catch (e) { /* bỏ qua */ }
   try { locDraft = getReportSS_().getSpreadsheetLocale(); } catch (e) { /* file Draft có thể chưa mở được lúc này */ }
@@ -135,9 +152,9 @@ const MAU_SO_CHUAN_ = '#,##0.###';
  * ĐẶT VÙNG (Locale) + định dạng ngày (đúng kiểu của vùng đó) + định dạng số
  * (tự đổi dấu phân cách theo vùng) — TẤT CẢ TRONG 1 HÀM DUY NHẤT, chỉ chạy khi
  * người dùng bấm "✅ Áp dụng" (không tự chạy khi mở trang Thiết lập — trang chỉ
- * ĐỌC qua LAY_VUNG_HIEN_TAI(), không hề gọi hàm này lúc tải trang).
+ * ĐỌC qua LAY_VUNG_HIEN_TAI_(), không hề gọi hàm này lúc tải trang).
  */
-function DAT_VUNG_HE_THONG(locale) {
+function DAT_VUNG_HE_THONG_(locale) {
   locale = (locale || '').toString().trim();
   if (!locale) return { thongBao: 'Chưa chọn vùng nào.' };
   const SO_DONG_DU_PHONG = 5000;

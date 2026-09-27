@@ -13,49 +13,6 @@
  */
 
 /**
- * OCR 1 file (ảnh hoặc PDF) bằng GEMINI (dùng chung API key/model đã cấu hình
- * ở trang Thiết lập → 🤖 Chatbot — KHÔNG cần bật Advanced Drive Service nữa).
- * ⚠️ ĐÃ THAY: cách cũ dùng Drive.Files.insert(ocr:true) bị Google hạn chế cho
- * phần lớn tài khoản (đặc biệt Gmail cá nhân), thường xuyên báo lỗi. Gemini
- * đọc ảnh/PDF trực tiếp, ổn định hơn nhiều và không cần bật thêm dịch vụ nào.
- */
-function ocrFile_(fileId) {
-  const p = PropertiesService.getScriptProperties();
-  const apiKey = p.getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập (OCR giờ dùng chung API key này).');
-  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
-  const MODEL_DU_PHONG_OCR_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
-  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
-
-  const blob = DriveApp.getFileById(fileId).getBlob();
-  const mimeGoc = blob.getContentType();
-  // Nếu file GỐC đã bị Google Drive tự động chuyển thành Google Doc/Sheet, đọc
-  // thẳng nội dung văn bản có sẵn (đã là text, không cần OCR gì cả)
-  if (mimeGoc === MimeType.GOOGLE_DOCS) return DocumentApp.openById(fileId).getBody().getText();
-  if (mimeGoc === MimeType.GOOGLE_SHEETS) return SpreadsheetApp.openById(fileId).getDataRange().getValues().map(function (r) { return r.join(' '); }).join('\n');
-
-  const base64 = Utilities.base64Encode(blob.getBytes());
-  const promptOCR = 'Đọc và trích xuất TOÀN BỘ chữ/số trong ảnh hoặc file PDF này, giữ nguyên định dạng xuống dòng như trong ảnh, không tóm tắt, không diễn giải thêm — chỉ trả về đúng nguyên văn chữ đọc được.';
-  const payload = { contents: [{ parts: [{ text: promptOCR }, { inline_data: { mime_type: mimeGoc, data: base64 } }] }] };
-  const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
-
-  function goiGemini_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
-  }
-
-  let json = goiGemini_(model);
-  for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_OCR_.length; i++) {
-    if (MODEL_DU_PHONG_OCR_[i] === model) continue;
-    model = MODEL_DU_PHONG_OCR_[i];
-    json = goiGemini_(model);
-  }
-  if (json.error) throw new Error('Lỗi Gemini OCR: ' + json.error.message);
-  const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
-  return text || '';
-}
-
-/**
  * ============================================================
  *  ĐỌC BẢN SCAN ĐỂ TỰ ĐỘNG ĐIỀN FORM
  * ============================================================
@@ -75,8 +32,10 @@ function ocrFile_(fileId) {
  * loaiTaiLieu: 'cccd_chu_rung' | 'cccd_uy_quyen' | 'ho_so_rung' | 'giay_uy_quyen'
  * Trả về { thanhCong, truong: {...}, urlFileGoc, tenFileGoc, loi }
  */
-function OCR_TU_BAN_SCAN(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
+function OCR_TU_BAN_SCAN_(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu file' };
+  const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
+  if (loiFile) return { thanhCong: false, loi: loiFile };
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('GEMINI_API_KEY');
   if (!apiKey) return { thanhCong: false, loi: 'Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập.' };
@@ -152,27 +111,13 @@ function xayPromptTrichXuatScan_(loaiTaiLieu) {
     '"soGiayTo": "số hiệu/số văn bản ghi trên giấy tờ", "dienTichM2": "diện tích, quy đổi ra m² dạng số nguyên không có dấu phẩy/chấm (nếu ghi bằng ha thì nhân 10000), để trống nếu không tìm thấy diện tích"}';
 }
 
-/** Chuyển ngày dạng dd/mm/yyyy (OCR đọc được) về yyyy-mm-dd để đổ thẳng vào input type="date" */
-function chuyenNgayVeISO_(ngayStr) {
-  const m = ngayStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (!m) return '';
-  const dd = m[1].padStart(2, '0'), mm = m[2].padStart(2, '0'), yyyy = m[3];
-  return yyyy + '-' + mm + '-' + dd;
-}
-
-/** Tìm chuỗi 12 chữ số liên tiếp trong text OCR (nghi là số CCCD) */
-function timCCCDTrongText_(text) {
-  const matches = text.match(/\b\d{12}\b/g);
-  return matches ? matches : [];
-}
-
 /**
  * Đối chiếu 1 lô rừng: OCR file DinhKemGiayTo, kiểm tra số CCCD chủ rừng
  * và số giấy tờ (SoGiayTo) trong hồ sơ có xuất hiện trong nội dung OCR không.
  */
 /**
  * Đối chiếu 1 lô rừng: đọc file DinhKemGiayTo bằng Gemini (trích xuất trực
- * tiếp ra JSON — đồng bộ cách làm với OCR_TU_BAN_SCAN, không còn dò text thô
+ * tiếp ra JSON — đồng bộ cách làm với OCR_TU_BAN_SCAN_, không còn dò text thô
  * bằng .indexOf() như trước), rồi so khớp ĐỦ 5 trường với dữ liệu đã nhập
  * trong Sheet: CCCD chủ rừng, Tên chủ rừng, Số giấy tờ, Loại hồ sơ, Diện tích.
  */
@@ -201,13 +146,13 @@ function doiChieuMotLoRung_(row) {
     if (!truong) { ketQua.loi = 'Gemini không đọc được nội dung file (ảnh mờ, chưa cấu hình API key, hoặc lỗi tạm thời).'; return ketQua; }
 
     const cccdSheet = (row[RUNG_COL.CCCD] || '').toString().trim();
-    ketQua.khopCCCD = cccdSheet ? (truong.cccd && truong.cccd.indexOf(cccdSheet) !== -1) : null;
+    ketQua.khopCCCD = cccdSheet ? !!(truong.cccd && truong.cccd.indexOf(cccdSheet) !== -1) : null;
 
     const tenSheet = (row[RUNG_COL.TEN_CHU_RUNG] || '').toString().trim().toLowerCase();
     ketQua.khopTenChuRung = tenSheet && truong.tenChuRung ? soSanhTenKhongDauOCR_(truong.tenChuRung, tenSheet) : null;
 
     const soGiayToSheet = (row[RUNG_COL.SO_GIAY_TO] || '').toString().trim();
-    ketQua.khopSoGiayTo = soGiayToSheet ? (truong.soGiayTo && truong.soGiayTo.indexOf(soGiayToSheet) !== -1) : null;
+    ketQua.khopSoGiayTo = soGiayToSheet ? !!(truong.soGiayTo && truong.soGiayTo.indexOf(soGiayToSheet) !== -1) : null;
 
     const loaiHoSoSheet = (row[RUNG_COL.HO_SO_NGUON_GOC] || '').toString().trim();
     ketQua.khopLoaiHoSo = loaiHoSoSheet ? (truong.hoSoNguonGoc === loaiHoSoSheet) : null;
@@ -223,7 +168,7 @@ function doiChieuMotLoRung_(row) {
   return ketQua;
 }
 
-/** Trích xuất bằng Gemini phục vụ ĐỐI CHIẾU (khác OCR_TU_BAN_SCAN ở chỗ lấy ĐỦ
+/** Trích xuất bằng Gemini phục vụ ĐỐI CHIẾU (khác OCR_TU_BAN_SCAN_ ở chỗ lấy ĐỦ
  *  5 trường trong 1 lượt gọi, không tách theo loaiTaiLieu — file hồ sơ pháp lý
  *  luôn chỉ có 1 loại giấy tờ, không cần lọc nhiều giấy tờ gộp chung như CCCD). */
 function trichXuatDoiChieuBangGemini_(fileId) {
@@ -271,12 +216,18 @@ function soSanhTenKhongDauOCR_(ten1, ten2) {
   return boDau(ten1) === boDau(ten2);
 }
 
+/** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi DOI_CHIEU_HO_SO_DINH_KY_ qua api(). */
+function DOI_CHIEU_HO_SO_DINH_KY(e) {
+  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
+  return DOI_CHIEU_HO_SO_DINH_KY_();
+}
+
 /**
  * CHẠY ĐỐI CHIẾU ĐỊNH KỲ cho toàn bộ hồ sơ (nên đặt Trigger chạy hàng tuần
  * qua menu Extensions > Apps Script > Triggers, vì OCR tốn thời gian).
  * Có giới hạn thời gian chạy để tránh timeout 6 phút của Apps Script.
  */
-function DOI_CHIEU_HO_SO_DINH_KY() {
+function DOI_CHIEU_HO_SO_DINH_KY_() {
   const startTime = new Date().getTime();
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const baoCao = [];
@@ -311,7 +262,7 @@ function DOI_CHIEU_HO_SO_DINH_KY() {
  * webapp "Đối chiếu OCR" (mục riêng, tách khỏi Kiểm tra hồ sơ) — để người dùng
  * bấm xem file gốc trước khi chạy đối chiếu OCR cho từng dòng hoặc chạy tất cả.
  */
-function layDuLieuOCRWebapp() {
+function layDuLieuOCRWebapp_() {
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   return rungRows.map(function (r) {
     return {
@@ -323,7 +274,7 @@ function layDuLieuOCRWebapp() {
 }
 
 /** Chạy đối chiếu OCR cho MỘT lô rừng cụ thể (dùng khi bấm nút "Đối chiếu" ở từng dòng trong webapp) */
-function doiChieuMotLoRungTheoId(idRung) {
+function doiChieuMotLoRungTheoId_(idRung) {
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const row = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
   if (!row) return { loi: 'Không tìm thấy lô rừng: ' + idRung };
@@ -335,6 +286,7 @@ function doiChieuMotLoRungTheoId(idRung) {
  * vào 6h sáng thứ Hai hàng tuần. Chạy hàm này 1 lần để đăng ký.
  */
 function THIET_LAP_TRIGGER_DINH_KY() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (['DOI_CHIEU_HO_SO_DINH_KY', 'KIEM_TRA_HO_SO_TOAN_BO', 'KIEM_TRA_ANH_TOAN_BO'].indexOf(t.getHandlerFunction()) !== -1) {
       ScriptApp.deleteTrigger(t);
@@ -351,9 +303,9 @@ function THIET_LAP_TRIGGER_DINH_KY() {
  * dùng cho menu "⏰ Lên lịch kiểm tra" trên webapp. Xóa hết trigger cũ của hệ thống
  * trước khi tạo lại, tránh chạy trùng nhiều lần.
  */
-function THIET_LAP_TRIGGER_TUY_CHINH(tanSuat, gio, danhSachViec) {
+function THIET_LAP_TRIGGER_TUY_CHINH_(tanSuat, gio, danhSachViec) {
   gio = Number(gio) || 6;
-  HUY_TAT_CA_TRIGGER();
+  HUY_TAT_CA_TRIGGER_();
 
   const cacHam = (danhSachViec && danhSachViec.length) ? danhSachViec : ['KIEM_TRA_HO_SO_TOAN_BO', 'KIEM_TRA_ANH_TOAN_BO', 'DOI_CHIEU_HO_SO_DINH_KY'];
   cacHam.forEach(function (ten) {
@@ -366,7 +318,7 @@ function THIET_LAP_TRIGGER_TUY_CHINH(tanSuat, gio, danhSachViec) {
 }
 
 /** Hủy toàn bộ trigger tự động của hệ thống (kiểm tra hồ sơ/ảnh/OCR) */
-function HUY_TAT_CA_TRIGGER() {
+function HUY_TAT_CA_TRIGGER_() {
   let soDaXoa = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (['DOI_CHIEU_HO_SO_DINH_KY', 'KIEM_TRA_HO_SO_TOAN_BO', 'KIEM_TRA_ANH_TOAN_BO'].indexOf(t.getHandlerFunction()) !== -1) {
@@ -378,8 +330,8 @@ function HUY_TAT_CA_TRIGGER() {
 }
 
 /** Xem danh sách trigger hiện có của hệ thống (để hiển thị trạng thái lịch đang chạy) */
-function layDanhSachTrigger() {
-  const tenViet = { KIEM_TRA_HO_SO_TOAN_BO: 'Kiểm tra hồ sơ', KIEM_TRA_ANH_TOAN_BO: 'Kiểm tra ảnh', DOI_CHIEU_HO_SO_DINH_KY: 'Đối chiếu OCR' };
+function layDanhSachTrigger_() {
+  const tenViet = { KIEM_TRA_HO_SO_TOAN_BO_: 'Kiểm tra hồ sơ', KIEM_TRA_ANH_TOAN_BO_: 'Kiểm tra ảnh', DOI_CHIEU_HO_SO_DINH_KY_: 'Đối chiếu OCR' };
   return ScriptApp.getProjectTriggers()
     .filter(function (t) { return tenViet.hasOwnProperty(t.getHandlerFunction()); })
     .map(function (t) {

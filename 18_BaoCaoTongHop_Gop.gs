@@ -2,10 +2,10 @@
  * ============================================================
  *  18_BaoCaoTongHop_Gop.gs
  *  GỘP 4 lệnh gọi rời rạc của trang "Báo cáo tổng hợp":
- *    - layBaoCaoHopDongPhanTrang   (tab "Báo cáo hợp đồng")
- *    - layTongHopChoWebapp         (KPI + chi tiết "Tình hình thực hiện")
- *    - layTinhHinhThucHien         (KPI GPS/hồ sơ/ảnh theo trạng thái)
- *    - layDanhSachThanhLy          (tab "Thanh lý hợp đồng")
+ *    - layBaoCaoHopDongPhanTrang_   (tab "Báo cáo hợp đồng")
+ *    - layTongHopChoWebapp_         (KPI + chi tiết "Tình hình thực hiện")
+ *    - layTinhHinhThucHien_         (KPI GPS/hồ sơ/ảnh theo trạng thái)
+ *    - layDanhSachThanhLy_          (tab "Thanh lý hợp đồng")
  *  thành 1 HÀM DUY NHẤT, chạy trong 1 LƯỢT THỰC THI DUY NHẤT.
  *
  *  TẠI SAO CẦN GỘP:
@@ -28,8 +28,8 @@
  *  NGUYÊN VẸN như 4 hàm gốc — chỉ đổi CÁCH GỌI (1 lần thay vì 4 lần), không
  *  đổi cách các hàm render ở frontend (10_Page_BaoCao.html) DÙNG dữ liệu.
  *
- *  LƯU Ý: 4 hàm gốc (layBaoCaoHopDongPhanTrang, layTongHopChoWebapp,
- *  layTinhHinhThucHien, layDanhSachThanhLy) VẪN GIỮ NGUYÊN, không xóa — vẫn
+ *  LƯU Ý: 4 hàm gốc (layBaoCaoHopDongPhanTrang_, layTongHopChoWebapp_,
+ *  layTinhHinhThucHien_, layDanhSachThanhLy_) VẪN GIỮ NGUYÊN, không xóa — vẫn
  *  dùng cho các thao tác lẻ sau khi trang đã tải xong (đổi trang, bấm "Lọc",
  *  bấm "Làm mới dữ liệu" của riêng 1 bảng...), vì các thao tác đó vốn dĩ chỉ
  *  bắn 1 lệnh tại 1 thời điểm nên không có vấn đề gọi trùng lặp.
@@ -39,11 +39,11 @@
  * @param {Object} boLocTL  Bộ lọc cho tab "Thanh lý hợp đồng" — { soHD, tenChuRung, tenUyQuyen }
  * @param {number} trangBC  Trang hiện tại của bảng "Báo cáo hợp đồng" (mặc định 1)
  * @param {number} trangTL  Trang hiện tại của bảng "Thanh lý hợp đồng" (mặc định 1)
- * @param {boolean} boBuoc  true = chạy LAM_MOI_DRAFT_THEO_THAY_DOI() trước khi đọc
+ * @param {boolean} boBuoc  true = chạy LAM_MOI_DRAFT_THEO_THAY_DOI_() trước khi đọc
  *                          (chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại từ đầu)
  * @return {Object} { baoCaoHopDong, tongHopWebapp, tinhHinhThucHien, danhSachThanhLy }
  */
-function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) {
+function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc) {
   try {
     boLocBC = boLocBC || {};
     boLocTL = boLocTL || {};
@@ -54,7 +54,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) 
 
     // Chỉ làm mới Draft ĐÚNG 1 LẦN cho cả trang (trước đây có thể bị gọi tới
     // 3 lần nếu cả 3 hàm cùng nhận forceLamMoi=true).
-    if (boBuocThat) LAM_MOI_DRAFT_THEO_THAY_DOI();
+    if (boBuocThat) LAM_MOI_DRAFT_THEO_THAY_DOI_();
 
     // ---- ĐỌC DRAFT ĐÚNG 1 LẦN — dùng chung cho cả 4 khối bên dưới ----
     const tatCa = docToanBoDraftBaoCao_();
@@ -62,7 +62,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) 
     const chuaLoc_ = function (s, tk) { return !tk || (s || '').toString().toLowerCase().indexOf(tk.toLowerCase()) !== -1; };
 
     // ================================================================
-    // 1. BÁO CÁO HỢP ĐỒNG (phân trang + lọc) — GIỐNG HỆT layBaoCaoHopDongPhanTrang
+    // 1. BÁO CÁO HỢP ĐỒNG (phân trang + lọc) — GIỐNG HỆT layBaoCaoHopDongPhanTrang_
     // ================================================================
     const dsBaoCaoHD = tatCa.map(function (m) {
       const toaDo = m.toaDoTrungBinh ? (function () {
@@ -113,7 +113,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) 
     };
 
     // ================================================================
-    // 2. TỔNG HỢP KPI + CHI TIẾT "Tình hình thực hiện" — GIỐNG HỆT layTongHopChoWebapp
+    // 2. TỔNG HỢP KPI + CHI TIẾT "Tình hình thực hiện" — GIỐNG HỆT layTongHopChoWebapp_
     // ================================================================
     const listDangTH = tatCa.filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
     const tongKhoiLuong = listDangTH.reduce(function (s, m) { return s + (Number(m.khoiLuongDuKien) || 0); }, 0);
@@ -137,7 +137,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) 
 
     // ================================================================
     // 3. TÌNH HÌNH THỰC HIỆN (KPI GPS/hồ sơ/ảnh + đếm theo trạng thái)
-    //    — GIỐNG HỆT layTinhHinhThucHien
+    //    — GIỐNG HỆT layTinhHinhThucHien_
     // ================================================================
     const chiTietTH = tatCa.map(function (m) {
       return {
@@ -157,7 +157,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, trangBC, trangTL, boBuoc) 
     };
 
     // ================================================================
-    // 4. DANH SÁCH THANH LÝ (phân trang + lọc) — GIỐNG HỆT layDanhSachThanhLy
+    // 4. DANH SÁCH THANH LÝ (phân trang + lọc) — GIỐNG HỆT layDanhSachThanhLy_
     // ================================================================
     const listTL = tatCa
       .filter(function (m) { return m.tinhTrang !== 'Đã thanh lý'; })

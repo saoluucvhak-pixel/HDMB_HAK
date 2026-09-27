@@ -6,22 +6,22 @@
 <style>
 
   :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
     --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--page-bg); color: var(--heading);
   }
 
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -105,12 +105,17 @@
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
   table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+  table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
+  table.mecon-table tr:hover td { background: #dcfce7; }
 
   @media (max-width: 800px) {
     body { flex-direction: column; }
@@ -123,6 +128,8 @@
 </style>
 </head>
 <body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -134,6 +141,12 @@
 
   <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
     <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
+    <span class="icon">🖼️</span> Tra cứu hình ảnh
   </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
@@ -170,6 +183,42 @@
     <div class="page-subtitle">Cấu hình vùng (Locale) và dữ liệu xuất báo cáo MISA — áp dụng chung cho toàn hệ thống.</div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">👥 Người dùng &amp; phân quyền</h3>
+      <p class="hint" style="margin-top:-4px">Chỉ những email trong danh sách (trạng thái "Hoạt động") mới vào được webapp và dùng được menu trong Google Sheet. <b>Quản trị</b>: mọi chức năng + Thiết lập. <b>Nhập liệu</b>: thêm/sửa hợp đồng, lô rừng, tài khoản, ảnh, GPS, kiểm tra hồ sơ. <b>Chỉ xem</b>: tổng quan, tra cứu, bản đồ, báo cáo (CCCD/SĐT/số TK bị che bớt ở trang Tra cứu). Muốn cho nghỉ: đổi trạng thái sang "Khóa" (có hiệu lực trong 1 phút).</p>
+      <p id="ndChuScript" class="hint"></p>
+      <div class="field-row">
+        <div class="field"><label for="ndEmail">Email Google</label><input id="ndEmail" placeholder="vd: nhanvien@gmail.com" autocomplete="off"></div>
+        <div class="field"><label for="ndHoTen">Họ tên</label><input id="ndHoTen" placeholder="vd: Nguyễn Văn A"></div>
+        <div class="field"><label for="ndVaiTro">Vai trò</label><select id="ndVaiTro"><option value="XEM">Chỉ xem</option><option value="NHAP_LIEU">Nhập liệu</option><option value="ADMIN">Quản trị</option></select></div>
+        <div class="field"><label for="ndTrangThai">Trạng thái</label><select id="ndTrangThai"><option>Hoạt động</option><option>Khóa</option></select></div>
+      </div>
+      <button class="btn btn-green" type="button" onclick="luuNguoiDung_()">💾 Lưu người dùng</button>
+      <button class="btn btn-outline" type="button" onclick="taiNguoiDung_()">🔄 Tải lại danh sách</button>
+      <div id="msgNguoiDung" class="msg" style="display:none;margin-top:10px"></div>
+      <div id="bangNguoiDung" style="margin-top:10px"><p class="hint">Đang tải...</p></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🔐 Cổng đăng nhập Gmail</h3>
+      <p class="hint" style="margin-top:-4px">Webapp chạy dưới tài khoản chủ nên không tự biết email người đang mở. Cổng đăng nhập là 1 dự án Apps Script nhỏ chạy dưới tài khoản <b>người đăng nhập</b>, xác nhận email rồi chuyển về đây. Làm 1 lần:</p>
+      <ol class="hint" style="margin:0 0 10px 18px;padding:0">
+        <li>Mở <a href="https://script.new" target="_blank" rel="noopener">script.new</a> (dự án mới), xóa mã mẫu, dán <b>mã nguồn Cổng</b> bên dưới.</li>
+        <li>Deploy › New deployment › Web app — <b>Execute as: User accessing the web app</b>, <b>Who has access: Anyone with Google account</b>.</li>
+        <li>Dán link Web app (…/exec) của Cổng vào ô bên dưới rồi Lưu.</li>
+      </ol>
+      <p id="dnTrangThai" class="hint">Đang đọc cấu hình...</p>
+      <div class="field-row">
+        <div class="field"><label for="dnLinkCong">Link Cổng đăng nhập</label><input id="dnLinkCong" placeholder="https://script.google.com/macros/s/.../exec"></div>
+      </div>
+      <button class="btn btn-green" type="button" onclick="luuLinkCongDangNhap_()">💾 Lưu link Cổng</button>
+      <button class="btn btn-outline" type="button" onclick="saoChepMaNguonCong_()">📋 Sao chép mã nguồn Cổng</button>
+      <button class="btn btn-outline" type="button" onclick="taoLaiMaBiMatDangNhap_()">🔁 Tạo lại mã bí mật</button>
+      <div id="msgDangNhap" class="msg" style="display:none;margin-top:10px"></div>
+      <label for="dnMaNguon" class="hint" style="display:block;margin-top:10px">Mã nguồn Cổng (chứa mã bí mật — không gửi cho người khác):</label>
+      <textarea id="dnMaNguon" readonly style="width:100%;height:120px;font-family:monospace;font-size:11px;border:1px solid var(--border-light);border-radius:6px;padding:8px"></textarea>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🤖 Chatbot tra cứu dữ liệu (Gemini)</h3>
       <p class="hint" style="margin-top:-4px">Chatbot tự tra đúng dữ liệu thật trong hệ thống (khách hàng/hợp đồng/lô rừng được nhắc trong câu hỏi), rồi nhờ Gemini diễn giải thành câu trả lời tự nhiên — không tự bịa số liệu.</p>
       <p class="hint" style="margin-top:-4px">✅ <b>Không bắt buộc phải có API key</b> — không cấu hình (hoặc Gemini đang lỗi/quá tải) thì chatbot vẫn tra được dữ liệu và tự trả lời theo luật cứng (đánh dấu 🔧), chỉ là câu trả lời không "văn vẻ" bằng khi có AI hỗ trợ.</p>
@@ -197,6 +246,29 @@
       </div>
       <button class="btn btn-green" onclick="luuKetNoi()">💾 Lưu kết nối</button>
       <div id="msgKetNoi" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">📤 Chia sẻ dữ liệu</h3>
+      <p class="hint" style="margin-top:-4px">Cấp quyền truy cập toàn bộ dữ liệu webapp (2 Google Sheet + 4 thư mục Drive ở mục "Kết nối dữ liệu" bên trên) cho 1 email khác — không cần vào từng file trên Google Drive để chia sẻ tay.</p>
+      <div class="field-row">
+        <div class="field"><label>Email cần chia sẻ</label><input id="csEmail" placeholder="vd: ketoan@gmail.com"></div>
+        <div class="field">
+          <label>Mức quyền</label>
+          <select id="csQuyen">
+            <option value="xem">👁️ Chỉ xem</option>
+            <option value="binhluan">💬 Bình luận</option>
+            <option value="sua">✏️ Chỉnh sửa</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="chiaSeDuLieu()">📤 Chia sẻ</button>
+      <div id="msgChiaSe" class="msg" style="display:none;margin-top:10px"></div>
+      <div id="ketQuaChiaSe" style="margin-top:10px"></div>
+
+      <h4 style="margin:18px 0 6px 0">👥 Ai đang có quyền truy cập</h4>
+      <button class="btn btn-outline" onclick="taiDanhSachQuyen()">🔄 Tải danh sách</button>
+      <div id="bangQuyenTruyCap" style="margin-top:10px"><p class="hint">Bấm "Tải danh sách" để xem.</p></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -284,7 +356,7 @@
         <p class="hint" style="margin:0 0 6px">⚠️ <b>Webhook (trả lời tức thì, nhưng THƯỜNG bị lỗi)</b> — Telegram gọi thẳng vào webapp mỗi khi có tin mới. Về lý thuyết nhanh hơn Polling, NHƯNG Google Apps Script có giới hạn cố hữu: webapp luôn trả về "302 chuyển hướng" trước khi chạy code thật — trình duyệt tự đi theo redirect này nên không thấy vấn đề, nhưng Telegram KHÔNG đi theo, nên hay báo lỗi "Wrong response...302 Found" dù cấu hình Deploy đúng "Anyone" rồi. Chỉ dùng nếu đã thử và thấy chạy ổn ở máy bạn.</p>
         <button class="btn btn-outline" onclick="batWebhookTelegram()">🔌 Bật Webhook</button>
         <button class="btn btn-outline" onclick="kiemTraWebhookTelegram()">🩺 Kiểm tra Webhook</button>
-        <button class="btn" style="background:#e74c3c;color:#fff" onclick="tatWebhookTelegram()">⏸️ Tắt Webhook</button>
+        <button class="btn" style="background:#dc2626;color:#fff" onclick="tatWebhookTelegram()">⏸️ Tắt Webhook</button>
         <div id="ketQuaKiemTraWebhook" style="margin-top:10px"></div>
       </div>
 
@@ -396,45 +468,45 @@
   function renderTrangThaiKhoaText_(kq) {
     var el = document.getElementById('trangThaiKhoaText');
     if (kq.daKhoaHoanToan) {
-      el.innerHTML = '🔒 Đã khóa đầy đủ (' + kq.soDaKhoa + '/' + kq.tongSo + ' cột).';
+      el.innerHTML = '🔒 Đã khóa đầy đủ (' + escHtmlBT_(kq.soDaKhoa) + '/' + escHtmlBT_(kq.tongSo) + ' cột).';
     } else if (kq.coMotPhan) {
-      el.innerHTML = '⚠️ Mới khóa MỘT PHẦN (' + kq.soDaKhoa + '/' + kq.tongSo + ' cột) — bấm nút bên dưới để khóa đủ.';
+      el.innerHTML = '⚠️ Mới khóa MỘT PHẦN (' + escHtmlBT_(kq.soDaKhoa) + '/' + escHtmlBT_(kq.tongSo) + ' cột) — bấm nút bên dưới để khóa đủ.';
     } else {
-      el.innerHTML = '🔓 CHƯA khóa (0/' + kq.tongSo + ' cột) — bấm nút bên dưới để khóa.';
+      el.innerHTML = '🔓 CHƯA khóa (0/' + escHtmlBT_(kq.tongSo) + ' cột) — bấm nút bên dưới để khóa.';
     }
   }
-  google.script.run.withSuccessHandler(renderTrangThaiKhoaText_)
+  hakRun_().withSuccessHandler(renderTrangThaiKhoaText_)
     .withFailureHandler(function (err) { document.getElementById('trangThaiKhoaText').textContent = 'Không kiểm tra được trạng thái: ' + err.message; })
     .KIEM_TRA_TRANG_THAI_KHOA_TEXT();
 
   function khoaDinhDangText() {
     showMsg('msgKhoaText', '⌛ Đang áp dụng...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         showMsg('msgKhoaText', kq.thongBao, kq.thanhCong);
-        google.script.run.withSuccessHandler(renderTrangThaiKhoaText_).KIEM_TRA_TRANG_THAI_KHOA_TEXT();
+        hakRun_().withSuccessHandler(renderTrangThaiKhoaText_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRANG_THAI_KHOA_TEXT:', err); }).KIEM_TRA_TRANG_THAI_KHOA_TEXT();
       })
       .withFailureHandler(function (err) { showMsg('msgKhoaText', '❌ Lỗi: ' + err.message, false); })
       .DINH_DANG_TEXT_CHO_COT_QUAN_TRONG();
   }
 
   // ---- Chatbot (Gemini) ----
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('chatbotTrangThai').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), model: ' + kq.model : '🔓 Chưa cấu hình API key — chatbot chưa dùng được.';
     document.getElementById('oGeminiModel').value = kq.model;
-  }).LAY_CAI_DAT_CHATBOT();
+  }).withFailureHandler(function (err) { document.getElementById('chatbotTrangThai').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_CHATBOT();
   function luuCaiDatChatbot() {
     var apiKey = document.getElementById('oGeminiApiKey').value.trim();
     var model = document.getElementById('oGeminiModel').value.trim();
     document.getElementById('msgChatbot').style.display = 'block';
     document.getElementById('msgChatbot').textContent = '⌛ Đang lưu...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgChatbot').textContent = '✅ ' + kq.thongBao;
         document.getElementById('oGeminiApiKey').value = '';
-        google.script.run.withSuccessHandler(function (kq2) {
+        hakRun_().withSuccessHandler(function (kq2) {
           document.getElementById('chatbotTrangThai').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), model: ' + kq2.model : '🔓 Chưa cấu hình API key.';
-        }).LAY_CAI_DAT_CHATBOT();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_CHATBOT:', err); }).LAY_CAI_DAT_CHATBOT();
       })
       .withFailureHandler(function (err) { document.getElementById('msgChatbot').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_CHATBOT(apiKey, model);
@@ -442,14 +514,14 @@
 
   // ---- Kết nối dữ liệu (file Draft + thư mục Drive) ----
   function renderKetNoi_(kq) {
-    var dong1 = kq.draftLoi ? '❌ File Draft báo cáo: ' + kq.draftLoi : '✅ File Draft báo cáo: "' + kq.draftTen + '" — <a href="' + kq.draftUrl + '" target="_blank">mở file</a>';
-    var dong2 = kq.folderLoi ? '❌ Thư mục ảnh hiện trường: ' + kq.folderLoi : '✅ Thư mục ảnh hiện trường: "' + kq.folderTen + '" — <a href="' + kq.folderUrl + '" target="_blank">mở thư mục</a>';
-    var dong3 = kq.hoSoFolderLoi ? '❌ Thư mục hồ sơ pháp lý: ' + kq.hoSoFolderLoi : '✅ Thư mục hồ sơ pháp lý: "' + kq.hoSoFolderTen + '" — <a href="' + kq.hoSoFolderUrl + '" target="_blank">mở thư mục</a>';
-    var dong4 = kq.gpsFolderLoi ? '❌ Thư mục ảnh GPS: ' + kq.gpsFolderLoi : '✅ Thư mục ảnh GPS: "' + kq.gpsFolderTen + '" — <a href="' + kq.gpsFolderUrl + '" target="_blank">mở thư mục</a>';
-    var dong5 = kq.misaFolderLoi ? '❌ Thư mục xuất MISA: ' + kq.misaFolderLoi : '✅ Thư mục xuất MISA: "' + kq.misaFolderTen + '" — <a href="' + kq.misaFolderUrl + '" target="_blank">mở thư mục</a>';
+    var dong1 = kq.draftLoi ? '❌ File Draft báo cáo: ' + kq.draftLoi : '✅ File Draft báo cáo: "' + escHtmlBT_(kq.draftTen) + '" — <a href="' + escHtmlBT_(kq.draftUrl) + '" target="_blank">mở file</a>';
+    var dong2 = kq.folderLoi ? '❌ Thư mục ảnh hiện trường: ' + kq.folderLoi : '✅ Thư mục ảnh hiện trường: "' + escHtmlBT_(kq.folderTen) + '" — <a href="' + escHtmlBT_(kq.folderUrl) + '" target="_blank">mở thư mục</a>';
+    var dong3 = kq.hoSoFolderLoi ? '❌ Thư mục hồ sơ pháp lý: ' + kq.hoSoFolderLoi : '✅ Thư mục hồ sơ pháp lý: "' + escHtmlBT_(kq.hoSoFolderTen) + '" — <a href="' + escHtmlBT_(kq.hoSoFolderUrl) + '" target="_blank">mở thư mục</a>';
+    var dong4 = kq.gpsFolderLoi ? '❌ Thư mục ảnh GPS: ' + kq.gpsFolderLoi : '✅ Thư mục ảnh GPS: "' + escHtmlBT_(kq.gpsFolderTen) + '" — <a href="' + escHtmlBT_(kq.gpsFolderUrl) + '" target="_blank">mở thư mục</a>';
+    var dong5 = kq.misaFolderLoi ? '❌ Thư mục xuất MISA: ' + kq.misaFolderLoi : '✅ Thư mục xuất MISA: "' + escHtmlBT_(kq.misaFolderTen) + '" — <a href="' + escHtmlBT_(kq.misaFolderUrl) + '" target="_blank">mở thư mục</a>';
     document.getElementById('ketNoiHienTai').innerHTML = [dong1, dong2, dong3, dong4, dong5].join('<br>');
   }
-  google.script.run.withSuccessHandler(renderKetNoi_).withFailureHandler(function (err) {
+  hakRun_().withSuccessHandler(renderKetNoi_).withFailureHandler(function (err) {
     document.getElementById('ketNoiHienTai').textContent = 'Không đọc được kết nối hiện tại: ' + err.message;
   }).LAY_CAU_HINH_KET_NOI();
 
@@ -461,21 +533,126 @@
     var misaFolderUrl = document.getElementById('clMisaFolderUrl').value.trim();
     if (!draftUrl && !folderUrl && !misaFolderUrl && !hoSoFolderUrl && !gpsFolderUrl) { showMsg('msgKetNoi', '⚠️ Nhập ít nhất 1 URL để đổi (để trống hết = không có gì để lưu).', false); return; }
     showMsg('msgKetNoi', '⌛ Đang kiểm tra và lưu...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         showMsg('msgKetNoi', kq.thongBao, kq.thanhCong);
         if (kq.thanhCong) {
           document.getElementById('clDraftUrl').value = ''; document.getElementById('clFolderUrl').value = '';
           document.getElementById('clHoSoFolderUrl').value = ''; document.getElementById('clGpsFolderUrl').value = ''; document.getElementById('clMisaFolderUrl').value = '';
-          google.script.run.withSuccessHandler(renderKetNoi_).LAY_CAU_HINH_KET_NOI();
+          hakRun_().withSuccessHandler(renderKetNoi_).withFailureHandler(function (err) { console.error('LAY_CAU_HINH_KET_NOI:', err); }).LAY_CAU_HINH_KET_NOI();
         }
       })
       .withFailureHandler(function (err) { showMsg('msgKetNoi', '❌ Lỗi: ' + err.message, false); })
       .LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl);
   }
 
+  // ---- Chia sẻ dữ liệu (2 Sheet + 4 thư mục Drive) cho email khác ----
+  // Chỉ hỏi mật khẩu quản trị 1 lần/lần tải trang (không lưu vào localStorage/sessionStorage
+  // để tránh lộ mật khẩu nếu máy dùng chung) — xem SEC-001 trong báo cáo QA Audit.
+  var _adminTokenCache_ = null;
+  function layAdminToken_() {
+    if (_adminTokenCache_ === null) {
+      _adminTokenCache_ = prompt('Nhập mật khẩu quản trị để chia sẻ/thu hồi quyền truy cập dữ liệu:') || '';
+    }
+    return _adminTokenCache_;
+  }
+
+  function chiaSeDuLieu() {
+    var email = document.getElementById('csEmail').value.trim();
+    var quyen = document.getElementById('csQuyen').value;
+    if (!email) { showMsg('msgChiaSe', '❌ Vui lòng nhập email.', false); return; }
+    var adminToken = layAdminToken_();
+    if (!adminToken) { showMsg('msgChiaSe', '❌ Cần nhập mật khẩu quản trị.', false); return; }
+    showMsg('msgChiaSe', '⌛ Đang chia sẻ...', true);
+    document.getElementById('ketQuaChiaSe').innerHTML = '';
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        if (!kq.chiTiet) {
+          showMsg('msgChiaSe', '❌ ' + (kq.loi || 'Lỗi không rõ.'), false);
+          if (kq.loi && kq.loi.indexOf('Sai mật khẩu') !== -1) _adminTokenCache_ = null;
+          return;
+        }
+        var soOk = kq.chiTiet.filter(function (c) { return c.ok; }).length;
+        showMsg('msgChiaSe', kq.thanhCong ? '✅ Đã chia sẻ ' + soOk + '/' + kq.chiTiet.length + ' tài nguyên cho ' + email + '.' : '❌ Không chia sẻ được tài nguyên nào.', kq.thanhCong);
+        var html = '<table class="mecon-table"><thead><tr><th>Tài nguyên</th><th>Kết quả</th></tr></thead><tbody>';
+        kq.chiTiet.forEach(function (c) {
+          html += '<tr><td>' + escHtmlBT_(c.ten) + '</td><td>' + (c.ok ? '✅ OK' : '❌ ' + escHtmlBT_(c.loi)) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('ketQuaChiaSe').innerHTML = html;
+        if (kq.thanhCong) { document.getElementById('csEmail').value = ''; taiDanhSachQuyen(); }
+      })
+      .withFailureHandler(function (err) { showMsg('msgChiaSe', '❌ Lỗi: ' + err.message, false); })
+      .CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen);
+  }
+
+  function taiDanhSachQuyen() {
+    var adminToken = layAdminToken_();
+    if (!adminToken) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Cần nhập mật khẩu quản trị.</p>'; return; }
+    document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    hakRun_()
+      .withSuccessHandler(function (list) {
+        var ds = (list || []).filter(function (r) { return r.permissionId; });
+        var loi = (list || []).filter(function (r) { return r.loi && !r.permissionId; });
+        if (loi.length && loi[0].loi && (loi[0].loi.indexOf('Sai mật khẩu') !== -1 || loi[0].loi.indexOf('Chưa thiết lập ADMIN_TOKEN') !== -1)) {
+          _adminTokenCache_ = null;
+          document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ ' + escHtmlBT_(loi[0].loi) + '</p>';
+          return;
+        }
+        var html = '';
+        if (!ds.length) html += '<p class="hint">Chưa chia sẻ cho ai (ngoài chủ sở hữu).</p>';
+        else {
+          html += '<table class="mecon-table"><thead><tr><th>Email</th><th>Quyền</th><th>Tài nguyên</th><th></th></tr></thead><tbody>';
+          ds.forEach(function (r) {
+            html += '<tr><td>' + escHtmlBT_(r.email) + '</td><td>' + escHtmlBT_(r.quyen) + '</td><td>' + escHtmlBT_(r.ten) + '</td>' +
+              '<td><button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="thuHoiQuyen(\'' + escHtmlBT_(r.id) + '\',\'' + escHtmlBT_(r.permissionId) + '\',\'' + escHtmlBT_(r.email) + '\',\'' + escHtmlBT_(r.ten) + '\')">🗑️ Thu hồi</button></td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+        if (loi.length) html += '<p class="hint">⚠️ Không đọc được quyền của: ' + loi.map(function (r) { return escHtmlBT_(r.ten); }).join(', ') + '.</p>';
+        document.getElementById('bangQuyenTruyCap').innerHTML = html;
+      })
+      .withFailureHandler(function (err) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Lỗi: ' + escHtmlBT_(err.message) + '</p>'; })
+      .LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken);
+  }
+
+  function thuHoiQuyen(id, permissionId, email, ten) {
+    if (!confirm('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.')) return;
+    var adminToken = layAdminToken_();
+    if (!adminToken) { thongBao_('❌ Cần nhập mật khẩu quản trị.'); return; }
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        if (kq.thanhCong) taiDanhSachQuyen(); else {
+          thongBao_('❌ Lỗi: ' + kq.loi);
+          if (kq.loi && kq.loi.indexOf('Sai mật khẩu') !== -1) _adminTokenCache_ = null;
+        }
+      })
+      .withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); })
+      .THU_HOI_QUYEN_TRUY_CAP(adminToken, id, permissionId);
+  }
+
   // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----
-  function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // Thông báo nổi KHÔNG chặn thao tác (thay cho alert()): tự tắt sau vài giây, bấm để đóng,
+  // màu theo tiền tố ❌ / ⚠️ / ✅ sẵn có của nội dung, trình đọc màn hình đọc được (aria-live).
+  function thongBao_(noiDung) {
+    var s = String(noiDung === null || noiDung === undefined ? '' : noiDung);
+    var loai = /^❌/.test(s) ? 'loi' : /^⚠️/.test(s) ? 'canhbao' : /^✅/.test(s) ? 'ok' : 'tin';
+    var hop = document.getElementById('hakToastHop');
+    if (!hop) {
+      hop = document.createElement('div'); hop.id = 'hakToastHop';
+      hop.setAttribute('role', 'status'); hop.setAttribute('aria-live', 'polite');
+      hop.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100000;display:flex;flex-direction:column;gap:8px;max-width:min(420px,calc(100vw - 24px))';
+      document.body.appendChild(hop);
+    }
+    var o = document.createElement('div');
+    o.textContent = s; o.title = 'Bấm để đóng'; o.className = 'hak-toast hak-toast-' + loai;
+    o.style.cssText = 'background:' + { loi: '#dc2626', canhbao: '#b45309', ok: '#16a34a', tin: '#1f2937' }[loai] +
+      ';color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:13px;line-height:1.45;white-space:pre-line;word-break:break-word;cursor:pointer';
+    o.onclick = function () { if (o.parentNode) o.parentNode.removeChild(o); };
+    hop.appendChild(o);
+    setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, loai === 'loi' ? 12000 : 6000);
+  }
+  function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   function renderKetQuaMoCoi_(kq) {
     var el = document.getElementById('ketQuaBaoTri');
     if (kq.tongSoVanDe === 0) { el.innerHTML = '<div class="msg ok" style="display:block">✅ Không phát hiện ID/Key mồ côi hay bị sót nào.</div>'; return; }
@@ -488,11 +665,11 @@
       { nhan: 'HD_Picture mồ côi', list: kq.picture_moCoi, cot: [['dong', 'Dòng'], ['idPicture', 'ID ảnh'], ['tenChuRung', 'Tên (ghi trên ảnh)'], ['idSai', 'ID đang trỏ (sai)']] }
     ];
     var h = '<table class="mecon-table" style="margin-top:6px"><thead><tr><th>Loại vấn đề</th><th>Số dòng</th></tr></thead><tbody>';
-    nhom.forEach(function (n) { h += '<tr><td>' + n.nhan + '</td><td>' + n.list.length + '</td></tr>'; });
+    nhom.forEach(function (n) { h += '<tr><td>' + escHtmlBT_(n.nhan) + '</td><td>' + n.list.length + '</td></tr>'; });
     h += '</tbody></table>';
     nhom.forEach(function (n) {
       if (!n.list.length) return;
-      h += '<h4 style="margin:14px 0 4px">📋 Chi tiết — ' + n.nhan + ' (' + n.list.length + ' dòng)</h4>';
+      h += '<h4 style="margin:14px 0 4px">📋 Chi tiết — ' + escHtmlBT_(n.nhan) + ' (' + n.list.length + ' dòng)</h4>';
       h += '<table class="mecon-table"><thead><tr>' + n.cot.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
       n.list.forEach(function (r) {
         h += '<tr>' + n.cot.map(function (c) { return '<td>' + escHtmlBT_(r[c[0]]) + '</td>'; }).join('') + '</tr>';
@@ -506,7 +683,7 @@
     document.getElementById('msgBaoTri').style.display = 'block';
     document.getElementById('msgBaoTri').textContent = '⌛ Đang chẩn đoán...';
     document.getElementById('ketQuaBaoTri').innerHTML = '';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgBaoTri').style.display = 'none'; renderKetQuaMoCoi_(kq); })
       .withFailureHandler(function (err) { document.getElementById('msgBaoTri').textContent = '❌ Lỗi: ' + err.message; })
       .CHAN_DOAN_MO_COI_TOAN_HE_THONG();
@@ -519,7 +696,7 @@
     guiLenhXayDungDraft_();
   }
   function guiLenhXayDungDraft_() {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgXayDungDraft').textContent = kq;
         if (kq.indexOf('⏸️') === 0) { setTimeout(guiLenhXayDungDraft_, 500); } // còn dở dang -> tự gọi lại luôn, khỏi phải tự bấm nhiều lần
@@ -535,7 +712,7 @@
     guiLenhXayDungHoSoRung_();
   }
   function guiLenhXayDungHoSoRung_() {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (kq.dungSom) {
           document.getElementById('msgXayDungHoSoRung').textContent = '⏸️ ' + kq.thongBao;
@@ -550,69 +727,69 @@
 
   // ---- Bẫy nhật ký tự động ----
   function capNhatTrangThaiTriggerOnEdit_() {
-    google.script.run.withSuccessHandler(function (kq) {
+    hakRun_().withSuccessHandler(function (kq) {
       document.getElementById('trangThaiTriggerOnEdit').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
       document.getElementById('btnBatTriggerOnEdit').style.display = kq.daBat ? 'none' : 'inline-block';
       document.getElementById('btnTatTriggerOnEdit').style.display = kq.daBat ? 'inline-block' : 'none';
-    }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
+    }).withFailureHandler(function (err) { document.getElementById('trangThaiTriggerOnEdit').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRIGGER_ONEDIT_DRAFT();
   }
   // ---- Tra cứu ngân hàng ----
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTraCuuNh').textContent = kq.daCoApiKey ? '✅ Đã cấu hình API key (' + kq.apiKeyRutGon + '), URL: ' + kq.apiUrl : '🔓 Chưa cấu hình API key.';
     document.getElementById('oTraCuuNhApiUrl').value = kq.apiUrl;
-  }).LAY_CAI_DAT_TRA_CUU_NH();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTraCuuNh').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_TRA_CUU_NH();
   function luuCaiDatTraCuuNh() {
     var apiKey = document.getElementById('oTraCuuNhApiKey').value.trim();
     var apiUrl = document.getElementById('oTraCuuNhApiUrl').value.trim();
     document.getElementById('msgTraCuuNh').style.display = 'block';
     document.getElementById('msgTraCuuNh').textContent = '⌛ Đang lưu...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTraCuuNh').textContent = '✅ ' + kq.thongBao;
         document.getElementById('oTraCuuNhApiKey').value = '';
-        google.script.run.withSuccessHandler(function (kq2) {
+        hakRun_().withSuccessHandler(function (kq2) {
           document.getElementById('trangThaiTraCuuNh').textContent = kq2.daCoApiKey ? '✅ Đã cấu hình API key (' + kq2.apiKeyRutGon + '), URL: ' + kq2.apiUrl : '🔓 Chưa cấu hình API key.';
-        }).LAY_CAI_DAT_TRA_CUU_NH();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_TRA_CUU_NH:', err); }).LAY_CAI_DAT_TRA_CUU_NH();
       })
       .withFailureHandler(function (err) { document.getElementById('msgTraCuuNh').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_TRA_CUU_NH(apiKey, apiUrl);
   }
 
   // ---- Bot Telegram ----
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTelegram').textContent = kq.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq.tokenRutGon + '), Chat ID: ' + (kq.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
     if (kq.chatId) document.getElementById('oTelegramChatId').value = kq.chatId;
-  }).LAY_CAI_DAT_TELEGRAM();
-  google.script.run.withSuccessHandler(function (kq) {
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTelegram').textContent = 'Không đọc được cấu hình: ' + err.message; }).LAY_CAI_DAT_TELEGRAM();
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('trangThaiTriggerTelegram').textContent = kq.daBat ? '✅ Đang BẬT.' : '🔓 Đang TẮT.';
     document.getElementById('btnBatTriggerTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
     document.getElementById('btnTatTriggerTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
-  }).KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiTriggerTelegram').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM();
 
   function luuCaiDatTelegram() {
     var token = document.getElementById('oTelegramToken').value.trim();
     var chatId = document.getElementById('oTelegramChatId').value.trim();
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang lưu...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
         document.getElementById('oTelegramToken').value = '';
-        google.script.run.withSuccessHandler(function (kq2) {
+        hakRun_().withSuccessHandler(function (kq2) {
           document.getElementById('trangThaiTelegram').textContent = kq2.daCoToken ? '✅ Đã cấu hình Bot Token (' + kq2.tokenRutGon + '), Chat ID: ' + (kq2.chatId || '(chưa nhập)') : '🔓 Chưa cấu hình Bot Token.';
-        }).LAY_CAI_DAT_TELEGRAM();
+        }).withFailureHandler(function (err) { console.error('LAY_CAI_DAT_TELEGRAM:', err); }).LAY_CAI_DAT_TELEGRAM();
       })
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .LUU_CAI_DAT_TELEGRAM(token, chatId);
   }
   function tuDongLayChatId() {
     document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">⌛ Đang tìm...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
-        if (!kq.thanhCong) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ ' + kq.loi + '</p>'; return; }
+        if (!kq.thanhCong) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ ' + escHtmlBT_(kq.loi) + '</p>'; return; }
         var html = '<p class="hint">Bấm đúng nhóm bên dưới để tự điền vào ô "Chat ID":</p>';
         kq.list.forEach(function (c) {
-          html += '<button type="button" class="btn btn-outline" style="margin:2px 4px 2px 0;padding:5px 10px;font-size:11.5px" data-chatid="' + c.chatId + '">' +
+          html += '<button type="button" class="btn btn-outline" style="margin:2px 4px 2px 0;padding:5px 10px;font-size:11.5px" data-chatid="' + escHtmlBT_(c.chatId) + '">' +
             (c.loai === 'private' ? '👤 ' : '👥 ') + escHtmlBT_(c.ten) + ' (' + c.chatId + ')</button>';
         });
         document.getElementById('dsChatIdTimDuoc').innerHTML = html;
@@ -623,20 +800,20 @@
           });
         });
       })
-      .withFailureHandler(function (err) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ Lỗi: ' + err.message + '</p>'; })
+      .withFailureHandler(function (err) { document.getElementById('dsChatIdTimDuoc').innerHTML = '<p class="hint">❌ Lỗi: ' + escHtmlBT_(err.message) + '</p>'; })
       .TU_DONG_LAY_CHAT_ID_TELEGRAM();
   }
 
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('trangThaiPollingTelegram').textContent = kq.daBat ? '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).' : '🔓 Đang TẮT.';
     document.getElementById('btnBatPollingTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
     document.getElementById('btnTatPollingTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
-  }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
+  }).withFailureHandler(function (err) { document.getElementById('trangThaiPollingTelegram').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
 
   function batPollingTelegram() {
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang bật Polling...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi;
         if (kq.thanhCong) {
@@ -649,7 +826,7 @@
       .BAT_POLLING_TELEGRAM();
   }
   function tatPollingTelegram() {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').style.display = 'block';
         document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
@@ -657,20 +834,21 @@
         document.getElementById('btnBatPollingTelegram').style.display = 'inline-block';
         document.getElementById('btnTatPollingTelegram').style.display = 'none';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_POLLING_TELEGRAM();
   }
 
   function kiemTraWebhookTelegram() {
     document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<p class="hint">⌛ Đang kiểm tra...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
-        if (!kq.thanhCong) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ ' + kq.loi + '</div>'; return; }
+        if (!kq.thanhCong) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ ' + escHtmlBT_(kq.loi) + '</div>'; return; }
         var h = '<table class="mecon-table"><tbody>';
         h += '<tr><td>URL webhook đang đăng ký với Telegram</td><td>' + escHtmlBT_(kq.urlDaDangKy) + '</td></tr>';
         h += '<tr><td>URL webapp hiện tại (sau khi Deploy)</td><td>' + escHtmlBT_(kq.urlWebappHienTai) + '</td></tr>';
         h += '<tr><td>2 URL có khớp nhau?</td><td>' + (kq.khopUrl ? '✅ Khớp' : '❌ KHÔNG khớp — đây là nguyên nhân chính!') + '</td></tr>';
-        h += '<tr><td>Lỗi gần nhất Telegram ghi nhận</td><td>' + (kq.loiGanNhat ? '❌ ' + escHtmlBT_(kq.loiGanNhat) + ' (lúc ' + kq.thoiDiemLoi + ')' : '✅ Không có lỗi') + '</td></tr>';
-        h += '<tr><td>Số tin nhắn đang chờ xử lý</td><td>' + kq.soTinDangCho + '</td></tr>';
+        h += '<tr><td>Lỗi gần nhất Telegram ghi nhận</td><td>' + (kq.loiGanNhat ? '❌ ' + escHtmlBT_(kq.loiGanNhat) + ' (lúc ' + escHtmlBT_(kq.thoiDiemLoi) + ')' : '✅ Không có lỗi') + '</td></tr>';
+        h += '<tr><td>Số tin nhắn đang chờ xử lý</td><td>' + escHtmlBT_(kq.soTinDangCho) + '</td></tr>';
         h += '</tbody></table>';
         if (!kq.khopUrl) {
           h += '<div class="msg" style="display:block;margin-top:8px">⚠️ <b>Nguyên nhân rất có thể:</b> URL webapp đã đổi (do Deploy phiên bản mới) nhưng webhook vẫn trỏ về URL CŨ. Bấm lại nút "🔌 Bật Webhook" ở trên để đăng ký lại đúng URL mới nhất.</div>';
@@ -683,14 +861,14 @@
         }
         document.getElementById('ketQuaKiemTraWebhook').innerHTML = h;
       })
-      .withFailureHandler(function (err) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + err.message + '</div>'; })
+      .withFailureHandler(function (err) { document.getElementById('ketQuaKiemTraWebhook').innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + escHtmlBT_(err.message) + '</div>'; })
       .KIEM_TRA_WEBHOOK_TELEGRAM();
   }
 
   function batWebhookTelegram() {
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang bật webhook...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .BAT_WEBHOOK_TELEGRAM();
@@ -699,7 +877,7 @@
     if (!confirm('Tắt webhook — bot sẽ ngừng trả lời tin nhắn (thông báo tự động vẫn hoạt động bình thường nếu đang bật riêng). Tiếp tục?')) return;
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang tắt...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_WEBHOOK_TELEGRAM();
@@ -707,13 +885,13 @@
   function guiThuTelegram() {
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang gửi...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi; })
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .GUI_THU_TELEGRAM();
   }
   function batTriggerTelegram() {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').style.display = 'block';
         document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
@@ -721,10 +899,11 @@
         document.getElementById('btnBatTriggerTelegram').style.display = 'none';
         document.getElementById('btnTatTriggerTelegram').style.display = 'inline-block';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .BAT_TRIGGER_THONG_BAO_TELEGRAM();
   }
   function tatTriggerTelegram() {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').style.display = 'block';
         document.getElementById('msgTelegram').textContent = '✅ ' + kq.thongBao;
@@ -732,13 +911,14 @@
         document.getElementById('btnBatTriggerTelegram').style.display = 'inline-block';
         document.getElementById('btnTatTriggerTelegram').style.display = 'none';
       })
+      .withFailureHandler(function (err) { document.getElementById('msgTelegram').style.display = 'block'; document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_TRIGGER_THONG_BAO_TELEGRAM();
   }
 
   function batTriggerOnEdit() {
     document.getElementById('msgTriggerOnEdit').style.display = 'block';
     document.getElementById('msgTriggerOnEdit').textContent = '⌛ Đang bật...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgTriggerOnEdit').textContent = '✅ ' + kq.thongBao; capNhatTrangThaiTriggerOnEdit_(); })
       .withFailureHandler(function (err) { document.getElementById('msgTriggerOnEdit').textContent = '❌ Lỗi: ' + err.message; })
       .THIET_LAP_TRIGGER_ONEDIT_DRAFT();
@@ -746,7 +926,7 @@
   function tatTriggerOnEdit() {
     document.getElementById('msgTriggerOnEdit').style.display = 'block';
     document.getElementById('msgTriggerOnEdit').textContent = '⌛ Đang tắt...';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { document.getElementById('msgTriggerOnEdit').textContent = '✅ ' + kq.thongBao; capNhatTrangThaiTriggerOnEdit_(); })
       .withFailureHandler(function (err) { document.getElementById('msgTriggerOnEdit').textContent = '❌ Lỗi: ' + err.message; })
       .TAT_TRIGGER_ONEDIT_DRAFT();
@@ -758,7 +938,7 @@
     document.getElementById('msgBaoTri').style.display = 'block';
     document.getElementById('msgBaoTri').textContent = '⌛ Đang chạy toàn bộ bảo trì (có thể mất một lúc)...';
     document.getElementById('ketQuaBaoTri').innerHTML = '';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         document.getElementById('msgBaoTri').textContent = '✅ Hoàn tất. ' + kq.dongBo.thongBao + ' Tọa độ trích xuất thêm: ' + kq.toaDoDaTrichXuat.soDaGhi + '/' + kq.toaDoDaTrichXuat.tongSoLo + ' lô. Ảnh chuyển URL: ' + kq.anhDaChuyen.soDaChuyen + (kq.anhDaChuyen.xongHet ? '' : ' (còn dở, chạy lại để tiếp tục)') + '. Hồ sơ pháp lý chuyển URL: ' + kq.hoSoDaChuyen.soDaChuyen + (kq.hoSoDaChuyen.xongHet ? '' : ' (còn dở, chạy lại để tiếp tục)') + '.';
         renderKetQuaMoCoi_(kq.chiTietMoCoiConLai);
@@ -779,7 +959,7 @@
     var denNgay = document.getElementById('nkDenNgay').value;
     var el = document.getElementById('vungNhatKy');
     el.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (list) {
         if (!list || !list.length) { el.innerHTML = '<div class="msg" style="display:block">Không có nhật ký nào trong khoảng ngày đã chọn.</div>'; return; }
         var h = '<table class="mecon-table"><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Hành động</th><th>ID_HD</th><th>Chi tiết</th></tr></thead><tbody>';
@@ -790,7 +970,7 @@
         if (list.length >= 500) h += '<p class="hint">⚠️ Chỉ hiện tối đa 500 dòng gần nhất trong khoảng đã lọc — thu hẹp khoảng ngày nếu cần xem đủ.</p>';
         el.innerHTML = h;
       })
-      .withFailureHandler(function (err) { el.innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + err.message + '</div>'; })
+      .withFailureHandler(function (err) { el.innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + escHtmlBT_(err.message) + '</div>'; })
       .LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay);
   }
   taiNhatKy(); // tự tải sẵn 7 ngày gần nhất lúc mở trang
@@ -801,15 +981,15 @@
       ? '⏱️ Đang BẬT chạy định kỳ (6 tiếng/lần).'
       : '⏹️ Đang TẮT — chỉ chạy khi bạn bấm "Chạy ngay 1 lần" hoặc bật định kỳ.';
   }
-  google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_)
+  hakRun_().withSuccessHandler(renderTrangThaiTriggerAnh_)
     .withFailureHandler(function (err) { document.getElementById('trangThaiTriggerAnh').textContent = 'Không đọc được trạng thái: ' + err.message; })
     .KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL();
 
   function chayChuyenDoiAnhNgay() {
     showMsg('msgChuyenDoiAnh', '⌛ Đang chạy (ảnh trước, hồ sơ pháp lý sau)...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq1) {
-        google.script.run
+        hakRun_()
           .withSuccessHandler(function (kq2) { showMsg('msgChuyenDoiAnh', 'Ảnh: ' + kq1.thongBao + '\n\nHồ sơ pháp lý: ' + kq2.thongBao, true); })
           .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi (hồ sơ pháp lý): ' + err.message, false); })
           .CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL();
@@ -820,22 +1000,22 @@
 
   function batTriggerChuyenDoiAnh() {
     showMsg('msgChuyenDoiAnh', '⌛ Đang bật...', true);
-    google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+    hakRun_()
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); hakRun_().withSuccessHandler(renderTrangThaiTriggerAnh_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL:', err); }).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
       .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
       .THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL();
   }
 
   function tatTriggerChuyenDoiAnh() {
     showMsg('msgChuyenDoiAnh', '⌛ Đang tắt...', true);
-    google.script.run
-      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); google.script.run.withSuccessHandler(renderTrangThaiTriggerAnh_).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
+    hakRun_()
+      .withSuccessHandler(function (kq) { showMsg('msgChuyenDoiAnh', '✅ ' + kq.thongBao, true); hakRun_().withSuccessHandler(renderTrangThaiTriggerAnh_).withFailureHandler(function (err) { console.error('KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL:', err); }).KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL(); })
       .withFailureHandler(function (err) { showMsg('msgChuyenDoiAnh', '❌ Lỗi: ' + err.message, false); })
       .TAT_TRIGGER_CHUYEN_DOI_ANH_URL();
   }
 
   // ---- Cài đặt Vùng ----
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('vungHienTaiWeb').textContent = 'Vùng hiện tại — File chính: ' + (kq.locChinh || '(không đọc được)') + ' | File Draft: ' + (kq.locDraft || '(chưa mở được)');
     if (kq.locChinh) {
       var sel = document.getElementById('vungLocale');
@@ -848,7 +1028,7 @@
   function apDungVungLocale() {
     var vung = document.getElementById('vungLocale').value;
     showMsg('msgVungLocale', '⌛ Đang áp dụng...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         showMsg('msgVungLocale', '✅ ' + kq.thongBao, true);
         document.getElementById('vungHienTaiWeb').textContent = 'Vùng hiện tại: ' + vung;
@@ -858,7 +1038,7 @@
   }
 
   // ---- Thiết lập dữ liệu xuất MISA ----
-  google.script.run.withSuccessHandler(function (kq) {
+  hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('tlMaHang').value = kq.maHangMacDinh;
     document.getElementById('tlTenHang').value = kq.tenHangMacDinh;
     document.getElementById('tlDonViTinh').value = kq.donViTinhMacDinh;
@@ -866,7 +1046,7 @@
     document.getElementById('tlMasterSheetUrl').value = kq.masterSheetUrl || '';
     var sel = document.getElementById('tlVungMisa');
     for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === kq.vungDinhDangMisa) { sel.selectedIndex = i; break; } }
-  }).LAY_THIET_LAP_MISA();
+  }).withFailureHandler(function (err) { console.error('LAY_THIET_LAP_MISA:', err); }).LAY_THIET_LAP_MISA();
 
   function luuThietLapMisa() {
     var thietLap = {
@@ -878,7 +1058,7 @@
       masterSheetUrl: document.getElementById('tlMasterSheetUrl').value.trim()
     };
     showMsg('msgThietLapMisa', '⌛ Đang lưu...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { showMsg('msgThietLapMisa', '✅ ' + kq.thongBao, true); })
       .withFailureHandler(function (err) { showMsg('msgThietLapMisa', '❌ Lỗi: ' + err.message, false); })
       .LUU_THIET_LAP_MISA(thietLap);
@@ -886,11 +1066,104 @@
 
   function donFileTamMisa() {
     showMsg('msgDonFileTam', '⌛ Đang quét và dọn...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { showMsg('msgDonFileTam', '✅ ' + kq.thongBao, true); })
       .withFailureHandler(function (err) { showMsg('msgDonFileTam', '❌ Lỗi: ' + err.message, false); })
       .DON_FILE_TAM_MISA_CON_SOT();
   }
+</script>
+<script>
+  // ---- Người dùng & phân quyền / Cổng đăng nhập (34_PhanQuyen.gs) ----
+  var ND_VAI_TRO_NHAN_ = { ADMIN: 'Quản trị', NHAP_LIEU: 'Nhập liệu', XEM: 'Chỉ xem' };
+  function taiNguoiDung_() {
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        document.getElementById('ndChuScript').textContent = 'Quản trị cố định (luôn vào được, không sửa ở đây): ' +
+          [kq.chuScript].concat(kq.quanTriCoDinh).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(', ');
+        var el = document.getElementById('bangNguoiDung');
+        if (!kq.nguoiDung.length) { el.innerHTML = '<p class="hint">Chưa có người dùng nào — thêm ở trên.</p>'; return; }
+        var h = '<table class="data-table"><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+        kq.nguoiDung.forEach(function (x, i) {
+          h += '<tr><td>' + escHtmlBT_(x.email) + '</td><td>' + escHtmlBT_(x.hoTen) + '</td><td>' + escHtmlBT_(ND_VAI_TRO_NHAN_[x.vaiTro] || x.vaiTro) + '</td>' +
+            '<td>' + escHtmlBT_(x.trangThai) + '</td><td><button class="btn btn-outline" type="button" data-nd="' + i + '" style="padding:4px 10px">✏️ Sửa</button></td></tr>';
+        });
+        el.innerHTML = h + '</tbody></table>';
+        var nut = el.querySelectorAll('button[data-nd]');
+        for (var k = 0; k < nut.length; k++) nut[k].addEventListener('click', function () {
+          var x = kq.nguoiDung[Number(this.getAttribute('data-nd'))];
+          document.getElementById('ndEmail').value = x.email;
+          document.getElementById('ndHoTen').value = x.hoTen;
+          document.getElementById('ndVaiTro').value = x.vaiTro;
+          document.getElementById('ndTrangThai').value = x.trangThai;
+          document.getElementById('ndEmail').focus();
+        });
+      })
+      .withFailureHandler(function (err) { document.getElementById('bangNguoiDung').innerHTML = '<div class="msg err" style="display:block">❌ ' + escHtmlBT_(err.message) + '</div>'; })
+      .LAY_DANH_SACH_NGUOI_DUNG();
+  }
+  var ndDangLuu_ = false;
+  function luuNguoiDung_() {
+    if (ndDangLuu_) return;
+    var duLieu = {
+      email: document.getElementById('ndEmail').value.trim(),
+      hoTen: document.getElementById('ndHoTen').value.trim(),
+      vaiTro: document.getElementById('ndVaiTro').value,
+      trangThai: document.getElementById('ndTrangThai').value
+    };
+    if (!duLieu.email) { showMsg('msgNguoiDung', '❌ Nhập email.', false); return; }
+    ndDangLuu_ = true;
+    showMsg('msgNguoiDung', '⌛ Đang lưu...', true);
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        ndDangLuu_ = false;
+        showMsg('msgNguoiDung', kq.message, kq.success);
+        if (kq.success) { document.getElementById('ndEmail').value = ''; document.getElementById('ndHoTen').value = ''; taiNguoiDung_(); }
+      })
+      .withFailureHandler(function (err) { ndDangLuu_ = false; showMsg('msgNguoiDung', '❌ Lỗi: ' + err.message, false); })
+      .LUU_NGUOI_DUNG(duLieu);
+  }
+  function taiCauHinhDangNhap_() {
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        document.getElementById('dnLinkCong').value = kq.congDangNhapUrl || '';
+        document.getElementById('dnMaNguon').value = kq.maNguon || '';
+        document.getElementById('dnTrangThai').textContent = kq.congDangNhapUrl
+          ? '✅ Đã cấu hình Cổng đăng nhập. Link webapp chính: ' + kq.appUrl
+          : '⚠️ Chưa cấu hình Cổng đăng nhập — người dùng (trừ tài khoản chủ) chưa đăng nhập được. Link webapp chính: ' + kq.appUrl;
+      })
+      .withFailureHandler(function (err) { document.getElementById('dnTrangThai').textContent = '❌ ' + err.message; })
+      .LAY_CAU_HINH_DANG_NHAP();
+  }
+  function luuLinkCongDangNhap_() {
+    showMsg('msgDangNhap', '⌛ Đang lưu...', true);
+    hakRun_()
+      .withSuccessHandler(function (kq) { showMsg('msgDangNhap', kq.message, kq.success); if (kq.success) taiCauHinhDangNhap_(); })
+      .withFailureHandler(function (err) { showMsg('msgDangNhap', '❌ Lỗi: ' + err.message, false); })
+      .LUU_LINK_CONG_DANG_NHAP(document.getElementById('dnLinkCong').value.trim());
+  }
+  function saoChepMaNguonCong_() {
+    var o = document.getElementById('dnMaNguon');
+    o.select();
+    var xong = function () { showMsg('msgDangNhap', '✅ Đã sao chép mã nguồn Cổng — dán vào dự án Apps Script mới.', true); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(o.value).then(xong, function () { document.execCommand('copy'); xong(); });
+    else { document.execCommand('copy'); xong(); }
+  }
+  var dnXacNhanTaoLai_ = 0;
+  function taoLaiMaBiMatDangNhap_() {
+    // Bấm 2 lần trong 5 giây để xác nhận (không dùng hộp confirm chặn màn hình)
+    if (Date.now() - dnXacNhanTaoLai_ > 5000) {
+      dnXacNhanTaoLai_ = Date.now();
+      showMsg('msgDangNhap', '⚠️ Tạo lại mã bí mật làm Cổng đăng nhập hiện tại NGỪNG hoạt động cho tới khi dán lại mã nguồn mới. Bấm "Tạo lại mã bí mật" lần nữa trong 5 giây để xác nhận.', false);
+      return;
+    }
+    dnXacNhanTaoLai_ = 0;
+    hakRun_()
+      .withSuccessHandler(function (kq) { showMsg('msgDangNhap', kq.message, kq.success); taiCauHinhDangNhap_(); })
+      .withFailureHandler(function (err) { showMsg('msgDangNhap', '❌ Lỗi: ' + err.message, false); })
+      .TAO_LAI_MA_BI_MAT_DANG_NHAP();
+  }
+  taiNguoiDung_();
+  taiCauHinhDangNhap_();
 </script>
 </body>
 </html>

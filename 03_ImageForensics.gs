@@ -65,17 +65,17 @@ function docExifTuBytes_(blob) {
   const little = (byteOrder === 'II');
 
   function readU16(pos) {
-    return little ? (bytes[pos] | (bytes[pos + 1] << 8)) : ((bytes[pos] << 8) | bytes[pos + 1]);
+    return little ? ((bytes[pos] & 0xFF) | ((bytes[pos + 1] & 0xFF) << 8)) : (((bytes[pos] & 0xFF) << 8) | (bytes[pos + 1] & 0xFF));
   }
   function readU32(pos) {
     return little
-      ? ((bytes[pos]) | (bytes[pos + 1] << 8) | (bytes[pos + 2] << 16) | (bytes[pos + 3] << 24)) >>> 0
-      : ((bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3]) >>> 0;
+      ? ((bytes[pos] & 0xFF) | ((bytes[pos + 1] & 0xFF) << 8) | ((bytes[pos + 2] & 0xFF) << 16) | ((bytes[pos + 3] & 0xFF) << 24)) >>> 0
+      : (((bytes[pos] & 0xFF) << 24) | ((bytes[pos + 1] & 0xFF) << 16) | ((bytes[pos + 2] & 0xFF) << 8) | (bytes[pos + 3] & 0xFF)) >>> 0;
   }
   function readString(pos, len) {
     let s = '';
     for (let i = 0; i < len; i++) {
-      const c = bytes[pos + i];
+      const c = bytes[pos + i] & 0xFF;
       if (c === 0) break;
       s += String.fromCharCode(c);
     }
@@ -173,7 +173,7 @@ function khoangCachMet_(lat1, lng1, lat2, lng2) {
  * Trích xuất tọa độ GPS từ CHỮ IN SẴN TRÊN ẢNH (không phải EXIF) — rất phổ biến
  * với các app "GPS Map Camera"/"Camera địa lý" hay dùng khi chụp hiện trường rừng:
  * app vẽ chữ tọa độ/địa chỉ/giờ chụp trực tiếp lên ảnh thay vì (hoặc thêm vào) EXIF.
- * Dùng OCR (ocrFile_ ở 04_Reconciliation.gs) đọc chữ trên ảnh rồi dò mẫu tọa độ
+ * Dùng Gemini đọc chữ trên ảnh rồi lấy tọa độ (xem ghi chú ngay bên dưới) — các mẫu tọa độ thường gặp
  * dạng độ-phút-giây (vd: 15°44'4.872" N 108°4'57.026" E).
  */
 /** ⚠️ ĐÃ SỬA: trước đây tự OCR rồi bóc tách bằng regex CHỈ bắt đúng 1 định dạng
@@ -191,7 +191,7 @@ function docToaDoTuChuTrenAnh_(fileId) {
   }
 }
 
-function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
+function kiemTraMotAnh_(duongDanFile, latRungKyVong, lngRungKyVong) {
   const blob = layBlobTheoTen_(duongDanFile);
   if (!blob) {
     return { file: duongDanFile, loi: 'Không tìm thấy file trên Drive', dauHieu: ['file_khong_ton_tai'] };
@@ -200,7 +200,7 @@ function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
   const exif = docExifTuBytes_(blob);
   const dauHieu = [];
   let khoangCach = null;
-  let gpsAnh = exif.hasExif && exif.gpsLat && exif.gpsLng ? { lat: exif.gpsLat, lng: exif.gpsLng } : null;
+  let gpsAnh = exif.hasExif && exif.gpsLat !== null && exif.gpsLng !== null ? { lat: exif.gpsLat, lng: exif.gpsLng } : null;
   let diaChiTrenAnh = '';
   let nguonToaDo = 'EXIF';
 
@@ -270,12 +270,18 @@ function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
  * tương ứng lấy từ HD_GPS (join theo ID_HD <-> ID_KEY_GPS), xuất báo cáo.
  */
 /** Kiểm tra 1 ảnh ĐÃ CÓ SẴN trên Drive qua link dán tay — không cần upload lại, dùng khi hộp thoại chọn file bị đơ trên máy người dùng */
-function KIEM_TRA_ANH_TU_LINK(url) {
+function KIEM_TRA_ANH_TU_LINK_(url) {
   if (!url) return { loi: 'Thiếu link ảnh' };
-  return kiemTraMotAnh(url, null, null);
+  return kiemTraMotAnh_(url, null, null);
 }
 
-function KIEM_TRA_ANH_TOAN_BO() {
+/** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi KIEM_TRA_ANH_TOAN_BO_ qua api(). */
+function KIEM_TRA_ANH_TOAN_BO(e) {
+  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
+  return KIEM_TRA_ANH_TOAN_BO_();
+}
+
+function KIEM_TRA_ANH_TOAN_BO_() {
   const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
 
@@ -285,8 +291,8 @@ function KIEM_TRA_ANH_TOAN_BO() {
     const id = (r[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (!id) return;
     const type = r[GPS_COL.HE_TOA_DO];
-    const lat = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
-    const lng = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
+    const lat = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
     if (isNaN(lat) || isNaN(lng)) return;
     if (!gpsByRung[id]) gpsByRung[id] = [];
     gpsByRung[id].push({ lat: lat, lng: lng });
@@ -307,7 +313,7 @@ function KIEM_TRA_ANH_TOAN_BO() {
     for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
       const duongDan = row[c];
       if (!duongDan) continue;
-      const kq = kiemTraMotAnh(duongDan, toaDo ? toaDo.lat : null, toaDo ? toaDo.lng : null);
+      const kq = kiemTraMotAnh_(duongDan, toaDo ? toaDo.lat : null, toaDo ? toaDo.lng : null);
       baoCao.push({
         idHD: idHD,
         chuRung: row[PICTURE_COL.TEN_CHU_RUNG],

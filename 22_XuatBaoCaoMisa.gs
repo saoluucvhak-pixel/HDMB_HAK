@@ -25,7 +25,7 @@
  */
 
 /** Đọc thiết lập xuất báo cáo MISA hiện tại (Script Properties) — có mặc định an toàn nếu chưa cấu hình lần nào */
-function LAY_THIET_LAP_MISA() {
+function LAY_THIET_LAP_MISA_() {
   const p = PropertiesService.getScriptProperties();
   return {
     maHangMacDinh: p.getProperty('MISA_MA_HANG_MAC_DINH') || 'GK',
@@ -38,7 +38,7 @@ function LAY_THIET_LAP_MISA() {
 }
 
 /** Lưu lại thiết lập xuất báo cáo MISA (Script Properties) */
-function LUU_THIET_LAP_MISA(thietLap) {
+function LUU_THIET_LAP_MISA_(thietLap) {
   const p = PropertiesService.getScriptProperties();
   p.setProperty('MISA_MA_HANG_MAC_DINH', (thietLap.maHangMacDinh || 'GK').toString().trim());
   p.setProperty('MISA_TEN_HANG_MAC_DINH', (thietLap.tenHangMacDinh || 'Gỗ tròn keo').toString().trim());
@@ -91,7 +91,7 @@ const MISA_COT_KHOA_HDMB_ = 23; // "KEY_HD" (= idRung)
 function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   let nccRows = readData_(SHEET_NAME.HD_NCC);
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const thietLap = LAY_THIET_LAP_MISA();
+  const thietLap = LAY_THIET_LAP_MISA_();
 
   const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
   const denNgayDate = denNgay ? new Date(denNgay) : null;
@@ -171,7 +171,7 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
  * Dòng trùng khóa CÓ SẴN trong Sheet (nếu có, do nhập tay/lỗi trước đây) sẽ bị
  * GIẢM CÒN 1 DÒNG (giữ dòng đầu tiên, xóa các dòng trùng phía sau).
  */
-function DONG_BO_VAO_MISA_MASTER(tuNgay, denNgay) {
+function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
   const masterId = PropertiesService.getScriptProperties().getProperty('MISA_MASTER_SHEET_ID');
   if (!masterId) return { thanhCong: false, loi: 'Chưa cấu hình Sheet cố định "Update_Hopdong_NCC_DN". Vào Thiết lập → 📊 Báo cáo MISA để dán URL.' };
 
@@ -247,8 +247,8 @@ function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotTe
  *   trong Sheet cố định tại thời điểm xuất (kể cả dữ liệu từ các lần đồng bộ
  *   trước đó, không riêng lần này).
  */
-function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
-  const kqDongBo = DONG_BO_VAO_MISA_MASTER(tuNgay, denNgay);
+function XUAT_BAO_CAO_MISA_(tuNgay, denNgay) {
+  const kqDongBo = DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay);
   if (!kqDongBo.thanhCong) return kqDongBo;
 
   const masterId = PropertiesService.getScriptProperties().getProperty('MISA_MASTER_SHEET_ID');
@@ -277,7 +277,7 @@ function XUAT_BAO_CAO_MISA(tuNgay, denNgay) {
  * Code HIỆN TẠI (từ bản sửa này) KHÔNG còn tạo file tạm nào nữa — hàm này chỉ
  * để DỌN SẠCH những gì đã lỡ sót lại từ trước, chạy 1 lần là đủ.
  */
-function DON_FILE_TAM_MISA_CON_SOT() {
+function DON_FILE_TAM_MISA_CON_SOT_() {
   const itNormal = DriveApp.getFilesByName('TAM_XUAT_MISA'); // tên cũ (không có timestamp) — phòng trường hợp hiếm
   const itSearch = DriveApp.searchFiles('title contains "TAM_XUAT_MISA_"'); // tên có timestamp, kiểu tìm phổ biến nhất
   const daXoa = [];
@@ -294,15 +294,17 @@ function DON_FILE_TAM_MISA_CON_SOT() {
 
 /** Chạy từ menu Google Sheet */
 function DON_FILE_TAM_MISA_CON_SOT_TU_MENU() {
-  const kq = DON_FILE_TAM_MISA_CON_SOT();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = DON_FILE_TAM_MISA_CON_SOT_();
   SpreadsheetApp.getUi().alert(kq.thongBao + (kq.danhSach.length ? '\n\n' + kq.danhSach.join('\n') : ''));
 }
 
 /** Chạy từ menu Google Sheet — hiện link tải trực tiếp trong hộp thoại */
 function XUAT_BAO_CAO_MISA_TU_MENU() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const ui = SpreadsheetApp.getUi();
   try {
-    const kq = XUAT_BAO_CAO_MISA();
+    const kq = XUAT_BAO_CAO_MISA_();
     if (!kq.thanhCong) { ui.alert('❌ ' + kq.loi); return; }
     ui.alert(
       '✅ Đã đồng bộ + xuất "' + kq.tenFile + '"\n' +

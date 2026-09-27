@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+<style>
+
+  :root {
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
+    --card-bg: #ffffff;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; display: flex; min-height: 100vh;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--page-bg); color: var(--heading);
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .app-sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
+  }
+  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
+
+  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
+    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
+  .tab-bar a, .tab-bar span {
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  /* Modal "Xem chi tiết lô rừng" — nổi giữa màn hình, không phụ thuộc vị trí
+     cuộn trang, vì bảng Hồ sơ rừng có thể rất dài (hàng trăm dòng) khiến card
+     cũ (nằm ngay sau bảng, theo dòng chảy trang bình thường) bị đẩy xuống tít
+     dưới, người dùng phải cuộn rất xa mới thấy. */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,35,27,0.55);
+    z-index: 1000; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.mo { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: 12px; padding: 22px 24px;
+    max-width: 640px; width: 100%; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-purple { background: var(--accent-purple); color: #fff; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+    .brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
+  }
+</style>
+<style>
+  .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .the-thongke { flex: 1; min-width: 140px; background: #fff; border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .the-thongke:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+  .the-thongke.active { border-color: var(--active-green); background: #dcfce7; }
+  .the-thongke .so { font-size: 26px; font-weight: 700; color: var(--heading); }
+  .the-thongke.active .so { color: var(--active-green); }
+  .the-thongke .nhan { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+  table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
+  table.mecon-table tr:hover td { background: #dcfce7; }
+  a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
+  a.lnk-hd:hover { text-decoration: underline; }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #dcfce7; color: var(--active-green); }
+  .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
+</style>
+<style>
+  .tc-o-tim { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .tc-o-tim .field { flex: 1; min-width: 240px; }
+  .tc-ghi-chu { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .tc-khop { font-size: 11px; color: #6b7280; }
+  .tc-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; font-size: 13px; }
+  .tc-luoi .nhan { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .tc-luoi .gt { margin-top: 2px; word-break: break-word; }
+  .tc-anh { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: var(--active-green); }
+  .tc-canh-bao { background: #fef3c7; color: #92400e; border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
+  .tc-quay-lai { margin-bottom: 14px; }
+  .tc-dang-tai { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
+  .tc-o-tim .field.tc-ngay { flex: none; min-width: 150px; width: 160px; }
+  .tc-nhanh { font-size: 12px; color: var(--text-muted); margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: #fff; border-radius: 14px; cursor: pointer; color: var(--heading); }
+  .tc-nhanh button:hover { border-color: var(--active-green); color: var(--active-green); }
+</style>
+<style>
+  .ha-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 8px; }
+  .ha-o { border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; background: #fff; position: relative; }
+  .ha-o.bo { opacity: .45; }
+  .ha-khung { width: 100%; aspect-ratio: 4 / 3; background: #f3f4f6; display: flex; align-items: center; justify-content: center; cursor: zoom-in; overflow: hidden; }
+  .ha-khung img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ha-khung .cho { font-size: 11px; color: #9ca3af; }
+  .ha-chon { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; cursor: pointer; accent-color: #16a34a; }
+  .ha-cap { padding: 6px 8px; font-size: 11px; color: #374151; line-height: 1.35; }
+  .ha-cap .loai { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #dcfce7; color: #166534; }
+  .ha-cap .loai.gps { background: #dbeafe; color: #1e40af; }
+  .ha-nhom { margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--heading); }
+  .ha-o.hs { border-color: #c7d2fe; }
+  .ha-o.hs .ha-khung { background: #eef2ff; }
+  .ha-o.hs .ha-khung img { object-fit: contain; background: #fff; }
+  .ha-cap .loai.hs { background: #e0e7ff; color: #3730a3; }
+  .ha-kem { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #374151; background: #fff; border: 1px solid var(--border-light); border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+  .ha-kem input { width: 16px; height: 16px; accent-color: #4338ca; }
+  .ha-thanh { position: sticky; top: 0; z-index: 5; background: var(--page-bg); padding: 8px 0 10px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ha-thanh .dem { font-size: 12.5px; color: #374151; margin-left: 4px; }
+  #haPhongTo { position: fixed; inset: 0; background: rgba(17,24,39,.92); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+  #haPhongTo.mo { display: flex; }
+  #haPhongTo img { max-width: 92vw; max-height: 80vh; object-fit: contain; background: #111; }
+  #haPhongTo .chu { color: #e5e7eb; font-size: 13px; margin-top: 10px; text-align: center; max-width: 92vw; }
+  #haPhongTo .chu a { color: #93c5fd; }
+  #haPhongTo button { position: absolute; background: rgba(255,255,255,.12); color: #fff; border: 0; font-size: 26px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; }
+  #haPhongTo .dong { top: 16px; right: 16px; font-size: 20px; }
+  #haPhongTo .truoc { left: 16px; top: 50%; }
+  #haPhongTo .sau { right: 16px; top: 50%; }
+</style>
+</head>
+<body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
+    <span class="icon">🖼️</span> Tra cứu hình ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+
+  <div class="nav-group-label">Khác</div>
+  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
+    <span class="icon">📖</span> Hướng dẫn sử dụng
+  </a>
+  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
+    <span class="icon">⚙️</span> Thiết lập
+  </a>
+</div>
+
+  <div class="app-main">
+    <div class="page-title">🖼️ Tra cứu hình ảnh</div>
+    <div class="page-subtitle">Tìm hợp đồng hoặc khách hàng, xem toàn bộ ảnh hiện trường và ảnh minh chứng GPS theo từng lô rừng, bấm vào ảnh để phóng to, rồi xuất file PDF (chọn/bỏ chọn từng ảnh trước khi xuất). Vai trò Nhập liệu / Quản trị xem được cả hồ sơ pháp lý và ghép chúng vào file PDF.</div>
+
+    <div id="haVungTim">
+      <div class="card">
+        <form class="tc-o-tim" onsubmit="haTim_(); return false;">
+          <div class="field">
+            <label for="haTuKhoa">Số HĐ / tên khách hàng / CCCD / SĐT</label>
+            <input id="haTuKhoa" autocomplete="off" placeholder="vd 20260710010 · Nguyễn Văn A · 0490..." maxlength="100">
+          </div>
+          <div class="field tc-ngay"><label for="haTuNgay">Ngày ký từ ngày</label><input id="haTuNgay" type="date"></div>
+          <div class="field tc-ngay"><label for="haDenNgay">Đến ngày</label><input id="haDenNgay" type="date"></div>
+          <div class="field" style="flex:none"><button class="btn btn-green" type="submit" id="haNutTim">🔍 Tìm</button></div>
+        </form>
+        <div class="tc-ghi-chu">Từ khóa ít nhất 2 ký tự, hoặc chỉ chọn khoảng ngày ký. Ở mỗi hợp đồng chọn <b>🖼️ Ảnh hợp đồng</b> hoặc <b>👤 Ảnh cả khách hàng</b> (mọi hợp đồng cùng CCCD chủ rừng).</div>
+      </div>
+      <div id="haKetQua"></div>
+    </div>
+
+    <div id="haVungAnh" style="display:none"></div>
+  </div>
+
+<div id="haPhongTo" role="dialog" aria-modal="true" aria-label="Xem ảnh phóng to">
+  <button type="button" class="dong" aria-label="Đóng" onclick="haDongPhongTo_()">✕</button>
+  <button type="button" class="truoc" aria-label="Ảnh trước" onclick="haPhongToLech_(-1)">‹</button>
+  <img id="haAnhLon" alt="">
+  <div class="chu" id="haChuLon"></div>
+  <button type="button" class="sau" aria-label="Ảnh sau" onclick="haPhongToLech_(1)">›</button>
+</div>
+
+<script>
+function escHA_(s) {
+  return (s === null || s === undefined ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function urlHA_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escHA_(u) : '#'; }
+function loiHA_(err) { return escHA_(err && err.message ? err.message : err); }
+
+// ---------- Tìm hợp đồng ----------
+var haDangTim_ = false;
+function haTim_() {
+  var tk = document.getElementById('haTuKhoa').value.trim();
+  var tu = document.getElementById('haTuNgay').value, den = document.getElementById('haDenNgay').value;
+  var vung = document.getElementById('haKetQua');
+  if (!tu && !den && tk.length < 2) { vung.innerHTML = '<div class="msg err">Nhập ít nhất 2 ký tự để tìm, hoặc chọn khoảng ngày ký.</div>'; return; }
+  if (tk.length === 1) { vung.innerHTML = '<div class="msg err">Từ khóa cần ít nhất 2 ký tự.</div>'; return; }
+  if (tu && den && tu > den) { vung.innerHTML = '<div class="msg err">"Từ ngày" phải trước hoặc bằng "Đến ngày".</div>'; return; }
+  if (haDangTim_) return;
+  haDangTim_ = true; document.getElementById('haNutTim').disabled = true;
+  vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tìm…</div>';
+  hakRun_()
+    .withSuccessHandler(function (kq) { haDangTim_ = false; document.getElementById('haNutTim').disabled = false; haVeKetQua_(kq); })
+    .withFailureHandler(function (err) { haDangTim_ = false; document.getElementById('haNutTim').disabled = false; vung.innerHTML = '<div class="msg err">❌ ' + loiHA_(err) + '</div>'; })
+    .TRA_CUU_HOP_DONG(tk, tu, den);
+}
+function haVeKetQua_(kq) {
+  var vung = document.getElementById('haKetQua');
+  if (kq.loi) { vung.innerHTML = '<div class="msg err">' + escHA_(kq.loi) + '</div>'; return; }
+  if (!kq.ketQua.length) { vung.innerHTML = '<div class="card"><div class="empty-hint">Không tìm thấy hợp đồng nào.</div></div>'; return; }
+  var h = '<div class="card"><h3>Kết quả: ' + kq.tongSo + ' hợp đồng' + (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất)</span>' : '') + '</h3>' +
+    '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Địa chỉ rừng</th><th>Tình trạng</th><th>Xem ảnh</th></tr></thead><tbody>';
+  kq.ketQua.forEach(function (x, i) {
+    h += '<tr><td>' + escHA_(x.soHD || x.idHD) + '</td><td>' + escHA_(x.ngayKy) + '</td><td>' + escHA_(x.tenChuRung) + '</td><td>' + escHA_(x.diaChiRung) + '</td>' +
+      '<td>' + (x.tinhTrang ? '<span class="badge-trang-thai">' + escHA_(x.tinhTrang) + '</span>' : '') + '</td>' +
+      '<td style="white-space:nowrap"><button class="btn btn-green" type="button" style="padding:5px 10px" data-i="' + i + '" data-kh="0">🖼️ Ảnh hợp đồng</button> ' +
+      '<button class="btn btn-outline" type="button" style="padding:5px 10px" data-i="' + i + '" data-kh="1">👤 Ảnh cả khách hàng</button></td></tr>';
+  });
+  vung.innerHTML = h + '</tbody></table></div></div>';
+  var nut = vung.querySelectorAll('button[data-i]');
+  for (var k = 0; k < nut.length; k++) nut[k].addEventListener('click', function () {
+    haMoAnh_(kq.ketQua[Number(this.getAttribute('data-i'))].idHD, this.getAttribute('data-kh') === '1');
+  });
+}
+
+// ---------- Thư viện ảnh ----------
+var haDuLieu_ = null;     // kết quả LAY_ANH_TRA_CUU
+var haDanhSach_ = [];     // mọi ảnh theo thứ tự hiển thị: { ma, id, url, loai, lat, lng, diaChi, nhom, soHD }
+var haAnhNho_ = {};       // id -> dataUrl
+var haBoChon_ = {};       // ma -> true (ảnh bị bỏ chọn)
+var haHoSo_ = [];         // hồ sơ pháp lý: { ma, id, url, lo, hoSoNguonGoc, soGiayTo, ngayGiayTo, soHD }
+
+function haMoAnh_(idHD, theoKhachHang) {
+  document.getElementById('haVungTim').style.display = 'none';
+  var vung = document.getElementById('haVungAnh');
+  vung.style.display = '';
+  vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải danh sách ảnh…</div>';
+  try { google.script.history.replace(null, { page: 'hinhanh', idhd: idHD, kh: theoKhachHang ? '1' : '0' }); } catch (e) { /* ngoài Apps Script */ }
+  hakRun_()
+    .withSuccessHandler(function (d) { haVeThuVien_(d); })
+    .withFailureHandler(function (err) { vung.innerHTML = haNutVe_() + '<div class="msg err">❌ ' + loiHA_(err) + '</div>'; haGanNutVe_(); })
+    .LAY_ANH_TRA_CUU(idHD, !!theoKhachHang);
+}
+function haNutVe_() { return '<button class="btn btn-outline" type="button" id="haVe">← Quay lại tìm kiếm</button>'; }
+function haGanNutVe_() {
+  var b = document.getElementById('haVe');
+  if (b) b.addEventListener('click', function () {
+    document.getElementById('haVungAnh').style.display = 'none';
+    document.getElementById('haVungTim').style.display = '';
+    haDuLieu_ = null;
+  });
+}
+
+function haVeThuVien_(d) {
+  var vung = document.getElementById('haVungAnh');
+  if (!d || d.khongTimThay) { vung.innerHTML = haNutVe_() + '<div class="msg err">' + escHA_((d && d.loi) || 'Không tìm thấy hợp đồng.') + '</div>'; haGanNutVe_(); return; }
+  haDuLieu_ = d; haDanhSach_ = []; haBoChon_ = {}; haHoSo_ = [];
+  var h = '<div class="ha-thanh">' + haNutVe_() +
+    '<button class="btn btn-outline" type="button" id="haChonHet">☑ Chọn tất cả</button>' +
+    '<button class="btn btn-outline" type="button" id="haBoHet">☐ Bỏ chọn tất cả</button>' +
+    (d.tongHoSo ? '<label class="ha-kem" for="haKemHoSo"><input type="checkbox" id="haKemHoSo"> 📁 Kèm hồ sơ pháp lý (' + d.tongHoSo + ' file)</label>' : '') +
+    '<button class="btn btn-green" type="button" id="haXuatPdf">📄 Xuất PDF</button><span class="dem" id="haDem"></span></div>';
+  h += '<div class="card"><h3>' + (d.theoKhachHang ? '👤 Khách hàng ' : '📄 Hợp đồng của ') + escHA_(d.khachHang.ten) + '</h3>' +
+    '<div class="tc-luoi">' +
+    '<div><div class="nhan">CCCD</div><div class="gt">' + escHA_(d.khachHang.cccd || '—') + '</div></div>' +
+    '<div><div class="nhan">Số hợp đồng</div><div class="gt">' + d.hopDong.length + '</div></div>' +
+    '<div><div class="nhan">Tổng số ảnh</div><div class="gt">' + d.tongAnh + '</div></div>' +
+    '<div><div class="nhan">Hồ sơ pháp lý</div><div class="gt">' + (d.hoSoBiAn ? '🔒 ' + d.hoSoBiAn + ' file (cần vai trò Nhập liệu)' : (d.tongHoSo || 0) + ' file') + '</div></div></div>' +
+    (d.chuaCoLink ? '<div class="tc-ghi-chu">⚠️ ' + d.chuaCoLink + ' ảnh còn lưu tên file chưa tìm được trên Drive — chạy menu "Chuyển tên file ảnh sang URL thật" rồi xem lại.</div>' : '') + '</div>';
+  d.hopDong.forEach(function (hd) {
+    h += '<div class="card"><h3>Hợp đồng ' + escHA_(hd.soHD || hd.idHD) + (hd.ngayKy ? ' — ký ' + escHA_(hd.ngayKy) : '') +
+      (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escHA_(hd.tinhTrang) + '</span>' : '') + '</h3>' +
+      (hd.diaChiRung ? '<div class="tc-ghi-chu" style="margin-top:-8px">' + escHA_(hd.diaChiRung) + ' · ' + hd.soLo + ' lô rừng</div>' : '');
+    if (!hd.nhom.length) h += '<div class="empty-hint">Hợp đồng này chưa có ảnh.</div>';
+    hd.nhom.forEach(function (n) {
+      h += '<div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
+      n.anh.forEach(function (a) {
+        var vt = haDanhSach_.length;
+        haDanhSach_.push(Object.assign({ nhom: n.tieuDe, soHD: hd.soHD }, a));
+        var coGps = a.lat !== null && a.lat !== undefined && a.lng !== null && a.lng !== undefined;
+        h += '<div class="ha-o" id="haO' + vt + '">' +
+          '<input type="checkbox" class="ha-chon" checked data-vt="' + vt + '" aria-label="Chọn ảnh ' + (vt + 1) + ' để xuất PDF">' +
+          '<div class="ha-khung" data-vt="' + vt + '" data-id="' + escHA_(a.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
+          '<div class="ha-cap"><span class="loai' + (a.loai === 'Ảnh GPS' ? ' gps' : '') + '">' + escHA_(a.loai) + '</span> #' + (vt + 1) +
+          (coGps ? '<br>📍 ' + escHA_(a.lat + ', ' + a.lng) : '') + (a.diaChi ? '<br>' + escHA_(a.diaChi) : '') + '</div></div>';
+      });
+      h += '</div>';
+    });
+    if ((hd.hoSo || []).length) {
+      h += '<div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
+      hd.hoSo.forEach(function (x) {
+        var k = haHoSo_.length;
+        haHoSo_.push(Object.assign({ soHD: hd.soHD }, x));
+        h += '<div class="ha-o hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
+          '<div class="ha-cap"><span class="loai hs">Hồ sơ pháp lý</span><br><b>' + escHA_(x.hoSoNguonGoc || 'Hồ sơ') + '</b>' + (x.soGiayTo ? ' · số ' + escHA_(x.soGiayTo) : '') +
+          (x.ngayGiayTo ? ' · ' + escHA_(x.ngayGiayTo) : '') + '<br>' + escHA_(x.lo) + '</div></div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+  });
+  if (!d.tongAnh && !d.tongHoSo) h += '<div class="card"><div class="empty-hint">Chưa có ảnh nào cho ' + (d.theoKhachHang ? 'khách hàng' : 'hợp đồng') + ' này.</div></div>';
+  vung.innerHTML = h;
+  haGanNutVe_();
+  document.getElementById('haChonHet').addEventListener('click', function () { haChonTatCa_(true); });
+  document.getElementById('haBoHet').addEventListener('click', function () { haChonTatCa_(false); });
+  document.getElementById('haXuatPdf').addEventListener('click', haXuatPdf_);
+  if (document.getElementById('haKemHoSo')) document.getElementById('haKemHoSo').addEventListener('change', haCapNhatDem_);
+  vung.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('ha-chon')) return;
+    var vt = Number(e.target.getAttribute('data-vt'));
+    if (e.target.checked) delete haBoChon_[haDanhSach_[vt].ma]; else haBoChon_[haDanhSach_[vt].ma] = true;
+    document.getElementById('haO' + vt).classList.toggle('bo', !e.target.checked);
+    haCapNhatDem_();
+  });
+  vung.addEventListener('click', function (e) {
+    var k = e.target.closest ? e.target.closest('.ha-khung') : null;
+    if (!k) return;
+    if (k.hasAttribute('data-hs')) haMoLon_(haHoSo_, Number(k.getAttribute('data-hs')));
+    else haPhongTo_(Number(k.getAttribute('data-vt')));
+  });
+  haCapNhatDem_();
+  haIdCanTai_ = [];
+  haDanhSach_.concat(haHoSo_).forEach(function (a) { if (haIdCanTai_.indexOf(a.id) === -1) haIdCanTai_.push(a.id); });
+  haTaiAnhNho_(0);
+  window.scrollTo(0, 0);
+}
+
+function haSoDaChon_() { return haDanhSach_.filter(function (a) { return !haBoChon_[a.ma]; }).length; }
+function haKemHoSo_() { var o = document.getElementById('haKemHoSo'); return !!(o && o.checked); }
+function haCapNhatDem_() {
+  var n = haSoDaChon_(), kem = haKemHoSo_();
+  document.getElementById('haDem').textContent = 'Đã chọn ' + n + '/' + haDanhSach_.length + ' ảnh' + (kem ? ' + ' + haHoSo_.length + ' hồ sơ pháp lý' : '') + (n > 60 ? ' — PDF lấy tối đa 60 ảnh đầu' : '');
+  document.getElementById('haXuatPdf').disabled = !n && !(kem && haHoSo_.length);
+}
+function haChonTatCa_(chon) {
+  haBoChon_ = {};
+  if (!chon) haDanhSach_.forEach(function (a) { haBoChon_[a.ma] = true; });
+  var o = document.querySelectorAll('.ha-chon');
+  for (var i = 0; i < o.length; i++) { o[i].checked = chon; document.getElementById('haO' + o[i].getAttribute('data-vt')).classList.toggle('bo', !chon); }
+  haCapNhatDem_();
+}
+
+/** Tải ảnh thu nhỏ (ảnh + trang đầu hồ sơ) theo lô 30 file, tuần tự để không quá tải máy chủ. */
+var haIdCanTai_ = [];
+function haTaiAnhNho_(batDau) {
+  var d = haDuLieu_;
+  if (!d || batDau >= haIdCanTai_.length) return;
+  var lo = haIdCanTai_.slice(batDau, batDau + 30);
+  var ids = lo.filter(function (id) { return !haAnhNho_[id]; });
+  var ve = function () {
+    lo.forEach(function (id) {
+      var khung = document.querySelectorAll('.ha-khung[data-id="' + id + '"]');
+      for (var i = 0; i < khung.length; i++) {
+        var src = haAnhNho_[id];
+        khung[i].innerHTML = src ? '' : '<span class="cho">Không tải được ảnh</span>';
+        if (src) { var img = document.createElement('img'); img.src = src; img.alt = khung[i].hasAttribute('data-hs') ? 'Trang đầu hồ sơ pháp lý' : 'Ảnh ' + (Number(khung[i].getAttribute('data-vt')) + 1); khung[i].appendChild(img); }
+      }
+    });
+    if (haDuLieu_ === d) haTaiAnhNho_(batDau + 30);
+  };
+  if (!ids.length) { ve(); return; }
+  hakRun_()
+    .withSuccessHandler(function (kq) { Object.keys((kq && kq.anh) || {}).forEach(function (id) { haAnhNho_[id] = kq.anh[id]; }); ve(); })
+    .withFailureHandler(function (err) { console.error('LAY_DU_LIEU_ANH:', err); ve(); })
+    .LAY_DU_LIEU_ANH(d.idHD, d.theoKhachHang, ids, false);
+}
+
+// ---------- Phóng to (ảnh hoặc trang đầu hồ sơ pháp lý) ----------
+var haDsLon_ = [], haViTriLon_ = -1, haAnhLon_ = {};
+function haPhongTo_(vt) { haMoLon_(haDanhSach_, vt); }
+function haMoLon_(ds, vt) {
+  var a = ds[vt];
+  if (!a) return;
+  haDsLon_ = ds; haViTriLon_ = vt;
+  var laHoSo = a.loai === 'Hồ sơ pháp lý';
+  var img = document.getElementById('haAnhLon');
+  img.src = haAnhLon_[a.id] || haAnhNho_[a.id] || '';
+  img.alt = laHoSo ? 'Trang đầu hồ sơ pháp lý' : 'Ảnh ' + (vt + 1);
+  var coGps = a.lat !== null && a.lat !== undefined && a.lng !== null && a.lng !== undefined;
+  document.getElementById('haChuLon').innerHTML = laHoSo
+    ? 'Hồ sơ ' + (vt + 1) + '/' + ds.length + ' · HĐ ' + escHA_(a.soHD) + ' · ' + escHA_(a.lo) + '<br><b>' + escHA_(a.hoSoNguonGoc || 'Hồ sơ pháp lý') + '</b>' +
+      (a.soGiayTo ? ' · số ' + escHA_(a.soGiayTo) : '') + (a.ngayGiayTo ? ' · ' + escHA_(a.ngayGiayTo) : '') + ' <span style="opacity:.75">(hiện trang đầu)</span>' +
+      '<br><a target="_blank" rel="noopener" href="' + urlHA_(a.url) + '">Mở toàn bộ file gốc trên Drive</a>'
+    : 'Ảnh ' + (vt + 1) + '/' + ds.length + ' · HĐ ' + escHA_(a.soHD) + ' · ' + escHA_(a.nhom) + ' · ' + escHA_(a.loai) +
+      (coGps ? ' · 📍 ' + escHA_(a.lat + ', ' + a.lng) : '') + (a.diaChi ? '<br>' + escHA_(a.diaChi) : '') +
+      '<br><a target="_blank" rel="noopener" href="' + urlHA_(a.url) + '">Mở file gốc trên Drive</a>';
+  document.getElementById('haPhongTo').className = 'mo';
+  if (!haAnhLon_[a.id]) {
+    var d = haDuLieu_;
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        var src = kq && kq.anh && kq.anh[a.id];
+        if (src) { haAnhLon_[a.id] = src; if (haDsLon_[haViTriLon_] === a) document.getElementById('haAnhLon').src = src; }
+      })
+      .withFailureHandler(function (err) { console.error('LAY_DU_LIEU_ANH lớn:', err); })
+      .LAY_DU_LIEU_ANH(d.idHD, d.theoKhachHang, [a.id], true);
+  }
+}
+function haDongPhongTo_() { document.getElementById('haPhongTo').className = ''; haViTriLon_ = -1; }
+function haPhongToLech_(buoc) {
+  if (haViTriLon_ < 0 || !haDsLon_.length) return;
+  haMoLon_(haDsLon_, (haViTriLon_ + buoc + haDsLon_.length) % haDsLon_.length);
+}
+document.addEventListener('keydown', function (e) {
+  if (haViTriLon_ < 0) return;
+  if (e.key === 'Escape') haDongPhongTo_();
+  else if (e.key === 'ArrowLeft') haPhongToLech_(-1);
+  else if (e.key === 'ArrowRight') haPhongToLech_(1);
+});
+document.getElementById('haPhongTo').addEventListener('click', function (e) { if (e.target.id === 'haPhongTo') haDongPhongTo_(); });
+
+// ---------- Xuất PDF (+ ghép hồ sơ pháp lý) ----------
+var haDangXuat_ = false;
+/** Gọi 1 chức năng máy chủ, trả Promise. */
+function haGoi_(ten, thamSo) {
+  return new Promise(function (ok, loi) {
+    var r = hakRun_().withSuccessHandler(ok).withFailureHandler(loi);
+    r[ten].apply(r, thamSo);
+  });
+}
+/** Nạp thư viện ghép PDF (pdf-lib) khi cần: cdnjs, dự phòng jsDelivr. */
+var HA_PDF_LIB_URL = ['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'];
+function haNapPdfLib_() {
+  if (window.PDFLib) return Promise.resolve(window.PDFLib);
+  return HA_PDF_LIB_URL.reduce(function (p, url) {
+    return p.catch(function () {
+      return new Promise(function (ok, loi) {
+        var sc = document.createElement('script');
+        sc.src = url; sc.async = true;
+        sc.onload = function () { window.PDFLib ? ok(window.PDFLib) : loi(new Error('pdf-lib')); };
+        sc.onerror = function () { loi(new Error('Không tải được ' + url)); };
+        document.head.appendChild(sc);
+      });
+    });
+  }, Promise.reject(new Error('start')));
+}
+function haBase64SangBytes_(b64) {
+  var bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+/** Ghép từng file hồ sơ vào cuối PDF ảnh. Trả { bytes, loi: [..] }. */
+async function haGhepHoSo_(kq, d, baoTienDo) {
+  var PDFLib = await haNapPdfLib_();
+  var tl = await PDFLib.PDFDocument.load(haBase64SangBytes_(kq.base64));
+  var loi = [];
+  for (var i = 0; i < kq.hoSoKem.length; i++) {
+    var x = kq.hoSoKem[i], nhan = (x.hoSoNguonGoc || 'Hồ sơ') + ' (' + x.lo + ')';
+    baoTienDo(i + 1, kq.hoSoKem.length);
+    var f;
+    try { f = await haGoi_('LAY_FILE_HO_SO', [d.idHD, d.theoKhachHang, x.id]); } catch (e) { loi.push(nhan + ': ' + (e.message || e)); continue; }
+    if (!f || !f.thanhCong) { loi.push(nhan + ': ' + ((f && f.loi) || 'không đọc được')); continue; }
+    var bytes = haBase64SangBytes_(f.base64), mime = String(f.mimeType || '');
+    try {
+      if (mime === 'application/pdf') {
+        var nguon = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        var trang = await tl.copyPages(nguon, nguon.getPageIndices());
+        trang.forEach(function (t) { tl.addPage(t); });
+      } else if (mime === 'image/jpeg' || mime === 'image/png') {
+        var anh = mime === 'image/png' ? await tl.embedPng(bytes) : await tl.embedJpg(bytes);
+        var p = tl.addPage([595.28, 841.89]); // A4
+        var tile = Math.min((595.28 - 56) / anh.width, (841.89 - 56) / anh.height, 1);
+        p.drawImage(anh, { x: (595.28 - anh.width * tile) / 2, y: (841.89 - anh.height * tile) / 2, width: anh.width * tile, height: anh.height * tile });
+      } else {
+        loi.push(nhan + ': định dạng ' + (mime || 'không rõ') + ' chưa ghép được — mở file gốc trên Drive');
+      }
+    } catch (e) { loi.push(nhan + ': file hỏng hoặc bị khóa (' + (e.message || e) + ')'); }
+  }
+  return { bytes: await tl.save(), loi: loi };
+}
+function haXuatPdf_() {
+  var d = haDuLieu_;
+  if (!d || haDangXuat_) return;
+  var soChon = haSoDaChon_(), kem = haKemHoSo_();
+  var chon = soChon === haDanhSach_.length ? [] : haDanhSach_.filter(function (a) { return !haBoChon_[a.ma]; }).map(function (a) { return a.ma; });
+  var nut = document.getElementById('haXuatPdf');
+  haDangXuat_ = true; nut.disabled = true; nut.textContent = '⏳ Đang tạo PDF…';
+  var xong = function () { haDangXuat_ = false; nut.disabled = false; nut.textContent = '📄 Xuất PDF'; haCapNhatDem_(); };
+  hakRun_()
+    .withSuccessHandler(function (kq) {
+      if (!kq || !kq.thanhCong) { xong(); thongBaoHA_('❌ ' + ((kq && kq.loi) || 'Không tạo được PDF.')); return; }
+      var moTa = kq.soAnh + ' ảnh' + (kq.boQua ? ', bỏ qua ' + kq.boQua + ' ảnh vượt giới hạn 60' : '') + (kq.loiTai ? ', ' + kq.loiTai + ' ảnh không tải được' : '');
+      if (!kq.hoSoKem || !kq.hoSoKem.length) {
+        xong(); haTaiFile_(kq.base64, kq.tenFile, kq.mimeType);
+        thongBaoHA_('✅ Đã tạo ' + kq.tenFile + ' (' + moTa + ').');
+        return;
+      }
+      haGhepHoSo_(kq, d, function (i, n) { nut.textContent = '⏳ Ghép hồ sơ ' + i + '/' + n + '…'; })
+        .then(function (r) {
+          xong(); haTaiBytes_(r.bytes, kq.tenFile, 'application/pdf');
+          var ghep = kq.hoSoKem.length - r.loi.length;
+          thongBaoHA_((r.loi.length ? '⚠️ ' : '✅ ') + 'Đã tạo ' + kq.tenFile + ' (' + moTa + ', ghép ' + ghep + '/' + kq.hoSoKem.length + ' hồ sơ pháp lý).' +
+            (r.loi.length ? '\nChưa ghép được: ' + r.loi.join('; ') : ''));
+        })
+        .catch(function (e) {
+          xong(); haTaiFile_(kq.base64, kq.tenFile, kq.mimeType);
+          thongBaoHA_('⚠️ Không tải được công cụ ghép PDF (' + (e && e.message ? e.message : e) + ') — đã tải file ảnh kèm danh mục hồ sơ; hồ sơ pháp lý mở riêng bằng cách bấm vào từng hồ sơ.');
+        });
+    })
+    .withFailureHandler(function (err) { xong(); thongBaoHA_('❌ ' + (err && err.message ? err.message : err)); })
+    .XUAT_PDF_ANH(d.idHD, d.theoKhachHang, chon, { kemHoSo: kem, khongAnh: soChon === 0 });
+}
+function haTaiFile_(base64, tenFile, mimeType) { haTaiBytes_(haBase64SangBytes_(base64), tenFile, mimeType); }
+function haTaiBytes_(bytes, tenFile, mimeType) {
+  var url = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+  var a = document.createElement('a');
+  a.href = url; a.download = tenFile;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+}
+/** Thông báo nổi (không chặn màn hình), chỉ dùng textContent. */
+function thongBaoHA_(noiDung) {
+  var s = String(noiDung || ''), loai = /^❌/.test(s) ? '#dc2626' : /^✅/.test(s) ? '#16a34a' : /^⚠️/.test(s) ? '#b45309' : '#1f2937';
+  var o = document.createElement('div');
+  o.textContent = s; o.setAttribute('role', 'status');
+  o.style.cssText = 'position:fixed;right:12px;bottom:84px;z-index:100000;max-width:min(420px,calc(100vw - 24px));background:' + loai + ';color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:13px;cursor:pointer;white-space:pre-line';
+  o.onclick = function () { if (o.parentNode) o.parentNode.removeChild(o); };
+  document.body.appendChild(o);
+  setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, /^(❌|⚠️)/.test(s) ? 16000 : 9000);
+}
+
+// Mở thẳng thư viện ảnh khi có ?idhd=... (vd bấm từ trang Tra cứu hợp đồng)
+(function () {
+  try {
+    google.script.url.getLocation(function (loc) {
+      var p = (loc && loc.parameter) || {};
+      if (p.idhd) haMoAnh_(String(p.idhd), p.kh === '1');
+    });
+  } catch (e) { /* ngoài Apps Script */ }
+})();
+</script>
+<?!= include('ChatbotWidget') ?>
+
+</body>
+</html>

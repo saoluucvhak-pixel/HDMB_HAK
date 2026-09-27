@@ -6,22 +6,22 @@
 <style>
 
   :root {
-    --sidebar-bg: #14231b;
-    --sidebar-bg-2: #182a20;
-    --active-green: #2f7d52;
-    --accent-gold: #c9973f;
-    --accent-purple: #6b4a63;
-    --text-light: #cdd6d0;
-    --text-muted: #7d8c84;
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
     --card-bg: #ffffff;
-    --page-bg: #f2f3f1;
-    --border-light: #e5e7e5;
-    --heading: #1c2a22;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; display: flex; min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--page-bg); color: var(--heading);
   }
 
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f5f2ea; color: #7a6a4a; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -105,8 +105,8 @@
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #eafaf1; color: #196f3d; border-left: 4px solid var(--active-green); }
-  .msg.err { background: #fdecea; color: #c0392b; border-left: 4px solid #e74c3c; }
+  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -130,9 +130,9 @@
   .app-main table th, .app-main table td { border: 1px solid var(--border-light); padding: 6px 8px; text-align: left; vertical-align: top; }
   .app-main table th { background: var(--sidebar-bg); color: #fff; }
   .app-main table tr:nth-child(even) { background: #f7f7f7; }
-  .app-main pre { background: #f0fff4; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+  .app-main pre { background: #dcfce7; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
   .app-main code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-  .app-main .warn { background: #fdecea; border-left: 4px solid #e74c3c; padding: 8px 12px; margin: 10px 0; }
+  .app-main .warn { background: #fee2e2; border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; }
   .app-main a { color: var(--active-green); }
 </style>
 </head>
@@ -148,6 +148,12 @@
 
   <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
     <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
+    <span class="icon">🖼️</span> Tra cứu hình ảnh
   </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
@@ -192,6 +198,21 @@
         │     └── 🖼️ Ảnh hiện trường (HD_Picture — tối đa 10 ảnh/dòng)
         └── 💳 Số tài khoản (HD_STK — 1 hợp đồng nhiều số TK)</pre>
 <p>Dữ liệu <b>bên ngoài</b> (chỉ đọc): <b>Báo giá gỗ keo</b> (tra đơn giá theo ngày), <b>DNTT_GK_DN_CT</b> (khối lượng/giá trị đã thực hiện + thanh toán), <b>PhieuCan_DN</b> (phiếu cân).</p>
+
+<h3>Đăng nhập &amp; phân quyền</h3>
+<p>Mở webapp → bấm <b>"Đăng nhập bằng Google"</b> → chọn tài khoản Gmail → bấm <b>"Vào hệ thống"</b>. Chỉ email đã được Quản trị thêm ở <b>⚙️ Thiết lập › 👥 Người dùng &amp; phân quyền</b> mới vào được (menu trong Google Sheet cũng vậy). Đăng nhập 1 lần là dùng được ở mọi tab của trình duyệt đó; đang dùng thì tự gia hạn, chỉ phải đăng nhập lại khi bỏ không quá 6 giờ hoặc sau 7 ngày; nút <b>Đăng xuất</b> (góc dưới bên trái) thoát ở mọi tab. Lần đầu mở Cổng đăng nhập, Google hỏi cho phép ứng dụng biết địa chỉ email — chỉ hỏi 1 lần cho mỗi tài khoản.</p>
+<ul>
+  <li><b>Chỉ xem</b>: Tổng quan, Tra cứu hợp đồng, Bản đồ, Báo cáo, Hướng dẫn. Ở trang Tra cứu, CCCD / SĐT / số tài khoản bị che bớt và không mở được file hồ sơ pháp lý.</li>
+  <li><b>Nhập liệu</b>: thêm quyền tạo/sửa hợp đồng, lô rừng, tài khoản, ảnh, GPS, kiểm tra hồ sơ, xuất MISA.</li>
+  <li><b>Quản trị</b>: toàn bộ, gồm Thiết lập, người dùng, bảo trì, xóa vĩnh viễn hợp đồng.</li>
+</ul>
+<p><b>Xem ảnh / file hồ sơ:</b> bấm "xem", "📎", "Mở file"… ở bất kỳ trang nào, file mở ngay trong hệ thống (không cần được chia sẻ trên Google Drive); có nút <b>Tải về</b>, <b>Mở trong tab mới</b> (file PDF) và <b>Mở trên Drive</b> (dành cho người có quyền Drive). Hồ sơ pháp lý chỉ vai trò Nhập liệu / Quản trị mở được.</p>
+<h3>🔍 Tra cứu hợp đồng</h3>
+<p>Gõ Số HĐ, tên chủ rừng hoặc người ủy quyền (có dấu hay không dấu đều được), CCCD, số điện thoại, số tài khoản (nhập từ 4 chữ số, có thể chỉ 1 phần) hoặc địa chỉ rừng, và/hoặc chọn <b>Ngày ký từ ngày – đến ngày</b> (có nút chọn nhanh Tháng này / Tháng trước / Quý này / Năm nay; để trống từ khóa = xem mọi hợp đồng ký trong khoảng đó) → <b>Tra cứu</b>. Bấm Số HĐ để xem chi tiết: thông tin hợp đồng, tình hình thực hiện, lô rừng (kèm số điểm GPS), tài khoản nhận tiền, hồ sơ pháp lý và ảnh hiện trường.</p>
+
+<h3>🖼️ Tra cứu hình ảnh &amp; xuất PDF</h3>
+<p>Tìm hợp đồng (Số HĐ, tên, CCCD, SĐT hoặc khoảng ngày ký) → bấm <b>🖼️ Ảnh hợp đồng</b> (chỉ hợp đồng đó) hoặc <b>👤 Ảnh cả khách hàng</b> (mọi hợp đồng cùng CCCD chủ rừng). Ảnh hiện theo từng lô rừng: ảnh hiện trường và ảnh minh chứng GPS (kèm tọa độ, địa chỉ). Bấm vào ảnh để phóng to (phím ← → để chuyển, Esc để đóng). Bỏ tick những ảnh không cần rồi bấm <b>📄 Xuất PDF</b> — file gồm trang thông tin khách hàng/hợp đồng và lưới ảnh 2 cột có chú thích (tối đa 60 ảnh/file). Từ trang Tra cứu hợp đồng cũng có nút <b>Xem ảnh &amp; xuất PDF</b>.</p>
+<p><b>Hồ sơ pháp lý</b> (GCN QSDĐ, CCCD, giấy ủy quyền… đính kèm ở từng lô rừng) — chỉ vai trò Nhập liệu / Quản trị: hiện trang đầu của từng file trong mục <b>📁 Hồ sơ pháp lý</b>, bấm để phóng to và mở file gốc. Tick <b>📁 Kèm hồ sơ pháp lý</b> trước khi xuất để ghép nguyên văn các file hồ sơ (PDF, ảnh JPG/PNG, Google Docs) vào cuối file PDF; trang đầu file có bảng danh mục hồ sơ theo đúng thứ tự ghép. File Word/Excel hoặc file trên 15 MB không ghép được — mở riêng trên Drive.</p>
 
 <h2>2. Quy trình nhập liệu (trang "📝 Nhập liệu HĐ / Rừng / TK")</h2>
 <p>Trang gốc là <b>👤 Khách hàng</b> (không phải danh sách hợp đồng phẳng) — bấm 1 khách hàng để xem toàn bộ hợp đồng họ đã ký, mỗi hợp đồng 1 dòng riêng.</p>

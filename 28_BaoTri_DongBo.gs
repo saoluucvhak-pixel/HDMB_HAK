@@ -7,21 +7,21 @@
  *                 │                   └─ HD_Picture (cháu)
  *                 └─ HD_STK (con 2)
  *
- *  1. CHAN_DOAN_MO_COI_TOAN_HE_THONG() — tìm ID/Key MỒ CÔI (con trỏ về mẹ
+ *  1. CHAN_DOAN_MO_COI_TOAN_HE_THONG_() — tìm ID/Key MỒ CÔI (con trỏ về mẹ
  *     không tồn tại) và ID/Key BỊ SÓT (dòng thiếu chính ID định danh của nó).
- *  2. DONG_BO_THONG_TIN_MO_RONG() — đồng bộ lại các trường LẶP LẠI (tên chủ
+ *  2. DONG_BO_THONG_TIN_MO_RONG_() — đồng bộ lại các trường LẶP LẠI (tên chủ
  *     rừng ở HD_GPS/HD_STK...) theo đúng dữ liệu mới nhất từ HD_NCC/HD_RUNG,
  *     và điền "Địa chỉ" cho các điểm HD_GPS đang trống (lấy theo Địa chỉ rừng
  *     của chính lô đó — không có API định vị ngược nên dùng địa chỉ rừng làm
  *     giá trị hợp lý gần đúng nhất hiện có).
- *  3. Gợi ý luôn chạy lại GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS() (đã có sẵn ở
+ *  3. Gợi ý luôn chạy lại GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_() (đã có sẵn ở
  *     25_TrichXuatToaDoTuDiaChi.gs) — bắt các lô rừng vẫn còn ghi tọa độ dạng
  *     chữ trong "Địa chỉ rừng" mà chưa từng chuyển vào HD_GPS.
  * ============================================================
  */
 
 /** ============ 1. CHẨN ĐOÁN MỒ CÔI / SÓT ID TOÀN HỆ THỐNG ============ */
-function CHAN_DOAN_MO_COI_TOAN_HE_THONG() {
+function CHAN_DOAN_MO_COI_TOAN_HE_THONG_() {
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const stkRows = readData_(SHEET_NAME.HD_STK);
@@ -65,7 +65,7 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG() {
   pictureRows.forEach(function (r, idx) {
     const idHD = (r[PICTURE_COL.ID_HD] || '').toString().trim();
     // ⚠️ HD_Picture có quirk lịch sử: cột ID_HD đôi khi lưu ID_RUNG thay vì ID_HD thật —
-    // đối chiếu kép (giống layAnhCuaHopDong/layCoAnhVaGpsTrucTiep_ đã dùng), chỉ coi là
+    // đối chiếu kép (giống layAnhCuaHopDong_/layCoAnhVaGpsTrucTiep_ đã dùng), chỉ coi là
     // mồ côi nếu KHÔNG khớp được với CẢ 2 khả năng.
     if (idHD && !idHDHopLe[idHD] && !idRungHopLe[idHD]) ketQua.picture_moCoi.push({ dong: idx + 2, idPicture: r[PICTURE_COL.ID_PICTURE], idSai: idHD, tenChuRung: r[PICTURE_COL.TEN_CHU_RUNG] });
   });
@@ -76,7 +76,8 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG() {
 
 /** Chạy từ menu Sheets — hiện popup tóm tắt */
 function CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU() {
-  const kq = CHAN_DOAN_MO_COI_TOAN_HE_THONG();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
   if (kq.tongSoVanDe === 0) { SpreadsheetApp.getUi().alert('✅ Không phát hiện ID/Key mồ côi hay bị sót nào trong toàn bộ hệ thống.'); return; }
   let tb = '⚠️ Phát hiện ' + kq.tongSoVanDe + ' vấn đề:\n\n';
   tb += 'HD_NCC thiếu ID_HD: ' + kq.ncc_thieuIdHD.length + ' dòng\n';
@@ -91,7 +92,7 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU() {
 }
 
 /** ============ 2. ĐỒNG BỘ THÔNG TIN LẶP LẠI + ĐIỀN ĐỊA CHỈ GPS CÒN TRỐNG ============ */
-function DONG_BO_THONG_TIN_MO_RONG() {
+function DONG_BO_THONG_TIN_MO_RONG_() {
   damBaoTieuDeCotMoRongRung_(); // ⚠️ MỚI: điền tiêu đề 2 cột mở rộng (Khối lượng thực hiện, Năm trồng) nếu còn thiếu — chạy ngay khi bảo trì, không cần đợi thêm lô rừng mới mới tự điền
 
   // ⚠️ MỚI: định dạng TEXT cho toàn bộ cột định danh HIỆN CÓ trong HD_NCC/HD_STK
@@ -158,6 +159,8 @@ function DONG_BO_THONG_TIN_MO_RONG() {
     if (coSua) soDaSuaStk++;
   });
 
+  if (soDaSuaGps > 0 || soDaDienDiaChiGps > 0) xoaCacheBanDo_(); // dữ liệu HD_GPS vừa đổi -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
+
   return {
     thanhCong: true, soDaSuaGps: soDaSuaGps, soDaDienDiaChiGps: soDaDienDiaChiGps, soDaSuaStk: soDaSuaStk,
     thongBao: 'Đã đồng bộ lại tên chủ rừng cho ' + soDaSuaGps + ' điểm GPS, điền Địa chỉ còn trống cho ' + soDaDienDiaChiGps + ' điểm GPS, đồng bộ ' + soDaSuaStk + ' số tài khoản.'
@@ -166,24 +169,25 @@ function DONG_BO_THONG_TIN_MO_RONG() {
 
 /** Chạy từ menu Sheets — hiện popup */
 function DONG_BO_THONG_TIN_MO_RONG_TU_MENU() {
-  const kq = DONG_BO_THONG_TIN_MO_RONG();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = DONG_BO_THONG_TIN_MO_RONG_();
   SpreadsheetApp.getUi().alert('✅ ' + kq.thongBao);
 }
 
 /** ============ 3. CHẠY TOÀN BỘ BẢO TRÌ 1 LƯỢT (chẩn đoán + đồng bộ + trích xuất tọa độ còn sót) ============ */
-function CHAY_TOAN_BO_BAO_TRI() {
-  const chanDoanTruoc = CHAN_DOAN_MO_COI_TOAN_HE_THONG();
-  const dongBo = DONG_BO_THONG_TIN_MO_RONG();
+function CHAY_TOAN_BO_BAO_TRI_() {
+  const chanDoanTruoc = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
+  const dongBo = DONG_BO_THONG_TIN_MO_RONG_();
   let toaDoDaTrichXuat = { thanhCong: true, soDaGhi: 0, tongSoLo: 0, loi: [] };
-  try { toaDoDaTrichXuat = GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS(); } catch (e) { /* nếu chưa có hàm này (project cũ chưa cập nhật) thì bỏ qua bước này */ }
+  try { toaDoDaTrichXuat = GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_(); } catch (e) { /* nếu chưa có hàm này (project cũ chưa cập nhật) thì bỏ qua bước này */ }
   // ⚠️ BỔ SUNG: trước đây bảo trì tổng thể thiếu bước chuyển tên file ảnh/hồ sơ
   // pháp lý sang URL thật (nguyên nhân chính khiến "Xem chi tiết" chậm/treo) —
   // giờ chạy luôn trong 1 lượt bảo trì, không cần nhớ chạy riêng.
   let anhDaChuyen = { thanhCong: true, xongHet: true, soDaChuyen: 0 };
   let hoSoDaChuyen = { thanhCong: true, xongHet: true, soDaChuyen: 0 };
-  try { anhDaChuyen = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL(); } catch (e) { /* bỏ qua nếu chưa có hàm này */ }
-  try { hoSoDaChuyen = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL(); } catch (e) { /* bỏ qua nếu chưa có hàm này */ }
-  const chanDoanSau = CHAN_DOAN_MO_COI_TOAN_HE_THONG();
+  try { anhDaChuyen = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_(); } catch (e) { /* bỏ qua nếu chưa có hàm này */ }
+  try { hoSoDaChuyen = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_(); } catch (e) { /* bỏ qua nếu chưa có hàm này */ }
+  const chanDoanSau = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
   return {
     thanhCong: true,
     soVanDeMoCoiTruoc: chanDoanTruoc.tongSoVanDe, soVanDeMoCoiSau: chanDoanSau.tongSoVanDe,
@@ -192,10 +196,11 @@ function CHAY_TOAN_BO_BAO_TRI() {
   };
 }
 function CHAY_TOAN_BO_BAO_TRI_TU_MENU() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const ui = SpreadsheetApp.getUi();
   const xacNhan = ui.alert('🔧 Chạy toàn bộ bảo trì dữ liệu', 'Sẽ: (1) Chẩn đoán mồ côi, (2) Đồng bộ thông tin lặp lại + điền địa chỉ GPS trống, (3) Trích xuất nốt tọa độ còn ghi dạng chữ trong Địa chỉ rừng, (4) Chuyển tên file ảnh/hồ sơ pháp lý sang URL thật. KHÔNG xóa dữ liệu nào. Tiếp tục?', ui.ButtonSet.OK_CANCEL);
   if (xacNhan !== ui.Button.OK) return;
-  const kq = CHAY_TOAN_BO_BAO_TRI();
+  const kq = CHAY_TOAN_BO_BAO_TRI_();
   ui.alert(
     '✅ Hoàn tất bảo trì.\n\n' +
     'Mồ côi trước: ' + kq.soVanDeMoCoiTruoc + ' → sau: ' + kq.soVanDeMoCoiSau + ' (bảo trì KHÔNG tự sửa mồ côi thật, chỉ đồng bộ dữ liệu — nếu còn mồ côi cần xem tay).\n' +
