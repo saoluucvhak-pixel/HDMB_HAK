@@ -362,17 +362,6 @@ function haVeThuVien_(d) {
       (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escHA_(hd.tinhTrang) + '</span>' : '') + '</h3>' +
       (hd.diaChiRung ? '<div class="tc-ghi-chu" style="margin-top:-8px">' + escHA_(hd.diaChiRung) + ' · ' + hd.soLo + ' lô rừng</div>' : '');
     if (!hd.nhom.length) h += '<div class="empty-hint">Hợp đồng này chưa có ảnh.</div>';
-    if ((hd.hoSo || []).length) {
-      h += '<div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
-      hd.hoSo.forEach(function (x) {
-        var k = haHoSo_.length;
-        haHoSo_.push(Object.assign({ soHD: hd.soHD }, x));
-        h += '<div class="ha-o hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
-          '<div class="ha-cap"><span class="loai hs">Hồ sơ pháp lý</span><br><b>' + escHA_(x.hoSoNguonGoc || 'Hồ sơ') + '</b>' + (x.soGiayTo ? ' · số ' + escHA_(x.soGiayTo) : '') +
-          (x.ngayGiayTo ? ' · ' + escHA_(x.ngayGiayTo) : '') + '<br>' + escHA_(x.lo) + '</div></div>';
-      });
-      h += '</div>';
-    }
     hd.nhom.forEach(function (n) {
       h += '<div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
       n.anh.forEach(function (a) {
@@ -387,6 +376,17 @@ function haVeThuVien_(d) {
       });
       h += '</div>';
     });
+    if ((hd.hoSo || []).length) {
+      h += '<div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
+      hd.hoSo.forEach(function (x) {
+        var k = haHoSo_.length;
+        haHoSo_.push(Object.assign({ soHD: hd.soHD }, x));
+        h += '<div class="ha-o hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
+          '<div class="ha-cap"><span class="loai hs">Hồ sơ pháp lý</span><br><b>' + escHA_(x.hoSoNguonGoc || 'Hồ sơ') + '</b>' + (x.soGiayTo ? ' · số ' + escHA_(x.soGiayTo) : '') +
+          (x.ngayGiayTo ? ' · ' + escHA_(x.ngayGiayTo) : '') + '<br>' + escHA_(x.lo) + '</div></div>';
+      });
+      h += '</div>';
+    }
     h += '</div>';
   });
   if (!d.tongAnh && !d.tongHoSo) h += '<div class="card"><div class="empty-hint">Chưa có ảnh nào cho ' + (d.theoKhachHang ? 'khách hàng' : 'hợp đồng') + ' này.</div></div>';
