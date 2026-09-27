@@ -349,7 +349,9 @@ function haVeThuVien_(d) {
     '<button class="btn btn-outline" type="button" id="haChonHet">☑ Chọn tất cả</button>' +
     '<button class="btn btn-outline" type="button" id="haBoHet">☐ Bỏ chọn tất cả</button>' +
     (d.tongHoSo ? '<label class="ha-kem" for="haKemHoSo"><input type="checkbox" id="haKemHoSo"> 📁 Kèm hồ sơ pháp lý (' + d.tongHoSo + ' file)</label>' : '') +
-    '<button class="btn btn-green" type="button" id="haXuatPdf">📄 Xuất PDF</button><span class="dem" id="haDem"></span></div>';
+    '<button class="btn btn-green" type="button" id="haXuatPdf">📄 Xuất PDF</button>' +
+    '<button class="btn btn-outline" type="button" id="haXuatBaoCao" title="Tổng hợp tiến độ, thanh toán, bản đồ vùng khai thác và hồ sơ pháp lý của cả hợp đồng vào 1 file">📊 Báo cáo thực hiện (PDF)</button>' +
+    '<span class="dem" id="haDem"></span></div>';
   h += '<div class="card"><h3>' + (d.theoKhachHang ? '👤 Khách hàng ' : '📄 Hợp đồng của ') + escHA_(d.khachHang.ten) + '</h3>' +
     '<div class="tc-luoi">' +
     '<div><div class="nhan">CCCD</div><div class="gt">' + escHA_(d.khachHang.cccd || '—') + '</div></div>' +
@@ -395,6 +397,7 @@ function haVeThuVien_(d) {
   document.getElementById('haChonHet').addEventListener('click', function () { haChonTatCa_(true); });
   document.getElementById('haBoHet').addEventListener('click', function () { haChonTatCa_(false); });
   document.getElementById('haXuatPdf').addEventListener('click', haXuatPdf_);
+  document.getElementById('haXuatBaoCao').addEventListener('click', haXuatBaoCao_);
   if (document.getElementById('haKemHoSo')) document.getElementById('haKemHoSo').addEventListener('change', haCapNhatDem_);
   vung.addEventListener('change', function (e) {
     if (!e.target.classList.contains('ha-chon')) return;
@@ -590,6 +593,41 @@ function haXuatPdf_() {
     })
     .withFailureHandler(function (err) { xong(); thongBaoHA_('❌ ' + (err && err.message ? err.message : err)); })
     .XUAT_PDF_ANH(d.idHD, d.theoKhachHang, chon, { kemHoSo: kem, khongAnh: soChon === 0 });
+}
+/** Báo cáo tình hình thực hiện hợp đồng (PDF) — tổng hợp tiến độ/thanh toán/bản đồ vùng khai thác/hồ sơ pháp lý,
+ *  dùng chung state ảnh đã chọn + tùy chọn kèm hồ sơ với nút "Xuất PDF" ở trên (36_BaoCaoHopDong.gs). */
+var haDangXuatBaoCao_ = false;
+function haXuatBaoCao_() {
+  var d = haDuLieu_;
+  if (!d || haDangXuatBaoCao_) return;
+  var soChon = haSoDaChon_(), kem = haKemHoSo_();
+  var chon = soChon === haDanhSach_.length ? [] : haDanhSach_.filter(function (a) { return !haBoChon_[a.ma]; }).map(function (a) { return a.ma; });
+  var nut = document.getElementById('haXuatBaoCao');
+  haDangXuatBaoCao_ = true; nut.disabled = true; nut.textContent = '⏳ Đang tạo báo cáo…';
+  var xong = function () { haDangXuatBaoCao_ = false; nut.disabled = false; nut.textContent = '📊 Báo cáo thực hiện (PDF)'; };
+  hakRun_()
+    .withSuccessHandler(function (kq) {
+      if (!kq || !kq.thanhCong) { xong(); thongBaoHA_('❌ ' + ((kq && kq.loi) || 'Không tạo được báo cáo.')); return; }
+      var moTa = kq.soAnh + ' ảnh, ' + kq.soBanDo + ' bản đồ' + (kq.canhBao && kq.canhBao.length ? ' — ⚠️ ' + kq.canhBao.join('; ') : '');
+      if (!kq.hoSoKem || !kq.hoSoKem.length) {
+        xong(); haTaiFile_(kq.base64, kq.tenFile, kq.mimeType);
+        thongBaoHA_('✅ Đã tạo ' + kq.tenFile + ' (' + moTa + ').');
+        return;
+      }
+      haGhepHoSo_(kq, d, function (i, n) { nut.textContent = '⏳ Ghép hồ sơ ' + i + '/' + n + '…'; })
+        .then(function (r) {
+          xong(); haTaiBytes_(r.bytes, kq.tenFile, 'application/pdf');
+          var ghep = kq.hoSoKem.length - r.loi.length;
+          thongBaoHA_((r.loi.length ? '⚠️ ' : '✅ ') + 'Đã tạo ' + kq.tenFile + ' (' + moTa + ', ghép ' + ghep + '/' + kq.hoSoKem.length + ' hồ sơ pháp lý).' +
+            (r.loi.length ? '\nChưa ghép được: ' + r.loi.join('; ') : ''));
+        })
+        .catch(function (e) {
+          xong(); haTaiFile_(kq.base64, kq.tenFile, kq.mimeType);
+          thongBaoHA_('⚠️ Không tải được công cụ ghép PDF (' + (e && e.message ? e.message : e) + ') — đã tải báo cáo kèm danh mục hồ sơ; hồ sơ pháp lý mở riêng bằng cách bấm vào từng hồ sơ.');
+        });
+    })
+    .withFailureHandler(function (err) { xong(); thongBaoHA_('❌ ' + (err && err.message ? err.message : err)); })
+    .BAO_CAO_HOP_DONG_PDF(d.idHD, d.theoKhachHang, chon, { kemHoSo: kem, khongAnh: soChon === 0 });
 }
 function haTaiFile_(base64, tenFile, mimeType) { haTaiBytes_(haBase64SangBytes_(base64), tenFile, mimeType); }
 function haTaiBytes_(bytes, tenFile, mimeType) {
