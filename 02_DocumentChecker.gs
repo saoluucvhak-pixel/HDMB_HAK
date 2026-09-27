@@ -375,20 +375,32 @@ function KIEM_TRA_ANH_DA_CHON(duongDanList) {
     rungByHD[idHD].push(r);
   });
 
+  // ⚠️ ĐÃ TỐI ƯU (PERF-005): trước đây đọc lại TOÀN BỘ HD_GPS cho MỖI ảnh được chọn (M ảnh = M lần đọc
+  // cả sheet) và so khớp O(số lô × số điểm). Giờ đọc HD_GPS 1 lần cho cả lượt, tra lô bằng Set, và nhớ
+  // kết quả theo hợp đồng (nhiều ảnh cùng 1 hợp đồng). Giữ đúng thứ tự dòng nên kết quả trung bình y hệt.
+  let gpsRowsMotLan = null;
+  const toaDoDaTinh = {};
   function toaDoTrungBinhCuaHD(idHD) {
-    const cacRung = rungByHD[idHD] || [];
-    const rows = readData_(SHEET_NAME.HD_GPS).filter(function (g) {
-      return cacRung.some(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === (g[GPS_COL.ID_KEY_GPS] || '').toString().trim(); });
-    });
-    if (!rows.length) return null;
-    let latTong = 0, lngTong = 0, dem = 0;
-    rows.forEach(function (g) {
-      const type = g[GPS_COL.HE_TOA_DO];
-      const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-      const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
-      if (!isNaN(lat) && !isNaN(lng)) { latTong += lat; lngTong += lng; dem++; }
-    });
-    return dem ? { lat: latTong / dem, lng: lngTong / dem } : null;
+    if (Object.prototype.hasOwnProperty.call(toaDoDaTinh, idHD)) {
+      const c = toaDoDaTinh[idHD];
+      return c ? { lat: c.lat, lng: c.lng } : null;
+    }
+    if (!gpsRowsMotLan) gpsRowsMotLan = readData_(SHEET_NAME.HD_GPS);
+    const idRungCuaHD = new Set((rungByHD[idHD] || []).map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); }));
+    const rows = gpsRowsMotLan.filter(function (g) { return idRungCuaHD.has((g[GPS_COL.ID_KEY_GPS] || '').toString().trim()); });
+    let kq = null;
+    if (rows.length) {
+      let latTong = 0, lngTong = 0, dem = 0;
+      rows.forEach(function (g) {
+        const type = g[GPS_COL.HE_TOA_DO];
+        const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+        const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+        if (!isNaN(lat) && !isNaN(lng)) { latTong += lat; lngTong += lng; dem++; }
+      });
+      kq = dem ? { lat: latTong / dem, lng: lngTong / dem } : null;
+    }
+    toaDoDaTinh[idHD] = kq;
+    return kq ? { lat: kq.lat, lng: kq.lng } : null;
   }
 
   const nccRows = readData_(SHEET_NAME.HD_NCC);
