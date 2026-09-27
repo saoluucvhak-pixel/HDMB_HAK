@@ -1245,6 +1245,8 @@ function layGPSCuaRung(idRung) {
 /** Tải 1 ảnh minh chứng lên Drive để gắn vào 1 điểm GPS cụ thể (cột HINH_ANH của HD_GPS) */
 function TAI_ANH_GPS_LEN_DRIVE(base64Data, mimeType, tenFileGoc) {
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
+  const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
+  if (loiFile) return { thanhCong: false, loi: loiFile };
   try {
     // ⚠️ ĐÃ SỬA: trước đây dùng CHUNG thư mục với ảnh hiện trường
     // (layHoacTaoThuMucAnh_) — giờ tách thư mục RIÊNG cho ảnh minh chứng GPS,
@@ -1315,6 +1317,8 @@ function layHoacTaoThuMucHoSo_() {
 function TAI_LEN_HO_SO_RUNG(idRung, tenFileGoc, base64Data, mimeType) {
   idRung = (idRung || '').toString().trim();
   if (!idRung || !base64Data) return { thanhCong: false, loi: 'Thiếu ID_RUNG hoặc dữ liệu file' };
+  const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
+  if (loiFile) return { thanhCong: false, loi: loiFile };
   try {
     const folder = layHoacTaoThuMucHoSo_();
     const bytes = Utilities.base64Decode(base64Data);
@@ -1465,6 +1469,8 @@ function docToaDoTuTemAnhBangGemini_(blob) {
 
 function THEM_ANH_RUNG(params) {
   if (!params || !params.base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
+  const loiFile = kiemTraFileTaiLen_(params.base64Data, params.mimeType);
+  if (loiFile) return { thanhCong: false, loi: loiFile };
 
   try {
     const folder = layHoacTaoThuMucAnh_();

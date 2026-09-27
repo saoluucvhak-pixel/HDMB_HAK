@@ -77,6 +77,8 @@ function ocrFile_(fileId) {
  */
 function OCR_TU_BAN_SCAN(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu file' };
+  const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
+  if (loiFile) return { thanhCong: false, loi: loiFile };
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('GEMINI_API_KEY');
   if (!apiKey) return { thanhCong: false, loi: 'Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập.' };

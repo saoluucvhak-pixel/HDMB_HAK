@@ -567,6 +567,21 @@ function getOrCreateNhatKySheet_() {
 }
 
 /**
+ * Kiểm tra file tải lên trước khi lưu vào Drive của chủ sở hữu. Webapp ANYONE_ANONYMOUS -> ai có URL
+ * cũng gọi được các hàm tải lên; trước đây nhận MỌI loại file/dung lượng (html, exe...) và lưu dưới
+ * tài khoản chủ sở hữu. Chỉ nhận ảnh + PDF (mime rỗng = trình duyệt không nhận ra, vd HEIC trên một
+ * số máy -> vẫn cho qua như trước), tối đa 20 MB. Trả chuỗi lỗi hoặc null nếu hợp lệ.
+ */
+const MIME_TAI_LEN_HOP_LE_ = ['', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif', 'image/tiff', 'image/bmp', 'application/pdf'];
+function kiemTraFileTaiLen_(base64Data, mimeType) {
+  const mime = (mimeType || '').toString().trim().toLowerCase();
+  if (MIME_TAI_LEN_HOP_LE_.indexOf(mime) === -1) return 'Loại file không được hỗ trợ (' + mime + '). Chỉ nhận ảnh hoặc PDF.';
+  const soByte = Math.floor(String(base64Data || '').length * 3 / 4);
+  if (soByte > 20 * 1024 * 1024) return 'File quá lớn (' + Math.round(soByte / 1048576) + ' MB). Tối đa 20 MB.';
+  return null;
+}
+
+/**
  * Xóa cache Bản đồ GPS (getMapData(), TTL 15 phút, xem Code.gs) — gọi ở MỌI điểm
  * ghi thay đổi HD_GPS/HD_RUNG (thêm/sửa/xóa lô rừng, đồng bộ mở rộng, xóa vĩnh viễn
  * hợp đồng), không chỉ riêng CAP_NHAT_GPS_RUNG như trước đây, để tránh bản đồ hiện
