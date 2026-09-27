@@ -17,6 +17,7 @@
  * ============================================================
  */
 function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const SO_DONG_DU_PHONG = 5000; // đặt định dạng cho cả các dòng chưa có dữ liệu, để tương lai ghi vào vẫn giữ TEXT
 
   function datTextChoCot(sheet, chiSoCotAr) {
@@ -63,6 +64,7 @@ function DINH_DANG_TEXT_CHO_COT_QUAN_TRONG_TU_MENU() {
  *  của DÒNG 2 (đại diện) trong mỗi cột quan trọng — vì hàm khóa luôn áp dụng
  *  đồng loạt 1 lần cho cả 5000 dòng, dòng 2 phản ánh đúng trạng thái chung. */
 function KIEM_TRA_TRANG_THAI_KHOA_TEXT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   function laText_(sheet, cot) {
     try { return sheet.getRange(2, cot + 1).getNumberFormat() === '@'; } catch (e) { return false; }
   }
@@ -129,6 +131,7 @@ function MO_DIALOG_CAI_DAT_VUNG() {
 
 /** Đọc Locale hiện tại của cả 2 file — dùng để hiện sẵn lựa chọn đúng trong dialog */
 function LAY_VUNG_HIEN_TAI_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   let locChinh = '', locDraft = '';
   try { locChinh = getSS_().getSpreadsheetLocale(); } catch (e) { /* bỏ qua */ }
   try { locDraft = getReportSS_().getSpreadsheetLocale(); } catch (e) { /* file Draft có thể chưa mở được lúc này */ }
@@ -155,6 +158,7 @@ const MAU_SO_CHUAN_ = '#,##0.###';
  * ĐỌC qua LAY_VUNG_HIEN_TAI_(), không hề gọi hàm này lúc tải trang).
  */
 function DAT_VUNG_HE_THONG_(locale) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   locale = (locale || '').toString().trim();
   if (!locale) return { thongBao: 'Chưa chọn vùng nào.' };
   const SO_DONG_DU_PHONG = 5000;

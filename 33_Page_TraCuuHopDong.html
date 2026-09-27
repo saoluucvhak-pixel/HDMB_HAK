@@ -381,7 +381,9 @@ function veChiTiet_(ct) {
   var h = nutQuayLai_();
   if (ct.daCheSo) h += '<div class="tc-canh-bao">🔒 Vai trò "Chỉ xem": CCCD, số điện thoại, số tài khoản được che bớt và không mở được file hồ sơ pháp lý.</div>';
 
-  h += '<div class="card"><h3>📄 Hợp đồng ' + escTC_(hd.soHD) + (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escTC_(hd.tinhTrang) + '</span>' : '') + '</h3><div class="tc-luoi">' +
+  h += '<div class="card"><h3>📄 Hợp đồng ' + escTC_(hd.soHD) + (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escTC_(hd.tinhTrang) + '</span>' : '') +
+    ' <button class="btn btn-outline" type="button" id="tcBaoCaoPdf" style="padding:4px 10px;font-size:12px;margin-left:8px" title="Tổng hợp tiến độ, thanh toán, bản đồ vùng khai thác và hồ sơ pháp lý của hợp đồng này vào 1 file">📊 Báo cáo thực hiện (PDF)</button>' +
+    ' <span id="tcBaoCaoMsg" style="font-size:12.5px"></span></h3><div class="tc-luoi">' +
     oTC_('Số HĐ', escTC_(hd.soHD)) + oTC_('Ngày ký', escTC_(hd.ngayKy)) + oTC_('Nhóm KH', escTC_(hd.nhomKH)) +
     oTC_('Diện tích ký', soTC_(hd.dienTichKy)) + oTC_('Sản lượng dự kiến', soTC_(hd.slDuKien)) + oTC_('Đơn giá', soTC_(hd.donGia)) +
     oTC_('Địa chỉ rừng', escTC_(hd.diaChiRung)) + '</div></div>';
@@ -460,7 +462,34 @@ function veChiTiet_(ct) {
 
   vung.innerHTML = h;
   ganNutQuayLai_();
+  document.getElementById('tcBaoCaoPdf').addEventListener('click', function () { taiBaoCaoPdf_(ct.idHD); });
   window.scrollTo(0, 0);
+}
+
+/** Tải "Báo cáo thực hiện (PDF)" của hợp đồng đang xem — bao gồm mọi ảnh hiện trường,
+ *  không kèm ghép file hồ sơ pháp lý gốc (chỉ liệt kê danh mục trong báo cáo; xem/tải
+ *  từng file gốc thì dùng trang "Xem ảnh & xuất PDF" — có sẵn công cụ ghép). */
+var dangTaiBaoCaoTC_ = false;
+function taiBaoCaoPdf_(idHD) {
+  if (dangTaiBaoCaoTC_) return;
+  var nut = document.getElementById('tcBaoCaoPdf'), msg = document.getElementById('tcBaoCaoMsg');
+  dangTaiBaoCaoTC_ = true; nut.disabled = true; nut.textContent = '⏳ Đang tạo…'; msg.textContent = '';
+  var xong = function () { dangTaiBaoCaoTC_ = false; nut.disabled = false; nut.textContent = '📊 Báo cáo thực hiện (PDF)'; };
+  hakRun_()
+    .withSuccessHandler(function (kq) {
+      xong();
+      if (!kq || !kq.thanhCong) { msg.textContent = '❌ ' + ((kq && kq.loi) || 'Không tạo được báo cáo.'); return; }
+      var bin = atob(kq.base64), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([bytes], { type: kq.mimeType }));
+      var a = document.createElement('a');
+      a.href = url; a.download = kq.tenFile;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+      msg.textContent = '✅ Đã tạo ' + kq.tenFile + ' (' + kq.soAnh + ' ảnh, ' + kq.soBanDo + ' bản đồ).';
+    })
+    .withFailureHandler(function (err) { xong(); msg.textContent = '❌ ' + (err && err.message ? err.message : err); })
+    .BAO_CAO_HOP_DONG_PDF(idHD, false, [], {});
 }
 
 // Mở lại đúng từ khóa / khoảng ngày khi tải lại trang (?q=...&tu=...&den=...)

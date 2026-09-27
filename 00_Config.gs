@@ -120,6 +120,7 @@ const LOAI_HO_SO_HOP_LE = [
 
 /** Lấy danh sách loại hồ sơ đầy đủ = danh mục gốc + các loại người dùng đã tự thêm (lưu ở Script Properties) */
 function layDanhSachLoaiHoSo_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const themVao = PropertiesService.getScriptProperties().getProperty('LOAI_HO_SO_THEM');
   const dsThem = themVao ? JSON.parse(themVao) : [];
   return LOAI_HO_SO_HOP_LE.concat(dsThem);
@@ -127,6 +128,7 @@ function layDanhSachLoaiHoSo_() {
 
 /** Thêm 1 loại hồ sơ nguồn gốc mới vào danh mục (bấm "+ Loại khác..." trên form) */
 function themLoaiHoSoMoi_(loaiMoi) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   loaiMoi = (loaiMoi || '').toString().trim();
   if (!loaiMoi) return { thanhCong: false, loi: 'Tên loại hồ sơ trống' };
   const key = 'LOAI_HO_SO_THEM';
@@ -203,6 +205,7 @@ let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — trán
  * khác mà không cần sửa code.
  */
 function LAY_CAU_HINH_KET_NOI_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const props = PropertiesService.getScriptProperties();
   const ketQua = {
     draftUrl: '', draftTen: '', draftLoi: '',
@@ -262,6 +265,7 @@ function LAY_CAU_HINH_KET_NOI_() {
  * TRƯỚC khi lưu — không lưu URL không hợp lệ.
  */
 function LUU_CAU_HINH_KET_NOI_(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const props = PropertiesService.getScriptProperties();
   const ketQua = { thanhCong: true, thongBao: [] };
 
@@ -398,6 +402,7 @@ function kiemTraAdminToken_(adminToken) {
  * addViewer/addEditor, không có mức Bình luận).
  */
 function CHIA_SE_DU_LIEU_CHO_EMAIL_(adminToken, email, quyen) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return { thanhCong: false, loi: loiToken };
   email = (email || '').toString().trim();
@@ -425,6 +430,7 @@ function CHIA_SE_DU_LIEU_CHO_EMAIL_(adminToken, email, quyen) {
  * kiểu "Bất kỳ ai có link") vì không có ai để "thu hồi" trong 2 trường hợp đó.
  */
 function LAY_DANH_SACH_QUYEN_TRUY_CAP_(adminToken) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return [{ ten: '', id: null, permissionId: null, email: '', quyen: '', loi: loiToken }];
   const ketQua = [];
@@ -445,6 +451,7 @@ function LAY_DANH_SACH_QUYEN_TRUY_CAP_(adminToken) {
 
 /** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP_(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
 function THU_HOI_QUYEN_TRUY_CAP_(adminToken, id, permissionId) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return { thanhCong: false, loi: loiToken };
   if (!id || !permissionId) return { thanhCong: false, loi: 'Thiếu thông tin quyền cần thu hồi.' };
@@ -678,6 +685,7 @@ function ghiNhatKy_(hanhDong, idHD, chiTiet) {
 /** Đọc Nhật ký hệ thống (NhatKy_SuaDoi), lọc theo khoảng ngày [tuNgay, denNgay] —
  *  để trống 1 trong 2 nghĩa là không giới hạn phía đó. Mới nhất hiện trước. */
 function LAY_NHAT_KY_THEO_NGAY_(tuNgay, denNgay) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const sh = getOrCreateNhatKySheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];

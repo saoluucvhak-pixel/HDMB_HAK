@@ -44,6 +44,7 @@
  * @return {Object} { baoCaoHopDong, tongHopWebapp, tinhHinhThucHien, danhSachThanhLy }
  */
 function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     boLocBC = boLocBC || {};
     boLocTL = boLocTL || {};

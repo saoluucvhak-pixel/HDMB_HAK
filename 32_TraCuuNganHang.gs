@@ -15,6 +15,7 @@
 
 /** Danh sách ngân hàng VN — API công khai VietQR, cache 24h (danh sách hiếm khi đổi) */
 function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const cache = CacheService.getScriptCache();
   const daCache = cache.get('DS_NGAN_HANG_VIETQR');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tải lại */ } }
@@ -29,6 +30,7 @@ function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
 
 /** Đọc cấu hình dịch vụ tra cứu chủ TK */
 function LAY_CAI_DAT_TRA_CUU_NH_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('TRACUU_NH_API_KEY') || '';
   return {
@@ -39,6 +41,7 @@ function LAY_CAI_DAT_TRA_CUU_NH_() {
 
 /** Lưu cấu hình dịch vụ tra cứu chủ TK */
 function LUU_CAI_DAT_TRA_CUU_NH_(apiKey, apiUrl) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
   if (apiKey) p.setProperty('TRACUU_NH_API_KEY', apiKey.toString().trim());
   p.setProperty('TRACUU_NH_API_URL', (apiUrl || 'https://tracuubank.com/api/lookup').toString().trim());
@@ -53,6 +56,7 @@ function LUU_CAI_DAT_TRA_CUU_NH_(apiKey, apiUrl) {
  * @param {string} [tenChuRungMongDoi] tên chủ rừng đã có trong hồ sơ, dùng để tự so khớp có đúng người không
  */
 function TRA_CUU_TEN_CHU_TK_(soTK, tenNganHangGoTuDo, tenChuRungMongDoi) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const cd = LAY_CAI_DAT_TRA_CUU_NH_();
   if (!cd.daCoApiKey) return { thanhCong: false, loi: 'Chưa cấu hình API key tra cứu ngân hàng. Vào Thiết lập → 🏦 Tra cứu ngân hàng để nhập.' };
   if (!soTK || !soTK.toString().trim()) return { thanhCong: false, loi: 'Thiếu số tài khoản.' };
