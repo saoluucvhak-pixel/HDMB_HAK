@@ -9,7 +9,8 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `c852a6a` | 🔒✨ Bảo mật + tính năng | **SEC-002**: đăng nhập qua Cổng đăng nhập Gmail, 3 vai trò (Quản trị / Nhập liệu / Chỉ xem) trong `SYS_NguoiDung`, 1 cửa `api()` + bảng quyền 123 chức năng; 133 hàm thành riêng tư; 38 hàm menu/trigger kiểm tra quyền; màn đăng nhập, ẩn menu theo vai trò, Đăng xuất; thẻ Người dùng & Cổng đăng nhập ở Thiết lập; nhật ký ghi email người đăng nhập. **Trang 🔍 Tra cứu hợp đồng** (`?page=tracuu`) | 34_PhanQuyen.gs, 33_TraCuuHopDong.gs, 33_Page_TraCuuHopDong.html, PhanQuyen_JS.html (mới); mọi `.gs`/`.html` có lời gọi server |
 | `452e6e6` | 📄 | Cập nhật báo cáo | docs/qa |
 | (merge) | 🔀 | Gộp `main` (đồng bộ từ Apps Script; `access` đổi sang `ANYONE` theo chủ dự án) | appsscript.json |
-| (commit này) | ✨ | Tra cứu hợp đồng: lọc **Từ ngày – Đến ngày ký** (có thể chỉ chọn ngày, không cần từ khóa), nút chọn nhanh Tháng này / Tháng trước / Quý này / Năm nay; giới hạn hiển thị 50 → 200 hợp đồng | 33_TraCuuHopDong.gs, 33_Page_TraCuuHopDong.html, 13_HuongDan.html |
+| (commit sau) | ✨ | **Tra cứu hình ảnh** (`?page=hinhanh`): chọn hợp đồng hoặc khách hàng → ảnh hiện trường + ảnh GPS theo lô, phóng to, chọn ảnh → **xuất PDF** (trang thông tin + lưới ảnh có chú thích, tối đa 60 ảnh). Ảnh tải qua quyền chủ script, chỉ ảnh thuộc hợp đồng đang xem | 35_TraCuuHinhAnh.gs, 35_Page_TraCuuHinhAnh.html (mới); 34_PhanQuyen.gs, Code.gs, PhanQuyen_JS.html, menu các trang |
+| `38b682c` | ✨ | Tra cứu hợp đồng: lọc **Từ ngày – Đến ngày ký** (có thể chỉ chọn ngày, không cần từ khóa), nút chọn nhanh Tháng này / Tháng trước / Quý này / Năm nay; giới hạn hiển thị 50 → 200 hợp đồng | 33_TraCuuHopDong.gs, 33_Page_TraCuuHopDong.html, 13_HuongDan.html |
 
 ## 27/09/2026 — Đợt 3: dọn mã chết, gộp mã trùng, XSS còn lại, chặn ghi lệch cột
 

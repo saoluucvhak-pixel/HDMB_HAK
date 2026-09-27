@@ -175,6 +175,9 @@
   <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
     <span class="icon">🔍</span> Tra cứu hợp đồng
   </a>
+  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
+    <span class="icon">🖼️</span> Tra cứu hình ảnh
+  </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
   </a>
@@ -444,7 +447,9 @@ function veChiTiet_(ct) {
   }
   h += '</div>';
 
-  h += '<div class="card"><h3>🖼️ Ảnh hiện trường (' + ct.anh.length + ')</h3>';
+  var goc = ((document.getElementById('hakPhanQuyen') || { getAttribute: function () { return ''; } }).getAttribute('data-base') || '');
+  h += '<div class="card"><h3>🖼️ Ảnh hiện trường (' + ct.anh.length + ')' +
+    ' <a class="btn btn-outline" style="padding:4px 10px;font-size:12px;text-decoration:none;margin-left:8px" target="_top" href="' + escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0') + '">Xem ảnh &amp; xuất PDF</a></h3>';
   if (!ct.anh.length) h += '<div class="empty-hint">Chưa có ảnh.</div>';
   else {
     h += '<div class="tc-anh">';

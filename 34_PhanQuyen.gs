@@ -394,6 +394,9 @@ function _bangQuyenApi_() {
     TRA_LOI_CHATBOT: r(TRA_LOI_CHATBOT_, X),
     TRA_CUU_HOP_DONG: r(TRA_CUU_HOP_DONG_, X),
     CHI_TIET_TRA_CUU_HOP_DONG: r(CHI_TIET_TRA_CUU_HOP_DONG_, X),
+    LAY_ANH_TRA_CUU: r(LAY_ANH_TRA_CUU_, X),
+    LAY_DU_LIEU_ANH: r(LAY_DU_LIEU_ANH_, X),
+    XUAT_PDF_ANH: r(XUAT_PDF_ANH_, X),
     // Kiểm tra & đối chiếu: chỉ đọc
     layDuLieuAnhWebapp: r(layDuLieuAnhWebapp_, X),
     layDuLieuKiemTraHoSoWebapp: r(layDuLieuKiemTraHoSoWebapp_, X),
