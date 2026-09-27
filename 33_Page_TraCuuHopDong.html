@@ -450,6 +450,8 @@ function veChiTiet_(ct) {
   var goc = ((document.getElementById('hakPhanQuyen') || { getAttribute: function () { return ''; } }).getAttribute('data-base') || '');
   h += '<div class="card"><h3>🖼️ Ảnh hiện trường (' + ct.anh.length + ')' +
     ' <a class="btn btn-outline" style="padding:4px 10px;font-size:12px;text-decoration:none;margin-left:8px" target="_top" href="' + escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0') + '">Xem ảnh &amp; xuất PDF</a></h3>';
+  h = h.replace('<h3>📄 Hợp đồng ', '<h3><a class="btn btn-gold" style="float:right;padding:5px 12px;font-size:12px;text-decoration:none" target="_top" title="Tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý" href="' +
+    escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0&bc=1') + '">📊 Báo cáo thực hiện (PDF)</a>📄 Hợp đồng ');
   if (!ct.anh.length) h += '<div class="empty-hint">Chưa có ảnh.</div>';
   else {
     h += '<div class="tc-anh">';

@@ -418,6 +418,7 @@ function _bangQuyenApi_() {
     XUAT_PDF_ANH: r(XUAT_PDF_ANH_, X),
     LAY_FILE_HO_SO: r(LAY_FILE_HO_SO_, N),
     XEM_FILE_DRIVE: r(XEM_FILE_DRIVE_, X),
+    BAO_CAO_HOP_DONG_PDF: r(BAO_CAO_HOP_DONG_PDF_, X),
     // Kiểm tra & đối chiếu: chỉ đọc
     layDuLieuAnhWebapp: r(layDuLieuAnhWebapp_, X),
     layDuLieuKiemTraHoSoWebapp: r(layDuLieuKiemTraHoSoWebapp_, X),

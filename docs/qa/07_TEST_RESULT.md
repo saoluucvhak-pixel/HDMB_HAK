@@ -14,7 +14,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 
 ## 2. Kết quả
 
-### Server (bộ giả lập Apps Script) — 40/40 đạt (f064f8a: 24/32 · 8cbf662: 8/32)
+### Server (bộ giả lập Apps Script) — 45/45 đạt (f064f8a: 24/45 · 8cbf662: 8/45)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-TEXT-01 | CCCD/SĐT/MST giữ số 0 đầu khi tạo và khi sửa | ✅ PASS | PASS | FAIL — CCCD on create: expected "049012345678", got "49012345678" |
 | T-TK-01 | THEM_TAI_KHOAN_MOI trả đúng số dòng vừa ghi và giữ số 0 đầu của Số TK | ✅ PASS | PASS | PASS |
 | T-DOUBLE-01 | Bấm "Lưu chính thức" 2 lần (request thứ 2 tới khi request 1 đang chạy) chỉ tạo 1 hợp đồng | ✅ PASS | PASS | FAIL — number of contracts created: expected 1, got 2 |
-| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_492CE7B4 |
+| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_FE5D98CE |
 | T-LOG-01 | log_: ERROR/WARNING/INFO ra đúng console.*, DEBUG chỉ khi bật LOG_DEBUG | ✅ PASS | PASS | FAIL — P.ctx.log_ is not a function |
 | T-LOG-02 | Lỗi tổng hợp ct_hopdong không còn bị nuốt im lặng | ✅ PASS | PASS | FAIL — error was not logged |
 | T-SEC-006 | Người lạ gọi SETUP_*_TOKEN không ghi đè được token đã cấu hình; token mẫu bị từ chối | ✅ PASS | PASS | FAIL — SYNC_TOKEN overwritten: expected "that-su-bi-mat", got "DAT_TOKEN_CUA_BAN_O_DAY" |
@@ -48,18 +48,23 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-AUTH-04 | Bảng quyền: mọi chức năng trang web gọi đều có trong bảng, trỏ tới hàm nội bộ (X_) có thật | ✅ PASS | FAIL — P.ctx._bangQuyenApi_ is not a function | FAIL — P.ctx._bangQuyenApi_ is not a function |
 | T-AUTH-05 | Hàm menu/trigger giữ tên cũ: trigger thật của project chạy được, người lạ giả triggerUid bị chặn | ✅ PASS | FAIL — fake trigger uid accepted | FAIL — fake trigger uid accepted |
 | T-TC-01 | Tra cứu: tên không dấu, CCCD/SĐT/STK 1 phần, số TK ở HD_STK; kết quả mới ký trước | ✅ PASS | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function |
-| T-TC-03 | Tra cứu theo khoảng Ngày ký: chỉ chọn ngày (không từ khóa), ngày + từ khóa, 1 đầu mở, ngày ngược bị  | ✅ PASS | — (chưa có) | — (chưa có) |
+| T-TC-03 | Tra cứu theo khoảng Ngày ký: chỉ chọn ngày (không từ khóa), ngày + từ khóa, 1 đầu mở, ngày ngược bị  | ✅ PASS | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function |
 | T-TC-02 | Tra cứu: vai trò Chỉ xem thấy CCCD/SĐT/STK bị che, không có link hồ sơ pháp lý; Nhập liệu thấy đủ | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
 | T-AUDIT-01 | Nhật ký và cột Email người tạo ghi đúng người đăng nhập (trước đây trống khi dùng webapp) | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
-| T-HA-01 | Ảnh theo hợp đồng: ảnh chung + ảnh từng lô + ảnh GPS (kèm tọa độ); theo khách hàng gộp mọi HĐ cùng C | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-02 | Tải ảnh: chỉ trả ảnh thuộc hợp đồng đang xem (không lấy được file Drive khác), dùng ảnh thu nhỏ Driv | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-03 | Xuất PDF: đúng ảnh đã chọn, chú thích lô/GPS, CCCD che với Chỉ xem, tên khách hàng độc hại bị escape | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-04 | Xuất PDF: quá 60 ảnh thì lấy 60 ảnh đầu và báo số ảnh bỏ qua | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-05 | Hồ sơ pháp lý: Nhập liệu thấy hồ sơ từng lô (kể cả theo khách hàng) và xem được trang đầu; Chỉ xem c | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-06 | Xuất PDF kèm hồ sơ: Nhập liệu nhận danh mục + danh sách file để ghép, xuất được cả khi bỏ chọn hết ả | ✅ PASS | — (chưa có) | — (chưa có) |
-| T-HA-07 | LAY_FILE_HO_SO: chỉ trả file là hồ sơ của hợp đồng đang xem; Chỉ xem bị chặn; Google Docs chuyển san | ✅ PASS | — (chưa có) | — (chưa có) |
+| T-HA-01 | Ảnh theo hợp đồng: ảnh chung + ảnh từng lô + ảnh GPS (kèm tọa độ); theo khách hàng gộp mọi HĐ cùng C | ✅ PASS | FAIL — P.ctx.LAY_ANH_TRA_CUU_ is not a function | FAIL — P.ctx.LAY_ANH_TRA_CUU_ is not a function |
+| T-HA-02 | Tải ảnh: chỉ trả ảnh thuộc hợp đồng đang xem (không lấy được file Drive khác), dùng ảnh thu nhỏ Driv | ✅ PASS | FAIL — P.ctx.LAY_DU_LIEU_ANH_ is not a function | FAIL — P.ctx.LAY_DU_LIEU_ANH_ is not a function |
+| T-HA-03 | Xuất PDF: đúng ảnh đã chọn, chú thích lô/GPS, CCCD che với Chỉ xem, tên khách hàng độc hại bị escape | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-HA-04 | Xuất PDF: quá 60 ảnh thì lấy 60 ảnh đầu và báo số ảnh bỏ qua | ✅ PASS | FAIL — P.ctx.XUAT_PDF_ANH_ is not a function | FAIL — P.ctx.XUAT_PDF_ANH_ is not a function |
+| T-HA-05 | Hồ sơ pháp lý: Nhập liệu thấy hồ sơ từng lô (kể cả theo khách hàng) và xem được trang đầu; Chỉ xem c | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-HA-06 | Xuất PDF kèm hồ sơ: Nhập liệu nhận danh mục + danh sách file để ghép, xuất được cả khi bỏ chọn hết ả | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-HA-07 | LAY_FILE_HO_SO: chỉ trả file là hồ sơ của hợp đồng đang xem; Chỉ xem bị chặn; Google Docs chuyển san | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-DRV-01 | Xem file Drive trong hệ thống: ảnh (kể cả ảnh nháp) ai đăng nhập cũng xem được không cần quyền Drive | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-AUTH-06 | Phiên đăng nhập: dùng sau 30 phút thì được cấp mã mới (mã cũ vẫn chạy cho tab khác); quá 7 ngày từ l | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-AUTH-07 | Trình duyệt chặn bộ nhớ: doGet nhận lại phiên qua ?ph=... khi mã còn hiệu lực; mã giả / hết hạn bị b | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-BC-01 | Báo cáo thực hiện PDF: tiến độ, thanh toán (DNTT), bản đồ vệ tinh Google Maps từng lô + link tọa độ, | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
+| T-BC-02 | Báo cáo thực hiện: Chỉ xem được lập báo cáo (CCCD/SĐT/STK che, không hồ sơ); theo khách hàng có bản  | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
 
-### Trình duyệt (Chromium + giả lập google.script.run) — 42/42 đạt (f064f8a: 27/34 · 8cbf662: 13/33)
+### Trình duyệt (Chromium + giả lập google.script.run) — 47/47 đạt (f064f8a: 27/44 · 8cbf662: 13/43)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -85,11 +90,16 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | UI-AUTH-04 | Lỗi [QUYEN]: trang nhận thông báo đã bỏ tiền tố, KHÔNG bị đăng xuất | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
 | UI-TC-01 | Tra cứu: tìm -> bảng kết quả; bấm HĐ -> chi tiết (lô rừng, TK, ảnh, hồ sơ); dữ liệu độc hại hiện dạn | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
 | UI-TC-02 | Tra cứu: từ khóa 1 ký tự không gọi server; bấm Tra cứu liên tục chỉ gửi 1 yêu cầu | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
-| UI-TC-03 | Tra cứu: lọc Từ ngày–Đến ngày gửi đúng ngày lên server; chọn nhanh "Tháng trước"; ngày ngược bị chặn | ✅ PASS | — (chưa có) | — (chưa có) |
-| UI-HA-01 | Tra cứu hình ảnh: tìm -> "Ảnh cả khách hàng" -> thư viện theo lô, ảnh thu nhỏ tải theo lô, phóng to  | ✅ PASS | — (chưa có) | — (chưa có) |
-| UI-HA-02 | Tra cứu hình ảnh: bỏ chọn ảnh -> xuất PDF chỉ gửi ảnh đang chọn, tải file xuống; bỏ chọn hết thì khô | ✅ PASS | — (chưa có) | — (chưa có) |
-| UI-HA-03 | Hồ sơ pháp lý: hiện trang đầu từng hồ sơ (chữ độc hại an toàn), bấm để phóng to + link file gốc; xuấ | ✅ PASS | — (chưa có) | — (chưa có) |
-| UI-HA-04 | Hồ sơ pháp lý: bỏ chọn hết ảnh vẫn xuất được hồ sơ (khongAnh); không có công cụ ghép thì vẫn tải fil | ✅ PASS | — (chưa có) | — (chưa có) |
+| UI-TC-03 | Tra cứu: lọc Từ ngày–Đến ngày gửi đúng ngày lên server; chọn nhanh "Tháng trước"; ngày ngược bị chặn | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
+| UI-HA-01 | Tra cứu hình ảnh: tìm -> "Ảnh cả khách hàng" -> thư viện theo lô, ảnh thu nhỏ tải theo lô, phóng to  | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/35_Page_TraCuuHinhAnh.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/35_Page_TraCuuHinhAnh.html' |
+| UI-HA-02 | Tra cứu hình ảnh: bỏ chọn ảnh -> xuất PDF chỉ gửi ảnh đang chọn, tải file xuống; bỏ chọn hết thì khô | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/35_Page_TraCuuHinhAnh.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/35_Page_TraCuuHinhAnh.html' |
+| UI-HA-03 | Hồ sơ pháp lý: hiện trang đầu từng hồ sơ (chữ độc hại an toàn), bấm để phóng to + link file gốc; xuấ | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/35_Page_TraCuuHinhAnh.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/35_Page_TraCuuHinhAnh.html' |
+| UI-HA-04 | Hồ sơ pháp lý: bỏ chọn hết ảnh vẫn xuất được hồ sơ (khongAnh); không có công cụ ghép thì vẫn tải fil | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/35_Page_TraCuuHinhAnh.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/35_Page_TraCuuHinhAnh.html' |
+| UI-DRV-01 | Bấm link Drive của ảnh/hồ sơ: mở ngay trong hệ thống (không sang Drive đòi quyền), Tải về lấy file đ | ✅ PASS | FAIL — page.evaluate: TypeError: Cannot read properties of null (reading 'className') | FAIL — page.evaluate: TypeError: Cannot read properties of null (reading 'className') |
+| UI-AUTH-05 | Đăng nhập 1 lần dùng cho mọi tab: tab mới dùng lại phiên (không bắt đăng nhập lại), nhận mã gia hạn  | ✅ PASS | FAIL — page.evaluate: TypeError: Failed to execute 'getComputedStyle' on 'Window': parameter 1 is not of ty | FAIL — page.evaluate: TypeError: Failed to execute 'getComputedStyle' on 'Window': parameter 1 is not of ty |
+| UI-AUTH-06 | Trình duyệt chặn bộ nhớ (cookie bên thứ ba): link chuyển trang và window.open của hệ thống tự mang t | ✅ PASS | FAIL — page.evaluate: TypeError: Cannot read properties of null (reading 'setAttribute') | FAIL — page.evaluate: TypeError: Cannot read properties of null (reading 'setAttribute') |
+| UI-BC-01 | Nút "Báo cáo thực hiện (PDF)": gửi đúng ảnh đã chọn + tùy chọn hồ sơ, ghép hồ sơ, tải file; mở từ Tr | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/35_Page_TraCuuHinhAnh.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/35_Page_TraCuuHinhAnh.html' |
+| UI-BC-02 | Tra cứu hợp đồng: chi tiết có nút "Báo cáo thực hiện (PDF)" dẫn sang trang hình ảnh với đúng hợp đồn | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
 | UI-TL-ND | Thiết lập: danh sách người dùng hiện dạng chữ (email/tên độc hại không chạy), bấm Sửa nạp lại form | ✅ PASS | FAIL — page.click: Timeout 30000ms exceeded. | FAIL — page.click: Timeout 30000ms exceeded. |
 | UI-LOAD-07 | 07_Form_HopDong.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |
 | UI-LOAD-10 | 10_Page_BaoCao.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |

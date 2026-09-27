@@ -240,7 +240,7 @@
 
   <div class="app-main">
     <div class="page-title">🖼️ Tra cứu hình ảnh</div>
-    <div class="page-subtitle">Tìm hợp đồng hoặc khách hàng, xem toàn bộ ảnh hiện trường và ảnh minh chứng GPS theo từng lô rừng, bấm vào ảnh để phóng to, rồi xuất file PDF (chọn/bỏ chọn từng ảnh trước khi xuất). Vai trò Nhập liệu / Quản trị xem được cả hồ sơ pháp lý và ghép chúng vào file PDF.</div>
+    <div class="page-subtitle">Tìm hợp đồng hoặc khách hàng, xem toàn bộ ảnh hiện trường và ảnh minh chứng GPS theo từng lô rừng, bấm vào ảnh để phóng to, rồi xuất file PDF ảnh hoặc <b>📊 Báo cáo thực hiện</b> (tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý) — chọn/bỏ chọn từng ảnh trước khi xuất. Vai trò Nhập liệu / Quản trị xem được cả hồ sơ pháp lý và ghép chúng vào file PDF.</div>
 
     <div id="haVungTim">
       <div class="card">
@@ -318,7 +318,8 @@ var haDuLieu_ = null;     // kết quả LAY_ANH_TRA_CUU
 var haDanhSach_ = [];     // mọi ảnh theo thứ tự hiển thị: { ma, id, url, loai, lat, lng, diaChi, nhom, soHD }
 var haAnhNho_ = {};       // id -> dataUrl
 var haBoChon_ = {};       // ma -> true (ảnh bị bỏ chọn)
-var haHoSo_ = [];         // hồ sơ pháp lý: { ma, id, url, lo, hoSoNguonGoc, soGiayTo, ngayGiayTo, soHD }
+var haHoSo_ = [];
+var haTuDongBaoCao_ = false; // mở từ nút "Báo cáo thực hiện" ở trang Tra cứu hợp đồng (?bc=1)         // hồ sơ pháp lý: { ma, id, url, lo, hoSoNguonGoc, soGiayTo, ngayGiayTo, soHD }
 
 function haMoAnh_(idHD, theoKhachHang) {
   document.getElementById('haVungTim').style.display = 'none';
@@ -349,7 +350,9 @@ function haVeThuVien_(d) {
     '<button class="btn btn-outline" type="button" id="haChonHet">☑ Chọn tất cả</button>' +
     '<button class="btn btn-outline" type="button" id="haBoHet">☐ Bỏ chọn tất cả</button>' +
     (d.tongHoSo ? '<label class="ha-kem" for="haKemHoSo"><input type="checkbox" id="haKemHoSo"> 📁 Kèm hồ sơ pháp lý (' + d.tongHoSo + ' file)</label>' : '') +
-    '<button class="btn btn-green" type="button" id="haXuatPdf">📄 Xuất PDF</button><span class="dem" id="haDem"></span></div>';
+    '<button class="btn btn-green" type="button" id="haXuatPdf">📄 Xuất PDF ảnh</button>' +
+    '<button class="btn btn-gold" type="button" id="haBaoCao" title="Báo cáo tình hình thực hiện: tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý">📊 Báo cáo thực hiện (PDF)</button>' +
+    '<span class="dem" id="haDem"></span></div>';
   h += '<div class="card"><h3>' + (d.theoKhachHang ? '👤 Khách hàng ' : '📄 Hợp đồng của ') + escHA_(d.khachHang.ten) + '</h3>' +
     '<div class="tc-luoi">' +
     '<div><div class="nhan">CCCD</div><div class="gt">' + escHA_(d.khachHang.cccd || '—') + '</div></div>' +
@@ -394,7 +397,9 @@ function haVeThuVien_(d) {
   haGanNutVe_();
   document.getElementById('haChonHet').addEventListener('click', function () { haChonTatCa_(true); });
   document.getElementById('haBoHet').addEventListener('click', function () { haChonTatCa_(false); });
-  document.getElementById('haXuatPdf').addEventListener('click', haXuatPdf_);
+  document.getElementById('haXuatPdf').addEventListener('click', function () { haXuatPdf_('anh'); });
+  document.getElementById('haBaoCao').addEventListener('click', function () { haXuatPdf_('baocao'); });
+  if (haTuDongBaoCao_) { haTuDongBaoCao_ = false; if (d.tongHoSo && document.getElementById('haKemHoSo')) document.getElementById('haKemHoSo').checked = true; haCapNhatDem_(); haXuatPdf_('baocao'); }
   if (document.getElementById('haKemHoSo')) document.getElementById('haKemHoSo').addEventListener('change', haCapNhatDem_);
   vung.addEventListener('change', function (e) {
     if (!e.target.classList.contains('ha-chon')) return;
@@ -422,6 +427,7 @@ function haCapNhatDem_() {
   var n = haSoDaChon_(), kem = haKemHoSo_();
   document.getElementById('haDem').textContent = 'Đã chọn ' + n + '/' + haDanhSach_.length + ' ảnh' + (kem ? ' + ' + haHoSo_.length + ' hồ sơ pháp lý' : '') + (n > 60 ? ' — PDF lấy tối đa 60 ảnh đầu' : '');
   document.getElementById('haXuatPdf').disabled = !n && !(kem && haHoSo_.length);
+  if (document.getElementById('haBaoCao')) document.getElementById('haBaoCao').disabled = haDangXuat_;
 }
 function haChonTatCa_(chon) {
   haBoChon_ = {};
@@ -559,18 +565,21 @@ async function haGhepHoSo_(kq, d, baoTienDo) {
   }
   return { bytes: await tl.save(), loi: loi };
 }
-function haXuatPdf_() {
+/** loai: 'anh' = file PDF ảnh (+ hồ sơ); 'baocao' = báo cáo tình hình thực hiện (tiến độ, thanh toán, bản đồ, ảnh, hồ sơ). */
+function haXuatPdf_(loai) {
   var d = haDuLieu_;
   if (!d || haDangXuat_) return;
+  loai = loai === 'baocao' ? 'baocao' : 'anh';
   var soChon = haSoDaChon_(), kem = haKemHoSo_();
   var chon = soChon === haDanhSach_.length ? [] : haDanhSach_.filter(function (a) { return !haBoChon_[a.ma]; }).map(function (a) { return a.ma; });
-  var nut = document.getElementById('haXuatPdf');
-  haDangXuat_ = true; nut.disabled = true; nut.textContent = '⏳ Đang tạo PDF…';
-  var xong = function () { haDangXuat_ = false; nut.disabled = false; nut.textContent = '📄 Xuất PDF'; haCapNhatDem_(); };
+  var nut = document.getElementById(loai === 'baocao' ? 'haBaoCao' : 'haXuatPdf'), nhanGoc = nut.textContent;
+  haDangXuat_ = true; nut.disabled = true; nut.textContent = loai === 'baocao' ? '⏳ Đang lập báo cáo…' : '⏳ Đang tạo PDF…';
+  var xong = function () { haDangXuat_ = false; nut.disabled = false; nut.textContent = nhanGoc; haCapNhatDem_(); };
   hakRun_()
     .withSuccessHandler(function (kq) {
       if (!kq || !kq.thanhCong) { xong(); thongBaoHA_('❌ ' + ((kq && kq.loi) || 'Không tạo được PDF.')); return; }
-      var moTa = kq.soAnh + ' ảnh' + (kq.boQua ? ', bỏ qua ' + kq.boQua + ' ảnh vượt giới hạn 60' : '') + (kq.loiTai ? ', ' + kq.loiTai + ' ảnh không tải được' : '');
+      var moTa = (kq.soBanDo !== undefined ? kq.soBanDo + ' bản đồ, ' : '') + kq.soAnh + ' ảnh' + (kq.boQua ? ', bỏ qua ' + kq.boQua + ' ảnh vượt giới hạn 60' : '') + (kq.loiTai ? ', ' + kq.loiTai + ' ảnh không tải được' : '') +
+        (kq.canhBao && kq.canhBao.length ? '. Lưu ý: ' + kq.canhBao.join('; ') : '');
       if (!kq.hoSoKem || !kq.hoSoKem.length) {
         xong(); haTaiFile_(kq.base64, kq.tenFile, kq.mimeType);
         thongBaoHA_('✅ Đã tạo ' + kq.tenFile + ' (' + moTa + ').');
@@ -589,7 +598,7 @@ function haXuatPdf_() {
         });
     })
     .withFailureHandler(function (err) { xong(); thongBaoHA_('❌ ' + (err && err.message ? err.message : err)); })
-    .XUAT_PDF_ANH(d.idHD, d.theoKhachHang, chon, { kemHoSo: kem, khongAnh: soChon === 0 });
+    [loai === 'baocao' ? 'BAO_CAO_HOP_DONG_PDF' : 'XUAT_PDF_ANH'](d.idHD, d.theoKhachHang, chon, { kemHoSo: kem, khongAnh: soChon === 0 });
 }
 function haTaiFile_(base64, tenFile, mimeType) { haTaiBytes_(haBase64SangBytes_(base64), tenFile, mimeType); }
 function haTaiBytes_(bytes, tenFile, mimeType) {
@@ -615,7 +624,7 @@ function thongBaoHA_(noiDung) {
   try {
     google.script.url.getLocation(function (loc) {
       var p = (loc && loc.parameter) || {};
-      if (p.idhd) haMoAnh_(String(p.idhd), p.kh === '1');
+      if (p.idhd) { haTuDongBaoCao_ = p.bc === '1'; haMoAnh_(String(p.idhd), p.kh === '1'); }
     });
   } catch (e) { /* ngoài Apps Script */ }
 })();
