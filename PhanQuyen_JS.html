@@ -1,0 +1,219 @@
+<!--
+  PhanQuyen_JS — đăng nhập & gọi server qua cửa api() (xem 34_PhanQuyen.gs).
+  Mỗi trang nạp bằng include('PhanQuyen_JS') trong scriptlet, ngay sau phần tử #hakPhanQuyen
+  (phần tử đó mang mã phiên / lỗi đăng nhập do doGet truyền vào) và TRƯỚC mọi <script> của trang.
+  Trang gọi server bằng hakRun_() thay cho google.script.run (cùng cách dùng: .withSuccessHandler(...)
+  .withFailureHandler(...).TEN_HAM(thamSo...)) — hakRun_ tự chuyển thành api(phien, 'TEN_HAM', [thamSo...]).
+-->
+<style>
+  #hakDangNhapNen { position: fixed; inset: 0; background: rgba(243,244,246,.97); z-index: 99998; display: none; align-items: center; justify-content: center; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  #hakDangNhapNen.hien { display: flex; }
+  #hakDangNhapNen .hop { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px 26px; max-width: 460px; width: calc(100% - 32px); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.08); color: #1f2937; }
+  #hakDangNhapNen h3 { margin: 0 0 6px; font-size: 18px; }
+  #hakDangNhapNen .phu { font-size: 13px; color: #6b7280; margin: 0 0 14px; }
+  #hakDangNhapNen .loi { color: #dc2626; font-size: 13px; margin: 0 0 14px; }
+  #hakDangNhapNen .nut { display: inline-block; padding: 11px 22px; background: #16a34a; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; border: 0; cursor: pointer; }
+  #hakDangNhapNen .nut.phu2 { background: #fff; color: #1f2937; border: 1px solid #d1d5db; margin-top: 10px; }
+  #hakDangNhapNen .trangthai { font-size: 12.5px; color: #6b7280; margin-top: 10px; }
+  #hakNguoiDungChip { position: fixed; left: 12px; bottom: 12px; z-index: 99990; background: #1f2937; color: #e5e7eb; border-radius: 20px; padding: 6px 12px; font: 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; display: none; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); max-width: calc(100% - 24px); }
+  #hakNguoiDungChip.hien { display: flex; }
+  #hakNguoiDungChip .vt { background: #2563eb; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; }
+  #hakNguoiDungChip button { background: transparent; color: #fca5a5; border: 0; cursor: pointer; font-size: 12px; padding: 0; }
+  #hakNguoiDungChip .em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+</style>
+<div id="hakDangNhapNen" role="dialog" aria-modal="true" aria-labelledby="hakDangNhapTieuDe">
+  <div class="hop">
+    <h3 id="hakDangNhapTieuDe">🔐 Đăng nhập</h3>
+    <p class="phu" id="hakDangNhapPhu">Dùng tài khoản Google (Gmail) đã được Quản trị cấp quyền.</p>
+    <p class="loi" id="hakDangNhapLoi" style="display:none"></p>
+    <div id="hakDangNhapNut"></div>
+    <div class="trangthai" id="hakDangNhapTrangThai"></div>
+  </div>
+</div>
+<div id="hakNguoiDungChip"><span>👤</span><span class="em" id="hakChipEmail"></span><span class="vt" id="hakChipVaiTro"></span><button type="button" id="hakChipDangXuat" style="display:none">Đăng xuất</button></div>
+<script>
+var HAK_PHIEN_KHOA = 'hak_hdmb_phien';
+var HAK_LOI_DANG_NHAP = '[AUTH] ';
+var HAK_LOI_QUYEN = '[QUYEN] ';
+var HAK_PHIEN = '';
+var HAK_NGUOI_DUNG = null;
+// Quyền tối thiểu để mở từng trang (?page=...) — khớp QUYEN ở 34_PhanQuyen.gs. Máy chủ vẫn tự kiểm tra từng chức năng.
+var HAK_QUYEN_TRANG = { tongquan: 'XEM', tracuu: 'XEM', map: 'XEM', baocao: 'XEM', kiemtra: 'XEM', huongdan: 'XEM',
+  form: 'NHAP_LIEU', hopdongmc: 'NHAP_LIEU', meconn: 'NHAP_LIEU', thietlap: 'QUAN_TRI' };
+
+(function hakKhoiTaoPhien_() {
+  var el = document.getElementById('hakPhanQuyen');
+  var tuServer = el ? (el.getAttribute('data-phien') || '') : '';
+  if (tuServer) {
+    HAK_PHIEN = tuServer;
+    try { sessionStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); } catch (e) { /* trình duyệt chặn lưu trữ */ }
+    // Bỏ ?sso=... khỏi địa chỉ (link đăng nhập chỉ dùng được 1 lần — tải lại trang sẽ báo "đã được dùng").
+    try { google.script.history.replace(null, { page: hakTrangHienTai_() }); } catch (e) { /* không có google.script.history */ }
+  } else {
+    try { HAK_PHIEN = sessionStorage.getItem(HAK_PHIEN_KHOA) || ''; } catch (e) { HAK_PHIEN = ''; }
+  }
+})();
+
+function hakTrangHienTai_() {
+  var el = document.getElementById('hakPhanQuyen');
+  return el ? (el.getAttribute('data-trang') || '') : '';
+}
+function hakCoQuyen_(quyen) {
+  return !!(HAK_NGUOI_DUNG && HAK_NGUOI_DUNG.quyen && HAK_NGUOI_DUNG.quyen.indexOf(quyen) !== -1);
+}
+function hakPhanSauTienTo_(msg, tienTo) {
+  var i = msg.indexOf(tienTo);
+  return i >= 0 ? msg.slice(i + tienTo.length) : '';
+}
+
+/** Thay cho google.script.run: cùng cách dùng, nhưng mọi lời gọi đi qua api(phien, tên, [tham số]). */
+function hakRun_() {
+  var runner = google.script.run, coXuLyLoi = false;
+  var boc = function (f) {
+    return function (err, userObj) {
+      var msg = String((err && err.message) || err || '');
+      var loiDangNhap = hakPhanSauTienTo_(msg, HAK_LOI_DANG_NHAP);
+      if (loiDangNhap) { hakHienDangNhap_(loiDangNhap); return; }
+      var loiQuyen = hakPhanSauTienTo_(msg, HAK_LOI_QUYEN);
+      if (f) f(loiQuyen ? new Error(loiQuyen) : err, userObj);
+      else if (loiQuyen && typeof thongBao_ === 'function') thongBao_(loiQuyen, 'loi');
+      else console.error(msg);
+    };
+  };
+  var p = new Proxy({}, { get: function (_, ten) {
+    if (ten === 'withSuccessHandler') return function (f) { runner = runner.withSuccessHandler(f); return p; };
+    if (ten === 'withFailureHandler') return function (f) { coXuLyLoi = true; runner = runner.withFailureHandler(boc(f)); return p; };
+    if (ten === 'withUserObject') return function (o) { runner = runner.withUserObject(o); return p; };
+    return function () {
+      var thamSo = Array.prototype.slice.call(arguments);
+      if (!coXuLyLoi) runner = runner.withFailureHandler(boc(null));
+      return runner.api(HAK_PHIEN, String(ten), thamSo);
+    };
+  } });
+  return p;
+}
+
+function hakDangNhung_() {
+  try { return window.parent !== window.top; } catch (e) { return true; }
+}
+
+function hakHienDangNhap_(loi, tieuDe) {
+  var nen = document.getElementById('hakDangNhapNen');
+  if (!nen) return;
+  if (!tieuDe) {
+    HAK_PHIEN = '';
+    try { sessionStorage.removeItem(HAK_PHIEN_KHOA); } catch (e) { /* bỏ qua */ }
+  }
+  document.getElementById('hakDangNhapTieuDe').textContent = tieuDe || '🔐 Đăng nhập';
+  var elLoi = document.getElementById('hakDangNhapLoi');
+  elLoi.textContent = loi || '';
+  elLoi.style.display = loi ? '' : 'none';
+  var vung = document.getElementById('hakDangNhapNut');
+  vung.textContent = '';
+  var trang = hakTrangHienTai_();
+  var cong = (HAK_NGUOI_DUNG && HAK_NGUOI_DUNG.congDangNhapUrl) || '';
+  var phu = document.getElementById('hakDangNhapPhu');
+  phu.textContent = 'Dùng tài khoản Google (Gmail) đã được Quản trị cấp quyền.';
+  if (tieuDe) {
+    // Đã đăng nhập nhưng không đủ quyền vào trang này
+    phu.textContent = '';
+    var ve = document.createElement('a');
+    ve.className = 'nut'; ve.target = '_top';
+    ve.href = ((document.getElementById('hakPhanQuyen') || { getAttribute: function () { return ''; } }).getAttribute('data-base') || '') + '?page=tongquan';
+    ve.textContent = 'Về trang Tổng quan';
+    vung.appendChild(ve);
+  } else if (!trang) {
+    // Sidebar nhập liệu trong Google Sheet: dùng tài khoản đang mở Sheet, không có nút đăng nhập
+    phu.textContent = 'Tài khoản Google đang mở Sheet cần được Quản trị thêm vào danh sách người dùng (Thiết lập › Người dùng & phân quyền).';
+  } else if (!cong) {
+    phu.textContent = 'Quản trị chưa cấu hình Cổng đăng nhập. Chủ hệ thống hãy mở webapp bằng tài khoản chủ để cấu hình ở trang Thiết lập.';
+  } else if (hakDangNhung_()) {
+    var nut = document.createElement('button');
+    nut.type = 'button'; nut.className = 'nut'; nut.textContent = 'Đăng nhập bằng Google';
+    nut.onclick = function () { hakDangNhapCuaSoNho_(cong, trang); };
+    vung.appendChild(nut);
+  } else {
+    var a = document.createElement('a');
+    a.className = 'nut'; a.target = '_top';
+    a.href = cong + (cong.indexOf('?') >= 0 ? '&' : '?') + 'page=' + encodeURIComponent(trang);
+    a.textContent = 'Đăng nhập bằng Google';
+    vung.appendChild(a);
+  }
+  document.getElementById('hakDangNhapTrangThai').textContent = '';
+  nen.className = 'hien';
+  document.getElementById('hakNguoiDungChip').className = '';
+}
+
+/** Đăng nhập khi webapp nằm trong trang khác: Google không cho trang đăng nhập nằm trong khung,
+ *  nên mở Cổng ở cửa sổ nhỏ kèm mã yêu cầu ngẫu nhiên; xong thì hỏi máy chủ lấy phiên theo mã đó. */
+var hakHoiPhien_ = null;
+function hakDangNhapCuaSoNho_(cong, trang) {
+  var box = document.getElementById('hakDangNhapTrangThai');
+  var bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  var yeuCau = Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  var url = cong + (cong.indexOf('?') >= 0 ? '&' : '?') + 'yc=' + yeuCau + '&page=' + encodeURIComponent(trang);
+  var cuaSo = window.open(url, 'hak_hdmb_dang_nhap', 'width=520,height=680');
+  box.textContent = cuaSo ? 'Đang chờ đăng nhập ở cửa sổ mới…' : 'Trình duyệt đã chặn cửa sổ bật lên — cho phép cửa sổ bật lên rồi bấm lại.';
+  clearInterval(hakHoiPhien_);
+  var hetHan = Date.now() + 10 * 60 * 1000;
+  hakHoiPhien_ = setInterval(function () {
+    if (Date.now() > hetHan) { clearInterval(hakHoiPhien_); box.textContent = 'Hết thời gian chờ - bấm Đăng nhập lại.'; return; }
+    google.script.run.withSuccessHandler(function (kq) {
+      if (!kq || (!kq.phien && !kq.loi)) return;
+      clearInterval(hakHoiPhien_);
+      if (kq.loi) { hakHienDangNhap_(kq.loi); return; }
+      HAK_PHIEN = kq.phien;
+      try { sessionStorage.setItem(HAK_PHIEN_KHOA, HAK_PHIEN); } catch (e) { /* bỏ qua */ }
+      window.location.reload();
+    }).withFailureHandler(function (err) { console.error('nhanPhienDangNhap:', err); }).nhanPhienDangNhap(yeuCau);
+  }, 2500);
+}
+
+function hakDangXuat_() {
+  var phien = HAK_PHIEN;
+  google.script.run.withSuccessHandler(function () {}).withFailureHandler(function () {}).dangXuat(phien);
+  HAK_NGUOI_DUNG = Object.assign({}, HAK_NGUOI_DUNG || {}, { daDangNhap: false, quyen: [] });
+  hakHienDangNhap_('Đã đăng xuất.');
+}
+
+/** Ẩn mục menu trái trỏ tới trang không đủ quyền. */
+function hakApDungQuyenMenu_() {
+  var links = document.querySelectorAll('a[href*="?page="]');
+  for (var i = 0; i < links.length; i++) {
+    var m = /[?&]page=([a-z]+)/.exec(links[i].getAttribute('href') || '');
+    var can = m ? HAK_QUYEN_TRANG[m[1]] : '';
+    if (can && !hakCoQuyen_(can)) links[i].style.display = 'none';
+  }
+}
+
+function hakVeChip_() {
+  var nd = HAK_NGUOI_DUNG;
+  var chip = document.getElementById('hakNguoiDungChip');
+  if (!nd || !nd.daDangNhap) { chip.className = ''; return; }
+  document.getElementById('hakChipEmail').textContent = nd.email;
+  document.getElementById('hakChipVaiTro').textContent = nd.vaiTroNhan;
+  var nut = document.getElementById('hakChipDangXuat');
+  nut.style.display = nd.quaPhien ? '' : 'none';
+  nut.onclick = hakDangXuat_;
+  chip.className = 'hien';
+}
+
+(function hakKiemTraDangNhap_() {
+  var chay = function () {
+    var elPq = document.getElementById('hakPhanQuyen');
+    var loiTuServer = elPq ? (elPq.getAttribute('data-loi') || '') : '';
+    google.script.run.withSuccessHandler(function (nd) {
+      HAK_NGUOI_DUNG = nd || null;
+      if (!nd || !nd.daDangNhap) { hakHienDangNhap_(loiTuServer || (HAK_PHIEN ? 'Phiên đăng nhập đã hết hạn - vui lòng đăng nhập lại.' : '')); return; }
+      hakApDungQuyenMenu_();
+      hakVeChip_();
+      var can = HAK_QUYEN_TRANG[hakTrangHienTai_()];
+      if (can && !hakCoQuyen_(can)) hakHienDangNhap_('Tài khoản ' + nd.email + ' (' + nd.vaiTroNhan + ') không có quyền mở trang này.', '⛔ Không đủ quyền');
+    }).withFailureHandler(function (err) {
+      console.error('thongTinDangNhap:', err);
+    }).thongTinDangNhap(HAK_PHIEN);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', chay); else chay();
+})();
+</script>

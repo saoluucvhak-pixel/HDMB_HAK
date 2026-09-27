@@ -9,7 +9,7 @@
  *
  *  Cơ chế cập nhật: TỰ ĐỘNG đúng 1 dòng bị ảnh hưởng, ngay khi Thêm/Sửa/Xóa lô
  *  rừng hoặc thêm điểm GPS (xem các hook đã gắn ở 06_CreateUpdate.gs) — không
- *  bao giờ tính lại toàn bộ, TRỪ hàm XAY_DUNG_LAI_DRAFT_HOSORUNG() dùng 1 lần
+ *  bao giờ tính lại toàn bộ, TRỪ hàm XAY_DUNG_LAI_DRAFT_HOSORUNG_() dùng 1 lần
  *  lúc mới cài đặt (hoặc khi nghi ngờ cache bị lệch).
  * ============================================================
  */
@@ -57,7 +57,7 @@ function CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
     const nccRow = readData_(SHEET_NAME.HD_NCC).find(function (n) { return (n[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
     if (nccRow) tinhTrang = nccRow[NCC_COL.TINH_TRANG] || 'Đang thực hiện';
 
-    const diemGPS = layGPSCuaRung(idRung);
+    const diemGPS = layGPSCuaRung_(idRung);
     let latTB = '', lngTB = '';
     if (diemGPS.length) {
       latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
@@ -96,7 +96,7 @@ function CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD) {
         CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_((r[RUNG_COL.ID_RUNG] || '').toString().trim());
       }
     });
-  } catch (e) { /* không để lỗi làm gián đoạn thao tác chính */ }
+  } catch (e) { log_('WARNING', 'CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_', 'Không cập nhật được cache Hồ sơ rừng cho ' + idHD, e); }
 }
 
 function XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
@@ -108,11 +108,11 @@ function XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
 }
 
 /**
- * ✅ THAY THẾ layBaoCaoHoSoRung() cũ (từng đọc trực tiếp HD_RUNG+HD_GPS+HD_NCC ở
+ * ✅ THAY THẾ layBaoCaoHoSoRung_() cũ (từng đọc trực tiếp HD_RUNG+HD_GPS+HD_NCC ở
  * file chính mỗi lần tải trang — chậm dần khi HD_RUNG nhiều dòng). Giờ CHỈ đọc
  * cache Draft_HoSoRung — nhanh, không phụ thuộc kích thước HD_RUNG.
  */
-function layBaoCaoHoSoRung() {
+function layBaoCaoHoSoRung_() {
   const sh = getOrCreateDraftHoSoRungSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -152,7 +152,7 @@ function layBaoCaoHoSoRung() {
  * HD_RUNG/HD_GPS/HD_NCC CHỈ 1 LẦN (không lặp lại theo từng dòng), group trong
  * bộ nhớ, rồi ghi 1 lượt bằng setValues() — tránh timeout với dữ liệu lớn.
  */
-function XAY_DUNG_LAI_DRAFT_HOSORUNG() {
+function XAY_DUNG_LAI_DRAFT_HOSORUNG_() {
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
   const gpsByIdRung = {};
@@ -160,8 +160,8 @@ function XAY_DUNG_LAI_DRAFT_HOSORUNG() {
     const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (!idRung) return;
     const type = g[GPS_COL.HE_TOA_DO];
-    const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-    const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+    const lat = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
     if (isNaN(lat) || isNaN(lng)) return;
     if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = [];
     gpsByIdRung[idRung].push({ lat: lat, lng: lng });
@@ -206,8 +206,9 @@ function XAY_DUNG_LAI_DRAFT_HOSORUNG() {
   return { soLoRungDaXuLy: ketQua.length };
 }
 
-/** Gọi từ menu Sheet — chạy XAY_DUNG_LAI_DRAFT_HOSORUNG() rồi hiện kết quả cho người dùng thấy ngay */
+/** Gọi từ menu Sheet — chạy XAY_DUNG_LAI_DRAFT_HOSORUNG_() rồi hiện kết quả cho người dùng thấy ngay */
 function CHAY_XAY_DUNG_LAI_DRAFT_HOSORUNG() {
-  const kq = XAY_DUNG_LAI_DRAFT_HOSORUNG();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = XAY_DUNG_LAI_DRAFT_HOSORUNG_();
   SpreadsheetApp.getUi().alert('✅ Đã xây dựng lại cache Hồ sơ rừng cho ' + kq.soLoRungDaXuLy + ' lô rừng.');
 }

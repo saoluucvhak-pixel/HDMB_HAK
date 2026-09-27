@@ -118,27 +118,7 @@ function CAP_NHAT_CT_HOPDONG_(idHD) {
     const soDong = timDongCtHopDong_(sh, idHD);
     if (soDong === -1) sh.appendRow(row);
     else sh.getRange(soDong, 1, 1, row.length).setValues([row]);
-  } catch (e) { /* không để lỗi tổng hợp ct_hopdong làm hỏng thao tác chính */ }
-}
-
-/** Đọc "Chi tiết hợp đồng" (ct_hopdong) của 1 hợp đồng. Nếu chưa có dòng nào
- *  (hợp đồng mới chưa từng thêm lô rừng), tính nhanh 1 lần rồi trả kết quả rỗng hợp lệ. */
-function layChiTietHopDong(idHD) {
-  const sh = getOrCreateCtHopDongSheet_();
-  let soDong = timDongCtHopDong_(sh, idHD);
-  if (soDong === -1) {
-    CAP_NHAT_CT_HOPDONG_(idHD);
-    soDong = timDongCtHopDong_(sh, idHD);
-    if (soDong === -1) return null; // hợp đồng chưa có lô rừng nào — chưa có gì để hiển thị
-  }
-  const c = CT_HOPDONG_COL;
-  const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
-  return {
-    idHD: r[c.ID_HD], soHD: r[c.SO_HD], dienTichKy: r[c.DIEN_TICH_KY], donGia: r[c.DON_GIA],
-    khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], giaTriDuKien: r[c.GIA_TRI_DU_KIEN],
-    hoSoNguonGoc: r[c.LOAI_HO_SO_NGUON_GOC], soGiayTo: r[c.SO_GIAY_TO], diaChiRung: r[c.DIA_CHI_RUNG],
-    soLoRung: r[c.SO_LO_RUNG], capNhatLuc: r[c.CAP_NHAT_LUC]
-  };
+  } catch (e) { log_('ERROR', 'CAP_NHAT_CT_HOPDONG_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e); }
 }
 
 // ============================================================
@@ -146,7 +126,7 @@ function layChiTietHopDong(idHD) {
 // ============================================================
 
 /** Danh sách phụ lục của 1 hợp đồng, sắp theo "Lần phụ lục" tăng dần */
-function layDanhSachPhuLuc(idHD) {
+function layDanhSachPhuLuc_(idHD) {
   const sh = getOrCreatePhuLucSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -168,7 +148,7 @@ function layDanhSachPhuLuc(idHD) {
 
 /** Thêm mới (không có d.soDong) hoặc cập nhật (có d.soDong) 1 phụ lục hợp đồng.
  *  Thành tiền LUÔN tự tính = Đơn giá × Khối lượng (không cho nhập tay để tránh sai lệch). */
-function LUU_PHU_LUC(d) {
+function LUU_PHU_LUC_(d) {
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
   const donGia = Number(d.donGia) || 0;
   const khoiLuong = Number(d.khoiLuong) || 0;
@@ -185,28 +165,38 @@ function LUU_PHU_LUC(d) {
     return { thanhCong: true, soDong: d.soDong, thanhTien: thanhTien };
   }
 
-  const lastRow = sh.getLastRow();
-  let lanMax = 0;
-  if (lastRow > 1) {
-    sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues().forEach(function (r) {
-      if ((r[c.ID_HD] || '').toString().trim() === d.idHD.toString().trim()) {
-        const lan = Number(r[c.LAN_PHU_LUC]) || 0;
-        if (lan > lanMax) lanMax = lan;
-      }
-    });
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // chờ tối đa 15s nếu có người khác đang lưu phụ lục cùng lúc — tránh trùng "Lần phụ lục" (LOCK-001)
+  } catch (e) {
+    return { thanhCong: false, loi: 'Hệ thống đang bận (người khác đang lưu phụ lục), vui lòng thử lại sau vài giây.' };
   }
-  const idPhuLuc = 'PL_' + d.idHD + '_' + (lanMax + 1);
+  try {
+    const lastRow = sh.getLastRow();
+    let lanMax = 0;
+    if (lastRow > 1) {
+      sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues().forEach(function (r) {
+        if ((r[c.ID_HD] || '').toString().trim() === d.idHD.toString().trim()) {
+          const lan = Number(r[c.LAN_PHU_LUC]) || 0;
+          if (lan > lanMax) lanMax = lan;
+        }
+      });
+    }
+    const idPhuLuc = 'PL_' + d.idHD + '_' + (lanMax + 1);
 
-  const row = [];
-  row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
-  row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
-  row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
-  sh.appendRow(row);
-  return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
+    const row = [];
+    row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
+    row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
+    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
+    sh.appendRow(row);
+    return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
-/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc) */
-function XOA_PHU_LUC(soDong) {
+/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc_) */
+function XOA_PHU_LUC_(soDong) {
   const sh = getOrCreatePhuLucSheet_();
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   sh.deleteRow(soDong);
@@ -238,7 +228,7 @@ function XOA_PHU_LUC(soDong) {
  * Nếu cấu trúc cột của sheet thay đổi sau này (chèn/xóa cột), hàm sẽ TỰ DÒ LẠI
  * theo từ khóa tiêu đề (dòng 1) thay vì dùng vị trí cố định.
  */
-function layPhieuCanTheoChuRung(tenChuRung) {
+function layPhieuCanTheoChuRung_(tenChuRung) {
   try {
     if (!tenChuRung) return { thanhCong: false, loi: 'Thiếu tên chủ rừng', danhSach: [] };
     const boDauTV = function (s) {
@@ -308,9 +298,9 @@ function layPhieuCanTheoChuRung(tenChuRung) {
 
 /** Trích GPS (EXIF) từ 1 ảnh tải lên trực tiếp ở tab "Tọa độ GPS". Dùng chung
  *  hàm đọc EXIF đã có sẵn ở 03_ImageForensics.gs (docExifTuBytes_). Sau khi có
- *  lat/lng, front-end gọi tiếp CAP_NHAT_GPS_RUNG(idRung, {lat,lng}, false) như
+ *  lat/lng, front-end gọi tiếp CAP_NHAT_GPS_RUNG_(idRung, {lat,lng}, false) như
  *  nhập tay bình thường — không cần thêm hàm ghi dữ liệu riêng. */
-function TRICH_XUAT_GPS_TU_ANH(base64Data, mimeType) {
+function TRICH_XUAT_GPS_TU_ANH_(base64Data, mimeType) {
   try {
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType || 'image/jpeg', 'anh_gps.jpg');
     const exif = docExifTuBytes_(blob);

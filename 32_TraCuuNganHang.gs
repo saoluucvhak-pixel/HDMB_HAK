@@ -14,7 +14,7 @@
  */
 
 /** Danh sách ngân hàng VN — API công khai VietQR, cache 24h (danh sách hiếm khi đổi) */
-function LAY_DANH_SACH_NGAN_HANG_VIETQR() {
+function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
   const cache = CacheService.getScriptCache();
   const daCache = cache.get('DS_NGAN_HANG_VIETQR');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tải lại */ } }
@@ -28,7 +28,7 @@ function LAY_DANH_SACH_NGAN_HANG_VIETQR() {
 }
 
 /** Đọc cấu hình dịch vụ tra cứu chủ TK */
-function LAY_CAI_DAT_TRA_CUU_NH() {
+function LAY_CAI_DAT_TRA_CUU_NH_() {
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('TRACUU_NH_API_KEY') || '';
   return {
@@ -38,7 +38,7 @@ function LAY_CAI_DAT_TRA_CUU_NH() {
 }
 
 /** Lưu cấu hình dịch vụ tra cứu chủ TK */
-function LUU_CAI_DAT_TRA_CUU_NH(apiKey, apiUrl) {
+function LUU_CAI_DAT_TRA_CUU_NH_(apiKey, apiUrl) {
   const p = PropertiesService.getScriptProperties();
   if (apiKey) p.setProperty('TRACUU_NH_API_KEY', apiKey.toString().trim());
   p.setProperty('TRACUU_NH_API_URL', (apiUrl || 'https://tracuubank.com/api/lookup').toString().trim());
@@ -52,14 +52,14 @@ function LUU_CAI_DAT_TRA_CUU_NH(apiKey, apiUrl) {
  * @param {string} tenNganHangGoTuDo tên ngân hàng đã gõ trong hệ thống (tự do, vd "Vietcombank", "MB Bank chi nhánh X")
  * @param {string} [tenChuRungMongDoi] tên chủ rừng đã có trong hồ sơ, dùng để tự so khớp có đúng người không
  */
-function TRA_CUU_TEN_CHU_TK(soTK, tenNganHangGoTuDo, tenChuRungMongDoi) {
-  const cd = LAY_CAI_DAT_TRA_CUU_NH();
+function TRA_CUU_TEN_CHU_TK_(soTK, tenNganHangGoTuDo, tenChuRungMongDoi) {
+  const cd = LAY_CAI_DAT_TRA_CUU_NH_();
   if (!cd.daCoApiKey) return { thanhCong: false, loi: 'Chưa cấu hình API key tra cứu ngân hàng. Vào Thiết lập → 🏦 Tra cứu ngân hàng để nhập.' };
   if (!soTK || !soTK.toString().trim()) return { thanhCong: false, loi: 'Thiếu số tài khoản.' };
 
   // ---- Đổi tên ngân hàng gõ tự do -> đúng mã ngân hàng (bank code) ----
   let dsNganHang;
-  try { dsNganHang = LAY_DANH_SACH_NGAN_HANG_VIETQR(); } catch (e) { return { thanhCong: false, loi: e.message }; }
+  try { dsNganHang = LAY_DANH_SACH_NGAN_HANG_VIETQR_(); } catch (e) { return { thanhCong: false, loi: e.message }; }
   const tenLoc = (tenNganHangGoTuDo || '').toString().trim().toLowerCase();
   if (!tenLoc) return { thanhCong: false, loi: 'Thiếu tên ngân hàng — nhập/chọn ngân hàng trước khi kiểm tra.' };
   const boDau_ = function (s) { return s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); };

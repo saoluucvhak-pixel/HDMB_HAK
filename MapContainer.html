@@ -69,11 +69,14 @@
   </style>
 </head>
 <body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 
 <div id="panel">
   <h2>🗺️ Bản đồ GPS Rừng</h2>
   <div id="navMenu">
     <a href="<?= baseUrl ?>?page=tongquan">🏠 Menu chính</a>
+    <a href="<?= baseUrl ?>?page=tracuu">🔍 Tra cứu</a>
     <a href="<?= baseUrl ?>?page=map" class="active">🗺️ Bản đồ</a>
     <a href="<?= baseUrl ?>?page=kiemtra">🔎 Kiểm tra</a>
   </div>
@@ -143,7 +146,7 @@
     btn.disabled = true;
     setInfo('⌛ Đang tải dữ liệu...', false);
 
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (res) {
         groups = res || {};
         filterList('');
@@ -156,7 +159,7 @@
       })
       .getMapData();
 
-    google.script.run.withSuccessHandler(function (iso) {
+    hakRun_().withSuccessHandler(function (iso) {
       if (iso) {
         var phut = Math.round((new Date().getTime() - new Date(iso).getTime()) / 60000);
         var txt = phut < 1 ? 'vừa xong' : phut < 60 ? phut + ' phút trước' : Math.floor(phut / 60) + ' giờ trước';

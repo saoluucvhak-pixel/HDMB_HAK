@@ -119,14 +119,14 @@ const LOAI_HO_SO_HOP_LE = [
 ];
 
 /** Lấy danh sách loại hồ sơ đầy đủ = danh mục gốc + các loại người dùng đã tự thêm (lưu ở Script Properties) */
-function layDanhSachLoaiHoSo() {
+function layDanhSachLoaiHoSo_() {
   const themVao = PropertiesService.getScriptProperties().getProperty('LOAI_HO_SO_THEM');
   const dsThem = themVao ? JSON.parse(themVao) : [];
   return LOAI_HO_SO_HOP_LE.concat(dsThem);
 }
 
 /** Thêm 1 loại hồ sơ nguồn gốc mới vào danh mục (bấm "+ Loại khác..." trên form) */
-function themLoaiHoSoMoi(loaiMoi) {
+function themLoaiHoSoMoi_(loaiMoi) {
   loaiMoi = (loaiMoi || '').toString().trim();
   if (!loaiMoi) return { thanhCong: false, loi: 'Tên loại hồ sơ trống' };
   const key = 'LOAI_HO_SO_THEM';
@@ -137,7 +137,7 @@ function themLoaiHoSoMoi(loaiMoi) {
     ds.push(loaiMoi);
     props.setProperty(key, JSON.stringify(ds));
   }
-  return { thanhCong: true, danhSach: layDanhSachLoaiHoSo() };
+  return { thanhCong: true, danhSach: layDanhSachLoaiHoSo_() };
 }
 
 // Sai số cho phép (mét) khi đối chiếu tọa độ GPS ảnh với tọa độ rừng đã ghi nhận
@@ -202,7 +202,7 @@ let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — trán
  * dùng cho trang Thiết lập trên webapp, để có thể XEM và ĐỔI sang dữ liệu/dự án
  * khác mà không cần sửa code.
  */
-function LAY_CAU_HINH_KET_NOI() {
+function LAY_CAU_HINH_KET_NOI_() {
   const props = PropertiesService.getScriptProperties();
   const ketQua = {
     draftUrl: '', draftTen: '', draftLoi: '',
@@ -261,7 +261,7 @@ function LAY_CAU_HINH_KET_NOI() {
  * URL rỗng để GIỮ NGUYÊN giá trị đang dùng (không đổi). Luôn xác minh mở được
  * TRƯỚC khi lưu — không lưu URL không hợp lệ.
  */
-function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
+function LUU_CAU_HINH_KET_NOI_(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
   const props = PropertiesService.getScriptProperties();
   const ketQua = { thanhCong: true, thongBao: [] };
 
@@ -360,12 +360,46 @@ const QUYEN_CHIA_SE_MAP_ = { xem: 'reader', binhluan: 'commenter', sua: 'writer'
 const QUYEN_CHIA_SE_NHAN_ = { reader: 'Xem', commenter: 'Bình luận', writer: 'Chỉnh sửa', owner: 'Chủ sở hữu' };
 
 /**
+ * Thiết lập mật khẩu quản trị (ADMIN_TOKEN) cho các thao tác nhạy cảm (chia sẻ/thu
+ * hồi quyền truy cập dữ liệu). Chạy 1 lần thủ công từ trình soạn thảo Apps Script
+ * (Run > SETUP_ADMIN_TOKEN), giống cách SETUP_SYNC_TOKEN() đã làm cho action=run.
+ * Đổi 'DOI_MAT_KHAU_NAY_NGAY' thành mật khẩu thật của bạn trước khi chạy.
+ */
+function SETUP_ADMIN_TOKEN() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè mật khẩu đã đặt.
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ADMIN_TOKEN')) { Logger.log('ADMIN_TOKEN đã có — không ghi đè. Đổi trong Project Settings > Script Properties.'); return; }
+  props.setProperty('ADMIN_TOKEN', 'DOI_MAT_KHAU_NAY_NGAY');
+  Logger.log('Đã tạo ADMIN_TOKEN mẫu. Vào Project Settings > Script Properties đổi thành mật khẩu thật (giá trị mẫu bị từ chối).');
+}
+
+/**
+ * Chặn truy cập trái phép vào các hàm chia sẻ/thu hồi quyền — vì webapp deploy với
+ * access=ANYONE_ANONYMOUS nên MỌI hàm global đều gọi được qua google.script.run bởi
+ * bất kỳ ai biết URL, không riêng người mở đúng trang Thiết lập (xem SEC-001).
+ * Trả về chuỗi lỗi nếu bị chặn, null nếu hợp lệ.
+ */
+function kiemTraAdminToken_(adminToken) {
+  const SECRET = PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN');
+  if (!SECRET || SECRET === 'DOI_MAT_KHAU_NAY_NGAY') {
+    return '⚠️ Chưa thiết lập ADMIN_TOKEN (hoặc còn để mặc định). Vào Apps Script > chạy hàm SETUP_ADMIN_TOKEN() sau khi đã đổi mật khẩu trong code, rồi thử lại.';
+  }
+  if (adminToken !== SECRET) {
+    return '❌ Sai mật khẩu quản trị.';
+  }
+  return null;
+}
+
+/**
  * Cấp quyền truy cập 1 email vào TOÀN BỘ 6 tài nguyên dữ liệu của webapp (2 Sheet
  * + 4 thư mục Drive) — dùng Drive API v2 (Drive.Permissions.insert) vì đây là
  * cách DUY NHẤT hỗ trợ cấp quyền "Bình luận" (SpreadsheetApp/DriveApp chỉ có
  * addViewer/addEditor, không có mức Bình luận).
  */
-function CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen) {
+function CHIA_SE_DU_LIEU_CHO_EMAIL_(adminToken, email, quyen) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return { thanhCong: false, loi: loiToken };
   email = (email || '').toString().trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { thanhCong: false, loi: 'Email không hợp lệ: "' + email + '".' };
   const role = QUYEN_CHIA_SE_MAP_[quyen];
@@ -390,7 +424,9 @@ function CHIA_SE_DU_LIEU_CHO_EMAIL(email, quyen) {
  * luôn là tài khoản đã tạo file) và quyền không gắn với 1 email cụ thể (chia sẻ
  * kiểu "Bất kỳ ai có link") vì không có ai để "thu hồi" trong 2 trường hợp đó.
  */
-function LAY_DANH_SACH_QUYEN_TRUY_CAP() {
+function LAY_DANH_SACH_QUYEN_TRUY_CAP_(adminToken) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return [{ ten: '', id: null, permissionId: null, email: '', quyen: '', loi: loiToken }];
   const ketQua = [];
   layDanhSachTaiNguyenChiaSe_().forEach(function (tn) {
     if (tn.loi) { ketQua.push({ ten: tn.ten, id: null, permissionId: null, email: '', quyen: '', loi: tn.loi }); return; }
@@ -407,8 +443,10 @@ function LAY_DANH_SACH_QUYEN_TRUY_CAP() {
   return ketQua;
 }
 
-/** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
-function THU_HOI_QUYEN_TRUY_CAP(id, permissionId) {
+/** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP_(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
+function THU_HOI_QUYEN_TRUY_CAP_(adminToken, id, permissionId) {
+  const loiToken = kiemTraAdminToken_(adminToken);
+  if (loiToken) return { thanhCong: false, loi: loiToken };
   if (!id || !permissionId) return { thanhCong: false, loi: 'Thiếu thông tin quyền cần thu hồi.' };
   try {
     Drive.Permissions.remove(id, permissionId);
@@ -441,10 +479,82 @@ function getReportSS_() {
   }
 }
 
+const _cauTrucDaKiemTra_ = {};
 function getSheet_(name) {
   const sh = getSS_().getSheetByName(name);
   if (!sh) throw new Error('Không tìm thấy sheet: ' + name);
+  if (!_cauTrucDaKiemTra_[name] && laSheetCoMapCot_(name)) {
+    kiemTraCauTrucCot_(sh);
+    _cauTrucDaKiemTra_[name] = true;
+  }
   return sh;
+}
+
+/** Các sheet được đọc/ghi theo CHỈ SỐ cột cố định (*_COL) — chèn/xóa cột tay sẽ làm lệch âm thầm. */
+function laSheetCoMapCot_(name) {
+  return [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE, SHEET_NAME.DM_DIACHI].indexOf(name) !== -1;
+}
+
+/**
+ * Chống ghi LỆCH CỘT (MAP-001): mã đọc/ghi các sheet chính theo vị trí cột cố định, nên nếu ai đó
+ * chèn/xóa/kéo cột trực tiếp trên Sheet, mọi thao tác sẽ đọc sai cột và GHI ĐÈ nhầm cột mà không
+ * báo lỗi. Lần đầu chạy: lưu tiêu đề hiện tại làm MẪU (Script Property CAU_TRUC_COT_<sheet>).
+ * Các lần sau: nếu 1 tiêu đề của mẫu nay nằm ở VỊ TRÍ KHÁC -> cột đã bị dịch -> DỪNG đọc/ghi sheet
+ * đó và báo rõ cột nào. Chỉ đổi tên tiêu đề (không dịch cột) -> chỉ ghi cảnh báo. Thêm cột mới ở
+ * cuối -> hợp lệ, tự cập nhật mẫu. Kết quả "đạt" được nhớ 60 giây để không phải đọc tiêu đề mỗi lượt.
+ * Sau khi cố ý đổi cấu trúc VÀ đã sửa *_COL tương ứng: chạy menu "Xác nhận cấu trúc cột hiện tại".
+ */
+function kiemTraCauTrucCot_(sh) {
+  const ten = sh.getName();
+  const cache = CacheService.getScriptCache();
+  const khoaCache = 'CAU_TRUC_OK_' + ten;
+  try { if (cache.get(khoaCache)) return; } catch (e) { /* không có cache thì kiểm tra thật */ }
+  const soCot = sh.getLastColumn();
+  if (soCot < 1) return;
+  const hienTai = sh.getRange(1, 1, 1, soCot).getValues()[0].map(function (v) { return String(v).trim(); });
+  const props = PropertiesService.getScriptProperties();
+  const khoaMau = 'CAU_TRUC_COT_' + ten;
+  const mauJson = props.getProperty(khoaMau);
+  if (!mauJson) {
+    props.setProperty(khoaMau, JSON.stringify(hienTai));
+    log_('INFO', 'kiemTraCauTrucCot_', 'Đã lưu cấu trúc cột mẫu của ' + ten + ' (' + soCot + ' cột)');
+  } else {
+    const mau = JSON.parse(mauJson);
+    const lech = [], doiTen = [];
+    for (let k = 0; k < mau.length; k++) {
+      if (!mau[k] || hienTai[k] === mau[k]) continue;
+      const j = hienTai.indexOf(mau[k]);
+      if (j !== -1) lech.push('"' + mau[k] + '" từ cột ' + tenCotChu_(k) + ' sang cột ' + tenCotChu_(j));
+      else doiTen.push(tenCotChu_(k) + ': "' + mau[k] + '" → "' + (hienTai[k] || '') + '"');
+    }
+    if (lech.length) {
+      log_('ERROR', 'kiemTraCauTrucCot_', 'Cột của ' + ten + ' đã bị dịch', lech);
+      throw new Error('⛔ Cấu trúc cột sheet "' + ten + '" đã thay đổi (' + lech.slice(0, 3).join('; ') + (lech.length > 3 ? '; …' : '') +
+        '). Hệ thống tạm DỪNG đọc/ghi sheet này để không ghi nhầm cột. Hãy trả các cột về đúng vị trí cũ; nếu thay đổi là cố ý và mã nguồn đã được cập nhật theo, chạy menu "🧱 Xác nhận cấu trúc cột hiện tại".');
+    }
+    if (doiTen.length) log_('WARNING', 'kiemTraCauTrucCot_', 'Tiêu đề cột của ' + ten + ' đã đổi tên (vị trí không đổi)', doiTen);
+    if (hienTai.length > mau.length) props.setProperty(khoaMau, JSON.stringify(hienTai)); // thêm cột mới ở cuối: hợp lệ
+  }
+  try { cache.put(khoaCache, '1', 60); } catch (e) { /* bỏ qua */ }
+}
+
+function tenCotChu_(chiSo0) {
+  let n = chiSo0 + 1, s = '';
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+/** Menu: chấp nhận cấu trúc cột HIỆN TẠI làm mẫu mới (chỉ dùng sau khi đã cố ý đổi cột VÀ cập nhật *_COL). */
+function XAC_NHAN_CAU_TRUC_COT_HIEN_TAI() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const props = PropertiesService.getScriptProperties();
+  const cache = CacheService.getScriptCache();
+  const ds = [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE, SHEET_NAME.DM_DIACHI];
+  ds.forEach(function (ten) { props.deleteProperty('CAU_TRUC_COT_' + ten); try { cache.remove('CAU_TRUC_OK_' + ten); } catch (e) {} delete _cauTrucDaKiemTra_[ten]; });
+  ds.forEach(function (ten) { const sh = getSS_().getSheetByName(ten); if (sh) kiemTraCauTrucCot_(sh); });
+  const thongBao = 'Đã lưu cấu trúc cột hiện tại của ' + ds.length + ' sheet làm mẫu mới.';
+  try { SpreadsheetApp.getUi().alert('✅ ' + thongBao); } catch (e) { /* chạy từ editor */ }
+  return thongBao;
 }
 
 /**
@@ -457,13 +567,47 @@ function getSheet_(name) {
  * trong Apps Script editor (xem ngayToISO_ cục bộ từng dùng ở 06_CreateUpdate.gs
  * để vá đúng lỗi này — giờ tách thành hàm DÙNG CHUNG để mọi hàm khác trong dự
  * án đều gọi được, tránh quên convert ở chỗ mới thêm sau này).
+ *
+ * ⚠️ ĐÃ SỬA (lỗi LÙI 1 NGÀY): trước đây trả d.toISOString() (giờ UTC). Ô ngày
+ * "10/05/2026" trong Sheet múi giờ UTC+7 là thời điểm 2026-05-09T17:00:00Z, nên
+ * form nhập (07/11 dùng toISOString().split('T')[0], 27 dùng split('T')[0]) hiện
+ * 09/05/2026 và khi Lưu thì GHI ĐÈ ngày sai vào Sheet — mỗi lần mở+lưu lùi thêm 1
+ * ngày. Giờ trả chuỗi NGÀY THUẦN "yyyy-MM-dd" theo đúng múi giờ của bảng tính, nên
+ * cả 3 form đều ra đúng ngày mà không phải sửa HTML; hiển thị bằng
+ * new Date(x).toLocaleDateString('vi-VN') vẫn đúng như cũ.
  */
+const _ngayToISOCache_ = {};
+let _muiGioBangTinh_ = null;
 function ngayToISO_(v) {
-  if (!v) return '';
+  if (v === null || v === undefined || v === '') return '';
   try {
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? '' : d.toISOString();
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // đã là ngày thuần -> giữ nguyên, không đổi múi giờ
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // ô TEXT kiểu Việt Nam dd/mm/yyyy (new Date() sẽ hiểu nhầm thành mm/dd)
+      if (m) {
+        const ngay = Number(m[1]), thang = Number(m[2]), nam = Number(m[3]);
+        const kt = new Date(nam, thang - 1, ngay);
+        if (kt.getFullYear() !== nam || kt.getMonth() !== thang - 1 || kt.getDate() !== ngay) return ''; // loại 31/02, 00/13...
+        return m[3] + '-' + ('0' + thang).slice(-2) + '-' + ('0' + ngay).slice(-2);
+      }
+    }
+    const d = v instanceof Date ? v : new Date(v);
+    const t = d.getTime();
+    if (isNaN(t)) return '';
+    if (_ngayToISOCache_.hasOwnProperty(t)) return _ngayToISOCache_[t];
+    const kq = Utilities.formatDate(d, layMuiGioBangTinh_(), 'yyyy-MM-dd');
+    _ngayToISOCache_[t] = kq; // nhiều dòng trùng ngày -> gọi Utilities.formatDate 1 lần/ngày khác nhau
+    return kq;
   } catch (e) { return ''; }
+}
+
+/** Múi giờ của bảng tính chính (ô ngày được lưu là 00:00 theo múi giờ này) — đọc 1 lần/lượt chạy. */
+function layMuiGioBangTinh_() {
+  if (_muiGioBangTinh_) return _muiGioBangTinh_;
+  try { _muiGioBangTinh_ = getSS_().getSpreadsheetTimeZone(); } catch (e) { /* rơi xuống múi giờ script */ }
+  if (!_muiGioBangTinh_) _muiGioBangTinh_ = Session.getScriptTimeZone();
+  return _muiGioBangTinh_;
 }
 
 /**
@@ -495,19 +639,45 @@ function getOrCreateNhatKySheet_() {
   return sh;
 }
 
+/**
+ * Kiểm tra file tải lên trước khi lưu vào Drive của chủ sở hữu. Webapp ANYONE_ANONYMOUS -> ai có URL
+ * cũng gọi được các hàm tải lên; trước đây nhận MỌI loại file/dung lượng (html, exe...) và lưu dưới
+ * tài khoản chủ sở hữu. Chỉ nhận ảnh + PDF (mime rỗng = trình duyệt không nhận ra, vd HEIC trên một
+ * số máy -> vẫn cho qua như trước), tối đa 20 MB. Trả chuỗi lỗi hoặc null nếu hợp lệ.
+ */
+const MIME_TAI_LEN_HOP_LE_ = ['', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif', 'image/tiff', 'image/bmp', 'application/pdf'];
+function kiemTraFileTaiLen_(base64Data, mimeType) {
+  const mime = (mimeType || '').toString().trim().toLowerCase();
+  if (MIME_TAI_LEN_HOP_LE_.indexOf(mime) === -1) return 'Loại file không được hỗ trợ (' + mime + '). Chỉ nhận ảnh hoặc PDF.';
+  const soByte = Math.floor(String(base64Data || '').length * 3 / 4);
+  if (soByte > 20 * 1024 * 1024) return 'File quá lớn (' + Math.round(soByte / 1048576) + ' MB). Tối đa 20 MB.';
+  return null;
+}
+
+/**
+ * Xóa cache Bản đồ GPS (getMapData_(), TTL 15 phút, xem Code.gs) — gọi ở MỌI điểm
+ * ghi thay đổi HD_GPS/HD_RUNG (thêm/sửa/xóa lô rừng, đồng bộ mở rộng, xóa vĩnh viễn
+ * hợp đồng), không chỉ riêng CAP_NHAT_GPS_RUNG_ như trước đây, để tránh bản đồ hiện
+ * dữ liệu cũ tới 15 phút sau khi đổi (CACHE-001).
+ */
+function xoaCacheBanDo_() {
+  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
+}
+
 /** Ghi 1 dòng vào nhật ký sửa đổi — gọi mỗi khi tạo/sửa/hủy/xóa/thanh lý hợp đồng */
 function ghiNhatKy_(hanhDong, idHD, chiTiet) {
   try {
     const sh = getOrCreateNhatKySheet_();
+    // Người đăng nhập qua webapp (phiên) hoặc người bấm menu trong Sheet (34_PhanQuyen.gs).
     let email = '';
-    try { email = Session.getActiveUser().getEmail(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
+    try { email = _emailNguoiThucHien_(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
     sh.appendRow([new Date(), email, hanhDong, idHD || '', chiTiet || '']);
-  } catch (e) { /* không để lỗi ghi log làm hỏng thao tác chính */ }
+  } catch (e) { log_('ERROR', 'ghiNhatKy_', 'Không ghi được nhật ký: ' + hanhDong + ' ' + (idHD || ''), e); /* không để lỗi ghi log làm hỏng thao tác chính */ }
 }
 
 /** Đọc Nhật ký hệ thống (NhatKy_SuaDoi), lọc theo khoảng ngày [tuNgay, denNgay] —
  *  để trống 1 trong 2 nghĩa là không giới hạn phía đó. Mới nhất hiện trước. */
-function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
+function LAY_NHAT_KY_THEO_NGAY_(tuNgay, denNgay) {
   const sh = getOrCreateNhatKySheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -532,8 +702,8 @@ function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
 }
 
 /**
- * ⚠️ BỔ SUNG HÀM ĐANG THIẾU: được gọi ở 4 chỗ trong dự án (layTinhHinhThucHien,
- * layBaoCaoHopDongPhanTrang, layDanhSachThanhLy, TAI_TRANG_BAO_CAO_TONG_HOP)
+ * ⚠️ BỔ SUNG HÀM ĐANG THIẾU: được gọi ở 4 chỗ trong dự án (layTinhHinhThucHien_,
+ * layBaoCaoHopDongPhanTrang_, layDanhSachThanhLy_, TAI_TRANG_BAO_CAO_TONG_HOP_)
  * nhưng CHƯA TỪNG được định nghĩa ở đâu — nghĩa là mỗi khi 1 trong các hàm đó
  * gặp lỗi thật, gọi hàm không tồn tại này sẽ ném ra 1 lỗi MỚI ("ghiLoiBackend_
  * is not defined"), CHE MẤT lỗi gốc thật sự đã xảy ra, khiến rất khó chẩn đoán.
@@ -544,8 +714,33 @@ function ghiLoiBackend_(tenHam, err) {
   try {
     const noiDung = (err && err.message) ? err.message : String(err);
     Logger.log('[LỖI BACKEND — ' + tenHam + '] ' + noiDung + (err && err.stack ? '\n' + err.stack : ''));
+    log_('ERROR', tenHam, noiDung, err);
     ghiNhatKy_('LỖI backend: ' + tenHam, '', noiDung);
   } catch (e2) { /* không để lỗi ghi log làm hỏng luồng chính */ }
+}
+
+/**
+ * Ghi log có mức độ (DEBUG / INFO / SUCCESS / WARNING / ERROR) ra Cloud Logging — appsscript.json
+ * đã bật exceptionLogging STACKDRIVER nên console.* được lưu lại, lọc được theo mức độ, xem ở
+ * Apps Script > Executions (hoặc Google Cloud Logging) cho MỌI lượt chạy, kể cả lượt của người
+ * dùng khác. Khác ghiNhatKy_ (nhật ký nghiệp vụ trong Sheet cho người dùng xem).
+ * DEBUG chỉ ghi khi Script Property LOG_DEBUG = '1', tránh tràn log khi chạy bình thường.
+ */
+let _logDebugBat_ = null;
+function log_(mucDo, nguCanh, thongDiep, chiTiet) {
+  try {
+    if (mucDo === 'DEBUG') {
+      if (_logDebugBat_ === null) _logDebugBat_ = PropertiesService.getScriptProperties().getProperty('LOG_DEBUG') === '1';
+      if (!_logDebugBat_) return;
+    }
+    const banGhi = { mucDo: mucDo, nguCanh: nguCanh, thongDiep: String(thongDiep) };
+    if (chiTiet && typeof chiTiet === 'object' && typeof chiTiet.message === 'string') { banGhi.loi = chiTiet.message; banGhi.stack = chiTiet.stack || ''; } // lỗi (kể cả exception của dịch vụ Google không phải Error thuần)
+    else if (chiTiet !== undefined) banGhi.chiTiet = chiTiet;
+    if (mucDo === 'ERROR') console.error(banGhi);
+    else if (mucDo === 'WARNING') console.warn(banGhi);
+    else if (mucDo === 'DEBUG') console.log(banGhi);
+    else console.info(banGhi); // INFO, SUCCESS
+  } catch (e) { /* log không bao giờ được làm hỏng thao tác chính */ }
 }
 
 /**
@@ -561,14 +756,6 @@ function ghiLoiBackend_(tenHam, err) {
  */
 const CACHE_SHEET_NAME = 'Cache_BaoCao';
 const CACHE_CHUNK_SIZE = 45000; // 1 ô Google Sheets chứa được ~50.000 ký tự, để dư an toàn
-
-/** Thời điểm có thay đổi dữ liệu gần nhất, dựa vào dòng cuối cùng của nhật ký */
-function layThoiGianThayDoiGanNhat_() {
-  const sh = getOrCreateNhatKySheet_();
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return new Date(0); // chưa có thay đổi nào ghi nhận -> luôn coi cache còn mới
-  return new Date(sh.getRange(lastRow, 1).getValue());
-}
 
 function getOrCreateCacheSheet_() {
   const ss = getReportSS_(); // đổi sang file RIÊNG cho báo cáo/cache — không dùng file chính nữa
@@ -596,47 +783,12 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
       rows.push([tenCache, i === 0 ? new Date().toISOString() : '', json.substr(i * CACHE_CHUNK_SIZE, CACHE_CHUNK_SIZE)]);
     }
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
-  } catch (e) { /* lỗi lưu cache không được làm hỏng kết quả chính — bỏ qua, lần sau tính lại từ đầu */ }
-}
-
-/** Đọc cache đã lưu, trả về null nếu chưa có hoặc đã cũ (có thay đổi mới hơn) */
-function docCacheBaoCao_(tenCache) {
-  try {
-    const sh = getOrCreateCacheSheet_();
-    const data = sh.getDataRange().getValues();
-    const dongCuaCache = data.filter(function (r) { return r[0] === tenCache; });
-    if (!dongCuaCache.length) return null;
-
-    const thoiGianTao = new Date(dongCuaCache[0][1]);
-    const thoiGianThayDoi = layThoiGianThayDoiGanNhat_();
-    if (thoiGianThayDoi > thoiGianTao) return null; // đã có thay đổi mới hơn -> cache cũ, phải tính lại
-
-    const json = dongCuaCache.map(function (r) { return r[2]; }).join('');
-    return JSON.parse(json);
-  } catch (e) {
-    return null; // đọc lỗi (JSON hỏng, sheet lỗi...) -> coi như không có cache, tính lại từ đầu
-  }
+  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); }
 }
 
 /**
- * Lấy kết quả báo cáo — dùng cache nếu còn mới, tính lại nếu cache cũ/chưa có/bị ép làm mới.
- * hamTinh: function không tham số, trả về dữ liệu cần cache (phải là JSON-serializable).
- * boBuoc: true = luôn tính lại bất kể cache (dùng cho nút "Làm mới cưỡng bức" nếu cần).
- */
-function layHoacTinhBaoCao_(tenCache, hamTinh, boBuoc) {
-  if (!boBuoc) {
-    const cached = docCacheBaoCao_(tenCache);
-    if (cached !== null) return { tuCache: true, duLieu: cached };
-  }
-  const ketQua = hamTinh();
-  luuCacheBaoCao_(tenCache, ketQua);
-  return { tuCache: false, duLieu: ketQua };
-}
-
-/**
- * Đọc cache "CHỈ ĐỌC" — khác với docCacheBaoCao_ (kiểm tra hạn theo nhật ký
- * CHUNG của mọi thay đổi hợp đồng/rừng/tài khoản), hàm này đọc thẳng bất kể
- * nhật ký chung có gì mới hay không. Dùng cho dữ liệu mà độ mới của nó do 1
+ * Đọc cache "CHỈ ĐỌC" — đọc thẳng giá trị đã lưu, không kiểm tra hạn theo nhật ký
+ * chung của mọi thay đổi hợp đồng/rừng/tài khoản. Dùng cho dữ liệu mà độ mới của nó do 1
  * trigger RIÊNG quyết định (vd dữ liệu thanh toán DNTT_GK_DN_CT — chỉ nên làm
  * mới bởi trigger đồng bộ thanh toán 30 phút/lần, KHÔNG phải bởi việc sửa 1
  * hợp đồng bất kỳ — nếu không sẽ bị tính lại toàn bộ mỗi lần sửa 1 hợp đồng,
@@ -708,9 +860,9 @@ let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nế
  * Đọc TRỰC TIẾP HD_RUNG + HD_GPS + HD_Picture (đọc TOÀN BỘ sheet đúng 1 LẦN,
  * không đọc theo từng dòng) để tính "Có ảnh" / "Đã đo GPS đủ" / "Tọa độ trung
  * bình" THẬT — dùng làm lớp GHI ĐÈ lên Draft trong docToanBoDraftBaoCao_() và
- * layBaoCaoHoSoRung().
+ * layBaoCaoHoSoRung_().
  *
- * LÝ DO CẦN LỚP NÀY: Draft chỉ đúng NẾU đúng hàm CAP_NHAT_DRAFT_MOT_HOP_DONG /
+ * LÝ DO CẦN LỚP NÀY: Draft chỉ đúng NẾU đúng hàm CAP_NHAT_DRAFT_MOT_HOP_DONG_ /
  * CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_ được gọi mỗi khi ảnh/GPS thay đổi. Nếu dữ
  * liệu GPS/ảnh được NHẬP THẲNG vào sheet HD_GPS/HD_Picture bằng tay (không qua
  * webapp), hoặc lỡ sót 1 hàm ghi nào đó quên gọi cập nhật Draft, Draft sẽ hiện
@@ -734,8 +886,8 @@ function layCoAnhVaGpsTrucTiep_() {
     const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (!idRung) return;
     const type = g[GPS_COL.HE_TOA_DO];
-    const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-    const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+    const lat = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
     if (isNaN(lat) || isNaN(lng)) return;
     if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = { latTong: 0, lngTong: 0, dem: 0 };
     gpsByIdRung[idRung].latTong += lat; gpsByIdRung[idRung].lngTong += lng; gpsByIdRung[idRung].dem++;
@@ -744,7 +896,7 @@ function layCoAnhVaGpsTrucTiep_() {
   // ---- coAnh theo "định danh thô" trong HD_Picture (đúng 1 lượt đọc HD_Picture) ----
   // ⚠️ Không dùng thẳng làm coAnhByIdHD nữa: đã phát hiện một số dòng CŨ trong
   // HD_Picture lưu NHẦM giá trị ID_RUNG vào cột ID_HD (xác nhận qua đối chiếu
-  // trực tiếp dữ liệu thật — xem layAnhCuaHopDong() ở 06_CreateUpdate.gs). Nên
+  // trực tiếp dữ liệu thật — xem layAnhCuaHopDong_() ở 06_CreateUpdate.gs). Nên
   // giữ nguyên "định danh thô" (có thể là ID_HD thật HOẶC lỡ là ID_RUNG) rồi
   // đối chiếu lại theo CẢ HAI khả năng ở bước gộp theo hợp đồng bên dưới.
   const coAnhByDinhDanhTho = {};

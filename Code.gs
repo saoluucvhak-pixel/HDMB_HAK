@@ -18,12 +18,18 @@ function doGet(e) {
         "⚠️ Chưa cấu hình SYNC_TOKEN trong Script Properties. Vào Project Settings > Script Properties để thêm."
       ).setMimeType(ContentService.MimeType.TEXT);
     }
+    // Giá trị mẫu của SETUP_SYNC_TOKEN() nằm ngay trong mã nguồn -> ai đọc được code cũng biết; coi như chưa cấu hình.
+    if (SECRET === 'DAT_TOKEN_CUA_BAN_O_DAY') {
+      return ContentService.createTextOutput(
+        "⚠️ SYNC_TOKEN vẫn là giá trị mẫu. Đổi thành chuỗi bí mật riêng trong Project Settings > Script Properties."
+      ).setMimeType(ContentService.MimeType.TEXT);
+    }
     if (e.parameter.token !== SECRET) {
       return ContentService.createTextOutput("❌ Không có quyền truy cập (token sai hoặc thiếu).")
              .setMimeType(ContentService.MimeType.TEXT);
     }
     try {
-      var result = RUN_HAK_SYSTEM_FINAL();
+      var result = RUN_HAK_SYSTEM_FINAL_();
       return ContentService.createTextOutput("⚡ HỆ THỐNG HAK 2026: Cập nhật dữ liệu thành công! Kết quả: " + result)
              .setMimeType(ContentService.MimeType.TEXT);
     } catch (err) {
@@ -32,123 +38,60 @@ function doGet(e) {
     }
   }
 
-  if (page === "map") {
-    var tmplMapRieng = HtmlService.createTemplateFromFile('MapContainer');
-    tmplMapRieng.baseUrl = ScriptApp.getService().getUrl();
-    tmplMapRieng.currentPage = 'map';
-    return tmplMapRieng.evaluate()
-      .setTitle('🗺️ Bản đồ GPS HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
+  // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
+  var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
+  var cauHinh = TRANG_WEBAPP_[tenTrang];
+  var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
+  tmpl.baseUrl = ScriptApp.getService().getUrl();
+  tmpl.currentPage = cauHinh.currentPage || tenTrang;
+  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
+  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
+  tmpl.phien = '';
+  tmpl.loiDangNhap = '';
+  if (e.parameter.sso) {
+    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
+    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
+    tmpl.phien = dangNhap.phien;
+    tmpl.loiDangNhap = dangNhap.loi;
   }
-
-  if (page === "form") {
-    var tmplForm = HtmlService.createTemplateFromFile('11_Page_NhapLieu');
-    tmplForm.baseUrl = ScriptApp.getService().getUrl();
-    tmplForm.currentPage = 'form';
-    return tmplForm.evaluate()
-      .setTitle('📝 Nhập liệu HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "baocao") {
-    var tmplBaoCao = HtmlService.createTemplateFromFile('10_Page_BaoCao');
-    tmplBaoCao.baseUrl = ScriptApp.getService().getUrl();
-    tmplBaoCao.currentPage = 'baocao';
-    return tmplBaoCao.evaluate()
-      .setTitle('📊 Báo cáo tổng hợp HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "kiemtra") {
-    var tmplKiemTra = HtmlService.createTemplateFromFile('12_Page_KiemTra');
-    tmplKiemTra.baseUrl = ScriptApp.getService().getUrl();
-    tmplKiemTra.currentPage = 'kiemtra';
-    return tmplKiemTra.evaluate()
-      .setTitle('🔎 Kiểm tra & Đối chiếu HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "huongdan") {
-    var tmplHuongDan = HtmlService.createTemplateFromFile('13_HuongDan');
-    tmplHuongDan.baseUrl = ScriptApp.getService().getUrl();
-    tmplHuongDan.currentPage = 'huongdan';
-    return tmplHuongDan.evaluate()
-      .setTitle('📖 Hướng dẫn sử dụng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "thietlap") {
-    var tmplThietLap = HtmlService.createTemplateFromFile('24_Page_ThietLap');
-    tmplThietLap.baseUrl = ScriptApp.getService().getUrl();
-    tmplThietLap.currentPage = 'thietlap';
-    return tmplThietLap.evaluate()
-      .setTitle('⚙️ Thiết lập HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "meconn") {
-    // ⚠️ ĐÃ SỬA: "meconn" (26_Page_QuanLyMeCon) là bản cũ, trùng lặp phần lớn với
-    // "hopdongmc" (27_Page_HopDongMeCon) nhưng thiếu các cải tiến sau này của 27
-    // (chọn ngân hàng theo tên thật, gợi ý năm trồng, chỉ nhận số nguyên...) và
-    // từng có bug mất file đính kèm hồ sơ pháp lý khi lưu. Không còn liên kết
-    // nào trong menu trỏ tới "meconn", nhưng URL cũ (?page=meconn) có thể đã
-    // được người dùng lưu bookmark — thay vì để họ vào thẳng trang lỗi thời,
-    // route sang cùng trang "hopdongmc" đang được bảo trì.
-    var tmplMeCon = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
-    tmplMeCon.baseUrl = ScriptApp.getService().getUrl();
-    tmplMeCon.currentPage = 'hopdongmc';
-    return tmplMeCon.evaluate()
-      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "hopdongmc") {
-    var tmplHopDongMC = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
-    tmplHopDongMC.baseUrl = ScriptApp.getService().getUrl();
-    tmplHopDongMC.currentPage = 'hopdongmc';
-    return tmplHopDongMC.evaluate()
-      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "tongquan") {
-    var tmplTongQuan = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
-    tmplTongQuan.baseUrl = ScriptApp.getService().getUrl();
-    tmplTongQuan.currentPage = 'tongquan';
-    return tmplTongQuan.evaluate()
-      .setTitle('📊 Tổng quan hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  // ⚠️ ĐÃ SỬA: trước đây mở webapp KHÔNG kèm tham số ?page= sẽ mặc định vào
-  // Nhập liệu HĐ/Rừng/TK — giờ mặc định thẳng vào "Tổng quan hợp đồng" (dashboard),
-  // đúng màn hình tổng quan đầu tiên khi vào phần mềm.
-  var tmplTongQuanMacDinh = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
-  tmplTongQuanMacDinh.baseUrl = ScriptApp.getService().getUrl();
-  tmplTongQuanMacDinh.currentPage = 'tongquan';
-  return tmplTongQuanMacDinh.evaluate()
-    .setTitle('📊 Tổng quan hợp đồng HAK')
+  return tmpl.evaluate()
+    .setTitle(cauHinh.title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+/**
+ * Bảng định tuyến ?page=... của webapp: file HTML, tiêu đề tab, và currentPage (mục menu được tô
+ * sáng). Thêm trang mới = thêm 1 dòng ở đây (trước đây mỗi trang là 1 khối if dài 9 dòng chép lại).
+ */
+var TRANG_WEBAPP_ = {
+  map:       { file: 'MapContainer',            title: '🗺️ Bản đồ GPS HAK' },
+  form:      { file: '11_Page_NhapLieu',        title: '📝 Nhập liệu HAK' },
+  baocao:    { file: '10_Page_BaoCao',          title: '📊 Báo cáo tổng hợp HAK' },
+  kiemtra:   { file: '12_Page_KiemTra',         title: '🔎 Kiểm tra & Đối chiếu HAK' },
+  huongdan:  { file: '13_HuongDan',             title: '📖 Hướng dẫn sử dụng HAK' },
+  thietlap:  { file: '24_Page_ThietLap',        title: '⚙️ Thiết lập HAK' },
+  hopdongmc: { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK' },
+  // "meconn" từng là trang 26_Page_QuanLyMeCon (bản cũ, đã xóa khỏi dự án). URL cũ có
+  // thể còn trong bookmark -> đưa sang cùng trang "hopdongmc" đang được bảo trì.
+  meconn:    { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK', currentPage: 'hopdongmc' },
+  tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' },
+  tracuu:    { file: '33_Page_TraCuuHopDong',   title: '🔍 Tra cứu hợp đồng HAK' }
+};
+
 function SETUP_SYNC_TOKEN() {
-  var token = 'DAT_TOKEN_CUA_BAN_O_DAY';
-  PropertiesService.getScriptProperties().setProperty('SYNC_TOKEN', token);
-  Logger.log('Đã lưu SYNC_TOKEN: ' + token);
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè token đã đặt
+  // (trước đây gọi hàm này rồi dùng ?action=run&token=<giá trị mẫu> là chạy được đồng bộ).
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SYNC_TOKEN')) { Logger.log('SYNC_TOKEN đã có — không ghi đè. Đổi trong Project Settings > Script Properties.'); return; }
+  props.setProperty('SYNC_TOKEN', 'DAT_TOKEN_CUA_BAN_O_DAY');
+  Logger.log('Đã tạo SYNC_TOKEN mẫu — đổi thành chuỗi bí mật riêng trong Project Settings > Script Properties (giá trị mẫu bị từ chối).');
 }
 
 // --- HÀM NGUYÊN BẢN (GIỮ NGUYÊN 100%) ---
-function convertDmsToDd(input) {
+function convertDmsToDd_(input) {
   if (!input) return null;
   let str = input.toString().toUpperCase().trim();
   let direction = str.slice(-1);
@@ -177,14 +120,14 @@ function convertDmsToDd(input) {
  * ĐÃ CẬP NHẬT: dùng tên cột thống nhất từ 00_Config.gs
  * (GPS_COL.HE_TOA_DO thay cho GPS_COL.TYPE cũ).
  */
-function getLatLngFromRow(row) {
+function getLatLngFromRow_(row) {
   var type = row[GPS_COL.HE_TOA_DO];
-  var lat = (type === "DMS") ? convertDmsToDd(row[GPS_COL.LAT]) : parseFloat(row[GPS_COL.LAT]);
-  var lng = (type === "DMS") ? convertDmsToDd(row[GPS_COL.LNG]) : parseFloat(row[GPS_COL.LNG]);
+  var lat = (type === "DMS") ? convertDmsToDd_(row[GPS_COL.LAT]) : parseFloat(row[GPS_COL.LAT]);
+  var lng = (type === "DMS") ? convertDmsToDd_(row[GPS_COL.LNG]) : parseFloat(row[GPS_COL.LNG]);
   return { lat: lat, lng: lng };
 }
 
-function RUN_HAK_SYSTEM_FINAL() {
+function RUN_HAK_SYSTEM_FINAL_() {
   const startTime = new Date().getTime();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const gpsSh = ss.getSheetByName("HD_GPS");
@@ -200,7 +143,7 @@ function RUN_HAK_SYSTEM_FINAL() {
   for (let i = 1; i < gpsData.length; i++) {
     // ĐÃ CẬP NHẬT: GPS_COL.ID_KEY_GPS thay cho GPS_COL.ID cũ
     let id = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
-    let { lat, lng } = getLatLngFromRow(gpsData[i]);
+    let { lat, lng } = getLatLngFromRow_(gpsData[i]);
 
     if (id && !isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!forestGroups[id]) forestGroups[id] = [];
@@ -260,8 +203,8 @@ function RUN_HAK_SYSTEM_FINAL() {
   return "OK (đã geocode " + geocodedCount + " dòng)";
 }
 
-/** Lấy thời điểm chạy đồng bộ bản đồ (RUN_HAK_SYSTEM_FINAL) gần nhất, để hiển thị "Cập nhật lúc: ..." trên bản đồ */
-function layThoiGianCapNhatBanDo() {
+/** Lấy thời điểm chạy đồng bộ bản đồ (RUN_HAK_SYSTEM_FINAL_) gần nhất, để hiển thị "Cập nhật lúc: ..." trên bản đồ */
+function layThoiGianCapNhatBanDo_() {
   const gia = PropertiesService.getScriptProperties().getProperty('LAN_CUOI_CHAY_BAN_DO');
   return gia || null;
 }
@@ -274,7 +217,7 @@ function layThoiGianCapNhatBanDo() {
  * THỐNG" vẫn gọi đúng hàm này nên sau 15 phút sẽ tự làm mới, không cần thêm nút
  * "xóa cache" riêng.
  */
-function getMapData() {
+function getMapData_() {
   const cache = CacheService.getScriptCache();
   const daCache = cache.get('MAP_DATA_CACHE');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }
@@ -327,7 +270,7 @@ function getMapData_ThucThi_() {
     let idGPS = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
     if (!idGPS) continue;
 
-    let { lat, lng } = getLatLngFromRow(gpsData[i]);
+    let { lat, lng } = getLatLngFromRow_(gpsData[i]);
     let address = gpsData[i][GPS_COL.ADDRESS] || "Chưa xác định địa chỉ";
 
     if (!isNaN(lat) && lat !== 0 && !isNaN(lng)) {
@@ -338,4 +281,10 @@ function getMapData_ThucThi_() {
     }
   }
   return mapGroups;
+}
+
+/** Menu "🗺️ Mở bản đồ": đồng bộ tọa độ/địa chỉ HD_GPS (ghi dữ liệu) — cần quyền Nhập liệu. ?action=run (có SYNC_TOKEN) gọi thẳng RUN_HAK_SYSTEM_FINAL_. */
+function RUN_HAK_SYSTEM_FINAL() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  return RUN_HAK_SYSTEM_FINAL_();
 }

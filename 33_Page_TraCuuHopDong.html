@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+<style>
+
+  :root {
+    --sidebar-bg: #1f2937;
+    --sidebar-bg-2: #2d3a4d;
+    --active-green: #2563eb;
+    --accent-gold: #b45309;
+    --accent-purple: #1f2937;
+    --text-light: #cbd5e1;
+    --text-muted: #8b98ab;
+    --card-bg: #ffffff;
+    --page-bg: #f3f4f6;
+    --border-light: #e5e7eb;
+    --heading: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; display: flex; min-height: 100vh;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--page-bg); color: var(--heading);
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .app-sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    color: var(--text-light); display: flex; flex-direction: column; padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 18px 20px 18px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-gold);
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold); font-size: 12px;
+  }
+  .brand .title { font-weight: bold; color: #fff; font-size: 15px; line-height: 1.2; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); }
+
+  .nav-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 14px 18px 4px 18px; letter-spacing: .05em; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--text-light);
+    text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: var(--active-green); color: #fff; border-left-color: var(--accent-gold); font-weight: 600; }
+  .nav-item .icon { width: 18px; text-align: center; }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
+  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+
+  .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
+  .tab-bar a, .tab-bar span {
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h3 { margin: 0 0 14px 0; font-size: 15px; }
+
+  /* Modal "Xem chi tiết lô rừng" — nổi giữa màn hình, không phụ thuộc vị trí
+     cuộn trang, vì bảng Hồ sơ rừng có thể rất dài (hàng trăm dòng) khiến card
+     cũ (nằm ngay sau bảng, theo dòng chảy trang bình thường) bị đẩy xuống tít
+     dưới, người dùng phải cuộn rất xa mới thấy. */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,35,27,0.55);
+    z-index: 1000; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.mo { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: 12px; padding: 22px 24px;
+    max-width: 640px; width: 100%; max-height: calc(100vh - 80px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+
+  .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--active-green); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #fff; }
+  .btn-purple { background: var(--accent-purple); color: #fff; }
+  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
+
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
+  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
+  table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    .app-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+    .brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
+  }
+</style>
+<style>
+  .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .the-thongke { flex: 1; min-width: 140px; background: #fff; border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .the-thongke:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+  .the-thongke.active { border-color: var(--active-green); background: #dcfce7; }
+  .the-thongke .so { font-size: 26px; font-weight: 700; color: var(--heading); }
+  .the-thongke.active .so { color: var(--active-green); }
+  .the-thongke .nhan { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+  table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
+  table.mecon-table tr:hover td { background: #dcfce7; }
+  a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
+  a.lnk-hd:hover { text-decoration: underline; }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #dcfce7; color: var(--active-green); }
+  .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
+</style>
+<style>
+  .tc-o-tim { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .tc-o-tim .field { flex: 1; min-width: 240px; }
+  .tc-ghi-chu { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .tc-khop { font-size: 11px; color: #6b7280; }
+  .tc-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; font-size: 13px; }
+  .tc-luoi .nhan { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .tc-luoi .gt { margin-top: 2px; word-break: break-word; }
+  .tc-anh { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: var(--active-green); }
+  .tc-canh-bao { background: #fef3c7; color: #92400e; border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
+  .tc-quay-lai { margin-bottom: 14px; }
+  .tc-dang-tai { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
+</style>
+</head>
+<body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+
+  <div class="nav-group-label">Khác</div>
+  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
+    <span class="icon">📖</span> Hướng dẫn sử dụng
+  </a>
+  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
+    <span class="icon">⚙️</span> Thiết lập
+  </a>
+</div>
+
+  <div class="app-main">
+    <div class="page-title">🔍 Tra cứu hợp đồng</div>
+    <div class="page-subtitle">Tìm theo Số HĐ, tên chủ rừng / người ủy quyền (gõ có dấu hoặc không dấu), CCCD, số điện thoại, số tài khoản hoặc địa chỉ rừng. Bấm vào 1 hợp đồng để xem chi tiết.</div>
+
+    <div class="card">
+      <form class="tc-o-tim" id="tcForm" onsubmit="traCuu_(); return false;">
+        <div class="field">
+          <label for="tcTuKhoa">Từ khóa</label>
+          <input id="tcTuKhoa" autocomplete="off" placeholder="vd 20260710010 · Nguyễn Văn A · 0490... · 0912..." maxlength="100">
+        </div>
+        <div class="field" style="flex:none"><button class="btn btn-green" type="submit" id="tcNutTim">🔍 Tra cứu</button></div>
+      </form>
+      <div class="tc-ghi-chu" id="tcGhiChu">Nhập ít nhất 2 ký tự. CCCD / SĐT / số tài khoản: nhập từ 4 chữ số trở lên (có thể chỉ nhập 1 phần).</div>
+    </div>
+
+    <div id="tcVungKetQua"></div>
+    <div id="tcVungChiTiet"></div>
+  </div>
+
+<script>
+function escTC_(s) {
+  return (s === null || s === undefined ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function urlTC_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escTC_(u) : '#'; } // chỉ nhận link http(s)
+function soTC_(v) {
+  if (v === null || v === undefined || v === '') return '';
+  var n = Number(v);
+  return isNaN(n) ? escTC_(v) : n.toLocaleString('vi-VN');
+}
+function oTC_(nhan, giaTri) {
+  var gt = (giaTri === null || giaTri === undefined || giaTri === '') ? '<span style="color:#9ca3af">—</span>' : giaTri;
+  return '<div><div class="nhan">' + escTC_(nhan) + '</div><div class="gt">' + gt + '</div></div>';
+}
+
+var tcKetQuaCuoi_ = null;
+var tcDangTim_ = false;
+
+function traCuu_() {
+  var tk = document.getElementById('tcTuKhoa').value.trim();
+  var vung = document.getElementById('tcVungKetQua');
+  document.getElementById('tcVungChiTiet').innerHTML = '';
+  if (tk.length < 2) { vung.innerHTML = '<div class="msg err">Nhập ít nhất 2 ký tự để tìm.</div>'; return; }
+  if (tcDangTim_) return;
+  tcDangTim_ = true;
+  document.getElementById('tcNutTim').disabled = true;
+  vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tìm…</div>';
+  try { google.script.history.replace(null, { page: 'tracuu', q: tk }); } catch (e) { /* ngoài Apps Script */ }
+  hakRun_()
+    .withSuccessHandler(function (kq) {
+      tcDangTim_ = false;
+      document.getElementById('tcNutTim').disabled = false;
+      tcKetQuaCuoi_ = kq;
+      veKetQua_(kq);
+    })
+    .withFailureHandler(function (err) {
+      tcDangTim_ = false;
+      document.getElementById('tcNutTim').disabled = false;
+      vung.innerHTML = '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
+    })
+    .TRA_CUU_HOP_DONG(tk);
+}
+
+function veKetQua_(kq) {
+  var vung = document.getElementById('tcVungKetQua');
+  document.getElementById('tcVungChiTiet').innerHTML = '';
+  if (!kq) { vung.innerHTML = ''; return; }
+  if (kq.loi) { vung.innerHTML = '<div class="msg err">' + escTC_(kq.loi) + '</div>'; return; }
+  if (!kq.ketQua.length) {
+    vung.innerHTML = '<div class="card"><div class="empty-hint">Không tìm thấy hợp đồng nào khớp "' + escTC_(kq.tuKhoa) + '".</div></div>';
+    return;
+  }
+  var h = '<div class="card"><h3>Kết quả: ' + kq.tongSo + ' hợp đồng' +
+    (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất — nhập từ khóa cụ thể hơn để thu hẹp)</span>' : '') + '</h3>' +
+    '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>CCCD chủ rừng</th><th>Địa chỉ rừng</th><th>Tình trạng</th><th>Khớp theo</th></tr></thead><tbody>';
+  kq.ketQua.forEach(function (x, i) {
+    h += '<tr><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
+      '<td>' + escTC_(x.ngayKy) + '</td><td>' + escTC_(x.tenChuRung) + '</td><td>' + escTC_(x.tenUyQuyen) + '</td>' +
+      '<td>' + escTC_(x.cccdChuRung) + '</td><td>' + escTC_(x.diaChiRung) + '</td>' +
+      '<td>' + (x.tinhTrang ? '<span class="badge-trang-thai">' + escTC_(x.tinhTrang) + '</span>' : '') + '</td>' +
+      '<td class="tc-khop">' + escTC_(x.khopTheo) + '</td></tr>';
+  });
+  h += '</tbody></table></div>' + (kq.daCheSo ? '<div class="tc-ghi-chu">🔒 Vai trò "Chỉ xem": số CCCD được che bớt.</div>' : '') + '</div>';
+  vung.innerHTML = h;
+  var links = vung.querySelectorAll('a.lnk-hd');
+  for (var k = 0; k < links.length; k++) {
+    links[k].addEventListener('click', function () { xemChiTiet_(kq.ketQua[Number(this.getAttribute('data-i'))].idHD); });
+  }
+}
+
+function xemChiTiet_(idHD) {
+  var vungKQ = document.getElementById('tcVungKetQua');
+  var vung = document.getElementById('tcVungChiTiet');
+  vungKQ.style.display = 'none';
+  vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
+  hakRun_()
+    .withSuccessHandler(function (ct) { veChiTiet_(ct); })
+    .withFailureHandler(function (err) {
+      vung.innerHTML = nutQuayLai_() + '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
+      ganNutQuayLai_();
+    })
+    .CHI_TIET_TRA_CUU_HOP_DONG(idHD);
+}
+
+function nutQuayLai_() {
+  return '<div class="tc-quay-lai"><button class="btn btn-outline" type="button" id="tcQuayLai">← Quay lại kết quả</button></div>';
+}
+function ganNutQuayLai_() {
+  var b = document.getElementById('tcQuayLai');
+  if (b) b.addEventListener('click', function () {
+    document.getElementById('tcVungChiTiet').innerHTML = '';
+    document.getElementById('tcVungKetQua').style.display = '';
+  });
+}
+
+function veChiTiet_(ct) {
+  var vung = document.getElementById('tcVungChiTiet');
+  if (!ct || ct.khongTimThay) {
+    vung.innerHTML = nutQuayLai_() + '<div class="msg err">' + escTC_((ct && ct.loi) || 'Không tìm thấy hợp đồng.') + '</div>';
+    ganNutQuayLai_();
+    return;
+  }
+  var hd = ct.hopDong, th = ct.thucHien || {};
+  var h = nutQuayLai_();
+  if (ct.daCheSo) h += '<div class="tc-canh-bao">🔒 Vai trò "Chỉ xem": CCCD, số điện thoại, số tài khoản được che bớt và không mở được file hồ sơ pháp lý.</div>';
+
+  h += '<div class="card"><h3>📄 Hợp đồng ' + escTC_(hd.soHD) + (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escTC_(hd.tinhTrang) + '</span>' : '') + '</h3><div class="tc-luoi">' +
+    oTC_('Số HĐ', escTC_(hd.soHD)) + oTC_('Ngày ký', escTC_(hd.ngayKy)) + oTC_('Nhóm KH', escTC_(hd.nhomKH)) +
+    oTC_('Diện tích ký', soTC_(hd.dienTichKy)) + oTC_('Sản lượng dự kiến', soTC_(hd.slDuKien)) + oTC_('Đơn giá', soTC_(hd.donGia)) +
+    oTC_('Địa chỉ rừng', escTC_(hd.diaChiRung)) + '</div></div>';
+
+  h += '<div class="card"><h3>👤 Chủ rừng &amp; người ủy quyền</h3><div class="tc-luoi">' +
+    oTC_('Chủ rừng', escTC_(hd.tenChuRung)) + oTC_('CCCD', escTC_(hd.cccdChuRung)) + oTC_('Ngày cấp / Nơi cấp', escTC_([hd.ngayCap, hd.noiCap].filter(Boolean).join(' · '))) +
+    oTC_('SĐT', escTC_(hd.sdtChuRung)) + oTC_('Thường trú', escTC_(hd.diaChiThuongTru)) + oTC_('Mã số thuế', escTC_(hd.maSoThue)) +
+    oTC_('Người ủy quyền', escTC_(hd.tenUyQuyen)) + oTC_('CCCD ủy quyền', escTC_(hd.cccdUyQuyen)) + oTC_('SĐT ủy quyền', escTC_(hd.sdtUyQuyen)) +
+    oTC_('Địa chỉ ủy quyền', escTC_(hd.diaChiUyQuyen)) + oTC_('Ủy quyền thanh toán', escTC_(hd.uyQuyenTT)) + '</div></div>';
+
+  h += '<div class="card"><h3>📦 Tình hình thực hiện</h3>';
+  if (th.khoiLuongDuKien === undefined) {
+    h += '<div class="empty-hint">Chưa có số liệu tổng hợp cho hợp đồng này (Draft báo cáo chưa cập nhật).</div>';
+  } else {
+    h += '<div class="tc-luoi">' +
+      oTC_('KL dự kiến', soTC_(th.khoiLuongDuKien)) + oTC_('KL thực hiện', soTC_(th.khoiLuongThucHien)) + oTC_('KL còn lại', soTC_(th.khoiLuongConLai)) +
+      oTC_('Giá trị HĐ', soTC_(th.giaTriHopDong)) + oTC_('Giá trị thực hiện', soTC_(th.giaTriThucHien)) + oTC_('Giá trị còn lại', soTC_(th.giaTriConLai)) +
+      oTC_('Thực hiện từ – đến', escTC_([th.thucHienTuNgay, th.thucHienDenNgay].filter(Boolean).join(' → '))) +
+      oTC_('Số phiếu cân', escTC_(th.danhSachSoPhieuCan)) +
+      oTC_('Hồ sơ còn thiếu', escTC_(th.thieuHoSoChiTiet)) +
+      oTC_('Tọa độ trung bình', th.toaDoTrungBinh ? '<a target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(th.toaDoTrungBinh) + '">' + escTC_(th.toaDoTrungBinh) + '</a>' : '') +
+      '</div>' + (th.capNhatLuc ? '<div class="tc-ghi-chu">Số liệu tổng hợp cập nhật lúc ' + escTC_(th.capNhatLuc) + '</div>' : '');
+  }
+  h += '</div>';
+
+  h += '<div class="card"><h3>🌲 Lô rừng (' + ct.loRung.length + ')</h3>';
+  if (!ct.loRung.length) h += '<div class="empty-hint">Chưa có lô rừng.</div>';
+  else {
+    h += '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Diện tích (m²)</th><th>Diện tích GPS</th><th>KL dự kiến</th><th>KL thực hiện</th><th>Năm trồng</th><th>Điểm GPS</th></tr></thead><tbody>';
+    ct.loRung.forEach(function (l) {
+      h += '<tr><td>' + escTC_(l.maRung || l.idRung) + '</td><td>' + escTC_(l.diaChiRung) + '</td><td>' + soTC_(l.dienTichM2) + '</td><td>' + soTC_(l.dienTichGPS) + '</td>' +
+        '<td>' + soTC_(l.khoiLuongDuKien) + '</td><td>' + soTC_(l.khoiLuongThucHien) + '</td><td>' + escTC_(l.namTrong) + '</td>' +
+        '<td>' + (l.soDiemGPS ? l.soDiemGPS + ' điểm' : '<span style="color:#dc2626">chưa có</span>') + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="card"><h3>🏦 Tài khoản nhận tiền</h3>';
+  var dsTK = [];
+  if (hd.soTK) dsTK.push({ soTK: hd.soTK, nganHang: hd.nganHang, tenUyQuyen: '(tài khoản chính trên hợp đồng)', uyQuyenTT: hd.uyQuyenTT });
+  ct.taiKhoan.forEach(function (t) { dsTK.push(t); });
+  if (!dsTK.length) h += '<div class="empty-hint">Chưa có số tài khoản.</div>';
+  else {
+    h += '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số tài khoản</th><th>Ngân hàng</th><th>Chủ TK / ghi chú</th><th>Ủy quyền TT</th></tr></thead><tbody>';
+    dsTK.forEach(function (t) {
+      h += '<tr><td>' + escTC_(t.soTK) + '</td><td>' + escTC_(t.nganHang) + '</td><td>' + escTC_(t.tenUyQuyen) + '</td><td>' + escTC_(t.uyQuyenTT) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="card"><h3>📁 Hồ sơ pháp lý</h3>';
+  if (!ct.hoSo.length) h += '<div class="empty-hint">Chưa có hồ sơ.</div>';
+  else {
+    h += '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Lô rừng</th><th>Hồ sơ nguồn gốc</th><th>Số giấy tờ</th><th>Ngày</th><th>File</th></tr></thead><tbody>';
+    ct.hoSo.forEach(function (x) {
+      var file = x.url ? '<a target="_blank" rel="noopener" href="' + urlTC_(x.url) + '">Mở file</a>'
+        : (x.coFile ? (ct.daCheSo ? '🔒 có file' : 'có file (chưa chuyển sang link)') : '<span style="color:#dc2626">chưa có</span>');
+      h += '<tr><td>' + escTC_(x.idRung) + '</td><td>' + escTC_(x.hoSoNguonGoc) + '</td><td>' + escTC_(x.soGiayTo) + '</td><td>' + escTC_(x.ngayGiayTo) + '</td><td>' + file + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="card"><h3>🖼️ Ảnh hiện trường (' + ct.anh.length + ')</h3>';
+  if (!ct.anh.length) h += '<div class="empty-hint">Chưa có ảnh.</div>';
+  else {
+    h += '<div class="tc-anh">';
+    ct.anh.forEach(function (u, i) { h += '<a target="_blank" rel="noopener" href="' + urlTC_(u) + '">Ảnh ' + (i + 1) + '</a>'; });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  vung.innerHTML = h;
+  ganNutQuayLai_();
+  window.scrollTo(0, 0);
+}
+
+// Mở lại đúng từ khóa khi tải lại trang (?q=...)
+(function () {
+  try {
+    google.script.url.getLocation(function (loc) {
+      var q = loc && loc.parameter && loc.parameter.q;
+      if (q) { document.getElementById('tcTuKhoa').value = q; traCuu_(); }
+    });
+  } catch (e) { /* ngoài Apps Script */ }
+})();
+</script>
+<?!= include('ChatbotWidget') ?>
+
+</body>
+</html>

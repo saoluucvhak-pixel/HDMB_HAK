@@ -21,7 +21,7 @@
  * ============================================================
  */
 
-function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL() {
+function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_() {
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000;
   const batDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();
@@ -79,12 +79,13 @@ function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL() {
 
 /** Bản gọi từ menu Google Sheets — hiện popup, KHÔNG dùng được từ trigger/webapp. */
 function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU() {
-  const kq = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_();
   SpreadsheetApp.getUi().alert(kq.thongBao + (kq.xongHet ? '\n\nTừ giờ "Xem chi tiết" sẽ hiện ảnh NGAY, không còn phải chờ tra cứu Drive nữa.' : '\n\n👉 BẤM LẠI CHÍNH MENU NÀY để tiếp tục.'));
 }
 
 /**
- * Y HỆT CHUYEN_DOI_TEN_FILE_ANH_SANG_URL() nhưng áp dụng cho cột DinhKemGiayTo
+ * Y HỆT CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_() nhưng áp dụng cho cột DinhKemGiayTo
  * trong HD_RUNG (hồ sơ pháp lý — CCCD/GCN QSDĐ/giấy xác nhận nguồn gốc...) —
  * cùng 1 vấn đề: ô lưu tên file/đường dẫn cũ (không phải URL) khiến mỗi lần
  * bấm "Xem chi tiết" phải tra Drive chậm. Ghi đè URL thật 1 lần cho nhanh vĩnh viễn.
@@ -97,7 +98,7 @@ function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU() {
  * liên kết thật tới file trên Drive, cần bạn xác nhận lại người mở nộp hồ sơ
  * gốc.
  */
-function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL() {
+function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_() {
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000;
   const batDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();
@@ -158,7 +159,8 @@ function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL() {
 
 /** Bản gọi từ menu Google Sheets — hiện popup, KHÔNG dùng được từ trigger/webapp. */
 function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_TU_MENU() {
-  const kq = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_();
   SpreadsheetApp.getUi().alert(kq.thongBao + (kq.xongHet ? '' : '\n\n👉 BẤM LẠI CHÍNH MENU NÀY để tiếp tục.'));
 }
 
@@ -171,16 +173,22 @@ function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_TU_MENU() {
  */
 function chuyenDoiAnhVaHoSoDinhKy_() {
   try {
-    const kq1 = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL();
-    const kq2 = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL();
+    const kq1 = CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_();
+    const kq2 = CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_();
     ghiNhatKy_('Chuyển đổi ảnh/hồ sơ sang URL (định kỳ)', '', 'Ảnh: ' + kq1.thongBao + ' | Hồ sơ: ' + kq2.thongBao);
   } catch (e) {
     ghiNhatKy_('LỖI chuyển đổi ảnh/hồ sơ sang URL (định kỳ)', '', e.message);
   }
 }
 
-/** Bật chạy định kỳ (mặc định 6 tiếng/lần) — gọi từ menu Sheets hoặc webapp */
+/** Menu Sheet (webapp gọi THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL_ qua api()). */
 function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  return THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL_();
+}
+
+/** Bật chạy định kỳ (mặc định 6 tiếng/lần) — gọi từ menu Sheets hoặc webapp */
+function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_') ScriptApp.deleteTrigger(t);
   });
@@ -189,7 +197,7 @@ function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL() {
 }
 
 /** Tắt chạy định kỳ */
-function TAT_TRIGGER_CHUYEN_DOI_ANH_URL() {
+function TAT_TRIGGER_CHUYEN_DOI_ANH_URL_() {
   let daXoa = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_') { ScriptApp.deleteTrigger(t); daXoa = true; }
@@ -198,7 +206,7 @@ function TAT_TRIGGER_CHUYEN_DOI_ANH_URL() {
 }
 
 /** Kiểm tra đã bật chạy định kỳ hay chưa — dùng để hiện trạng thái trên webapp */
-function KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL() {
+function KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL_() {
   const daBat = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_'; });
   return { daBat: daBat };
 }
