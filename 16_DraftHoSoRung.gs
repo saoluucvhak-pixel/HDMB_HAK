@@ -113,6 +113,7 @@ function XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
  * cache Draft_HoSoRung — nhanh, không phụ thuộc kích thước HD_RUNG.
  */
 function layBaoCaoHoSoRung_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const sh = getOrCreateDraftHoSoRungSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -153,6 +154,7 @@ function layBaoCaoHoSoRung_() {
  * bộ nhớ, rồi ghi 1 lượt bằng setValues() — tránh timeout với dữ liệu lớn.
  */
 function XAY_DUNG_LAI_DRAFT_HOSORUNG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
   const gpsByIdRung = {};

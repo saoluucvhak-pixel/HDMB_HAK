@@ -201,6 +201,7 @@ function layDuLieuThucHienTuDNTT_() {
 }
 
 function layDonGiaBinhQuanThang_(ngayKy) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     const ss = SpreadsheetApp.openByUrl(BAOGIA_URL);
     const sh = ss.getSheetByName(BAOGIA_SHEET_NAME);
@@ -270,6 +271,7 @@ function timSoDongTheoGiaTri_(sheetName, colIndex0based, giaTri) {
  * (dùng để gợi ý tự động khi tạo hợp đồng mới cho cùng 1 chủ rừng cũ).
  */
 function traCuuDiaChiThamChieu_(tenChuRung) {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rows = readData_(SHEET_NAME.DM_DIACHI);
   const ten = (tenChuRung || '').toString().trim().toLowerCase();
   const found = rows.find(function (r) {
@@ -324,6 +326,7 @@ function dongBoDiaChiTuRung_(idHD, thongTin) {
  * <datalist> cho ô "Địa chỉ thường trú" / "Địa chỉ rừng" gõ tới đâu gợi ý tới đó.
  */
 function layGoiYDiaChi_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rows = readData_(SHEET_NAME.DM_DIACHI);
   const set = {};
   rows.forEach(function (r) {
@@ -337,6 +340,7 @@ function layGoiYDiaChi_() {
 
 /** Gợi ý "Nơi cấp CCCD" — gõ kiểu gợi nhớ, lấy từ các giá trị đã từng nhập trong HD_NCC */
 function layGoiYNoiCap_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rows = readData_(SHEET_NAME.HD_NCC);
   const set = {};
   rows.forEach(function (r) {
@@ -355,6 +359,7 @@ function layGoiYNoiCap_() {
  * (không có bảng danh mục riêng — Nhóm KH lưu tự do ngay trên HD_NCC).
  */
 function layDanhSachNhomKH_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rows = readData_(SHEET_NAME.HD_NCC);
   const set = {};
   rows.forEach(function (r) {
@@ -376,6 +381,7 @@ function layDanhSachNhomKH_() {
  * Trả về { thanhCong, idHD, soHD, loi }
  */
 function TAO_HOP_DONG_MOI_(d) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   // ---- Kiểm tra tối thiểu trước khi ghi ----
   const thieu = [];
   if (!d.tenChuRung) thieu.push('Họ tên chủ rừng');
@@ -498,6 +504,7 @@ function damBaoTieuDeCotMoRongRung_() {
 }
 
 function THEM_LO_RUNG_MOI_(d) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   damBaoTieuDeCotMoRongRung_();
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
 
@@ -577,6 +584,7 @@ function THEM_LO_RUNG_MOI_(d) {
  * (hợp đồng có thể có nhiều số tài khoản nhận tiền).
  */
 function THEM_TAI_KHOAN_MOI_(d) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
   if (!d.soTK) return { thanhCong: false, loi: 'Thiếu số tài khoản' };
 
@@ -617,6 +625,7 @@ function THEM_TAI_KHOAN_MOI_(d) {
  * `patch` chỉ cần chứa các trường muốn sửa, ví dụ: { dienTichM2: 35000, donGia: 1600000 }
  */
 function CAP_NHAT_LO_RUNG_(idRung, patch) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, idRung);
   if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy lô rừng có ID_RUNG = ' + idRung };
 
@@ -690,6 +699,7 @@ function chuanHoaToaDo_(input) {
 }
 
 function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   // diemGPS: { lat, lng, heToaDo (tùy chọn, không còn bắt buộc — hệ thống tự nhận diện),
   //            diaChi (tùy chọn), anhUrl (tùy chọn — link Drive ảnh minh chứng cho điểm này) }
   // Luôn CHUẨN HÓA lat/lng về decimal (DD) NGAY TẠI ĐÂY trước khi lưu — dù người dùng
@@ -746,6 +756,7 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
  * lấy được từ hàm layDanhSachTaiKhoan_(idHD) bên dưới).
  */
 function CAP_NHAT_TAI_KHOAN_(soDong, patch) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getSheet_(SHEET_NAME.HD_STK);
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   const map = {
@@ -764,6 +775,8 @@ function CAP_NHAT_TAI_KHOAN_(soDong, patch) {
 
 /** Lấy danh sách tài khoản của 1 hợp đồng kèm số dòng thật (để dùng cho CAP_NHAT_TAI_KHOAN_) */
 function layDanhSachTaiKhoan_(idHD) {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const sh = getSheet_(SHEET_NAME.HD_STK);
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -790,6 +803,7 @@ function layDanhSachTaiKhoan_(idHD) {
  * ============================================================
  */
 function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
+  _yeuCauQuyen_(QUYEN.XEM);
   trang = trang || 1;
   kichThuoc = kichThuoc || 20;
   const rows = readData_(SHEET_NAME.HD_NCC);
@@ -827,6 +841,8 @@ function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
 
 /** Danh sách hợp đồng của ĐÚNG 1 khách hàng (lọc theo CCCD) — dùng khi đào sâu từ Khách hàng xuống Hợp đồng */
 function layHopDongTheoKhachHang_(cccd) {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   cccd = (cccd || '').toString().trim();
   if (!cccd) return [];
   const rows = readData_(SHEET_NAME.HD_NCC);
@@ -845,6 +861,8 @@ function layHopDongTheoKhachHang_(cccd) {
 }
 
 function layDanhSachRung_(idHD) {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const rows = readData_(SHEET_NAME.HD_RUNG);
   return rows
     .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD.toString().trim(); })
@@ -983,6 +1001,7 @@ function timHopDongTheoId_(idHoacSoHD) {
  * field muốn sửa. Dùng `soDong` lấy từ timHopDongTheoId_() để xác định đúng dòng.
  */
 function CAP_NHAT_HOP_DONG_(soDong, patch) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getSheet_(SHEET_NAME.HD_NCC);
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
 
@@ -1028,6 +1047,7 @@ function CAP_NHAT_HOP_DONG_(soDong, patch) {
  * lại hồ sơ để tra cứu/đối chiếu về sau.
  */
 function HUY_HOP_DONG_(idHD) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const kq = timHopDongTheoId_(idHD);
   if (!kq || kq.khongTimThay) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng: ' + idHD + (kq && kq.chanDoan ? ' — ' + kq.chanDoan : '') };
   const ketQua = CAP_NHAT_HOP_DONG_(kq.soDong, { tinhTrang: 'Đã hủy' });
@@ -1042,6 +1062,7 @@ function HUY_HOP_DONG_(idHD) {
  * để tránh xóa nhầm do gọi thiếu cẩn thận (vd gọi thử trong Apps Script editor).
  */
 function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   if (xacNhan !== true) {
     return { thanhCong: false, loi: 'Chưa xác nhận xóa — truyền xacNhan=true để thực hiện. Hành động này KHÔNG THỂ HOÀN TÁC.' };
   }
@@ -1111,6 +1132,8 @@ function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
 
 /** Lấy danh sách điểm GPS đã có của 1 lô rừng (theo ID_RUNG), toạ độ đã convert DD */
 function layGPSCuaRung_(idRung) {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const rows = readData_(SHEET_NAME.HD_GPS);
   return rows
     .filter(function (r) { return (r[GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim(); })
@@ -1127,6 +1150,7 @@ function layGPSCuaRung_(idRung) {
 
 /** Tải 1 ảnh minh chứng lên Drive để gắn vào 1 điểm GPS cụ thể (cột HINH_ANH của HD_GPS) */
 function TAI_ANH_GPS_LEN_DRIVE_(base64Data, mimeType, tenFileGoc) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
   const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
   if (loiFile) return { thanhCong: false, loi: loiFile };
@@ -1181,6 +1205,7 @@ function layHoacTaoThuMucHoSo_() {
  * lại form nhập liệu rồi test lại từ đầu.
  */
 function TAI_LEN_HO_SO_RUNG_(idRung, tenFileGoc, base64Data, mimeType) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   idRung = (idRung || '').toString().trim();
   if (!idRung || !base64Data) return { thanhCong: false, loi: 'Thiếu ID_RUNG hoặc dữ liệu file' };
   const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
@@ -1278,6 +1303,7 @@ function ghiAnhVaoHDPicture_(idHD, tenChuRung, tenFile) {
 /** Bản gọi được từ webapp (nhận base64 trực tiếp, dùng ở form "Thêm điểm GPS"
  *  để tự đọc tọa độ từ ảnh minh chứng vừa chọn — không cần đã lưu vào Drive trước). */
 function DOC_TOA_DO_TU_ANH_WEBAPP_(base64Data, mimeType) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
   try {
     const bytes = Utilities.base64Decode(base64Data);
@@ -1334,6 +1360,7 @@ function docToaDoTuTemAnhBangGemini_(blob) {
 }
 
 function THEM_ANH_RUNG_(params) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   if (!params || !params.base64Data) return { thanhCong: false, loi: 'Không có dữ liệu ảnh' };
   const loiFile = kiemTraFileTaiLen_(params.base64Data, params.mimeType);
   if (loiFile) return { thanhCong: false, loi: loiFile };
@@ -1397,6 +1424,8 @@ function THEM_ANH_RUNG_(params) {
  * thật (thấy được ở tab "Kiểm tra ảnh (đã lưu)" vì tab đó đọc thẳng HD_Picture).
  */
 function layDraftAnhChoRung_(idRung, idHD) {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const sh = getOrCreateDraftAnhSheet_();
   const lastRow = sh.getLastRow();
   const ketQua = [];
@@ -1434,6 +1463,7 @@ function layDraftAnhChoRung_(idRung, idHD) {
 
 /** Lấy TOÀN BỘ ảnh nháp (kể cả chưa gán rừng nào) — dùng cho trang "Kiểm tra ảnh" độc lập */
 function layTatCaDraftAnh_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const sh = getOrCreateDraftAnhSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -1461,6 +1491,7 @@ function chuyenDoiDongDraft_(r, soDong) {
  * vào đúng 1 hợp đồng + lô rừng cụ thể. Gọi trước khi DUYỆT nếu ảnh chưa có sẵn ID_RUNG.
  */
 function GAN_ANH_VAO_RUNG_(soDong, idHD, idRung) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftAnhSheet_();
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   sh.getRange(soDong, DRAFT_ANH_COL.ID_HD + 1).setValue(idHD);
@@ -1474,6 +1505,7 @@ function GAN_ANH_VAO_RUNG_(soDong, idHD, idRung) {
  * Bắt buộc ảnh đã được gán idHD + idRung (dùng GAN_ANH_VAO_RUNG_ nếu chưa có).
  */
 function DUYET_ANH_RUNG_(soDong) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftAnhSheet_();
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   const row = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -1510,6 +1542,7 @@ function DUYET_ANH_RUNG_(soDong) {
 
 /** TỪ CHỐI 1 ảnh nháp: xóa file khỏi Drive luôn (dọn rác), đánh dấu "Đã từ chối" */
 function TU_CHOI_ANH_RUNG_(soDong) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftAnhSheet_();
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   const row = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -1590,6 +1623,7 @@ function layAnhTheoDinhDanhHDPicture_(dinhDanh) {
 /** Lấy TẤT CẢ ảnh của 1 hợp đồng (không phân biệt lô rừng nào) — gộp cả ảnh
  *  khớp đúng ID_HD lẫn ảnh khớp ID_RUNG của bất kỳ lô nào thuộc hợp đồng này. */
 function layAnhCuaHopDong_(idHD) {
+  _yeuCauQuyen_(QUYEN.XEM);
   idHD = (idHD || '').toString().trim();
   if (!idHD) return [];
 
@@ -1608,6 +1642,7 @@ function layAnhCuaHopDong_(idHD) {
 
 /** Lấy hồ sơ pháp lý (loại hồ sơ + số giấy tờ + file đính kèm) theo từng lô rừng của 1 hợp đồng */
 function layHoSoCuaHopDong_(idHD) {
+  _yeuCauQuyen_(QUYEN.XEM);
   idHD = (idHD || '').toString().trim();
   if (!idHD) return [];
   const rows = readData_(SHEET_NAME.HD_RUNG);
@@ -1639,6 +1674,7 @@ function layHoSoCuaHopDong_(idHD) {
 /** Wrapper bắt lỗi — LUÔN trả về 1 object hợp lệ (kể cả khi lỗi), không bao giờ để client
  *  nhận null/undefined không rõ lý do (đây là nguyên nhân lỗi "Cannot read properties of null"). */
 function layDanhSachHopDong_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     return layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc);
   } catch (e) {
@@ -1705,6 +1741,7 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
 /** Lấy chi tiết 1 hợp đồng trực tiếp theo ID_HD (thay vì phải tự tìm số dòng
  *  trước rồi mới gọi layHopDongTheoSoDong_ — gộp lại còn 1 lượt gọi duy nhất) */
 function layHopDongTheoIdHD_(idHD) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
   if (soDong === -1) return { khongTimThay: true, chanDoan: 'Không tìm thấy hợp đồng có ID_HD = ' + idHD };
   return layHopDongTheoSoDong_ThucThi_(soDong);
@@ -1777,6 +1814,7 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
  * hợp đồng (ID_HD), không tách riêng theo từng lô rừng.
  */
 function XOA_LO_RUNG_(idRung) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, idRung);
   if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy lô rừng có ID_RUNG = ' + idRung };
 
@@ -1801,6 +1839,7 @@ function XOA_LO_RUNG_(idRung) {
 
 /** XÓA 1 TÀI KHOẢN cụ thể theo số dòng thật (lấy từ layDanhSachTaiKhoan_) */
 function XOA_TAI_KHOAN_(soDong) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getSheet_(SHEET_NAME.HD_STK);
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   const idHDCuaTK = sh.getRange(soDong, STK_COL.ID_HD + 1).getValue();
@@ -1820,6 +1859,7 @@ function XOA_TAI_KHOAN_(soDong) {
  * kèm số lượng/giá trị hợp đồng, đã thực hiện, còn lại — lấy từ Draft báo cáo (docToanBoDraftBaoCao_).
  */
 function layDanhSachThanhLy_(trang, kichThuoc, boLoc, boBuoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     trang = trang || 1;
     kichThuoc = kichThuoc || 20;
@@ -1868,6 +1908,7 @@ function layDanhSachThanhLy_(trang, kichThuoc, boLoc, boBuoc) {
  *    ngược lại trả về cảnh báo để người dùng xác nhận có muốn bỏ qua không.
  */
 function THANH_LY_HOP_DONG_(idHD, boQuaCanhBaoPhu) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const kqTim = timHopDongTheoId_(idHD);
   if (!kqTim || kqTim.khongTimThay) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng: ' + idHD + (kqTim && kqTim.chanDoan ? ' — ' + kqTim.chanDoan : '') };
 

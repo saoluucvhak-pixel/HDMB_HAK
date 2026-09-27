@@ -107,6 +107,7 @@ function _soVN_(v, le) {
  * Trả { thanhCong, base64, tenFile, mimeType, soAnh, soBanDo, hoSoKem: [...], canhBao: [...] }.
  */
 function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
+  _yeuCauQuyen_(QUYEN.XEM);
   tuyChon = tuyChon || {};
   const duLieu = _thuThapAnh_(idHD, theoKhachHang);
   if (!duLieu) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng.' };

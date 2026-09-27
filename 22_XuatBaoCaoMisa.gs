@@ -26,6 +26,8 @@
 
 /** Đọc thiết lập xuất báo cáo MISA hiện tại (Script Properties) — có mặc định an toàn nếu chưa cấu hình lần nào */
 function LAY_THIET_LAP_MISA_() {
+  // Không kiểm tra quyền ở đây: trang Thiết lập gọi qua api() (đã yêu cầu Quản trị); chức năng của vai trò
+  // Nhập liệu (xuất MISA / tra tên chủ tài khoản) cũng đọc cài đặt này nội bộ -> chặn ở đây sẽ báo lỗi quyền nhầm.
   const p = PropertiesService.getScriptProperties();
   return {
     maHangMacDinh: p.getProperty('MISA_MA_HANG_MAC_DINH') || 'GK',
@@ -39,6 +41,7 @@ function LAY_THIET_LAP_MISA_() {
 
 /** Lưu lại thiết lập xuất báo cáo MISA (Script Properties) */
 function LUU_THIET_LAP_MISA_(thietLap) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
   p.setProperty('MISA_MA_HANG_MAC_DINH', (thietLap.maHangMacDinh || 'GK').toString().trim());
   p.setProperty('MISA_TEN_HANG_MAC_DINH', (thietLap.tenHangMacDinh || 'Gỗ tròn keo').toString().trim());
@@ -172,6 +175,7 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
  * GIẢM CÒN 1 DÒNG (giữ dòng đầu tiên, xóa các dòng trùng phía sau).
  */
 function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const masterId = PropertiesService.getScriptProperties().getProperty('MISA_MASTER_SHEET_ID');
   if (!masterId) return { thanhCong: false, loi: 'Chưa cấu hình Sheet cố định "Update_Hopdong_NCC_DN". Vào Thiết lập → 📊 Báo cáo MISA để dán URL.' };
 
@@ -248,6 +252,7 @@ function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotTe
  *   trước đó, không riêng lần này).
  */
 function XUAT_BAO_CAO_MISA_(tuNgay, denNgay) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const kqDongBo = DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay);
   if (!kqDongBo.thanhCong) return kqDongBo;
 
@@ -278,6 +283,7 @@ function XUAT_BAO_CAO_MISA_(tuNgay, denNgay) {
  * để DỌN SẠCH những gì đã lỡ sót lại từ trước, chạy 1 lần là đủ.
  */
 function DON_FILE_TAM_MISA_CON_SOT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const itNormal = DriveApp.getFilesByName('TAM_XUAT_MISA'); // tên cũ (không có timestamp) — phòng trường hợp hiếm
   const itSearch = DriveApp.searchFiles('title contains "TAM_XUAT_MISA_"'); // tên có timestamp, kiểu tìm phổ biến nhất
   const daXoa = [];

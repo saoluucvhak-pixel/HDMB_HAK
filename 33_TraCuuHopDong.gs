@@ -51,6 +51,7 @@ function _ngayHienThi_(v) {
  * (tối đa TRA_CUU_GIOI_HAN_KET_QUA dòng, mới ký trước).
  */
 function TRA_CUU_HOP_DONG_(tuKhoa, tuNgay, denNgay) {
+  _yeuCauQuyen_(QUYEN.XEM);
   const tk = _chuoiSoKhop_(tuKhoa);
   tuNgay = (tuNgay || '').toString().trim();
   denNgay = (denNgay || '').toString().trim();
@@ -154,6 +155,7 @@ function _linkTrongO_(v) {
 
 /** Chi tiết 1 hợp đồng cho trang tra cứu. */
 function CHI_TIET_TRA_CUU_HOP_DONG_(idHD) {
+  _yeuCauQuyen_(QUYEN.XEM);
   idHD = (idHD || '').toString().trim();
   if (!idHD) return { khongTimThay: true, loi: 'Thiếu ID hợp đồng.' };
   const duocXemDu = _coQuyen_(QUYEN.NHAP_LIEU);

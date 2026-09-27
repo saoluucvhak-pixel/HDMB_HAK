@@ -24,6 +24,7 @@ function XOA_SHEET_TONGHOP_CU() {
  * lượng, tổng giá trị, kèm danh sách chi tiết để hiển thị bảng.
  */
 function layTongHopChoWebapp_(boBuoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   // Đọc THẲNG từ Draft_BaoCaoHopDong (đã tổng hợp sẵn, cập nhật ngay mỗi khi có
   // thay đổi — xem CAP_NHAT_DRAFT_MOT_HOP_DONG_) — không tính lại từ đầu nữa.
   const boBuocThat = !!boBuoc;
@@ -65,6 +66,7 @@ function layTongHopChoWebapp_(boBuoc) {
  * giá trị/khối lượng tính trước) — KHÔNG tính lại từ HD_RUNG mỗi lần lọc.
  */
 function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   boLoc = boLoc || {};
   const trang = boLoc.trang || 1, kichThuoc = boLoc.kichThuoc || 20;
   const soHDLoc = (boLoc.soHD || '').toString().trim().toLowerCase();
@@ -124,6 +126,7 @@ function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
 }
 
 function layTinhHinhThucHien_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     // ĐỌC CACHE Draft_BaoCaoHopDong — đã có sẵn coAnh/daDoGPSDu/hoSoDu (tính khi
     // Thêm/Sửa lô rừng, xem tinhDongDraftChoHopDong_) — KHÔNG đọc trực tiếp
@@ -175,6 +178,7 @@ function layTinhHinhThucHien_() {
  * chính xác theo lô vì có ID_RUNG) — ghi rõ nhãn để không gây hiểu lầm.
  */
 function layChiTietHoSoMotLoRung_(idRung) {
+  _yeuCauQuyen_(QUYEN.XEM);
   idRung = (idRung || '').toString().trim();
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
@@ -223,6 +227,7 @@ function layChiTietHoSoMotLoRung_(idRung) {
  * tiền từ DNTT_GK_DN_CT: số lần chuyển, tổng tiền, danh sách số phiếu cân.
  */
 function layBaoCaoThanhToan_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     const ss = SpreadsheetApp.openByUrl(DNTT_URL);
     const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
@@ -571,6 +576,7 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT() {
  *     lại đúng menu đó) để tiếp tục từ chỗ dừng, không tính lại từ đầu.
  */
 function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000; // dừng an toàn ở phút 4.5 (giới hạn thật ~6 phút)
   const thoiDiemBatDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();
@@ -666,6 +672,7 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
  * đọc thêm cả rừng liên quan — phải THIẾT LẬP 1 LẦN qua menu Sheet.
  */
 function THIET_LAP_TRIGGER_ONEDIT_DRAFT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'xuLyOnEditDraft_') ScriptApp.deleteTrigger(t); // xóa trigger cũ tránh tạo trùng
   });
@@ -680,6 +687,7 @@ function THIET_LAP_TRIGGER_ONEDIT_DRAFT_TU_MENU() {
 }
 /** Tắt bẫy nhật ký tự động */
 function TAT_TRIGGER_ONEDIT_DRAFT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   let daXoa = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'xuLyOnEditDraft_') { ScriptApp.deleteTrigger(t); daXoa = true; }
@@ -688,6 +696,7 @@ function TAT_TRIGGER_ONEDIT_DRAFT_() {
 }
 /** Kiểm tra đã bật hay chưa — dùng để hiện trạng thái trên webapp */
 function KIEM_TRA_TRIGGER_ONEDIT_DRAFT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const daBat = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'xuLyOnEditDraft_'; });
   return { daBat: daBat };
 }

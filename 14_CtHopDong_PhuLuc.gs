@@ -229,6 +229,7 @@ function XOA_PHU_LUC_(soDong) {
  * theo từ khóa tiêu đề (dòng 1) thay vì dùng vị trí cố định.
  */
 function layPhieuCanTheoChuRung_(tenChuRung) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     if (!tenChuRung) return { thanhCong: false, loi: 'Thiếu tên chủ rừng', danhSach: [] };
     const boDauTV = function (s) {
@@ -301,6 +302,7 @@ function layPhieuCanTheoChuRung_(tenChuRung) {
  *  lat/lng, front-end gọi tiếp CAP_NHAT_GPS_RUNG_(idRung, {lat,lng}, false) như
  *  nhập tay bình thường — không cần thêm hàm ghi dữ liệu riêng. */
 function TRICH_XUAT_GPS_TU_ANH_(base64Data, mimeType) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   try {
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType || 'image/jpeg', 'anh_gps.jpg');
     const exif = docExifTuBytes_(blob);

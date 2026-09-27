@@ -22,6 +22,8 @@
  */
 
 function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_() {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000;
   const batDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();
@@ -99,6 +101,8 @@ function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_TU_MENU() {
  * gốc.
  */
 function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_() {
+  // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
+  // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000;
   const batDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();
@@ -189,6 +193,7 @@ function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL() {
 
 /** Bật chạy định kỳ (mặc định 6 tiếng/lần) — gọi từ menu Sheets hoặc webapp */
 function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_') ScriptApp.deleteTrigger(t);
   });
@@ -198,6 +203,7 @@ function THIET_LAP_TRIGGER_CHUYEN_DOI_ANH_URL_() {
 
 /** Tắt chạy định kỳ */
 function TAT_TRIGGER_CHUYEN_DOI_ANH_URL_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   let daXoa = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_') { ScriptApp.deleteTrigger(t); daXoa = true; }
@@ -207,6 +213,7 @@ function TAT_TRIGGER_CHUYEN_DOI_ANH_URL_() {
 
 /** Kiểm tra đã bật chạy định kỳ hay chưa — dùng để hiện trạng thái trên webapp */
 function KIEM_TRA_TRIGGER_CHUYEN_DOI_ANH_URL_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const daBat = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'chuyenDoiAnhVaHoSoDinhKy_'; });
   return { daBat: daBat };
 }
