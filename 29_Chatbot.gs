@@ -484,9 +484,11 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   // cần dò tên/CCCD nên quét thẳng, nhẹ hơn nhiều — không cần gộp nhóm/đếm số
   // hợp đồng như hàm kia làm (phần đó tính riêng bên dưới, chỉ cho khách hàng
   // thật sự khớp câu hỏi, không phải toàn bộ hàng nghìn khách hàng).
-  const nccRowsChoDoTen_ = readData_(SHEET_NAME.HD_NCC);
+  // ⚠️ SỬA THÊM: dùng lại nccRows đã đọc ở trên (thongKeChung) — trước đây đọc lại
+  // TOÀN BỘ sheet HD_NCC lần thứ 2 trong cùng 1 lượt hỏi, tốn gấp đôi thời gian
+  // đọc Sheet (chậm nhất trong request) một cách không cần thiết.
   const theoCccdNhe_ = {};
-  nccRowsChoDoTen_.forEach(function (r) {
+  nccRows.forEach(function (r) {
     const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     if (!cccd) return;
     if (!theoCccdNhe_[cccd]) {
