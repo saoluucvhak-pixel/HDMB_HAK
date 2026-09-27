@@ -35,7 +35,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-TEXT-01 | CCCD/SĐT/MST giữ số 0 đầu khi tạo và khi sửa | ✅ PASS | PASS | FAIL — CCCD on create: expected "049012345678", got "49012345678" |
 | T-TK-01 | THEM_TAI_KHOAN_MOI trả đúng số dòng vừa ghi và giữ số 0 đầu của Số TK | ✅ PASS | PASS | PASS |
 | T-DOUBLE-01 | Bấm "Lưu chính thức" 2 lần (request thứ 2 tới khi request 1 đang chạy) chỉ tạo 1 hợp đồng | ✅ PASS | PASS | FAIL — number of contracts created: expected 1, got 2 |
-| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_775C2182 |
+| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_6457C8F5 |
 | T-LOG-01 | log_: ERROR/WARNING/INFO ra đúng console.*, DEBUG chỉ khi bật LOG_DEBUG | ✅ PASS | PASS | FAIL — P.ctx.log_ is not a function |
 | T-LOG-02 | Lỗi tổng hợp ct_hopdong không còn bị nuốt im lặng | ✅ PASS | PASS | FAIL — error was not logged |
 | T-SEC-006 | Người lạ gọi SETUP_*_TOKEN không ghi đè được token đã cấu hình; token mẫu bị từ chối | ✅ PASS | PASS | FAIL — SYNC_TOKEN overwritten: expected "that-su-bi-mat", got "DAT_TOKEN_CUA_BAN_O_DAY" |

@@ -94,6 +94,76 @@ function _lichSuThanhToan_(soHDs) {
   }
 }
 
+/**
+ * Chi tiết phiếu cân (sheet ngoài PhieuCan_DN) của các Số CT (chứng từ DNTT) — nối
+ * giống cách tính "Thực hiện từ/đến ngày" (06_CreateUpdate: DNTT Số CT <-> PhieuCan_DN cột W).
+ * Cột theo cấu trúc đã xác nhận (xem 14_CtHopDong_PhuLuc.gs); tiêu đề đổi thì tự dò lại.
+ * Chỉ lấy phiếu Trạng thái = "OK" (hoặc trống). Trả { thanhCong, theoSoCT: {soCT: [phiếu]}, soPhieuHuy, loi }.
+ */
+function _phieuCanTheoSoCT_(soCTs) {
+  const can = {};
+  soCTs.forEach(function (s) { s = (s || '').toString().trim(); if (s) can[s] = true; });
+  if (!Object.keys(can).length) return { thanhCong: true, theoSoCT: {}, soPhieuHuy: 0 };
+  try {
+    const ss = SpreadsheetApp.openByUrl(PHIEUCAN_URL);
+    const sh = ss.getSheetByName(PHIEUCAN_SHEET_NAME) || ss.getSheets()[0];
+    const data = sh.getDataRange().getValues();
+    if (data.length < 2) return { thanhCong: true, theoSoCT: {}, soPhieuHuy: 0 };
+    const bd = function (v) { return (v || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/_/g, ' ').trim(); };
+    const h = data[0].map(bd);
+    const IDX = { soPhieu: 0, ngay: 1, gio: 2, bienSo: 5, can1: 7, can2: 8, klKg: 9, nguonGoc: 10, maHang: 12, hinhAnh: 15, soCT: 22, donGia: 23, trangThai: 24, thanhTien: 25 };
+    if (!h[IDX.soCT] || h[IDX.soCT].indexOf('so ct') === -1) {
+      const tim = function (tk) { for (let i = 0; i < h.length; i++) if (tk.some(function (t) { return h[i].indexOf(t) !== -1; })) return i; return -1; };
+      IDX.soCT = tim(['so ct']); IDX.soPhieu = tim(['so phieu']); IDX.ngay = tim(['ngay can 1', 'ngay can']); IDX.gio = tim(['gio can 1', 'gio can']);
+      IDX.bienSo = tim(['bien so']); IDX.can1 = tim(['can lan 1']); IDX.can2 = tim(['can lan 2']); IDX.klKg = tim(['kl hang', 'khoi luong']);
+      IDX.nguonGoc = tim(['nguon goc']); IDX.maHang = tim(['ma hang']); IDX.hinhAnh = tim(['hinh anh']); IDX.donGia = tim(['don gia tc', 'don gia']);
+      IDX.trangThai = tim(['trang thai']); IDX.thanhTien = tim(['thanh tien']);
+      if (IDX.soCT === -1) return { thanhCong: false, loi: 'Không dò được cột "So_CT" trong ' + PHIEUCAN_SHEET_NAME + '.', theoSoCT: {}, soPhieuHuy: 0 };
+    }
+    const lay = function (r, k) { return IDX[k] >= 0 ? r[IDX[k]] : ''; };
+    const tz = layMuiGioBangTinh_();
+    const theoSoCT = {};
+    let soPhieuHuy = 0;
+    for (let i = 1; i < data.length; i++) {
+      const r = data[i];
+      const soCT = (lay(r, 'soCT') || '').toString().trim();
+      if (!can[soCT]) continue;
+      const tt = bd(lay(r, 'trangThai'));
+      if (tt && tt !== 'ok') { soPhieuHuy++; continue; }
+      const ngay = lay(r, 'ngay'), gio = lay(r, 'gio');
+      let thoiGian = _ngayHienThi_(ngay);
+      if (gio instanceof Date) thoiGian += ' ' + Utilities.formatDate(gio, tz, 'HH:mm');
+      else if (gio) thoiGian += ' ' + gio.toString().slice(0, 5);
+      const klKg = Number(lay(r, 'klKg')) || 0, donGia = Number(lay(r, 'donGia')) || 0;
+      const tien = Number(lay(r, 'thanhTien'));
+      const anh = (lay(r, 'hinhAnh') || '').toString().trim();
+      (theoSoCT[soCT] = theoSoCT[soCT] || []).push({
+        soPhieu: (lay(r, 'soPhieu') || '').toString(), thoiGian: thoiGian.trim(), mocNgay: ngay instanceof Date ? ngay.getTime() : (new Date(ngay).getTime() || 0),
+        bienSo: (lay(r, 'bienSo') || '').toString(), can1: Number(lay(r, 'can1')) || 0, can2: Number(lay(r, 'can2')) || 0,
+        klTan: Math.round(klKg) / 1000, donGia: donGia, thanhTien: isNaN(tien) || lay(r, 'thanhTien') === '' ? Math.round(klKg / 1000 * donGia) : tien,
+        maHang: (lay(r, 'maHang') || '').toString(), nguonGoc: (lay(r, 'nguonGoc') || '').toString(),
+        anh: /^https?:\/\//i.test(anh) ? anh : '', soCT: soCT
+      });
+    }
+    return { thanhCong: true, theoSoCT: theoSoCT, soPhieuHuy: soPhieuHuy };
+  } catch (e) {
+    return { thanhCong: false, loi: e.message, theoSoCT: {}, soPhieuHuy: 0 };
+  }
+}
+
+/** Nội dung mã QR "đóng dấu" trên báo cáo của 1 hợp đồng. */
+function _noiDungQrHopDong_(r, dsLo) {
+  const tongLo = dsLo.reduce(function (t, lo) { return t + (Number(lo.dienTichM2) || 0); }, 0);
+  const dt = Number(r[NCC_COL.DIEN_TICH_KY]) || tongLo;
+  const diaChiRung = (r[NCC_COL.DIA_CHI_RUNG] || '').toString().trim() ||
+    dsLo.map(function (lo) { return lo.diaChiRung; }).filter(String).join('; ');
+  return 'Số HĐ: ' + (r[NCC_COL.SO_HD] || '').toString().trim() +
+    '\nChủ rừng: ' + (r[NCC_COL.TEN_CHU_RUNG] || '').toString().trim() +
+    '\nĐịa chỉ: ' + (r[NCC_COL.DIA_CHI_TT] || '').toString().trim() +
+    '\nĐịa chỉ rừng: ' + diaChiRung +
+    '\nDiện tích: ' + (dt ? _soVN_(dt) + ' m² (' + _soVN_(dt / 10000, 2) + ' ha)' : 'chưa có');
+}
+
 function _soVN_(v, le) {
   const n = Number(v);
   if (v === '' || v === null || v === undefined || isNaN(n)) return '';
@@ -144,6 +214,8 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
   const diemTheoLo = _diemGpsTheoLo_(idRungs);
   const thanhToan = _lichSuThanhToan_(duLieu.hopDong.map(function (h) { return h.soHD; }));
   if (!thanhToan.thanhCong) canhBao.push('Không đọc được lịch sử thanh toán (DNTT): ' + thanhToan.loi);
+  const phieuCan = thanhToan.thanhCong ? _phieuCanTheoSoCT_(thanhToan.dong.map(function (x) { return x.soCT; })) : { thanhCong: false, loi: 'cần file DNTT để nối Số CT', theoSoCT: {}, soPhieuHuy: 0 };
+  if (!phieuCan.thanhCong && thanhToan.thanhCong) canhBao.push('Không đọc được phiếu cân (' + PHIEUCAN_SHEET_NAME + '): ' + phieuCan.loi);
 
   // ---- ảnh đã chọn (như Xuất PDF ảnh) ----
   const chon = {};
@@ -181,6 +253,7 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
     'table.kpi{border-collapse:collapse;width:100%;margin:6px 0}table.kpi td{border:1px solid #d1d5db;padding:6px;text-align:center;width:33%}.kpi-so{font-size:15px;font-weight:bold;color:#14532d}.kpi-nhan{font-size:9px;color:#6b7280}' +
     'table.luoi{width:100%;border-collapse:collapse}table.luoi td{width:50%;vertical-align:top;padding:4px;text-align:center}table.luoi img{width:320px;border:1px solid #d1d5db}' +
     '.cap{font-size:9px;color:#374151;margin-top:2px;text-align:left}.phu{color:#6b7280;font-size:9.5px}.canh{color:#b45309;font-size:9.5px}.bando{width:640px;border:1px solid #9ca3af}a{color:#1d4ed8}' +
+    '.dau{border:2px solid #b91c1c;padding:5px;text-align:center;color:#b91c1c}.dau-td{font-size:9px;font-weight:bold;letter-spacing:.5px;margin-bottom:3px}.dau-so{font-size:10px;font-weight:bold;margin-top:2px}.dau-phu{font-size:7.5px;color:#7f1d1d}' +
     '</style></head><body>';
   html += '<h1>BÁO CÁO TÌNH HÌNH THỰC HIỆN HỢP ĐỒNG MUA BÁN GỖ KEO</h1>' +
     '<div class="phu">Hệ thống HAK — Quản lý hợp đồng gỗ keo · Lập lúc ' + e(Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm')) + (nd && nd.email ? ' · Người lập: ' + e(nd.email) : '') +
@@ -196,6 +269,10 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
     html += '<h2>Hợp đồng số ' + e(h.soHD) + (h.ngayKy ? ' — ký ngày ' + e(h.ngayKy) : '') + (h.tinhTrang ? ' — ' + e(h.tinhTrang) : '') + '</h2>';
 
     // 1. Các bên
+    // Mã QR "đóng dấu" (số HĐ, chủ rừng, địa chỉ, địa chỉ rừng, diện tích) — tạo ngay trong script (37_MaQR.gs)
+    let qr = null;
+    try { qr = maQrAnh_(_noiDungQrHopDong_(r, dsLo), 4); } catch (eQr) { canhBao.push('Không tạo được mã QR cho HĐ ' + h.soHD + ': ' + eQr.message); }
+    html += '<table style="width:100%;border-collapse:collapse"><tr><td style="vertical-align:top;padding:0">';
     html += '<h3>1. Bên bán (chủ rừng) và tài khoản nhận tiền</h3><table class="tt">' +
       '<tr><th>Chủ rừng</th><td>' + e(r[NCC_COL.TEN_CHU_RUNG]) + '</td><th>CCCD</th><td>' + e(cccd(r[NCC_COL.CCCD_CHU_RUNG])) + '</td></tr>' +
       '<tr><th>Địa chỉ thường trú</th><td>' + e(r[NCC_COL.DIA_CHI_TT]) + '</td><th>Điện thoại</th><td>' + e(sdt(r[NCC_COL.SDT_CHU_RUNG])) + '</td></tr>' +
@@ -203,6 +280,9 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       '<tr><th>Tài khoản chính</th><td>' + e(stk(r[NCC_COL.SO_TK])) + (r[NCC_COL.NGAN_HANG] ? ' — ' + e(r[NCC_COL.NGAN_HANG]) : '') + '</td><th>Ủy quyền thanh toán</th><td>' + e(r[NCC_COL.UY_QUYEN_TT]) + '</td></tr>';
     (stkTheoHD[h.idHD] || []).forEach(function (t) { html += '<tr><th>Tài khoản khác</th><td colspan="3">' + e(t.soTK) + (t.nganHang ? ' — ' + e(t.nganHang) : '') + (t.ten ? ' — ' + e(t.ten) : '') + '</td></tr>'; });
     html += '<tr><th>Địa chỉ rừng</th><td colspan="3">' + e(r[NCC_COL.DIA_CHI_RUNG]) + ' · ' + dsLo.length + ' lô rừng' + (Number(r[NCC_COL.DIEN_TICH_KY]) ? ' · diện tích ký ' + e(_soVN_(r[NCC_COL.DIEN_TICH_KY])) + ' m²' : '') + '</td></tr></table>';
+    html += '</td>' + (qr ? '<td style="width:' + (qr.canh * 2 + 16) + 'px;vertical-align:top;padding:8px 0 0 10px"><div class="dau"><div class="dau-td">HAK · MÃ QR HỢP ĐỒNG</div>' +
+      '<img src="' + qr.src + '" style="width:' + qr.canh * 2 + 'px;height:' + qr.canh * 2 + 'px"><div class="dau-so">Số HĐ ' + e(h.soHD) + '</div><div class="dau-phu">Quét để xem số HĐ, chủ rừng, địa chỉ, địa chỉ rừng, diện tích</div></div></td>' : '') +
+      '</tr></table>';
 
     // 2. Tiến độ
     const klDK = Number(th.khoiLuongDuKien || r[NCC_COL.SL_DU_KIEN]) || 0, klTH = Number(th.khoiLuongThucHien) || 0;
@@ -219,10 +299,35 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       '<table style="width:100%;border-collapse:collapse;margin:4px 0"><tr><td style="width:' + Math.max(tyLe, 0.5) + '%;background:#16a34a;height:12px"></td><td style="background:#e5e7eb"></td></tr></table>' +
       '<div class="phu">Hoàn thành <b>' + e(_soVN_(tyLe, 1)) + '%</b> khối lượng dự kiến' + (th.thucHienTuNgay || th.thucHienDenNgay ? ' · Thời gian khai thác (ngày cân): <b>' + e(th.thucHienTuNgay || '?') + ' → ' + e(th.thucHienDenNgay || '?') + '</b>' : '') +
       (th.capNhatLuc ? ' · Số liệu cập nhật ' + e(th.capNhatLuc) : '') + '</div>';
-    if (th.danhSachSoPhieuCan) html += '<div class="phu">Phiếu cân: ' + e(th.danhSachSoPhieuCan) + '</div>';
+    if (th.danhSachSoPhieuCan && !phieuCan.thanhCong) html += '<div class="phu">Số CT phiếu cân: ' + e(th.danhSachSoPhieuCan) + '</div>';
 
-    // 3. Thanh toán
-    html += '<h3>3. Thanh toán cho bên bán</h3>';
+    // 3. Chi tiết phiếu cân
+    html += '<h3>3. Chi tiết phiếu cân (gỗ đã khai thác – cân nhận)</h3>';
+    if (!phieuCan.thanhCong) html += '<div class="canh">Không đọc được phiếu cân — ' + e(phieuCan.loi) + '</div>';
+    else {
+      const dsPC = [];
+      dsTT.forEach(function (x) { (phieuCan.theoSoCT[x.soCT] || []).forEach(function (p) { if (dsPC.indexOf(p) === -1) dsPC.push(p); }); });
+      dsPC.sort(function (a, b) { return a.mocNgay - b.mocNgay; });
+      if (!dsPC.length) html += '<div class="phu">Chưa có phiếu cân nào gắn với các chứng từ thanh toán của hợp đồng này.</div>';
+      else {
+        let tKL = 0, tTien = 0;
+        html += '<table class="bang"><tr><th>#</th><th>Số phiếu</th><th>Ngày giờ cân</th><th>Biển số xe</th><th class="so">Cân lần 1 (kg)</th><th class="so">Cân lần 2 (kg)</th>' +
+          '<th class="so">KL hàng (tấn)</th><th class="so">Đơn giá (đ/tấn)</th><th class="so">Thành tiền (đ)</th><th>Số CT (DNTT)</th></tr>';
+        dsPC.forEach(function (p, i) {
+          tKL += p.klTan; tTien += p.thanhTien;
+          html += '<tr><td>' + (i + 1) + '</td><td>' + (p.anh ? '<a href="' + e(p.anh) + '">' + e(p.soPhieu) + '</a>' : e(p.soPhieu)) + '</td><td>' + e(p.thoiGian) + '</td><td>' + e(p.bienSo) + '</td>' +
+            '<td class="so">' + e(_soVN_(p.can1)) + '</td><td class="so">' + e(_soVN_(p.can2)) + '</td><td class="so">' + e(_soVN_(p.klTan, 3)) + '</td>' +
+            '<td class="so">' + e(_soVN_(p.donGia)) + '</td><td class="so">' + e(_soVN_(p.thanhTien)) + '</td><td>' + e(p.soCT) + '</td></tr>';
+        });
+        html += '<tr><th colspan="6">Tổng (' + dsPC.length + ' phiếu)</th><th class="so">' + e(_soVN_(tKL, 3)) + '</th><th></th><th class="so">' + e(_soVN_(tTien)) + '</th><th></th></tr></table>';
+        const klTT = dsTT.reduce(function (t, x) { return t + x.khoiLuong; }, 0);
+        if (Math.abs(klTT - tKL) > 0.01) html += '<div class="canh">Tổng khối lượng phiếu cân (' + e(_soVN_(tKL, 3)) + ' tấn) khác tổng khối lượng đề nghị thanh toán (' + e(_soVN_(klTT, 3)) + ' tấn) — kiểm tra lại phiếu cân / DNTT.</div>';
+        html += '<div class="phu">Nguồn: sheet ' + e(PHIEUCAN_SHEET_NAME) + ', chỉ phiếu trạng thái OK; nối với hợp đồng qua Số CT của đề nghị thanh toán. Bấm số phiếu để mở ảnh phiếu (nếu có).</div>';
+      }
+    }
+
+    // 4. Thanh toán
+    html += '<h3>4. Thanh toán cho bên bán</h3>';
     if (!thanhToan.thanhCong) html += '<div class="canh">Không đọc được file DNTT — ' + e(thanhToan.loi) + '</div>';
     else if (!dsTT.length) html += '<div class="phu">Chưa có đề nghị thanh toán nào cho hợp đồng này.</div>';
     else {
@@ -235,8 +340,8 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       html += '<tr><th colspan="' + (dsTT.some(function (x) { return x.ngay; }) ? 4 : 3) + '">Tổng (' + dsTT.length + ' lần)</th><th class="so">' + e(_soVN_(tongKL, 2)) + '</th><th class="so">' + e(_soVN_(tongTien)) + '</th></tr></table>';
     }
 
-    // 4. Vùng khai thác theo lô
-    html += '<h3>4. Vùng khai thác (' + dsLo.length + ' lô rừng)</h3>';
+    // 5. Vùng khai thác theo lô
+    html += '<h3>5. Vùng khai thác (' + dsLo.length + ' lô rừng)</h3>';
     // Tổng quan: mỗi lô 1 ghim ở tâm các điểm GPS (không nối vùng giữa các lô khác nhau)
     const tamLo = [], chuGiai = [];
     dsLo.forEach(function (lo, i) {
@@ -307,8 +412,8 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       html += '</table>';
     }
 
-    // 5. Hồ sơ pháp lý
-    html += '<h3>5. Hồ sơ pháp lý</h3>';
+    // 6. Hồ sơ pháp lý
+    html += '<h3>6. Hồ sơ pháp lý</h3>';
     if (!duocXemDu) html += '<div class="phu">Hồ sơ pháp lý chỉ đưa vào báo cáo khi người lập có vai trò Nhập liệu / Quản trị.</div>';
     else if (!(h.hoSo || []).length) html += '<div class="phu">Chưa có file hồ sơ pháp lý đính kèm cho các lô của hợp đồng này.</div>';
     else {
@@ -320,7 +425,7 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       html += '</table>';
     }
   });
-  if (hoSoKem.length) html += '<h2>Phụ lục — Hồ sơ pháp lý đính kèm (' + hoSoKem.length + ' file)</h2><div class="phu">Các trang tiếp theo là bản gốc của từng hồ sơ, theo đúng thứ tự số ở mục 5 của từng hợp đồng.</div>';
+  if (hoSoKem.length) html += '<h2>Phụ lục — Hồ sơ pháp lý đính kèm (' + hoSoKem.length + ' file)</h2><div class="phu">Các trang tiếp theo là bản gốc của từng hồ sơ, theo đúng thứ tự số ở mục 6 của từng hợp đồng.</div>';
   if (canhBao.length) html += '<div class="canh" style="margin-top:10px">' + canhBao.map(e).join('<br>') + '</div>';
   html += '</body></html>';
 
