@@ -80,11 +80,19 @@ Tất cả đều có test hồi quy trong bộ test hiện tại (T-LOCK-001, T
 | SEC-011 | 🟡 | Chatbot: link trong câu trả lời chèn được thuộc tính (`https://a.com/"onmouseover=…`) | `64cde28` / UI-CHATXSS-10/27/30 |
 | DRY | — | Gộp 67 hàm trùng của 07/11 vào `NhapLieu_Chung_JS.html`; gộp widget chatbot của 10/27/30 vào `ChatbotWidget.html`; xóa 3 file + 19 hàm mã chết | `534ac14`, `64cde28`, `e5d5680` |
 
+## B3. Đợt 4 (chủ dự án chọn phân quyền theo mô hình DNTT + yêu cầu chức năng Tra cứu hợp đồng)
+
+| ID | Mức | Nội dung | Commit / Test |
+|---|---|---|---|
+| SEC-002 | 🔴 | 171 hàm server gọi được ẩn danh → nay bắt **đăng nhập Gmail** qua Cổng đăng nhập, 3 vai trò, 1 cửa `api()` + bảng quyền; mọi hàm công khai còn lại đều kiểm tra quyền | `c852a6a` / T-AUTH-01..05, UI-AUTH-01..04 |
+| AUDIT-01 | 🟡 | Nhật ký/cột "Email" người tạo hợp đồng/người sửa nháp **trống** khi thao tác qua webapp (`Session.getActiveUser()` không trả email ở chế độ chạy dưới tài khoản chủ) → nay ghi email người đăng nhập | `c852a6a` / T-AUDIT-01 |
+| TRIG-01 | ⚪ | Trigger hàng tuần gọi `KIEM_TRA_HO_SO_TOAN_BO(e)` → đối tượng sự kiện bị hiểu nhầm là "từ ngày" (bật chế độ lọc theo ngày ngoài ý muốn) → lớp vỏ mới gọi hàm với tham số rỗng (kiểm tra toàn bộ, đúng mô tả) | `c852a6a` |
+| TC-01 | ✨ Tính năng | Trang **🔍 Tra cứu hợp đồng** (`?page=tracuu`) | `c852a6a` / T-TC-01/02, UI-TC-01/02 |
+
 ## C. Lỗi còn tồn tại (chưa sửa — cần quyết định hoặc rủi ro cao)
 
 | ID | Mức | Nội dung | Lý do chưa sửa |
 |---|---|---|---|
-| SEC-002 | 🔴 | 171 hàm công khai gọi được ẩn danh (IDOR, không phân quyền) | Quyết định kiến trúc — xem 02_SECURITY_REPORT §3 |
 | LOCK-004/006/008 | 🟡 | TOCTOU theo số dòng ở một số hàm sửa/xóa; lớp cache Draft không khóa | Rủi ro lồng lock — cần xác minh `LockService` có tái nhập trong cùng lượt chạy trên runtime thật |
 | BUG-11 | 🟡 | Nháp lưu JSON trong 1 ô: > 50.000 ký tự (hợp đồng rất nhiều lô + điểm GPS) sẽ lưu nháp thất bại | Chưa gặp trên dữ liệu thật; cần đo kích thước nháp lớn nhất |
 | BUG-12 | ⚪ | Tạo hợp đồng qua `LUU_HOP_DONG_DAY_DU` ghi Ngày ký kèm giờ 07:00 (`new Date('yyyy-mm-dd')` là nửa đêm UTC) | Hiển thị đúng; chỉ ảnh hưởng so sánh chính xác theo thời điểm |

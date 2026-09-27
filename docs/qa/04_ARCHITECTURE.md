@@ -7,13 +7,14 @@
 | Hạng mục | Giá trị |
 |---|---|
 | Nền tảng | Google Apps Script (runtime V8), Web App + menu trong Google Sheet |
-| Triển khai (`appsscript.json`) | `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`, múi giờ `Asia/Ho_Chi_Minh`, `exceptionLogging: STACKDRIVER` |
+| Triển khai (`appsscript.json`) | `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS` (giữ cho webhook Telegram / `?action=run`), múi giờ `Asia/Ho_Chi_Minh`, `exceptionLogging: STACKDRIVER` |
+| Đăng nhập & phân quyền | Cổng đăng nhập Gmail (dự án Apps Script riêng) → phiên 6 giờ; 3 vai trò trong sheet `SYS_NguoiDung`; mọi lời gọi qua `api()` + bảng quyền (`34_PhanQuyen.gs`) |
 | Dịch vụ nâng cao | Drive API v2 (`Drive.Permissions` — chia sẻ quyền) |
 | Thư viện ngoài | Chỉ **Leaflet 1.9.4** (CDN cdnjs) trong `MapContainer.html`. Không bundler, không framework |
-| Quy mô | 35 file (24 `.gs`, 11 `.html`), **16.356 dòng** (trước đợt dọn: 19.058) |
-| Hàm server | **261** (171 công khai, 90 riêng tư `_`) |
+| Quy mô | 39 file (26 `.gs`, 13 `.html`), **18.033 dòng** (sau dọn mã chết: 16.356; ban đầu: 19.058 — phần tăng là đăng nhập + tra cứu) |
+| Hàm server | **310** (**47 công khai** — 9 đầu vào được phép + 38 hàm menu/trigger có kiểm tra quyền; 263 riêng tư `_`). Trước đăng nhập: 171 công khai |
 | Hàm client (trong `<script>`) | **296** (trước: 438 — phần lớn là bản sao trùng) |
-| Lời gọi `google.script.run` | 146 điểm gọi, tới 114 hàm server khác nhau |
+| Lời gọi server từ trang | Qua `hakRun_()` → `api(phien, tên, [tham số])`: 123 chức năng trong bảng quyền (XEM / NHAP_LIEU / QUAN_TRI). `google.script.run` chỉ còn gọi thẳng 3 hàm đăng nhập công khai |
 
 ## 2. Cấu trúc thư mục (phẳng — ràng buộc của Apps Script)
 
@@ -21,15 +22,16 @@ Apps Script không hỗ trợ thư mục con thật, nên dự án dùng **tiề
 
 | Nhóm | File | Vai trò |
 |---|---|---|
-| Lõi / cấu hình | `00_Config.gs`, `Code.gs`, `05_Menu.gs` | Hằng số cột `*_COL`, tên sheet, `getSS_()/getReportSS_()`, `doGet()` định tuyến webapp, menu Sheet, nhật ký, cache báo cáo, helper ngày, chia sẻ quyền |
+| Lõi / cấu hình | `00_Config.gs`, `Code.gs`, `05_Menu.gs`, `34_PhanQuyen.gs` (đăng nhập, phiên, vai trò, `api()`, bảng quyền, quản lý người dùng, sinh mã Cổng đăng nhập) | Hằng số cột `*_COL`, tên sheet, `getSS_()/getReportSS_()`, `doGet()` định tuyến webapp, menu Sheet, nhật ký, cache báo cáo, helper ngày, chia sẻ quyền |
 | Hợp đồng & báo cáo | `01_ContractManager.gs`, `02_DocumentChecker.gs`, `18_BaoCaoTongHop_Gop.gs`, `15_DraftHopDong.gs`, `16_DraftHoSoRung.gs`, `14_CtHopDong_PhuLuc.gs` | Draft báo cáo (bảng tổng hợp 1 dòng/hợp đồng), nháp hợp đồng, phụ lục, `ct_hopdong` |
 | CRUD | `06_CreateUpdate.gs` (2.213 dòng, file lớn nhất) | Tạo/sửa/xóa hợp đồng, lô rừng, tài khoản, GPS, ảnh, hồ sơ, thanh lý |
 | Kiểm tra / đối chiếu | `03_ImageForensics.gs`, `04_Reconciliation.gs`, `19_ChanDoanGPS.gs`, `17_ChanDoanTocDo.gs`, `28_BaoTri_DongBo.gs` | EXIF ảnh, OCR (Gemini), chẩn đoán, bảo trì |
 | Chuyển đổi / xuất | `20_ChuyenDoiAnhURL.gs`, `21_DinhDangText.gs`, `22_XuatBaoCaoMisa.gs`, `23_XuatBangRaFile.gs`, `25_TrichXuatToaDoTuDiaChi.gs` | Chuẩn hóa dữ liệu, xuất MISA/Excel |
 | Tích hợp | `29_Chatbot.gs` (Gemini), `31_TelegramBot.gs`, `32_TraCuuNganHang.gs` (VietQR + tracuubank), `Webhook_dntt.gs` | |
-| Giao diện webapp | `30_Page_TongQuanHopDong` (mặc định), `10_Page_BaoCao`, `11_Page_NhapLieu`, `12_Page_KiemTra`, `13_HuongDan`, `24_Page_ThietLap`, `27_Page_HopDongMeCon`, `MapContainer` | |
+| Tra cứu | `33_TraCuuHopDong.gs` + `33_Page_TraCuuHopDong.html` (`?page=tracuu`) | Tìm hợp đồng (không dấu, số 1 phần), chi tiết; che số với vai trò Chỉ xem |
+| Giao diện webapp | `30_Page_TongQuanHopDong` (mặc định), `33_Page_TraCuuHopDong`, `10_Page_BaoCao`, `11_Page_NhapLieu`, `12_Page_KiemTra`, `13_HuongDan`, `24_Page_ThietLap`, `27_Page_HopDongMeCon`, `MapContainer` | |
 | Giao diện trong Sheet | `07_Form_HopDong.html` (sidebar), `13_HuongDan.html` (dialog) | |
-| **Phần dùng chung** (nạp bằng `<?!= include('…') ?>`) | `NhapLieu_Chung_JS.html` (67 hàm của form nhập liệu, dùng ở 07 + 11), `ChatbotWidget.html` (widget chatbot, dùng ở 10, 27, 30) | Sửa 1 chỗ áp dụng cho mọi trang dùng |
+| **Phần dùng chung** (nạp bằng `<?!= include('…') ?>`) | `PhanQuyen_JS.html` (phiên, màn đăng nhập, `hakRun_()`, ẩn menu theo vai trò — mọi trang webapp + sidebar 07), `NhapLieu_Chung_JS.html` (67 hàm của form nhập liệu, dùng ở 07 + 11), `ChatbotWidget.html` (widget chatbot, dùng ở 10, 27, 30, 33) | Sửa 1 chỗ áp dụng cho mọi trang dùng |
 
 ## 3. Kho dữ liệu
 
@@ -59,7 +61,9 @@ HD_NCC (1 hợp đồng, khóa ID_HD = SoHD-ddMMyyyy)
 
 ## 5. Luồng xử lý chính
 
-**Mọi thao tác webapp:** Trình duyệt → `doGet(e)` chọn trang theo `?page=` (bảng `TRANG_WEBAPP_`) → HTML template (`baseUrl`, `currentPage`) → JS trang gọi `google.script.run.<HÀM>(...)` → hàm server đọc/ghi Sheet/Drive (có `LockService` ở các điểm "tính số tiếp theo rồi ghi") → cập nhật Draft báo cáo + xóa cache bản đồ → trả JSON (ngày luôn là chuỗi `yyyy-MM-dd`) → JS render.
+**Đăng nhập:** nút "Đăng nhập bằng Google" → Cổng đăng nhập (chạy dưới tài khoản người dùng, ký HMAC email + hạn 5 phút + mã 1 lần) → `doGet(?sso=…&page=…)` xác minh → cấp phiên (ScriptCache 6 giờ) → trang giữ phiên trong `sessionStorage`.
+
+**Mọi thao tác webapp:** Trình duyệt → `doGet(e)` chọn trang theo `?page=` (bảng `TRANG_WEBAPP_`) → HTML template (`baseUrl`, `currentPage`, `phien`) → JS trang gọi `hakRun_().<HÀM>(...)` = `google.script.run.api(phien, '<HÀM>', [...])` → `api()` kiểm phiên + vai trò theo `_bangQuyenApi_()` → hàm nội bộ `<HÀM>_` đọc/ghi Sheet/Drive (có `LockService` ở các điểm "tính số tiếp theo rồi ghi") → cập nhật Draft báo cáo + xóa cache bản đồ → trả JSON (ngày luôn là chuỗi `yyyy-MM-dd`) → JS render.
 
 **Sửa hợp đồng qua nháp (07 sidebar, 11 webapp):** `MO_DRAFT_THEO_SO_DONG` → `LAY_DRAFT_THEO_ID_HD` (khóa, tạo/đọc nháp, chuẩn hóa nháp cũ) → người dùng sửa, tự lưu nháp (`LUU_DRAFT`, debounce 700ms) → `LUU_CHINH_THUC` (nhận nháp nguyên tử qua ScriptCache, ghi HD_NCC/HD_RUNG/HD_STK/GPS/phụ lục bằng các hàm CRUD sẵn có, tìm lại dòng nháp theo ID rồi xóa).
 

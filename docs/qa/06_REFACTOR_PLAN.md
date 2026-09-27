@@ -21,8 +21,8 @@ Nguyên tắc: mỗi bước là **1 commit riêng**, có **cách kiểm chứng
 - 4 hàm khác biệt có chủ đích → 1 bản duy nhất, rẽ nhánh theo sự tồn tại của phần tử: `if (document.getElementById('nhomKH'))`.
 - Kiểm chứng: chạy `dupdiff.js` (phải còn 0 hàm trùng) + `ui_tests.js`; kiểm tra tay 1 vòng tạo/sửa hợp đồng ở cả sidebar và webapp.
 
-## R4 — Xác thực & phân quyền (SEC-002) (rủi ro CAO · cần chọn phương án ở 02_SECURITY_REPORT §3)
-Nếu chọn phương án A (đăng nhập trong ứng dụng):
+## R4 — Xác thực & phân quyền (SEC-002) ✅ ĐÃ LÀM (`c852a6a`) theo mô hình DNTT (Cổng đăng nhập Gmail + vai trò), không phải phương án A dưới đây
+Phương án A (đăng nhập bằng mật khẩu trong ứng dụng) — giữ lại để tham khảo, KHÔNG làm:
 1. `DANG_NHAP(tenDangNhap, matKhau)` → kiểm tra băm (`Utilities.computeDigest` SHA-256 + salt riêng từng người, lưu Script Properties) → cấp `phien` ngẫu nhiên (`Utilities.getUuid()`) lưu ScriptCache 6 giờ kèm vai trò.
 2. `yeuCauPhien_(phien, vaiTroToiThieu)` ở **dòng đầu** mọi hàm công khai; hàm chỉ dùng từ menu đổi thành riêng tư.
 3. Client: 1 hàm `goi_(ten, args, ok, loi)` bọc `google.script.run`, tự chèn `phien`, xử lý hết phiên → quay về màn đăng nhập. Thay dần các điểm gọi theo từng trang.
@@ -52,5 +52,5 @@ function TEST_LOCK_TAI_NHAP() {
 - Tái nhập được → thêm khóa trực tiếp. Không tái nhập → dùng mẫu đã áp dụng cho `LUU_CHINH_THUC` (khóa ngắn, nhả trước khi gọi hàm khác).
 
 ## Thứ tự đề xuất
-R4 (quyết định phương án) → R7 → phần còn lại của R2 → R6 (nếu chuyển sang đồng bộ bằng `clasp`).
-Đã xong: R1, R3, R5, phần chính của R2.
+R7 → phần còn lại của R2 → R6 (nếu chuyển sang đồng bộ bằng `clasp`).
+Đã xong: R1, R3, R4, R5, phần chính của R2.

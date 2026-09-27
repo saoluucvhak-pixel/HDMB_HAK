@@ -2,6 +2,13 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 27/09/2026 — Đợt 4: đăng nhập Gmail + phân quyền (theo DNTT) và Tra cứu hợp đồng
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `c852a6a` | 🔒✨ Bảo mật + tính năng | **SEC-002**: đăng nhập qua Cổng đăng nhập Gmail, 3 vai trò (Quản trị / Nhập liệu / Chỉ xem) trong `SYS_NguoiDung`, 1 cửa `api()` + bảng quyền 123 chức năng; 133 hàm thành riêng tư; 38 hàm menu/trigger kiểm tra quyền; màn đăng nhập, ẩn menu theo vai trò, Đăng xuất; thẻ Người dùng & Cổng đăng nhập ở Thiết lập; nhật ký ghi email người đăng nhập. **Trang 🔍 Tra cứu hợp đồng** (`?page=tracuu`) | 34_PhanQuyen.gs, 33_TraCuuHopDong.gs, 33_Page_TraCuuHopDong.html, PhanQuyen_JS.html (mới); mọi `.gs`/`.html` có lời gọi server |
+| (commit tài liệu) | 📄 | Cập nhật báo cáo | docs/qa |
+
 ## 27/09/2026 — Đợt 3: dọn mã chết, gộp mã trùng, XSS còn lại, chặn ghi lệch cột
 
 | Commit | Loại | Thay đổi | File |
@@ -12,7 +19,7 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `64cde28` | ♻️🔒 Gộp + bảo mật | Widget chatbot của 10/27/30 chuyển vào `ChatbotWidget.html`; sửa chèn thuộc tính qua link trong trả lời chatbot (SEC-011) | 10, 27, 30, ChatbotWidget (mới) |
 | `a72c265` | 🔒 Bảo mật | Escape 116 dòng còn lại chèn dữ liệu vào `innerHTML` (dữ liệu Sheet, dữ liệu tra cứu ngân hàng bên ngoài); `href` chỉ nhận http(s) | 10, 11, 12, 24, 27, 30, NhapLieu_Chung_JS |
 | `38482b9` | 🛡️ Toàn vẹn dữ liệu | MAP-001: phát hiện cột bị chèn/xóa tay ở 6 sheet dữ liệu → **dừng ghi** và báo rõ cột nào lệch; menu "Xác nhận cấu trúc cột hiện tại" | 00_Config, 05_Menu |
-| (commit tài liệu) | 📄 | Cập nhật 10 báo cáo | docs/qa |
+| `f064f8a` | 📄 | Cập nhật 10 báo cáo | docs/qa |
 
 ## 27/09/2026 — Đợt 2: rà soát toàn dự án + nâng cấp
 
@@ -41,4 +48,4 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `a1f876e` | Tính năng chia sẻ dữ liệu (cấp/xem/thu hồi quyền 2 Sheet + 4 thư mục) |
 
 ## Thống kê (a1f876e → nay, không tính tài liệu)
-27 file, +1.856 / −4.059 dòng — phần xóa chủ yếu là mã chết (1.393 dòng trang 26) và mã trùng được gộp vào 2 partial. Không xóa chức năng nào đang dùng, không đổi tên cột/sheet, không đổi bố cục giao diện (chỉ thêm khung "Ảnh chung của cả hợp đồng" còn thiếu ở sidebar 07 và thông báo nổi thay cho hộp `alert`).
+Đợt 1–3: 27 file, +1.856 / −4.059 dòng (phần xóa chủ yếu là mã chết và mã trùng được gộp). Đợt 4: thêm 4 file (đăng nhập, tra cứu), ~+1.700 dòng. Không xóa chức năng nào đang dùng, không đổi tên cột/sheet dữ liệu, không đổi bố cục các trang cũ (thêm: màn đăng nhập, chip người dùng, mục menu "Tra cứu hợp đồng", 2 thẻ ở Thiết lập, 1 mục Hướng dẫn).

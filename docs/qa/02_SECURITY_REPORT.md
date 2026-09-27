@@ -33,22 +33,27 @@ Chuỗi tấn công SEC-006 + SEC-007 trước khi sửa (đã tái hiện trong
    -> RUN_HAK_SYSTEM_FINAL() chạy với quyền chủ sở hữu
 ```
 
-## 3. 🔴 SEC-002 — CHƯA SỬA, cần quyết định của chủ dự án
+## 3. ✅ SEC-002 — ĐÃ SỬA: đăng nhập Gmail + phân quyền (`c852a6a`)
 
-**171 hàm server công khai** (trước khi dọn mã chết: 182) gọi được ẩn danh. Trong đó phần lớn các hàm chỉ dùng từ menu/trigger (chỉ dùng từ menu Sheet / trigger / chạy tay) nhưng vẫn phơi ra Internet, gồm các hàm ghi/xóa:
+Chủ dự án chọn **cùng mô hình với HAK_WEBAPP_DNTT_DRAFT (v2026.7)**, áp cho **toàn bộ webapp**:
 
-`XOA_SHEET_TONGHOP_CU` (xóa sheet), `XOA_PHU_LUC`, `LUU_HOP_DONG_DAY_DU`, `LUU_PHU_LUC`, `THIET_LAP_TRIGGER_DINH_KY` / `…_ONEDIT_DRAFT_TU_MENU` / `…_DONG_BO_THANH_TOAN` (tạo trigger), `XAY_DUNG_LAI` các cache, `CHUYEN_DOI_*`, `DINH_DANG_*`, `DONG_BO_*`, `CHAY_TOAN_BO_BAO_TRI_TU_MENU`, `RUN_HAK_SYSTEM_FINAL`, `XUAT_BAO_CAO_MISA_TU_MENU`…
+| Thành phần | Cách làm | Test |
+|---|---|---|
+| Xác thực | **Cổng đăng nhập**: 1 dự án Apps Script riêng chạy dưới tài khoản *người truy cập* (biết email thật), ký HMAC-SHA256 (email + hạn 5 phút + mã dùng 1 lần) rồi chuyển về webapp `?sso=…`. Webapp kiểm chữ ký (so sánh thời gian hằng), hạn, mã dùng 1 lần → cấp **phiên** ngẫu nhiên 256 bit (ScriptCache, 6 giờ) | T-AUTH-03 (dùng lại link, sửa email trong link, hết hạn, sai mã bí mật, email lạ, trang nhúng) |
+| Phân quyền | Sheet `SYS_NguoiDung`: email · vai trò (**Quản trị / Nhập liệu / Chỉ xem**) · trạng thái (Hoạt động/Khóa). Chủ script + `QUAN_TRI_CO_DINH` luôn là Quản trị. Khóa tài khoản có hiệu lực ≤ 60 giây kể cả phiên đang mở | T-AUTH-02 |
+| Một cửa vào | Trình duyệt chỉ gọi `api(phien, tên, [tham số])`; bảng `_bangQuyenApi_()` (123 chức năng) quy định quyền từng chức năng; chức năng ngoài bảng bị từ chối (kể cả `constructor`) | T-AUTH-02, T-AUTH-04 |
+| Đóng bề mặt ẩn danh | 116 hàm trang web gọi + 17 hàm nội bộ đổi thành hàm riêng tư (`X_`) → `google.script.run` không gọi thẳng được. **38 hàm công khai còn lại** (menu Sheet, chạy tay, trigger) kiểm tra quyền ở dòng đầu; trigger đã cài được nhận ra qua `triggerUid` | **T-AUTH-01**: gọi thẳng cả 38 hàm với người lạ → đều `[AUTH]`, không ghi dữ liệu. 9 hàm công khai được phép: `api`, `thongTinDangNhap`, `nhanPhienDangNhap`, `dangXuat`, `doGet`, `doPost`, `onOpen`, `include`, `onChangeLamMoiCache` |
+| Giao diện | Màn đăng nhập, ẩn menu theo vai trò, chip người dùng + Đăng xuất, lỗi `[AUTH]` → về màn đăng nhập, lỗi `[QUYEN]` → chỉ báo lỗi | UI-AUTH-01..04 |
+| Truy vết | Nhật ký, cột Email người tạo hợp đồng, người sửa nháp ghi **email thật** của người đăng nhập (trước đây trống khi dùng webapp) | T-AUDIT-01, T-AUTH-03 |
 
-Và các hàm mà trang web **có** dùng (đọc toàn bộ danh sách hợp đồng, CCCD, số tài khoản; sửa/xóa hợp đồng theo số dòng do client gửi — IDOR) cũng không có kiểm tra nào.
+**Chuỗi tấn công cũ nay bị chặn:** mở DevTools gõ `google.script.run.XOA_VINH_VIEN_HOP_DONG_(…)` → "Script function not found" (hàm riêng tư); `google.script.run.api('', 'XOA_VINH_VIEN_HOP_DONG', …)` → `[AUTH] Chưa đăng nhập`; có phiên Nhập liệu → `[QUYEN]` (xóa vĩnh viễn chỉ Quản trị).
 
-**Không thể vá bằng một chỗ sửa nhỏ** — phải chọn mô hình xác thực:
+**Vì sao vẫn để `access: ANYONE_ANONYMOUS`:** webhook Telegram (`doPost`) và `?action=run` (SYNC_TOKEN) được gọi từ máy chủ ngoài không đăng nhập Google. Bảo vệ nằm ở từng lời gọi, không phụ thuộc cấu hình triển khai. Trang HTML vẫn tải được cho người lạ nhưng không có dữ liệu.
 
-| Phương án | Mô tả | Ưu | Nhược |
-|---|---|---|---|
-| **A. Đăng nhập trong ứng dụng** (khuyến nghị nếu phải giữ truy cập không cần tài khoản Google) | Trang đăng nhập; server kiểm tra mật khẩu (băm + salt trong Script Properties), cấp phiên ngẫu nhiên lưu ở CacheService (6 giờ); client giữ phiên trong `sessionStorage` và gửi kèm **mọi** lời gọi; mọi hàm công khai kiểm tra phiên trước tiên; có thể thêm vai trò (xem / nhập liệu / quản trị) | Giữ được cách dùng hiện tại cho nhân viên hiện trường | Sửa mọi điểm gọi `google.script.run` + ~120 hàm server; cần kiểm thử kỹ trên môi trường thật |
-| **B. Bắt đăng nhập Google** (`access: ANYONE`) | Google chặn người chưa đăng nhập | Sửa 1 dòng cấu hình | Không chặn được *người có tài khoản Google bất kỳ*; với tài khoản gmail thường vẫn không lấy được email để phân quyền |
-| **C. Giới hạn miền** (`access: DOMAIN`) | Chỉ tài khoản trong Google Workspace của công ty | Mạnh nhất, ít sửa code | Cần Workspace; nhân viên/cộng tác viên phải có tài khoản công ty |
-| **D. Tạm thời** (làm ngay được) | Đổi các hàm chỉ dùng từ menu/trigger thành hàm riêng tư (`_`) + giữ tên cũ làm lớp vỏ gọi từ menu | Giảm ngay bề mặt tấn công ~63 hàm | Phải xác nhận trên project thật rằng menu gọi được đúng tên; không giải quyết phần dữ liệu trang web đang dùng |
+**Giới hạn còn lại (nói rõ):**
+- Vai trò **Chỉ xem** vẫn thấy CCCD/SĐT/số TK đầy đủ ở các trang báo cáo/tổng quan (như trước); chỉ trang Tra cứu che bớt. Muốn che toàn hệ thống cần sửa từng hàm báo cáo.
+- Người được chia sẻ **trực tiếp file Google Sheet** vẫn đọc/sửa dữ liệu trên Sheet — phân quyền webapp không thay được quyền chia sẻ của Google Drive.
+- `onChangeLamMoiCache` vẫn công khai (chỉ gọi webhook làm mới cache của DNTT, không đọc/ghi dữ liệu HDMB).
 
 ## 4. Các điểm còn lại
 
@@ -58,7 +63,7 @@ Và các hàm mà trang web **có** dùng (đọc toàn bộ danh sách hợp đ
 | CLICKJACK | 🟡 | Mọi trang đặt `XFrameOptionsMode.ALLOWALL` → bất kỳ website nào cũng nhúng được webapp vào iframe | Chuyển `DEFAULT` nếu không nhúng vào Google Sites/trang khác (cần xác nhận) |
 | 3RD-PARTY | 🟡 | Số tài khoản ngân hàng gửi tới `tracuubank.com` (dịch vụ bên thứ ba) để tra tên chủ TK; ảnh CCCD/hồ sơ gửi tới Gemini API; dữ liệu hợp đồng gửi qua Telegram | Rà soát điều khoản xử lý dữ liệu cá nhân (NĐ 13/2023), ghi rõ trong quy trình nội bộ |
 | SCOPE | ⚪ | Scope `documents` chỉ phục vụ 1 lệnh `DocumentApp` | Gỡ nếu tính năng đó không còn dùng |
-| IDS | ⚪ | 4 URL Sheet hard-code trong `00_Config.gs` | Không phải bí mật khi đã ANYONE_ANONYMOUS; chuyển vào Script Properties khi làm SEC-002 |
+| SECRET-PUB | 🟡 | Repo GitHub `HDMB_HAK` đang **công khai**: `WEBHOOK_SECRET` (mã gọi webhook làm mới cache của DNTT) nằm trong `Webhook_dntt.gs`; 4 URL Sheet trong `00_Config.gs` | Hậu quả hiện tại thấp (webhook chỉ làm mới cache DNTT). Nên: đặt repo về Private, hoặc đổi mã bí mật ở DNTT rồi lưu mã mới vào Script Properties của HDMB. Mã bí mật đăng nhập (`SSO_SECRET`) **không** nằm trong mã nguồn |
 
 ## 5. Hạng mục trong danh sách kiểm tra — kết quả
 
@@ -68,10 +73,10 @@ Và các hàm mà trang web **có** dùng (đọc toàn bộ danh sách hợp đ
 | SQL Injection | **N/A** — dự án không dùng SQL |
 | Formula Injection | ⚪ LOW — `setValue('=…')` được Google Sheets hiểu là công thức. Người nhập một địa chỉ/ghi chú bắt đầu bằng `=`, `+`, `-`, `@` sẽ tạo công thức trong Sheet (và trong file xuất). Đề xuất: thêm tiền tố `'` cho các trường văn bản tự do trước khi ghi |
 | CSRF | Thấp — `google.script.run` do Google xử lý kèm token chống XSRF; `doGet` chỉ có `action=run` có tác dụng phụ và đã yêu cầu token bí mật |
-| Token / Session / Cookie | Ứng dụng không có phiên đăng nhập (xem SEC-002); không đặt cookie riêng |
+| Token / Session / Cookie | Phiên 256 bit ngẫu nhiên trong ScriptCache (6 giờ), giữ ở `sessionStorage` (mất khi đóng tab); không cookie. Link đăng nhập ký HMAC, 5 phút, dùng 1 lần |
 | API Key | Không hard-code; Gemini/Telegram key nằm trong Script Properties ✅ |
 | OAuth | Scope rộng (`drive` toàn bộ) là cần thiết cho tính năng hiện tại; xem SCOPE |
-| Permission | Không có (SEC-002) |
+| Permission | 3 vai trò, 1 bảng quyền cho 123 chức năng + kiểm tra quyền ở mọi hàm menu/trigger (SEC-002 ✅) |
 | File Upload | Đã giới hạn loại + dung lượng (SEC-009) |
 | File Download | Xuất MISA/Excel tạo file tạm trong Drive chủ sở hữu rồi dọn; link tải là link Drive thật |
 | CORS / CSP | **Do Google quản lý** (HtmlService chạy trong iframe sandbox `*.googleusercontent.com`); dự án không cấu hình được |
