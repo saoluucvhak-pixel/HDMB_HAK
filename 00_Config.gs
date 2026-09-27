@@ -366,8 +366,11 @@ const QUYEN_CHIA_SE_NHAN_ = { reader: 'Xem', commenter: 'Bình luận', writer: 
  * Đổi 'DOI_MAT_KHAU_NAY_NGAY' thành mật khẩu thật của bạn trước khi chạy.
  */
 function SETUP_ADMIN_TOKEN() {
-  PropertiesService.getScriptProperties().setProperty('ADMIN_TOKEN', 'DOI_MAT_KHAU_NAY_NGAY');
-  Logger.log('Đã lưu ADMIN_TOKEN. Vào Project Settings > Script Properties để xem/đổi lại cho chắc chắn.');
+  // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè mật khẩu đã đặt.
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ADMIN_TOKEN')) { Logger.log('ADMIN_TOKEN đã có — không ghi đè. Đổi trong Project Settings > Script Properties.'); return; }
+  props.setProperty('ADMIN_TOKEN', 'DOI_MAT_KHAU_NAY_NGAY');
+  Logger.log('Đã tạo ADMIN_TOKEN mẫu. Vào Project Settings > Script Properties đổi thành mật khẩu thật (giá trị mẫu bị từ chối).');
 }
 
 /**

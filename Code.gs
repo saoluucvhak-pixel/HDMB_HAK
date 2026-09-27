@@ -70,9 +70,12 @@ var TRANG_WEBAPP_ = {
 };
 
 function SETUP_SYNC_TOKEN() {
-  var token = 'DAT_TOKEN_CUA_BAN_O_DAY';
-  PropertiesService.getScriptProperties().setProperty('SYNC_TOKEN', token);
-  Logger.log('Đã lưu SYNC_TOKEN: ' + token);
+  // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè token đã đặt
+  // (trước đây gọi hàm này rồi dùng ?action=run&token=<giá trị mẫu> là chạy được đồng bộ).
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SYNC_TOKEN')) { Logger.log('SYNC_TOKEN đã có — không ghi đè. Đổi trong Project Settings > Script Properties.'); return; }
+  props.setProperty('SYNC_TOKEN', 'DAT_TOKEN_CUA_BAN_O_DAY');
+  Logger.log('Đã tạo SYNC_TOKEN mẫu — đổi thành chuỗi bí mật riêng trong Project Settings > Script Properties (giá trị mẫu bị từ chối).');
 }
 
 // --- HÀM NGUYÊN BẢN (GIỮ NGUYÊN 100%) ---
