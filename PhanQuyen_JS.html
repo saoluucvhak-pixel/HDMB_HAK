@@ -20,6 +20,15 @@
   #hakNguoiDungChip .vt { background: #2563eb; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; }
   #hakNguoiDungChip button { background: transparent; color: #fca5a5; border: 0; cursor: pointer; font-size: 12px; padding: 0; }
   #hakNguoiDungChip .em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+  #hakXemFile { position: fixed; inset: 0; z-index: 100001; background: rgba(17,24,39,.9); display: none; flex-direction: column; align-items: center; padding: 14px 16px; gap: 10px; font: 13px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  #hakXemFile.hien { display: flex; }
+  #hakXemFile .thanh { width: 100%; max-width: 1000px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f9fafb; }
+  #hakXemFile .ten { flex: 1; min-width: 180px; font-weight: 600; overflow-wrap: anywhere; }
+  #hakXemFile .thanh button, #hakXemFile .thanh a { background: #fff; color: #1f2937; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 12.5px; }
+  #hakXemFile .thanh a.phu { background: transparent; color: #cbd5e1; border: 1px solid #4b5563; }
+  #hakXemFile .than { flex: 1; width: 100%; max-width: 1000px; display: flex; align-items: center; justify-content: center; overflow: auto; }
+  #hakXemFile .than img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; }
+  #hakXemFile .tb { color: #e5e7eb; text-align: center; max-width: 520px; line-height: 1.5; }
 </style>
 <div id="hakDangNhapNen" role="dialog" aria-modal="true" aria-labelledby="hakDangNhapTieuDe">
   <div class="hop">
@@ -31,6 +40,14 @@
   </div>
 </div>
 <div id="hakNguoiDungChip"><span>👤</span><span class="em" id="hakChipEmail"></span><span class="vt" id="hakChipVaiTro"></span><button type="button" id="hakChipDangXuat" style="display:none">Đăng xuất</button></div>
+<div id="hakXemFile" role="dialog" aria-modal="true" aria-labelledby="hakXemFileTen">
+  <div class="thanh"><span class="ten" id="hakXemFileTen"></span>
+    <button type="button" id="hakXemFileMo" hidden>Mở trong tab mới</button>
+    <button type="button" id="hakXemFileTai" hidden>⬇ Tải về</button>
+    <a class="phu" id="hakXemFileDrive" data-drive-goc="1" target="_blank" rel="noopener">Mở trên Drive</a>
+    <button type="button" id="hakXemFileDong">Đóng</button></div>
+  <div class="than" id="hakXemFileThan"></div>
+</div>
 <script>
 var HAK_PHIEN_KHOA = 'hak_hdmb_phien';
 var HAK_LOI_DANG_NHAP = '[AUTH] ';
@@ -215,5 +232,101 @@ function hakVeChip_() {
     }).thongTinDangNhap(HAK_PHIEN);
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', chay); else chay();
+})();
+
+// ---------- Xem file Drive ngay trong hệ thống ----------
+// Link Drive mở bằng tài khoản Google của người xem -> Drive đòi "cấp quyền truy cập" nếu tài khoản
+// đó chưa được chia sẻ file (hoặc trình duyệt đang dùng 1 tài khoản Google khác). Bấm link Drive của
+// ảnh / hồ sơ trong hệ thống giờ mở file qua máy chủ (quyền của chủ hệ thống), không cần quyền Drive.
+function hakIdDrive_(href) {
+  var m = /^https:\/\/(drive|docs)\.google\.com\/(?:[^?#]*\/d\/([A-Za-z0-9_-]{15,})|(?:open|uc)\?(?:[^#]*&)?id=([A-Za-z0-9_-]{15,}))/.exec(String(href || ''));
+  return m ? (m[2] || m[3]) : '';
+}
+var hakFileDangXem_ = null;
+function hakDongXemFile_() {
+  document.getElementById('hakXemFile').className = '';
+  if (hakFileDangXem_ && hakFileDangXem_.url) URL.revokeObjectURL(hakFileDangXem_.url);
+  hakFileDangXem_ = null;
+}
+function hakThongBaoXemFile_(noiDung) {
+  var than = document.getElementById('hakXemFileThan'), tb = document.createElement('div');
+  than.innerHTML = ''; tb.className = 'tb'; tb.textContent = noiDung; than.appendChild(tb);
+}
+function hakXemFile_(id, hrefGoc) {
+  var dangXem = hakFileDangXem_ = { id: id };
+  document.getElementById('hakXemFileTen').textContent = 'Đang mở file…';
+  document.getElementById('hakXemFileDrive').href = hrefGoc;
+  document.getElementById('hakXemFileMo').hidden = true;
+  document.getElementById('hakXemFileTai').hidden = true;
+  hakThongBaoXemFile_('⏳ Đang tải file…');
+  document.getElementById('hakXemFile').className = 'hien';
+  hakRun_().withSuccessHandler(function (kq) {
+    if (hakFileDangXem_ !== dangXem) return;
+    // Không phải file của dữ liệu hợp đồng (vd file báo cáo xuất ra) -> mở link Drive như trước
+    if (kq && kq.ngoaiDanhMuc) { hakDongXemFile_(); window.open(hrefGoc, '_blank', 'noopener'); return; }
+    if (!kq || !kq.thanhCong) { document.getElementById('hakXemFileTen').textContent = 'Không mở được file'; hakThongBaoXemFile_('❌ ' + ((kq && kq.loi) || 'Không mở được file.')); return; }
+    var laAnh = /^image\//.test(kq.mime);
+    dangXem.ten = kq.ten;
+    document.getElementById('hakXemFileTen').textContent = kq.ten;
+    document.getElementById('hakXemFileTai').hidden = false;
+    document.getElementById('hakXemFileMo').hidden = laAnh;
+    var than = document.getElementById('hakXemFileThan');
+    than.innerHTML = '';
+    if (kq.anh) { var img = document.createElement('img'); img.src = kq.anh; img.alt = kq.ten; than.appendChild(img); }
+    if (!laAnh) {
+      var ghi = document.createElement('div'); ghi.className = 'tb'; ghi.style.marginLeft = '14px';
+      ghi.textContent = (kq.anh ? 'Đang hiện trang đầu. ' : '') + 'Bấm "Mở trong tab mới" để xem toàn bộ file, hoặc "Tải về".';
+      than.appendChild(ghi);
+    } else if (!kq.anh) hakThongBaoXemFile_('Không tạo được ảnh xem trước — bấm "Tải về" để xem file.');
+  }).withFailureHandler(function (err) {
+    if (hakFileDangXem_ !== dangXem) return;
+    hakThongBaoXemFile_('❌ ' + ((err && err.message) || err));
+  }).XEM_FILE_DRIVE(id, 'xem');
+}
+/** Lấy nội dung đầy đủ của file đang xem rồi mở tab mới (moTab) hoặc tải về máy. */
+function hakLayFileDayDu_(moTab) {
+  var f = hakFileDangXem_;
+  if (!f) return;
+  var lam = function () { if (!moTab || !window.open(f.url, '_blank')) hakTaiUrl_(f.url, f.ten); };
+  if (f.url) { lam(); return; }
+  var nut = document.getElementById(moTab ? 'hakXemFileMo' : 'hakXemFileTai'), goc = nut.textContent;
+  nut.textContent = '⏳ Đang tải…'; nut.disabled = true;
+  hakRun_().withSuccessHandler(function (kq) {
+    nut.textContent = goc; nut.disabled = false;
+    if (hakFileDangXem_ !== f) return;
+    if (!kq || !kq.thanhCong) { document.getElementById('hakXemFileTen').textContent = '❌ ' + ((kq && kq.loi) || 'Không tải được file.'); return; }
+    var bin = atob(kq.base64), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    f.url = URL.createObjectURL(new Blob([bytes], { type: kq.mime }));
+    f.ten = kq.ten;
+    lam();
+  }).withFailureHandler(function (err) {
+    nut.textContent = goc; nut.disabled = false;
+    document.getElementById('hakXemFileTen').textContent = '❌ ' + ((err && err.message) || err);
+  }).XEM_FILE_DRIVE(f.id, 'tai');
+}
+function hakTaiUrl_(url, ten) {
+  var a = document.createElement('a');
+  a.href = url; a.download = ten || 'file';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+(function () {
+  document.getElementById('hakXemFileDong').addEventListener('click', hakDongXemFile_);
+  document.getElementById('hakXemFileMo').addEventListener('click', function () { hakLayFileDayDu_(true); });
+  document.getElementById('hakXemFileTai').addEventListener('click', function () { hakLayFileDayDu_(false); });
+  document.getElementById('hakXemFile').addEventListener('click', function (e) { if (e.target.id === 'hakXemFile') hakDongXemFile_(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && hakFileDangXem_) { e.stopImmediatePropagation(); hakDongXemFile_(); }
+  }, true);
+  // Bắt mọi link Drive trên trang (kể cả link dựng động sau khi tải dữ liệu)
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('data-drive-goc')) return;
+    var id = hakIdDrive_(a.getAttribute('href'));
+    if (!id) return;
+    e.preventDefault();
+    hakXemFile_(id, a.href);
+  });
 })();
 </script>

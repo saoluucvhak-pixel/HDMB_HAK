@@ -395,3 +395,58 @@ function LAY_FILE_HO_SO_(idHD, theoKhachHang, id) {
     return { thanhCong: false, loi: 'Không đọc được file hồ sơ (đã bị xóa hoặc không có quyền): ' + e.message };
   }
 }
+
+// ============================================================
+//  XEM FILE DRIVE NGAY TRONG HỆ THỐNG (mọi nút "xem / Mở file / 📎" ở các trang)
+//  Link Drive mở bằng tài khoản Google của NGƯỜI XEM -> Drive đòi quyền nếu tài
+//  khoản đó chưa được chia sẻ file (hoặc trình duyệt đang đăng nhập tài khoản
+//  khác). Ở đây file được đọc bằng quyền của chủ script, nên người đã đăng nhập
+//  hệ thống xem được mà không cần quyền Drive. Chỉ phục vụ file có trong dữ
+//  liệu hợp đồng (ảnh HD_Picture / HD_GPS / Draft_AnhRung, hồ sơ HD_RUNG);
+//  hồ sơ pháp lý chỉ Nhập liệu / Quản trị.
+// ============================================================
+
+/** { idDrive: 'anh' | 'hoso' } — mọi file được phép xem qua hệ thống. */
+function _danhMucFileDrive_() {
+  const kq = {};
+  const them = function (v, loai) {
+    const id = _idDriveTuLink_(v);
+    if (id && kq[id] !== 'hoso') kq[id] = loai;
+  };
+  const doc = function (ten, fn) { try { readData_(ten).forEach(fn); } catch (e) { /* sheet chưa có */ } };
+  doc(SHEET_NAME.HD_PICTURE, function (r) { for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) them(r[c], 'anh'); });
+  doc(SHEET_NAME.HD_GPS, function (r) { them(r[GPS_COL.HINH_ANH], 'anh'); });
+  doc(SHEET_NAME.DRAFT_ANH, function (r) {
+    them(r[DRAFT_ANH_COL.DRIVE_URL], 'anh');
+    const id = (r[DRAFT_ANH_COL.DRIVE_FILE_ID] || '').toString().trim();
+    if (MAU_ID_DRIVE.test(id) && !kq[id]) kq[id] = 'anh';
+  });
+  doc(SHEET_NAME.HD_RUNG, function (r) { them(r[RUNG_COL.DINH_KEM_GIAY_TO], 'hoso'); });
+  return kq;
+}
+
+/**
+ * CHỨC NĂNG: xem 1 file Drive của dữ liệu hợp đồng.
+ * cheDo 'xem' -> { ten, mime, loai, anh: dataUrl cỡ lớn (ảnh / trang đầu PDF) };
+ * cheDo 'tai' -> { ten, mime, base64 } nội dung đầy đủ (tối đa 15 MB; Google Docs -> PDF).
+ * File không thuộc dữ liệu hợp đồng -> { ngoaiDanhMuc: true } (trình duyệt mở link Drive như cũ).
+ */
+function XEM_FILE_DRIVE_(id, cheDo) {
+  id = String(id || '');
+  if (!MAU_ID_DRIVE.test(id)) return { thanhCong: false, ngoaiDanhMuc: true, loi: 'Link không hợp lệ.' };
+  const loai = _danhMucFileDrive_()[id];
+  if (!loai) return { thanhCong: false, ngoaiDanhMuc: true, loi: 'File không thuộc dữ liệu hợp đồng — mở bằng link Drive.' };
+  if (loai === 'hoso' && !_coQuyen_(QUYEN.NHAP_LIEU)) return { thanhCong: false, loi: 'Hồ sơ pháp lý chỉ vai trò Nhập liệu / Quản trị xem được.' };
+  let f;
+  try { f = DriveApp.getFileById(id); } catch (e) { return { thanhCong: false, loi: 'Không tìm thấy file trên Drive (có thể đã bị xóa).' }; }
+  const ten = f.getName(), mime = f.getMimeType() || '';
+  if (cheDo === 'tai') {
+    try {
+      const blob = mime.indexOf('application/vnd.google-apps.') === 0 ? f.getAs('application/pdf') : f.getBlob();
+      const bytes = blob.getBytes();
+      if (bytes.length > HO_SO_TC_TOI_DA_BYTE) return { thanhCong: false, loi: 'File "' + ten + '" lớn hơn 15 MB — mở trên Drive.' };
+      return { thanhCong: true, ten: ten + (mime.indexOf('application/vnd.google-apps.') === 0 ? '.pdf' : ''), mime: blob.getContentType() || mime, base64: Utilities.base64Encode(bytes) };
+    } catch (e) { return { thanhCong: false, loi: 'Không đọc được file: ' + e.message }; }
+  }
+  return { thanhCong: true, ten: ten, mime: mime, loai: loai, anh: _taiAnhDrive_([id], ANH_TC_CO_LON)[id] || '' };
+}
