@@ -339,6 +339,8 @@
       <button class="btn btn-green" style="margin-top:8px" onclick="taiAnhHienTruong()">⬆️ Tải lên (vào hàng chờ duyệt)</button>
       <div id="msgAnh" class="msg" style="display:none;margin-top:8px"></div>
       <div id="dsAnh" style="margin-top:10px"></div>
+      <p class="hint" style="margin-top:14px">📁 Ảnh chung của cả hợp đồng (thêm bằng cách khác, vd dán link — không phân biệt lô rừng nào):</p>
+      <div id="dsAnhChungHopDong" style="margin-top:4px"></div>
     </div>
   </div>
 
@@ -373,6 +375,10 @@
   var demTempId = 0;
 
   function val(id) { return document.getElementById(id).value; }
+  // Escape đầy đủ (kể cả dấu nháy) + chỉ cho link http(s) — tên file/đường link do người dùng tải lên
+  // được chèn vào innerHTML; thiếu escape thì tên file chứa <img onerror=...> hay link javascript: sẽ chạy mã.
+  function escAT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function urlAT_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escAT_(u) : '#'; }
   function setVal(id, v) { document.getElementById(id).value = v || ''; }
   function formatSoNhap_(v) { var n = Number(v); if (!v || isNaN(n)) return '0'; return n.toLocaleString('vi-VN'); }
   function showMsg(id, text, ok) { var el = document.getElementById(id); el.style.display = 'block'; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.textContent = text; }
@@ -711,7 +717,11 @@
     chonTabRung('gps');
     renderDsGPS_();
     if (rungDangSuaLaThat) { taiDsHoSoRungThat(r.idRung); taiDsAnh(r.idRung); }
-    else { document.getElementById('dsHoSoRung').innerHTML = ''; document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>'; }
+    else {
+      document.getElementById('dsHoSoRung').innerHTML = '';
+      document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>';
+      document.getElementById('dsAnhChungHopDong').innerHTML = '';
+    }
     hienTrang('trangRung');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: tenChuRungHienTai, onClick: 'quayVeTrangHopDong' }, { label: r.idRung || 'Lô rừng nháp' }]);
   }
@@ -751,6 +761,7 @@
       document.getElementById('khuVucTabsRung').style.display = 'block';
       chonTabRung('gps'); renderDsGPS_();
       document.getElementById('dsAnh').innerHTML = '<p class="hint">Chỉ khả dụng sau khi Lưu chính thức.</p>';
+      document.getElementById('dsAnhChungHopDong').innerHTML = '';
     }
     luuNhapNgay();
     showMsg('msgFormRung', '✅ Đã lưu vào nháp.', true);
@@ -776,7 +787,8 @@
       google.script.run.withSuccessHandler(function (list) {
         var el = document.getElementById('dsGPSDaLuu');
         el.innerHTML = (!list || !list.length) ? '<p class="hint">Chưa có điểm nào.</p>' : list.map(function (p, i) {
-          return '<div class="gps-row"><span>Điểm ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + '</span></div>';
+          var anh = p.hinhAnh ? ' <a href="' + urlAT_(p.hinhAnh) + '" target="_blank">🖼️ Xem ảnh</a>' : '';
+          return '<div class="gps-row"><span>Điểm ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + anh + '</span></div>';
         }).join('');
       }).withFailureHandler(function () { document.getElementById('dsGPSDaLuu').innerHTML = '<p class="hint">Không tải được.</p>'; }).layGPSCuaRung(r.idRung);
     } else {
@@ -786,7 +798,8 @@
     var elNhap = document.getElementById('dsGPSNhap');
     var gpsMoi = r.gpsMoi || [];
     elNhap.innerHTML = !gpsMoi.length ? '<p class="hint">Chưa có điểm nào trong nháp.</p>' : gpsMoi.map(function (p, i) {
-      return '<div class="gps-row nhap"><span>🟡 Điểm nháp ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + '</span>' +
+      var anh = p.anhUrl ? ' <a href="' + urlAT_(p.anhUrl) + '" target="_blank">🖼️</a>' : '';
+      return '<div class="gps-row nhap"><span>🟡 Điểm nháp ' + (i + 1) + '</span><span style="font-family:monospace">' + Number(p.lat).toFixed(6) + ', ' + Number(p.lng).toFixed(6) + anh + '</span>' +
         '<button class="btn btn-outline" style="padding:2px 8px;font-size:11px" onclick="xoaDiemGPSNhap(' + i + ')">Xóa</button></div>';
     }).join('');
   }
@@ -806,25 +819,39 @@
       var base64 = e.target.result.split(',')[1];
       google.script.run
         .withSuccessHandler(function (kq) {
-          fi.value = '';
-          if (!kq.thanhCong) { showMsg('msgGPS', '❌ ' + kq.loi, false); return; }
-          showMsg('msgGPS', '✅ Đọc được tọa độ từ ảnh — đã thêm vào nháp.', true);
-          ghiDiemGPSVaoNhap_(kq.lat, kq.lng);
+          if (!kq.thanhCong) { fi.value = ''; showMsg('msgGPS', '❌ ' + kq.loi, false); return; }
+          // ⚠️ BỔ SUNG: TRƯỚC ĐÂY ảnh dùng để đọc EXIF bị VỨT BỎ sau khi lấy xong tọa độ —
+          // chỉ giữ lại lat/lng, không lưu ảnh vào đâu cả (cột HINH_ANH trong HD_GPS luôn
+          // trống). Giờ tải LUÔN chính ảnh này lên Drive và đính kèm vào điểm GPS, vì đây
+          // đúng là ảnh minh chứng thực địa cho điểm tọa độ đó.
+          showMsg('msgGPS', '⌛ Đọc được tọa độ — đang lưu kèm ảnh minh chứng...', true);
+          google.script.run
+            .withSuccessHandler(function (kqAnh) {
+              fi.value = '';
+              ghiDiemGPSVaoNhap_(kq.lat, kq.lng, kqAnh.thanhCong ? kqAnh.url : '');
+              showMsg('msgGPS', kqAnh.thanhCong ? '✅ Đã thêm điểm + ảnh minh chứng vào nháp.' : '⚠️ Đã thêm điểm nhưng không lưu được ảnh: ' + kqAnh.loi, true);
+            })
+            .withFailureHandler(function (err) {
+              fi.value = '';
+              ghiDiemGPSVaoNhap_(kq.lat, kq.lng, '');
+              showMsg('msgGPS', '⚠️ Đã thêm điểm nhưng lỗi lưu ảnh: ' + err.message, false);
+            })
+            .TAI_ANH_GPS_LEN_DRIVE(base64, file.type, file.name);
         })
-        .withFailureHandler(function (err) { showMsg('msgGPS', '❌ Lỗi: ' + err.message, false); })
+        .withFailureHandler(function (err) { fi.value = ''; showMsg('msgGPS', '❌ Lỗi: ' + err.message, false); })
         .TRICH_XUAT_GPS_TU_ANH(base64, file.type);
     };
     reader.readAsDataURL(file);
   }
-  function ghiDiemGPSVaoNhap_(lat, lng) {
+  function ghiDiemGPSVaoNhap_(lat, lng, anhUrl) {
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r) return;
     if (!r.gpsMoi) r.gpsMoi = [];
-    r.gpsMoi.push({ lat: lat, lng: lng });
+    r.gpsMoi.push({ lat: lat, lng: lng, anhUrl: anhUrl || '' });
     setVal('gpsLatTay', ''); setVal('gpsLngTay', '');
     luuNhapNgay();
     renderDsGPS_();
-    showMsg('msgGPS', '✅ Đã thêm điểm vào nháp (sẽ ghi thật khi Lưu chính thức).', true);
+    if (!anhUrl) showMsg('msgGPS', '✅ Đã thêm điểm vào nháp (sẽ ghi thật khi Lưu chính thức).', true);
   }
   function xoaDiemGPSNhap(idx) {
     var r = timRungTrongNhap_(rungDangSuaKey);
@@ -850,7 +877,7 @@
           if (!kq.thanhCong) { showMsg('msgHoSoRung', '❌ ' + kq.loi, false); return; }
           showMsg('msgHoSoRung', '✅ Đã tải lên: ' + kq.tenFile, true);
           fi.value = ''; document.getElementById('tenFileHoSoRung').textContent = '';
-          document.getElementById('dsHoSoRung').innerHTML = '<div class="hint">📎 Đã có hồ sơ đính kèm — <a href="' + kq.url + '" target="_blank">Xem file</a></div>';
+          document.getElementById('dsHoSoRung').innerHTML = '<div class="hint">📎 Đã có hồ sơ đính kèm — <a href="' + urlAT_(kq.url) + '" target="_blank">Xem file</a></div>';
         })
         .withFailureHandler(function (err) { showMsg('msgHoSoRung', '❌ Lỗi: ' + err.message, false); })
         .TAI_LEN_HO_SO_RUNG(r.idRung, file.name, base64, file.type);
@@ -873,7 +900,7 @@
         if (!hs) { el.innerHTML = '<p class="hint">Không tìm thấy thông tin hồ sơ.</p>'; return; }
         var dongFile = hs.dinhKem
           ? (hs.dinhKem.url
-            ? '<a href="' + hs.dinhKem.url + '" target="_blank">📎 ' + hs.dinhKem.ten + '</a>'
+            ? '<a href="' + urlAT_(hs.dinhKem.url) + '" target="_blank">📎 ' + escAT_(hs.dinhKem.ten) + '</a>'
             : (hs.dinhKem.ten || '') + ' <span class="hint">(không tìm thấy file trên Drive)</span>')
           : '<span class="hint">Chưa đính kèm file nào.</span>';
         el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
@@ -907,16 +934,38 @@
     google.script.run
       .withSuccessHandler(function (list) {
         var el = document.getElementById('dsAnh');
-        if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh nào.</p>'; return; }
+        if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh riêng nào của lô rừng này.</p>'; return; }
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
           var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + a.soDong + ')">✅ Duyệt</button> ' +
             '<button class="btn" style="padding:3px 8px;font-size:11px;background:#e74c3c;color:#fff" onclick="tuChoiAnh(' + a.soDong + ')">✖ Từ chối</button>';
-          return '<div class="anh-row"><span>' + (a.tenFile || '') + ' ' + badge + '</span><span><a href="' + a.url + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
+          return '<div class="anh-row"><span>' + escAT_(a.tenFile || '') + ' ' + badge + '</span><span><a href="' + urlAT_(a.url) + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
         }).join('');
       })
       .withFailureHandler(function () { document.getElementById('dsAnh').innerHTML = '<p class="hint">Không tải được danh sách ảnh.</p>'; })
       .layDraftAnhChoRung(idRung);
+
+    // ⚠️ BỔ SUNG: layDraftAnhChoRung() ở trên CHỈ trả ảnh đi qua đúng luồng
+    // "Tải ảnh hiện trường -> Duyệt" VÀ đã gán rõ ID_RUNG. Ảnh thêm bằng cách
+    // khác (dán link ảnh có sẵn, import sẵn từ trước) ghi thẳng vào HD_Picture
+    // theo ID_HD (không phân biệt lô rừng) nên KHÔNG có mặt ở danh sách trên —
+    // trước đây khiến tab "Hình ảnh" báo "Chưa có ảnh nào" dù hợp đồng đã có
+    // ảnh từ trước. Tải thêm khối "Ảnh chung của hợp đồng" (dùng layAnhCuaHopDong
+    // đã có sẵn, 06_CreateUpdate.gs) để không bị mất hiển thị các ảnh này.
+    var elChung = document.getElementById('dsAnhChungHopDong');
+    if (duNhap.idHD) {
+      google.script.run
+        .withSuccessHandler(function (list) {
+          if (!list || !list.length) { elChung.innerHTML = '<p class="hint">Chưa có ảnh chung nào.</p>'; return; }
+          elChung.innerHTML = list.map(function (a) {
+            return '<div class="anh-row"><span>' + escAT_(a.ten || '') + '</span><span>' + (a.url ? '<a href="' + urlAT_(a.url) + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a>' : '<span class="hint">(không tìm thấy file trên Drive)</span>') + '</span></div>';
+          }).join('');
+        })
+        .withFailureHandler(function () { elChung.innerHTML = '<p class="hint">Không tải được.</p>'; })
+        .layAnhCuaHopDong(duNhap.idHD);
+    } else {
+      elChung.innerHTML = '';
+    }
   }
   function duyetAnh(soDong) { var r = timRungTrongNhap_(rungDangSuaKey); google.script.run.withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { alert('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong); }
   function tuChoiAnh(soDong) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); google.script.run.withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { alert('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong); }
@@ -937,7 +986,7 @@
       var key = t.soDong || t.tempId; var laNhap = !t.soDong;
       return '<div class="row-card' + (laNhap ? ' la-nhap' : '') + '" style="cursor:default">' +
         '<div><b>' + (t.soTK || '') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + (t.nganHang || '') + '<br>' +
-        '<span class="hint">Ủy quyền TT: ' + (t.uyQuyenTT || 'Không') + (t.tenUyQuyen ? ' (' + t.tenUyQuyen + ')' : '') + '</span></div>' +
+        '<span class="hint">Ủy quyền TT: ' + (t.uyQuyenTT || 'Không') + (t.tenUyQuyen ? ' (' + escAT_(t.tenUyQuyen) + ')' : '') + '</span></div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moFormTK(\'' + key + '\')">✏️ Sửa</button> ' +
         '<button class="btn" style="padding:5px 12px;font-size:12px;background:#e74c3c;color:#fff" onclick="xoaTaiKhoanKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
     }).join('');
@@ -981,7 +1030,7 @@
       var thanhTien = (Number(p.donGia) || 0) * (Number(p.khoiLuong) || 0);
       return '<div class="row-card' + (laNhap ? ' la-nhap' : '') + '" style="cursor:default">' +
         '<div><b>Phụ lục ' + (idx + 1) + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — Đơn giá ' + formatSoNhap_(p.donGia) + ' đ · KL ' + formatSoNhap_(p.khoiLuong) + ' tấn · Thành tiền ' + formatSoNhap_(thanhTien) + ' đ' +
-        (p.ghiChu ? '<br><span class="hint">' + p.ghiChu + '</span>' : '') + '</div>' +
+        (p.ghiChu ? '<br><span class="hint">' + escAT_(p.ghiChu) + '</span>' : '') + '</div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moFormPhuLuc(\'' + key + '\')">✏️ Sửa</button> ' +
         '<button class="btn" style="padding:5px 12px;font-size:12px;background:#e74c3c;color:#fff" onclick="xoaPhuLucKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
     }).join('');

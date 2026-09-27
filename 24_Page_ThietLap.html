@@ -588,7 +588,7 @@
   }
 
   // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----
-  function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   function renderKetQuaMoCoi_(kq) {
     var el = document.getElementById('ketQuaBaoTri');
     if (kq.tongSoVanDe === 0) { el.innerHTML = '<div class="msg ok" style="display:block">✅ Không phát hiện ID/Key mồ côi hay bị sót nào.</div>'; return; }

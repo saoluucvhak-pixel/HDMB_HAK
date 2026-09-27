@@ -344,6 +344,10 @@
     });
   });
 
+  // Escape đầy đủ (kể cả dấu nháy) + chỉ cho link http(s) — tên file/đường link do người dùng tải lên
+  // được chèn vào innerHTML; thiếu escape thì tên file chứa <img onerror=...> hay link javascript: sẽ chạy mã.
+  function escAT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function urlAT_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escAT_(u) : '#'; }
   function showMsg(id, text, ok) {
     var el = document.getElementById(id);
     el.style.display = 'block';
@@ -352,7 +356,7 @@
   }
   function linkOrText(link) {
     if (!link) return '<span class="hint">Chưa đính kèm</span>';
-    return link.url ? '<a href="' + link.url + '" target="_blank">📄 ' + link.ten + '</a>' : link.ten + ' <span class="hint">(không tìm thấy file)</span>';
+    return link.url ? '<a href="' + urlAT_(link.url) + '" target="_blank">📄 ' + escAT_(link.ten) + '</a>' : escAT_(link.ten) + ' <span class="hint">(không tìm thấy file)</span>';
   }
 
   // ============ 1. KIỂM TRA HỒ SƠ ============
@@ -446,9 +450,9 @@
     if (!loc.length) { tbody.innerHTML = '<tr><td colspan="4" class="hint" style="text-align:center">Không có ảnh nào khớp.</td></tr>'; return; }
     loc.forEach(function (a, i) {
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td><input type="checkbox" class="chonAnhMotDong" data-idhd="' + a.idHD + '" data-url="' + a.url + '" data-ten="' + (a.tenFile || '') + '"></td>' +
+      tr.innerHTML = '<td><input type="checkbox" class="chonAnhMotDong" data-idhd="' + escAT_(a.idHD) + '" data-url="' + escAT_(a.url) + '" data-ten="' + escAT_(a.tenFile || '') + '"></td>' +
         '<td>' + (a.soHD || '') + '</td><td>' + (a.chuRung || '') + '</td>' +
-        '<td>' + (a.url ? '<a href="' + a.url + '" target="_blank">🖼️ ' + a.tenFile + '</a>' : a.tenFile) + '</td>';
+        '<td>' + (a.url ? '<a href="' + urlAT_(a.url) + '" target="_blank">🖼️ ' + escAT_(a.tenFile) + '</a>' : escAT_(a.tenFile)) + '</td>';
       tbody.appendChild(tr);
     });
   }
@@ -473,9 +477,9 @@
           var toaDoAnhText = r.gpsAnh ? '<a href="#" onclick="xemToaDoAnh(' + r.gpsAnh.lat + ',' + r.gpsAnh.lng + ');return false;">' + r.gpsAnh.lat.toFixed(5) + ', ' + r.gpsAnh.lng.toFixed(5) + '</a>' : '<span class="hint">Không đọc được</span>';
           var toaDoDangKyText = r.toaDoDangKy ? r.toaDoDangKy.lat.toFixed(5) + ', ' + r.toaDoDangKy.lng.toFixed(5) : '<span class="hint">Chưa có</span>';
           html += '<tr' + (r.ketLuan !== 'Bình thường' ? ' class="row-vang"' : '') + '>' +
-            '<td><a href="' + r.url + '" target="_blank">' + (r.tenFile || 'xem ảnh') + '</a></td>' +
-            '<td>' + (r.chuRung || '<span class="hint">Không tra được</span>') + '</td><td>' + (r.diaChiRung || '') + '</td><td>' + toaDoAnhText + '</td>' +
-            '<td>' + (r.nguonToaDo || '<span class="hint">Không có</span>') + '</td><td>' + toaDoDangKyText + '</td><td>' + (r.diaChiTrenAnh || '') + '</td>' +
+            '<td><a href="' + urlAT_(r.url) + '" target="_blank">' + escAT_(r.tenFile || 'xem ảnh') + '</a></td>' +
+            '<td>' + (r.chuRung ? escAT_(r.chuRung) : '<span class="hint">Không tra được</span>') + '</td><td>' + escAT_(r.diaChiRung || '') + '</td><td>' + toaDoAnhText + '</td>' +
+            '<td>' + (r.nguonToaDo ? escAT_(r.nguonToaDo) : '<span class="hint">Không có</span>') + '</td><td>' + toaDoDangKyText + '</td><td>' + escAT_(r.diaChiTrenAnh || '') + '</td>' +
             '<td>' + r.ketLuan + '</td><td>' + r.dauHieu + '</td></tr>';
         });
         html += '</table>';
@@ -499,8 +503,8 @@
         kq.ketQua.forEach(function (r) {
           var toaDoText = r.gpsAnh ? '<a href="#" onclick="xemToaDoAnh(' + r.gpsAnh.lat + ',' + r.gpsAnh.lng + ');return false;">' + r.gpsAnh.lat.toFixed(5) + ', ' + r.gpsAnh.lng.toFixed(5) + '</a>' : '<span class="hint">Chưa có</span>';
           html += '<tr' + (r.ketLuan !== 'Bình thường' ? ' class="row-vang"' : '') + '>' +
-            '<td>' + (r.url ? '<a href="' + r.url + '" target="_blank">xem</a>' : r.file) + '</td>' +
-            '<td>' + (r.chuRung || '') + '</td><td>' + toaDoText + '</td>' +
+            '<td>' + (r.url ? '<a href="' + urlAT_(r.url) + '" target="_blank">xem</a>' : escAT_(r.file)) + '</td>' +
+            '<td>' + escAT_(r.chuRung || '') + '</td><td>' + toaDoText + '</td>' +
             '<td>' + (r.nguonToaDo || '<span class="hint">Không có</span>') + '</td><td>' + (r.diaChiTrenAnh || '') + '</td>' +
             '<td>' + r.ketLuan + '</td><td>' + r.dauHieu + '</td><td>' + (r.khoangCachM != null ? r.khoangCachM : '') + '</td></tr>';
         });
@@ -588,7 +592,7 @@
         var box = document.createElement('div');
         box.className = 'card'; box.style.padding = '12px'; box.style.marginBottom = '10px';
         box.innerHTML =
-          '<div class="data-row"><span>' + (a.url ? '<a href="' + a.url + '" target="_blank">🖼️ ' + a.tenFile + '</a>' : a.tenFile) + '</span>' +
+          '<div class="data-row"><span>' + (a.url ? '<a href="' + urlAT_(a.url) + '" target="_blank">🖼️ ' + escAT_(a.tenFile) + '</a>' : escAT_(a.tenFile)) + '</span>' +
           '<b style="color:' + mau + '">' + a.trangThai + '</b></div>' +
           (a.gpsLat ? '<div class="hint">GPS: ' + Number(a.gpsLat).toFixed(6) + ', ' + Number(a.gpsLng).toFixed(6) + ' — sẽ ghi vào HD_GPS khi duyệt</div>' : '<div class="hint">Không có GPS trong ảnh</div>') +
           (a.diaChiRung ? '<div class="hint">Địa chỉ ghi chú: ' + a.diaChiRung + '</div>' : '') +

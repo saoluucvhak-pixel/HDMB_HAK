@@ -228,7 +228,7 @@
   </div>
 
 <script>
-  function escHtmlTQ_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function escHtmlTQ_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   function formatTienTQ_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
   function formatSoTQ_(v) { return (Number(v) || 0).toLocaleString('vi-VN'); }
   var tinhTrangDangLoc_ = ''; // rỗng = Tất cả

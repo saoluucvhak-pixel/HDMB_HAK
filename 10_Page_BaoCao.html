@@ -504,7 +504,8 @@
   // ============ TAB "THEO DÕI HỢP ĐỒNG THEO KHÁCH HÀNG" (mẹ-con, chỉ xem) ============
   // Ghi chú: dùng data-* + addEventListener (không nhúng chuỗi vào onclick) — an toàn
   // với tên/địa chỉ có ký tự đặc biệt (bài học từ lần sửa lỗi ở trang mẹ-con Thêm/Sửa).
-  function escHtmlKH_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function urlKH_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escHtmlKH_(u) : '#'; } // chặn link javascript: lưu trong ô Sheet
+  function escHtmlKH_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   var daTaiTabTheoDoiKH_ = false;
   document.querySelector('[data-panel="pTheoDoiKH"]').addEventListener('click', function () {
     if (daTaiTabTheoDoiKH_) return;
@@ -618,7 +619,7 @@
         var tbody = document.createElement('tbody');
         list.forEach(function (r) {
           var trRung = document.createElement('tr'); trRung.className = 'hang-cha';
-          var linkHoSo = (r.dinhKem && r.dinhKem.url) ? ' — <a href="' + r.dinhKem.url + '" target="_blank">📎 xem</a>' : '';
+          var linkHoSo = (r.dinhKem && r.dinhKem.url) ? ' — <a href="' + urlKH_(r.dinhKem.url) + '" target="_blank">📎 xem</a>' : '';
           trRung.innerHTML = '<td><span class="mui-ten">▶</span></td><td>' + escHtmlKH_(r.maRung || r.idRung) + '</td><td>' + escHtmlKH_(r.diaChiRung) + '</td>' +
             '<td class="so-lieu">' + formatSo(r.dienTichM2) + '</td><td class="so-lieu">' + formatSo(r.khoiLuongDuKien) + '</td>' +
             '<td>' + escHtmlKH_(r.hoSoNguonGoc) + linkHoSo + '</td>';
@@ -669,7 +670,7 @@
         var h = '<table class="mecon-table"><thead><tr><th>Điểm</th><th>Tọa độ</th><th>Ảnh minh chứng</th></tr></thead><tbody>';
         list.forEach(function (p, i) {
           h += '<tr><td>Điểm ' + (i + 1) + '</td><td><a href="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '" target="_blank">' + p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + ' 🗺️</a></td>' +
-            '<td>' + (p.hinhAnh ? '<a href="' + p.hinhAnh + '" target="_blank">🖼️ xem</a>' : '—') + '</td></tr>';
+            '<td>' + (p.hinhAnh ? '<a href="' + urlKH_(p.hinhAnh) + '" target="_blank">🖼️ xem</a>' : '—') + '</td></tr>';
         });
         h += '</tbody></table>'; elND.innerHTML = h;
       }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layGPSCuaRung(idRung);
@@ -680,7 +681,7 @@
         var h = '<table class="mecon-table"><tbody>' +
           '<tr><th style="width:200px">Loại hồ sơ nguồn gốc</th><td>' + escHtmlKH_(hs.hoSoNguonGoc || '(chưa nhập)') + '</td></tr>' +
           '<tr><th>Số giấy tờ</th><td>' + escHtmlKH_(hs.soGiayTo || '(chưa nhập)') + '</td></tr>' +
-          '<tr><th>File đính kèm</th><td>' + (hs.dinhKem && hs.dinhKem.url ? '<a href="' + hs.dinhKem.url + '" target="_blank">📎 ' + escHtmlKH_(hs.dinhKem.ten) + '</a>' : '(chưa đính kèm)') + '</td></tr>' +
+          '<tr><th>File đính kèm</th><td>' + (hs.dinhKem && hs.dinhKem.url ? '<a href="' + urlKH_(hs.dinhKem.url) + '" target="_blank">📎 ' + escHtmlKH_(hs.dinhKem.ten) + '</a>' : '(chưa đính kèm)') + '</td></tr>' +
           '</tbody></table>'; elND.innerHTML = h;
       }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layHoSoCuaHopDong(idHD);
     }
