@@ -14,7 +14,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 
 ## 2. Kết quả
 
-### Server (bộ giả lập Apps Script) — 37/37 đạt (f064f8a: 24/32 · 8cbf662: 8/32)
+### Server (bộ giả lập Apps Script) — 40/40 đạt (f064f8a: 24/32 · 8cbf662: 8/32)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -55,8 +55,11 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-HA-02 | Tải ảnh: chỉ trả ảnh thuộc hợp đồng đang xem (không lấy được file Drive khác), dùng ảnh thu nhỏ Driv | ✅ PASS | — (chưa có) | — (chưa có) |
 | T-HA-03 | Xuất PDF: đúng ảnh đã chọn, chú thích lô/GPS, CCCD che với Chỉ xem, tên khách hàng độc hại bị escape | ✅ PASS | — (chưa có) | — (chưa có) |
 | T-HA-04 | Xuất PDF: quá 60 ảnh thì lấy 60 ảnh đầu và báo số ảnh bỏ qua | ✅ PASS | — (chưa có) | — (chưa có) |
+| T-HA-05 | Hồ sơ pháp lý: Nhập liệu thấy hồ sơ từng lô (kể cả theo khách hàng) và xem được trang đầu; Chỉ xem c | ✅ PASS | — (chưa có) | — (chưa có) |
+| T-HA-06 | Xuất PDF kèm hồ sơ: Nhập liệu nhận danh mục + danh sách file để ghép, xuất được cả khi bỏ chọn hết ả | ✅ PASS | — (chưa có) | — (chưa có) |
+| T-HA-07 | LAY_FILE_HO_SO: chỉ trả file là hồ sơ của hợp đồng đang xem; Chỉ xem bị chặn; Google Docs chuyển san | ✅ PASS | — (chưa có) | — (chưa có) |
 
-### Trình duyệt (Chromium + giả lập google.script.run) — 40/40 đạt (f064f8a: 27/34 · 8cbf662: 13/33)
+### Trình duyệt (Chromium + giả lập google.script.run) — 42/42 đạt (f064f8a: 27/34 · 8cbf662: 13/33)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -85,6 +88,8 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | UI-TC-03 | Tra cứu: lọc Từ ngày–Đến ngày gửi đúng ngày lên server; chọn nhanh "Tháng trước"; ngày ngược bị chặn | ✅ PASS | — (chưa có) | — (chưa có) |
 | UI-HA-01 | Tra cứu hình ảnh: tìm -> "Ảnh cả khách hàng" -> thư viện theo lô, ảnh thu nhỏ tải theo lô, phóng to  | ✅ PASS | — (chưa có) | — (chưa có) |
 | UI-HA-02 | Tra cứu hình ảnh: bỏ chọn ảnh -> xuất PDF chỉ gửi ảnh đang chọn, tải file xuống; bỏ chọn hết thì khô | ✅ PASS | — (chưa có) | — (chưa có) |
+| UI-HA-03 | Hồ sơ pháp lý: hiện trang đầu từng hồ sơ (chữ độc hại an toàn), bấm để phóng to + link file gốc; xuấ | ✅ PASS | — (chưa có) | — (chưa có) |
+| UI-HA-04 | Hồ sơ pháp lý: bỏ chọn hết ảnh vẫn xuất được hồ sơ (khongAnh); không có công cụ ghép thì vẫn tải fil | ✅ PASS | — (chưa có) | — (chưa có) |
 | UI-TL-ND | Thiết lập: danh sách người dùng hiện dạng chữ (email/tên độc hại không chạy), bấm Sửa nạp lại form | ✅ PASS | FAIL — page.click: Timeout 30000ms exceeded. | FAIL — page.click: Timeout 30000ms exceeded. |
 | UI-LOAD-07 | 07_Form_HopDong.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |
 | UI-LOAD-10 | 10_Page_BaoCao.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |
@@ -144,7 +149,7 @@ Test chỉ có ở mã cũ (trang đã xóa vì là mã chết): UI-LOAD-26.
 | Accessibility | ⚠️ Tĩnh | 0 thuộc tính `aria-*`/`role`, 169 `<label>` không gắn `for` → xem 09_TODO |
 | Login / Logout / Session | ✅ | T-AUTH-01..05, UI-AUTH-01..04: đăng nhập qua Cổng, dùng lại link, sửa chữ ký, hết hạn, email chưa cấp quyền, khóa tài khoản khi đang có phiên, đăng xuất, trang nhúng |
 | Permission / Role | ✅ | 38 hàm công khai gọi thẳng đều bị chặn; bảng quyền 123 chức năng; Chỉ xem không ghi được, Nhập liệu không quản lý người dùng; menu ẩn theo vai trò |
-| Tra cứu hình ảnh / xuất PDF ảnh | ✅ | T-HA-01..04, UI-HA-01/02: gom ảnh theo lô + GPS, theo khách hàng (cùng CCCD), chặn tải file Drive ngoài hợp đồng, cache ảnh nhỏ, chọn ảnh, giới hạn 60 ảnh, escape, che CCCD. Bộ chuyển HTML→PDF của Google chỉ chạy được trên Apps Script thật |
+| Tra cứu hình ảnh / xuất PDF ảnh + hồ sơ pháp lý | ✅ | T-HA-01..07, UI-HA-01..04 (ghép PDF thật bằng pdf-lib 1.17.1: PDF nhiều trang + ảnh scan, báo file không ghép được, dự phòng khi không tải được thư viện; hồ sơ chỉ Nhập liệu/Quản trị): gom ảnh theo lô + GPS, theo khách hàng (cùng CCCD), chặn tải file Drive ngoài hợp đồng, cache ảnh nhỏ, chọn ảnh, giới hạn 60 ảnh, escape, che CCCD. Bộ chuyển HTML→PDF của Google chỉ chạy được trên Apps Script thật |
 | Search (Tra cứu hợp đồng) | ✅ | T-TC-01/02/03, UI-TC-01/02/03: lọc Từ ngày–Đến ngày ký, không dấu, số 1 phần, che số theo vai trò, chống bấm lặp, dữ liệu độc hại |
 | LocalStorage / IndexedDB | N/A | Không dùng (trừ 1 chỗ ở trang 24) |
 | Dark Mode | N/A | Ứng dụng không có chế độ tối |

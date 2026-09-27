@@ -9,6 +9,10 @@
  *    Drive; máy chủ chỉ trả ảnh thuộc đúng các hợp đồng đang xem (không nhận
  *    ID Drive tùy ý từ trình duyệt).
  *  - PDF tạo trong bộ nhớ và trả về trình duyệt tải xuống, không lưu vào Drive.
+ *  - Hồ sơ pháp lý (cột "Đính kèm giấy tờ" của từng lô: GCN QSDĐ, CCCD, ủy quyền...)
+ *    chỉ vai trò Nhập liệu / Quản trị xem được. Khi xuất PDF có chọn "Kèm hồ sơ pháp
+ *    lý", trình duyệt tải từng file (LAY_FILE_HO_SO) rồi ghép nguyên văn vào cuối
+ *    file PDF ảnh (thư viện pdf-lib) -> 1 file duy nhất.
  * ============================================================
  */
 const ANH_TC_CO_NHO = 400;        // cạnh dài ảnh thu nhỏ (px)
@@ -18,6 +22,7 @@ const ANH_TC_TOI_DA_PDF = 60;     // số ảnh tối đa trong 1 file PDF
 const ANH_TC_TOI_DA_MOI_LUOT = 30; // số ảnh thu nhỏ tối đa mỗi lần gọi
 const ANH_TC_TOI_DA_TIM_TEN = 40; // số ô lưu TÊN file (chưa chuyển sang link) được dò trên Drive mỗi lần xem
 const MAU_ID_DRIVE = /^[A-Za-z0-9_-]{15,}$/;
+const HO_SO_TC_TOI_DA_BYTE = 15 * 1024 * 1024; // 1 file hồ sơ pháp lý tối đa 15 MB khi ghép vào PDF
 
 /** ID file Drive từ link (…/d/ID/…, ?id=ID). Rỗng nếu không phải link Drive. */
 function _idDriveTuLink_(v) {
@@ -60,7 +65,9 @@ function _thuThapAnh_(idHD, theoKhachHang) {
     const idH = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
     const idR = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
     if (!idHDs[idH] || !idR) return;
-    const lo = { idRung: idR, idHD: idH, maRung: (r[RUNG_COL.MA_RUNG] || '').toString(), diaChiRung: (r[RUNG_COL.DIA_CHI_RUNG] || '').toString() };
+    const lo = { idRung: idR, idHD: idH, maRung: (r[RUNG_COL.MA_RUNG] || '').toString(), diaChiRung: (r[RUNG_COL.DIA_CHI_RUNG] || '').toString(),
+      hoSoNguonGoc: (r[RUNG_COL.HO_SO_NGUON_GOC] || '').toString(), soGiayTo: (r[RUNG_COL.SO_GIAY_TO] || '').toString(),
+      ngayGiayTo: _ngayHienThi_(r[RUNG_COL.NGAY_GIAY_TO]), dinhKem: r[RUNG_COL.DINH_KEM_GIAY_TO] };
     loTheoId[idR] = lo;
     (loTheoHD[idH] = loTheoHD[idH] || []).push(lo);
   });
@@ -113,7 +120,7 @@ function _thuThapAnh_(idHD, theoKhachHang) {
   });
 
   const duocXemDu = _coQuyen_(QUYEN.NHAP_LIEU);
-  let tongAnh = 0;
+  let tongAnh = 0, tongHoSo = 0, hoSoBiAn = 0;
   const hopDong = hd.ds.map(function (r) {
     const idH = (r[NCC_COL.ID_HD] || '').toString().trim();
     const nhom = [];
@@ -124,10 +131,21 @@ function _thuThapAnh_(idHD, theoKhachHang) {
       if (a.length) nhom.push({ tieuDe: 'Lô ' + (lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + lo.diaChiRung : ''), idRung: lo.idRung, anh: a });
     });
     nhom.forEach(function (n) { tongAnh += n.anh.length; });
+    // Hồ sơ pháp lý của từng lô (1 file/lô) — chỉ Nhập liệu / Quản trị
+    const hoSo = [];
+    (loTheoHD[idH] || []).forEach(function (lo) {
+      if (!((lo.dinhKem || '').toString().trim())) return;
+      if (!duocXemDu) { hoSoBiAn++; return; }
+      const l = giaiLink(lo.dinhKem);
+      if (!l) return;
+      hoSo.push({ ma: 'H' + lo.idRung, id: l.id, url: l.url, loai: 'Hồ sơ pháp lý', lo: 'Lô ' + (lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + lo.diaChiRung : ''),
+        hoSoNguonGoc: lo.hoSoNguonGoc, soGiayTo: lo.soGiayTo, ngayGiayTo: lo.ngayGiayTo });
+    });
+    tongHoSo += hoSo.length;
     return {
       idHD: idH, soHD: (r[NCC_COL.SO_HD] || '').toString(), ngayKy: _ngayHienThi_(r[NCC_COL.NGAY_KY]),
       tinhTrang: (r[NCC_COL.TINH_TRANG] || '').toString(), diaChiRung: (r[NCC_COL.DIA_CHI_RUNG] || '').toString(),
-      soLo: (loTheoHD[idH] || []).length, nhom: nhom
+      soLo: (loTheoHD[idH] || []).length, nhom: nhom, hoSo: hoSo
     };
   });
   return {
@@ -140,6 +158,8 @@ function _thuThapAnh_(idHD, theoKhachHang) {
     },
     hopDong: hopDong,
     tongAnh: tongAnh,
+    tongHoSo: tongHoSo,
+    hoSoBiAn: hoSoBiAn,       // số lô có hồ sơ nhưng vai trò hiện tại không được xem
     chuaCoLink: chuaCoLink
   };
 }
@@ -214,7 +234,10 @@ function _taiAnhDrive_(ids, co) {
 /** Tập ID ảnh được phép xem cho (hợp đồng / khách hàng) này — chặn tải file Drive tùy ý. */
 function _idAnhDuocPhep_(duLieu) {
   const s = {};
-  duLieu.hopDong.forEach(function (h) { h.nhom.forEach(function (n) { n.anh.forEach(function (a) { s[a.id] = true; }); }); });
+  duLieu.hopDong.forEach(function (h) {
+    h.nhom.forEach(function (n) { n.anh.forEach(function (a) { s[a.id] = true; }); });
+    (h.hoSo || []).forEach(function (x) { s[x.id] = true; }); // chỉ có khi vai trò được xem hồ sơ
+  });
   return s;
 }
 
@@ -241,14 +264,25 @@ function _escPdf_(s) {
 
 /**
  * CHỨC NĂNG: xuất PDF ảnh. maChon: danh sách `ma` ảnh người dùng đã tick (rỗng = tất cả).
- * Trả { thanhCong, base64, tenFile, mimeType, soAnh, boQua, loiTai }.
+ * tuyChon: { kemHoSo: true -> thêm bảng danh mục hồ sơ pháp lý + trả danh sách file để
+ * trình duyệt ghép vào cuối (chỉ Nhập liệu / Quản trị), khongAnh: true -> không lấy ảnh nào }.
+ * Trả { thanhCong, base64, tenFile, mimeType, soAnh, boQua, loiTai, hoSoKem: [{id, ten, lo, ...}] }.
  */
-function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon) {
+function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
+  tuyChon = tuyChon || {};
   const duLieu = _thuThapAnh_(idHD, theoKhachHang);
   if (!duLieu) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng.' };
+  if (tuyChon.kemHoSo && !_coQuyen_(QUYEN.NHAP_LIEU)) return { thanhCong: false, loi: 'Chỉ vai trò Nhập liệu / Quản trị được xuất hồ sơ pháp lý.' };
+  const hoSoKem = [];
+  if (tuyChon.kemHoSo) {
+    duLieu.hopDong.forEach(function (h) {
+      (h.hoSo || []).forEach(function (x) { hoSoKem.push(Object.assign({ soHD: h.soHD }, x)); });
+    });
+  }
   const chon = {};
-  const coChon = Array.isArray(maChon) && maChon.length > 0;
-  if (coChon) maChon.forEach(function (m) { chon[String(m)] = true; });
+  const khongAnh = !!tuyChon.khongAnh;
+  const coChon = khongAnh || (Array.isArray(maChon) && maChon.length > 0);
+  if (coChon && !khongAnh) maChon.forEach(function (m) { chon[String(m)] = true; });
 
   // Giữ đúng thứ tự hiển thị; cắt ở ANH_TC_TOI_DA_PDF ảnh
   let dem = 0, boQua = 0;
@@ -265,7 +299,7 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon) {
     });
     h.nhom = h.nhom.filter(function (n) { return n.anh.length; });
   });
-  if (!dem) return { thanhCong: false, loi: 'Chưa có ảnh nào được chọn để xuất.' };
+  if (!dem && !hoSoKem.length) return { thanhCong: false, loi: tuyChon.kemHoSo ? 'Chưa có ảnh nào được chọn và không có hồ sơ pháp lý để xuất.' : 'Chưa có ảnh nào được chọn để xuất.' };
 
   const duLieuAnh = {};
   for (let i = 0; i < ids.length; i += 20) Object.assign(duLieuAnh, _taiAnhDrive_(ids.slice(i, i + 20), ANH_TC_CO_PDF));
@@ -319,11 +353,45 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon) {
       html += '</table>';
     });
   });
+  if (hoSoKem.length) {
+    html += '<h2>Hồ sơ pháp lý đính kèm (' + hoSoKem.length + ' file)</h2>' +
+      '<div class="phu">Các file dưới đây được ghép nguyên văn vào cuối tài liệu này, theo đúng thứ tự trong bảng.</div>' +
+      '<table class="tt"><tr><th>#</th><th>Số HĐ</th><th>Lô rừng</th><th>Hồ sơ nguồn gốc</th><th>Số giấy tờ</th><th>Ngày</th></tr>';
+    hoSoKem.forEach(function (x, i) {
+      html += '<tr><td>' + (i + 1) + '</td><td>' + _escPdf_(x.soHD) + '</td><td>' + _escPdf_(x.lo) + '</td><td>' + _escPdf_(x.hoSoNguonGoc) + '</td><td>' + _escPdf_(x.soGiayTo) + '</td><td>' + _escPdf_(x.ngayGiayTo) + '</td></tr>';
+    });
+    html += '</table>';
+  }
   html += '</body></html>';
 
   const pdf = Utilities.newBlob(html, 'text/html', 'anh.html').getAs('application/pdf');
   const tenGoc = duLieu.theoKhachHang ? 'Anh_KH_' + kh.ten : 'Anh_HD_' + (duLieu.hopDong[0] ? duLieu.hopDong[0].soHD : duLieu.idHD);
   const tenFile = boDauTiengViet_(tenGoc).replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').slice(0, 80) + '.pdf';
-  ghiNhatKy_('Xuất PDF ảnh', duLieu.idHD, dem + ' ảnh' + (duLieu.theoKhachHang ? ' (mọi hợp đồng của khách hàng)' : ''));
-  return { thanhCong: true, base64: Utilities.base64Encode(pdf.getBytes()), tenFile: tenFile, mimeType: 'application/pdf', soAnh: dem, boQua: boQua, loiTai: loiTai };
+  ghiNhatKy_('Xuất PDF ảnh', duLieu.idHD, dem + ' ảnh' + (hoSoKem.length ? ' + ' + hoSoKem.length + ' hồ sơ pháp lý' : '') + (duLieu.theoKhachHang ? ' (mọi hợp đồng của khách hàng)' : ''));
+  return { thanhCong: true, base64: Utilities.base64Encode(pdf.getBytes()), tenFile: tenFile, mimeType: 'application/pdf', soAnh: dem, boQua: boQua, loiTai: loiTai,
+    hoSoKem: hoSoKem.map(function (x) { return { id: x.id, soHD: x.soHD, lo: x.lo, hoSoNguonGoc: x.hoSoNguonGoc, soGiayTo: x.soGiayTo }; }) };
+}
+
+/**
+ * CHỨC NĂNG (Nhập liệu / Quản trị): nội dung 1 file hồ sơ pháp lý để ghép vào PDF.
+ * Chỉ nhận file là hồ sơ của các lô thuộc (idHD, theoKhachHang). File Google Docs/Sheets
+ * được chuyển sang PDF. Trả { thanhCong, base64, mimeType, ten } hoặc { thanhCong: false, loi }.
+ */
+function LAY_FILE_HO_SO_(idHD, theoKhachHang, id) {
+  const duLieu = _thuThapAnh_(idHD, theoKhachHang);
+  if (!duLieu) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng.' };
+  id = String(id || '');
+  let laHoSo = false;
+  duLieu.hopDong.forEach(function (h) { (h.hoSo || []).forEach(function (x) { if (x.id === id) laHoSo = true; }); });
+  if (!MAU_ID_DRIVE.test(id) || !laHoSo) return { thanhCong: false, loi: 'File không thuộc hồ sơ pháp lý của hợp đồng đang xem.' };
+  try {
+    const f = DriveApp.getFileById(id);
+    const mime = f.getMimeType() || '';
+    const blob = mime.indexOf('application/vnd.google-apps.') === 0 ? f.getAs('application/pdf') : f.getBlob();
+    const bytes = blob.getBytes();
+    if (bytes.length > HO_SO_TC_TOI_DA_BYTE) return { thanhCong: false, ten: f.getName(), loi: 'File "' + f.getName() + '" lớn hơn 15 MB — mở riêng trên Drive.' };
+    return { thanhCong: true, base64: Utilities.base64Encode(bytes), mimeType: blob.getContentType() || mime, ten: f.getName() };
+  } catch (e) {
+    return { thanhCong: false, loi: 'Không đọc được file hồ sơ (đã bị xóa hoặc không có quyền): ' + e.message };
+  }
 }

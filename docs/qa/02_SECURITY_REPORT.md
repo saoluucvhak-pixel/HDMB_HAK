@@ -50,6 +50,8 @@ Chủ dự án chọn **cùng mô hình với HAK_WEBAPP_DNTT_DRAFT (v2026.7)**,
 
 **Vì sao vẫn để `access: ANYONE_ANONYMOUS`:** webhook Telegram (`doPost`) và `?action=run` (SYNC_TOKEN) được gọi từ máy chủ ngoài không đăng nhập Google. Bảo vệ nằm ở từng lời gọi, không phụ thuộc cấu hình triển khai. Trang HTML vẫn tải được cho người lạ nhưng không có dữ liệu.
 
+**Hồ sơ pháp lý (CCCD, GCN QSDĐ…) trong Tra cứu hình ảnh:** chỉ Nhập liệu / Quản trị thấy và tải được; máy chủ chỉ trả file thuộc hợp đồng đang xem (không nhận ID Drive tùy ý), Chỉ xem chỉ thấy số lượng bị khóa. Mỗi lần xuất PDF ghi Nhật ký (người xuất, số ảnh, số hồ sơ) — T-HA-05..07.
+
 **Giới hạn còn lại (nói rõ):**
 - Vai trò **Chỉ xem** vẫn thấy CCCD/SĐT/số TK đầy đủ ở các trang báo cáo/tổng quan (như trước); chỉ trang Tra cứu che bớt. Muốn che toàn hệ thống cần sửa từng hàm báo cáo.
 - Người được chia sẻ **trực tiếp file Google Sheet** vẫn đọc/sửa dữ liệu trên Sheet — phân quyền webapp không thay được quyền chia sẻ của Google Drive.
