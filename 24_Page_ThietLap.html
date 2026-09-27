@@ -575,19 +575,39 @@
   function thuHoiQuyen(id, permissionId, email, ten) {
     if (!confirm('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.')) return;
     var adminToken = layAdminToken_();
-    if (!adminToken) { alert('❌ Cần nhập mật khẩu quản trị.'); return; }
+    if (!adminToken) { thongBao_('❌ Cần nhập mật khẩu quản trị.'); return; }
     google.script.run
       .withSuccessHandler(function (kq) {
         if (kq.thanhCong) taiDanhSachQuyen(); else {
-          alert('❌ Lỗi: ' + kq.loi);
+          thongBao_('❌ Lỗi: ' + kq.loi);
           if (kq.loi && kq.loi.indexOf('Sai mật khẩu') !== -1) _adminTokenCache_ = null;
         }
       })
-      .withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); })
+      .withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); })
       .THU_HOI_QUYEN_TRUY_CAP(adminToken, id, permissionId);
   }
 
   // ---- Bảo trì dữ liệu (mồ côi & đồng bộ mẹ-con) ----
+  // Thông báo nổi KHÔNG chặn thao tác (thay cho alert()): tự tắt sau vài giây, bấm để đóng,
+  // màu theo tiền tố ❌ / ⚠️ / ✅ sẵn có của nội dung, trình đọc màn hình đọc được (aria-live).
+  function thongBao_(noiDung) {
+    var s = String(noiDung === null || noiDung === undefined ? '' : noiDung);
+    var loai = /^❌/.test(s) ? 'loi' : /^⚠️/.test(s) ? 'canhbao' : /^✅/.test(s) ? 'ok' : 'tin';
+    var hop = document.getElementById('hakToastHop');
+    if (!hop) {
+      hop = document.createElement('div'); hop.id = 'hakToastHop';
+      hop.setAttribute('role', 'status'); hop.setAttribute('aria-live', 'polite');
+      hop.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100000;display:flex;flex-direction:column;gap:8px;max-width:min(420px,calc(100vw - 24px))';
+      document.body.appendChild(hop);
+    }
+    var o = document.createElement('div');
+    o.textContent = s; o.title = 'Bấm để đóng'; o.className = 'hak-toast hak-toast-' + loai;
+    o.style.cssText = 'background:' + { loi: '#c0392b', canhbao: '#b9770e', ok: '#1e8449', tin: '#2c3e50' }[loai] +
+      ';color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:13px;line-height:1.45;white-space:pre-line;word-break:break-word;cursor:pointer';
+    o.onclick = function () { if (o.parentNode) o.parentNode.removeChild(o); };
+    hop.appendChild(o);
+    setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, loai === 'loi' ? 12000 : 6000);
+  }
   function escHtmlBT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   function renderKetQuaMoCoi_(kq) {
     var el = document.getElementById('ketQuaBaoTri');

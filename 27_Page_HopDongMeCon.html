@@ -242,6 +242,26 @@
 
 <script>
   // ============ TIỆN ÍCH DÙNG CHUNG ============
+  // Thông báo nổi KHÔNG chặn thao tác (thay cho alert()): tự tắt sau vài giây, bấm để đóng,
+  // màu theo tiền tố ❌ / ⚠️ / ✅ sẵn có của nội dung, trình đọc màn hình đọc được (aria-live).
+  function thongBao_(noiDung) {
+    var s = String(noiDung === null || noiDung === undefined ? '' : noiDung);
+    var loai = /^❌/.test(s) ? 'loi' : /^⚠️/.test(s) ? 'canhbao' : /^✅/.test(s) ? 'ok' : 'tin';
+    var hop = document.getElementById('hakToastHop');
+    if (!hop) {
+      hop = document.createElement('div'); hop.id = 'hakToastHop';
+      hop.setAttribute('role', 'status'); hop.setAttribute('aria-live', 'polite');
+      hop.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100000;display:flex;flex-direction:column;gap:8px;max-width:min(420px,calc(100vw - 24px))';
+      document.body.appendChild(hop);
+    }
+    var o = document.createElement('div');
+    o.textContent = s; o.title = 'Bấm để đóng'; o.className = 'hak-toast hak-toast-' + loai;
+    o.style.cssText = 'background:' + { loi: '#c0392b', canhbao: '#b9770e', ok: '#1e8449', tin: '#2c3e50' }[loai] +
+      ';color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:13px;line-height:1.45;white-space:pre-line;word-break:break-word;cursor:pointer';
+    o.onclick = function () { if (o.parentNode) o.parentNode.removeChild(o); };
+    hop.appendChild(o);
+    setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, loai === 'loi' ? 12000 : 6000);
+  }
   function escHtml_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // escape cả dấu nháy: giá trị có " trong value="..." không bị cắt cụt khi sửa rồi lưu
   function formatSo_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
   function formatTien_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
@@ -289,7 +309,7 @@
   /** Tải lười — chỉ gọi lần đầu tiên cần đến (mở wizard/form thêm hợp đồng), các lần sau dùng lại cache */
   function damBaoDaTaiKhachHangDayDu_(khiXong) {
     if (daTaiKhachHangDayDu_) { khiXong(); return; }
-    google.script.run.withSuccessHandler(function (kq) { khachHangCoSan_ = kq.items || []; daTaiKhachHangDayDu_ = true; khiXong(); }).withFailureHandler(function (err) { alert('❌ Lỗi tải danh sách khách hàng: ' + err.message); }).layDanhSachKhachHang(1, 5000, '');
+    google.script.run.withSuccessHandler(function (kq) { khachHangCoSan_ = kq.items || []; daTaiKhachHangDayDu_ = true; khiXong(); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi tải danh sách khách hàng: ' + err.message); }).layDanhSachKhachHang(1, 5000, '');
   }
 
   // ============ TRANG 1: DANH MỤC KHÁCH HÀNG (GỐC) ============
@@ -612,7 +632,7 @@
       if (truong.ngayCap) dienNeuTrongScan_('wNgayCap', truong.ngayCap);
       dienNeuTrongScan_('wNoiCap', truong.noiCap);
       document.getElementById('wCccd').dispatchEvent(new Event('input')); // kích hoạt lại tự điền MST theo CCCD (noiMSTTheoCccd_ đã gắn sẵn ở dưới)
-      alert('✅ Đã đọc xong CCCD — kiểm tra lại thông tin trước khi bấm Tiếp tục (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      thongBao_('✅ Đã đọc xong CCCD — kiểm tra lại thông tin trước khi bấm Tiếp tục (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
     });
     document.getElementById('btnQuayLaiBuoc1').addEventListener('click', function () {
       // Lưu tạm những gì đã gõ trước khi quay lại Bước 1 (để nếu vào lại 1b sau đó vẫn còn)
@@ -635,7 +655,7 @@
       wz.noiCap = document.getElementById('wNoiCap').value.trim();
       wz.maSoThue = document.getElementById('wMaSoThue').value.trim();
       wz.nhomKH = document.getElementById('wNhomKH').value.trim();
-      if (!wz.tenChuRung || !wz.cccdChuRung) { alert('Cần nhập đủ Họ tên và Số CCCD.'); return; }
+      if (!wz.tenChuRung || !wz.cccdChuRung) { thongBao_('Cần nhập đủ Họ tên và Số CCCD.'); return; }
       renderWizardBuoc2_();
     });
     noiMSTTheoCccd_('wCccd', 'wMaSoThue');
@@ -658,10 +678,10 @@
         google.script.run
           .withSuccessHandler(function (kq) {
             elNut.disabled = false; elNut.textContent = nhanGoc; elFile.value = '';
-            if (!kq.thanhCong) { alert('❌ ' + kq.loi); return; }
+            if (!kq.thanhCong) { thongBao_('❌ ' + kq.loi); return; }
             xuLyKetQua(kq.truong, kq);
           })
-          .withFailureHandler(function (err) { elNut.disabled = false; elNut.textContent = nhanGoc; alert('❌ Lỗi đọc scan: ' + err.message); })
+          .withFailureHandler(function (err) { elNut.disabled = false; elNut.textContent = nhanGoc; thongBao_('❌ Lỗi đọc scan: ' + err.message); })
           .OCR_TU_BAN_SCAN(loaiTaiLieu, base64, file.type, file.name);
       };
       reader.readAsDataURL(file);
@@ -677,7 +697,7 @@
     elNut.addEventListener('click', function () {
       var soTK = document.getElementById(idSoTK).value.trim();
       var nganHang = document.getElementById(idNganHang).value.trim();
-      if (!soTK || !nganHang) { alert('Nhập đủ Số tài khoản và Ngân hàng trước khi kiểm tra.'); return; }
+      if (!soTK || !nganHang) { thongBao_('Nhập đủ Số tài khoản và Ngân hàng trước khi kiểm tra.'); return; }
       var elKQ = document.getElementById(idKetQua);
       elKQ.textContent = '⌛ Đang tra cứu...';
       google.script.run
@@ -770,12 +790,12 @@
       dienNeuTrongScan_('wTenUyQuyen', truong.tenUyQuyen);
       dienNeuTrongScan_('wCccdUyQuyen', truong.cccdUyQuyen);
       dienNeuTrongScan_('wDiaChiUyQuyen', truong.diaChiUyQuyen);
-      alert('✅ Đã đọc xong CCCD người ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục.');
+      thongBao_('✅ Đã đọc xong CCCD người ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục.');
     });
     themNutDocScan_('btnScanGiayUyQuyen', 'oScanGiayUyQuyen', 'giay_uy_quyen', function (truong) {
       dienNeuTrongScan_('wTenUyQuyen', truong.tenUyQuyen);
       if (truong.cccdUyQuyen) dienNeuTrongScan_('wCccdUyQuyen', truong.cccdUyQuyen);
-      alert('✅ Đã đọc xong Giấy ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục (giấy ủy quyền thường không có đủ SĐT/địa chỉ, cần bổ sung tay nếu thiếu).');
+      thongBao_('✅ Đã đọc xong Giấy ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục (giấy ủy quyền thường không có đủ SĐT/địa chỉ, cần bổ sung tay nếu thiếu).');
     });
     function luuBuoc2VaoWz_() {
       wz.ngayKy = document.getElementById('wNgayKy').value;
@@ -791,7 +811,7 @@
     document.getElementById('btnQuayLaiBuoc1b').addEventListener('click', function () { luuBuoc2VaoWz_(); renderWizardBuoc1b_(); });
     document.getElementById('btnTiepBuoc3').addEventListener('click', function () {
       luuBuoc2VaoWz_();
-      if (!wz.ngayKy) { alert('Cần nhập Ngày ký hợp đồng.'); return; }
+      if (!wz.ngayKy) { thongBao_('Cần nhập Ngày ký hợp đồng.'); return; }
       renderWizardBuoc3_();
     });
   }
@@ -893,8 +913,8 @@
             if (ttMoi === 'Đã hủy' && !confirm('Chắc chắn HỦY hợp đồng này?')) return;
             el.querySelectorAll('[data-tt-moi]').forEach(function (b) { b.disabled = true; });
             google.script.run
-              .withSuccessHandler(function (kq) { if (!kq.thanhCong) { alert('❌ ' + kq.loi); renderChiTietHopDong(); return; } renderChiTietHopDong(); })
-              .withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); renderChiTietHopDong(); })
+              .withSuccessHandler(function (kq) { if (!kq.thanhCong) { thongBao_('❌ ' + kq.loi); renderChiTietHopDong(); return; } renderChiTietHopDong(); })
+              .withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); renderChiTietHopDong(); })
               .CAP_NHAT_HOP_DONG(h.soDong, { tinhTrang: ttMoi });
           });
         });
@@ -982,7 +1002,7 @@
             var lnkSua = document.createElement('a'); lnkSua.className = 'lnk-sua'; lnkSua.textContent = 'Sửa';
             lnkSua.addEventListener('click', function () { moModalThemSuaSTK_(h, r); });
             var lnkHuy = document.createElement('a'); lnkHuy.className = 'lnk-huy'; lnkHuy.textContent = 'Xóa';
-            lnkHuy.addEventListener('click', function () { if (confirm('Xóa số tài khoản này?')) google.script.run.withSuccessHandler(function () { taiBangSTK_(h); }).withFailureHandler(function (err) { alert('❌ Lỗi: ' + err.message); }).XOA_TAI_KHOAN(r.soDong); });
+            lnkHuy.addEventListener('click', function () { if (confirm('Xóa số tài khoản này?')) google.script.run.withSuccessHandler(function () { taiBangSTK_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).XOA_TAI_KHOAN(r.soDong); });
             tdNut.appendChild(lnkSua); tdNut.appendChild(lnkHuy);
           }
           tbody.appendChild(tr);
@@ -1120,7 +1140,7 @@
             var lnkSua = document.createElement('a'); lnkSua.className = 'lnk-sua'; lnkSua.style.marginLeft = '8px'; lnkSua.textContent = 'Sửa';
             lnkSua.addEventListener('click', function () { moModalThemSuaRung_(h, r); });
             var lnkHuy = document.createElement('a'); lnkHuy.className = 'lnk-huy'; lnkHuy.textContent = 'Xóa';
-            lnkHuy.addEventListener('click', function () { if (confirm('Xóa lô rừng này?')) google.script.run.withSuccessHandler(function () { taiBangRung_(h); }).withFailureHandler(function (err) { alert('❌ Lỗi xóa lô rừng: ' + err.message); }).XOA_LO_RUNG(r.idRung); });
+            lnkHuy.addEventListener('click', function () { if (confirm('Xóa lô rừng này?')) google.script.run.withSuccessHandler(function () { taiBangRung_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi xóa lô rừng: ' + err.message); }).XOA_LO_RUNG(r.idRung); });
             tdNut.appendChild(lnkSua); tdNut.appendChild(lnkHuy);
           }
           tbody.appendChild(tr);
@@ -1172,7 +1192,7 @@
       dienNeuTrongScan_('mfSoGiayTo', truong.soGiayTo);
       if (truong.dienTichM2) dienNeuTrongScan_('mfDienTich', truong.dienTichM2);
       if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc;
-      alert('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      thongBao_('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
     });
     ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong');
     document.getElementById('btnLuuRung').addEventListener('click', function () {
@@ -1200,7 +1220,7 @@
     document.getElementById('mfKhoiLuong').value = kl ? kl.toLocaleString('vi-VN') : '';
   }
   function goiYDonGiaMC(ngayKy) {
-    if (!ngayKy) { alert('Hợp đồng chưa có Ngày ký.'); return; }
+    if (!ngayKy) { thongBao_('Hợp đồng chưa có Ngày ký.'); return; }
     document.getElementById('goiYDonGiaMC').innerHTML = '⌛ Đang tra...';
     google.script.run.withSuccessHandler(function (kq) {
       if (!kq.thanhCong) { document.getElementById('goiYDonGiaMC').textContent = '❌ ' + kq.loi; return; }

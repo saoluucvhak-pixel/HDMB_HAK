@@ -96,7 +96,7 @@ function CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD) {
         CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_((r[RUNG_COL.ID_RUNG] || '').toString().trim());
       }
     });
-  } catch (e) { /* không để lỗi làm gián đoạn thao tác chính */ }
+  } catch (e) { log_('WARNING', 'CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_', 'Không cập nhật được cache Hồ sơ rừng cho ' + idHD, e); }
 }
 
 function XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung) {

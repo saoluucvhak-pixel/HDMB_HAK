@@ -18,6 +18,12 @@ function doGet(e) {
         "⚠️ Chưa cấu hình SYNC_TOKEN trong Script Properties. Vào Project Settings > Script Properties để thêm."
       ).setMimeType(ContentService.MimeType.TEXT);
     }
+    // Giá trị mẫu của SETUP_SYNC_TOKEN() nằm ngay trong mã nguồn -> ai đọc được code cũng biết; coi như chưa cấu hình.
+    if (SECRET === 'DAT_TOKEN_CUA_BAN_O_DAY') {
+      return ContentService.createTextOutput(
+        "⚠️ SYNC_TOKEN vẫn là giá trị mẫu. Đổi thành chuỗi bí mật riêng trong Project Settings > Script Properties."
+      ).setMimeType(ContentService.MimeType.TEXT);
+    }
     if (e.parameter.token !== SECRET) {
       return ContentService.createTextOutput("❌ Không có quyền truy cập (token sai hoặc thiếu).")
              .setMimeType(ContentService.MimeType.TEXT);
@@ -32,114 +38,36 @@ function doGet(e) {
     }
   }
 
-  if (page === "map") {
-    var tmplMapRieng = HtmlService.createTemplateFromFile('MapContainer');
-    tmplMapRieng.baseUrl = ScriptApp.getService().getUrl();
-    tmplMapRieng.currentPage = 'map';
-    return tmplMapRieng.evaluate()
-      .setTitle('🗺️ Bản đồ GPS HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "form") {
-    var tmplForm = HtmlService.createTemplateFromFile('11_Page_NhapLieu');
-    tmplForm.baseUrl = ScriptApp.getService().getUrl();
-    tmplForm.currentPage = 'form';
-    return tmplForm.evaluate()
-      .setTitle('📝 Nhập liệu HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "baocao") {
-    var tmplBaoCao = HtmlService.createTemplateFromFile('10_Page_BaoCao');
-    tmplBaoCao.baseUrl = ScriptApp.getService().getUrl();
-    tmplBaoCao.currentPage = 'baocao';
-    return tmplBaoCao.evaluate()
-      .setTitle('📊 Báo cáo tổng hợp HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "kiemtra") {
-    var tmplKiemTra = HtmlService.createTemplateFromFile('12_Page_KiemTra');
-    tmplKiemTra.baseUrl = ScriptApp.getService().getUrl();
-    tmplKiemTra.currentPage = 'kiemtra';
-    return tmplKiemTra.evaluate()
-      .setTitle('🔎 Kiểm tra & Đối chiếu HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "huongdan") {
-    var tmplHuongDan = HtmlService.createTemplateFromFile('13_HuongDan');
-    tmplHuongDan.baseUrl = ScriptApp.getService().getUrl();
-    tmplHuongDan.currentPage = 'huongdan';
-    return tmplHuongDan.evaluate()
-      .setTitle('📖 Hướng dẫn sử dụng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "thietlap") {
-    var tmplThietLap = HtmlService.createTemplateFromFile('24_Page_ThietLap');
-    tmplThietLap.baseUrl = ScriptApp.getService().getUrl();
-    tmplThietLap.currentPage = 'thietlap';
-    return tmplThietLap.evaluate()
-      .setTitle('⚙️ Thiết lập HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "meconn") {
-    // ⚠️ ĐÃ SỬA: "meconn" (26_Page_QuanLyMeCon) là bản cũ, trùng lặp phần lớn với
-    // "hopdongmc" (27_Page_HopDongMeCon) nhưng thiếu các cải tiến sau này của 27
-    // (chọn ngân hàng theo tên thật, gợi ý năm trồng, chỉ nhận số nguyên...) và
-    // từng có bug mất file đính kèm hồ sơ pháp lý khi lưu. Không còn liên kết
-    // nào trong menu trỏ tới "meconn", nhưng URL cũ (?page=meconn) có thể đã
-    // được người dùng lưu bookmark — thay vì để họ vào thẳng trang lỗi thời,
-    // route sang cùng trang "hopdongmc" đang được bảo trì.
-    var tmplMeCon = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
-    tmplMeCon.baseUrl = ScriptApp.getService().getUrl();
-    tmplMeCon.currentPage = 'hopdongmc';
-    return tmplMeCon.evaluate()
-      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "hopdongmc") {
-    var tmplHopDongMC = HtmlService.createTemplateFromFile('27_Page_HopDongMeCon');
-    tmplHopDongMC.baseUrl = ScriptApp.getService().getUrl();
-    tmplHopDongMC.currentPage = 'hopdongmc';
-    return tmplHopDongMC.evaluate()
-      .setTitle('📝 Thêm/Sửa hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  if (page === "tongquan") {
-    var tmplTongQuan = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
-    tmplTongQuan.baseUrl = ScriptApp.getService().getUrl();
-    tmplTongQuan.currentPage = 'tongquan';
-    return tmplTongQuan.evaluate()
-      .setTitle('📊 Tổng quan hợp đồng HAK')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  // ⚠️ ĐÃ SỬA: trước đây mở webapp KHÔNG kèm tham số ?page= sẽ mặc định vào
-  // Nhập liệu HĐ/Rừng/TK — giờ mặc định thẳng vào "Tổng quan hợp đồng" (dashboard),
-  // đúng màn hình tổng quan đầu tiên khi vào phần mềm.
-  var tmplTongQuanMacDinh = HtmlService.createTemplateFromFile('30_Page_TongQuanHopDong');
-  tmplTongQuanMacDinh.baseUrl = ScriptApp.getService().getUrl();
-  tmplTongQuanMacDinh.currentPage = 'tongquan';
-  return tmplTongQuanMacDinh.evaluate()
-    .setTitle('📊 Tổng quan hợp đồng HAK')
+  // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
+  // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
+  var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
+  var cauHinh = TRANG_WEBAPP_[tenTrang];
+  var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
+  tmpl.baseUrl = ScriptApp.getService().getUrl();
+  tmpl.currentPage = cauHinh.currentPage || tenTrang;
+  return tmpl.evaluate()
+    .setTitle(cauHinh.title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
+
+/**
+ * Bảng định tuyến ?page=... của webapp: file HTML, tiêu đề tab, và currentPage (mục menu được tô
+ * sáng). Thêm trang mới = thêm 1 dòng ở đây (trước đây mỗi trang là 1 khối if dài 9 dòng chép lại).
+ */
+var TRANG_WEBAPP_ = {
+  map:       { file: 'MapContainer',            title: '🗺️ Bản đồ GPS HAK' },
+  form:      { file: '11_Page_NhapLieu',        title: '📝 Nhập liệu HAK' },
+  baocao:    { file: '10_Page_BaoCao',          title: '📊 Báo cáo tổng hợp HAK' },
+  kiemtra:   { file: '12_Page_KiemTra',         title: '🔎 Kiểm tra & Đối chiếu HAK' },
+  huongdan:  { file: '13_HuongDan',             title: '📖 Hướng dẫn sử dụng HAK' },
+  thietlap:  { file: '24_Page_ThietLap',        title: '⚙️ Thiết lập HAK' },
+  hopdongmc: { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK' },
+  // "meconn" từng là 26_Page_QuanLyMeCon (bản cũ, lỗi thời, có bug mất file đính kèm). URL cũ có
+  // thể còn trong bookmark -> đưa sang cùng trang "hopdongmc" đang được bảo trì.
+  meconn:    { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK', currentPage: 'hopdongmc' },
+  tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' }
+};
 
 function SETUP_SYNC_TOKEN() {
   var token = 'DAT_TOKEN_CUA_BAN_O_DAY';

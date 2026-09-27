@@ -580,7 +580,7 @@ function ghiNhatKy_(hanhDong, idHD, chiTiet) {
     let email = '';
     try { email = Session.getActiveUser().getEmail(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
     sh.appendRow([new Date(), email, hanhDong, idHD || '', chiTiet || '']);
-  } catch (e) { /* không để lỗi ghi log làm hỏng thao tác chính */ }
+  } catch (e) { log_('ERROR', 'ghiNhatKy_', 'Không ghi được nhật ký: ' + hanhDong + ' ' + (idHD || ''), e); /* không để lỗi ghi log làm hỏng thao tác chính */ }
 }
 
 /** Đọc Nhật ký hệ thống (NhatKy_SuaDoi), lọc theo khoảng ngày [tuNgay, denNgay] —
@@ -622,8 +622,33 @@ function ghiLoiBackend_(tenHam, err) {
   try {
     const noiDung = (err && err.message) ? err.message : String(err);
     Logger.log('[LỖI BACKEND — ' + tenHam + '] ' + noiDung + (err && err.stack ? '\n' + err.stack : ''));
+    log_('ERROR', tenHam, noiDung, err);
     ghiNhatKy_('LỖI backend: ' + tenHam, '', noiDung);
   } catch (e2) { /* không để lỗi ghi log làm hỏng luồng chính */ }
+}
+
+/**
+ * Ghi log có mức độ (DEBUG / INFO / SUCCESS / WARNING / ERROR) ra Cloud Logging — appsscript.json
+ * đã bật exceptionLogging STACKDRIVER nên console.* được lưu lại, lọc được theo mức độ, xem ở
+ * Apps Script > Executions (hoặc Google Cloud Logging) cho MỌI lượt chạy, kể cả lượt của người
+ * dùng khác. Khác ghiNhatKy_ (nhật ký nghiệp vụ trong Sheet cho người dùng xem).
+ * DEBUG chỉ ghi khi Script Property LOG_DEBUG = '1', tránh tràn log khi chạy bình thường.
+ */
+let _logDebugBat_ = null;
+function log_(mucDo, nguCanh, thongDiep, chiTiet) {
+  try {
+    if (mucDo === 'DEBUG') {
+      if (_logDebugBat_ === null) _logDebugBat_ = PropertiesService.getScriptProperties().getProperty('LOG_DEBUG') === '1';
+      if (!_logDebugBat_) return;
+    }
+    const banGhi = { mucDo: mucDo, nguCanh: nguCanh, thongDiep: String(thongDiep) };
+    if (chiTiet && typeof chiTiet === 'object' && typeof chiTiet.message === 'string') { banGhi.loi = chiTiet.message; banGhi.stack = chiTiet.stack || ''; } // lỗi (kể cả exception của dịch vụ Google không phải Error thuần)
+    else if (chiTiet !== undefined) banGhi.chiTiet = chiTiet;
+    if (mucDo === 'ERROR') console.error(banGhi);
+    else if (mucDo === 'WARNING') console.warn(banGhi);
+    else if (mucDo === 'DEBUG') console.log(banGhi);
+    else console.info(banGhi); // INFO, SUCCESS
+  } catch (e) { /* log không bao giờ được làm hỏng thao tác chính */ }
 }
 
 /**
@@ -674,7 +699,7 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
       rows.push([tenCache, i === 0 ? new Date().toISOString() : '', json.substr(i * CACHE_CHUNK_SIZE, CACHE_CHUNK_SIZE)]);
     }
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
-  } catch (e) { /* lỗi lưu cache không được làm hỏng kết quả chính — bỏ qua, lần sau tính lại từ đầu */ }
+  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); }
 }
 
 /** Đọc cache đã lưu, trả về null nếu chưa có hoặc đã cũ (có thay đổi mới hơn) */

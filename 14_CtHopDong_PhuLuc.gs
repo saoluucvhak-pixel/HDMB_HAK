@@ -118,7 +118,7 @@ function CAP_NHAT_CT_HOPDONG_(idHD) {
     const soDong = timDongCtHopDong_(sh, idHD);
     if (soDong === -1) sh.appendRow(row);
     else sh.getRange(soDong, 1, 1, row.length).setValues([row]);
-  } catch (e) { /* không để lỗi tổng hợp ct_hopdong làm hỏng thao tác chính */ }
+  } catch (e) { log_('ERROR', 'CAP_NHAT_CT_HOPDONG_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e); }
 }
 
 /** Đọc "Chi tiết hợp đồng" (ct_hopdong) của 1 hợp đồng. Nếu chưa có dòng nào

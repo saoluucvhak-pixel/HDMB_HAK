@@ -547,7 +547,7 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
     const sh = getOrCreateDraftBaoCaoSheet_();
     const soDong = timDongDraftBaoCao_(sh, idHD);
     if (soDong !== -1) sh.deleteRow(soDong);
-  } catch (e) { /* bỏ qua */ }
+  } catch (e) { log_('WARNING', 'XOA_DRAFT_MOT_HOP_DONG_', 'Không xóa được dòng Draft báo cáo của ' + idHD + ' — báo cáo có thể còn dòng thừa', e); }
 }
 
 /**
