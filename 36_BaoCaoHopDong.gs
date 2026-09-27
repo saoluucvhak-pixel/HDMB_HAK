@@ -37,13 +37,13 @@ function _diemGpsTheoLo_(idRungs) {
  * Bản đồ vệ tinh Google Maps (dịch vụ Maps có sẵn của Apps Script, không cần API key):
  * ranh giới lô (>= 3 điểm) + điểm đánh số 1..9, A..Z. Trả data URL PNG hoặc '' nếu lỗi / không có điểm.
  */
-function _banDoTinh_(diem) {
+function _banDoTinh_(diem, khongVung) {
   if (!diem || !diem.length) return '';
   try {
     const ds = diem.slice(0, BC_TOI_DA_DIEM_BAN_DO);
     const m = Maps.newStaticMap().setSize(640, 400).setMapType(Maps.StaticMap.Type.HYBRID).setLanguage('vi');
     if (ds.length === 1) m.setCenter(ds[0].lat, ds[0].lng).setZoom(16);
-    if (ds.length >= 3) {
+    if (ds.length >= 3 && !khongVung) {
       m.setPathStyle(3, '0xFFD400', '0xFFD40040').beginPath();
       ds.forEach(function (p) { m.addPoint(p.lat, p.lng); });
       m.addPoint(ds[0].lat, ds[0].lng).endPath();
@@ -201,7 +201,7 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
       ((r[NCC_COL.TEN_UY_QUYEN] || '').toString().trim() ? '<tr><th>Người được ủy quyền</th><td>' + e(r[NCC_COL.TEN_UY_QUYEN]) + '</td><th>CCCD ủy quyền</th><td>' + e(cccd(r[NCC_COL.CCCD_UY_QUYEN])) + '</td></tr>' : '') +
       '<tr><th>Tài khoản chính</th><td>' + e(stk(r[NCC_COL.SO_TK])) + (r[NCC_COL.NGAN_HANG] ? ' — ' + e(r[NCC_COL.NGAN_HANG]) : '') + '</td><th>Ủy quyền thanh toán</th><td>' + e(r[NCC_COL.UY_QUYEN_TT]) + '</td></tr>';
     (stkTheoHD[h.idHD] || []).forEach(function (t) { html += '<tr><th>Tài khoản khác</th><td colspan="3">' + e(t.soTK) + (t.nganHang ? ' — ' + e(t.nganHang) : '') + (t.ten ? ' — ' + e(t.ten) : '') + '</td></tr>'; });
-    html += '<tr><th>Địa chỉ rừng</th><td colspan="3">' + e(r[NCC_COL.DIA_CHI_RUNG]) + ' · ' + dsLo.length + ' lô rừng · diện tích ký ' + e(_soVN_(r[NCC_COL.DIEN_TICH_KY])) + '</td></tr></table>';
+    html += '<tr><th>Địa chỉ rừng</th><td colspan="3">' + e(r[NCC_COL.DIA_CHI_RUNG]) + ' · ' + dsLo.length + ' lô rừng' + (Number(r[NCC_COL.DIEN_TICH_KY]) ? ' · diện tích ký ' + e(_soVN_(r[NCC_COL.DIEN_TICH_KY])) + ' m²' : '') + '</td></tr></table>';
 
     // 2. Tiến độ
     const klDK = Number(th.khoiLuongDuKien || r[NCC_COL.SL_DU_KIEN]) || 0, klTH = Number(th.khoiLuongThucHien) || 0;
@@ -236,19 +236,29 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
 
     // 4. Vùng khai thác theo lô
     html += '<h3>4. Vùng khai thác (' + dsLo.length + ' lô rừng)</h3>';
-    const tatCaDiem = [];
-    dsLo.forEach(function (lo) { (diemTheoLo[lo.idRung] || []).forEach(function (p) { tatCaDiem.push(p); }); });
-    if (dsLo.length > 1 && tatCaDiem.length && soLoDaVe < BC_TOI_DA_LO_BAN_DO) {
-      const tongQuan = _banDoTinh_(tatCaDiem);
-      if (tongQuan) { soBanDo++; html += '<h4>Bản đồ tổng quan các lô</h4><img class="bando" src="' + tongQuan + '"><div class="phu">Mở trên Google Maps: <a href="' + e(_linkGoogleMaps_(tatCaDiem[0].lat, tatCaDiem[0].lng)) + '">' + e(tatCaDiem[0].lat + ', ' + tatCaDiem[0].lng) + '</a></div>'; }
+    // Tổng quan: mỗi lô 1 ghim ở tâm các điểm GPS (không nối vùng giữa các lô khác nhau)
+    const tamLo = [], chuGiai = [];
+    dsLo.forEach(function (lo, i) {
+      const ds = diemTheoLo[lo.idRung] || [];
+      if (!ds.length || tamLo.length >= 35) return;
+      const tam = { lat: 0, lng: 0 };
+      ds.forEach(function (p) { tam.lat += p.lat; tam.lng += p.lng; });
+      tam.lat = Math.round(tam.lat / ds.length * 1e6) / 1e6; tam.lng = Math.round(tam.lng / ds.length * 1e6) / 1e6;
+      tamLo.push(tam);
+      chuGiai.push('<b>' + '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.charAt(tamLo.length - 1) + '</b> = Lô ' + (i + 1) + ' (' + e(lo.maRung || lo.idRung) + ')');
+    });
+    if (tamLo.length > 1 && soLoDaVe < BC_TOI_DA_LO_BAN_DO) {
+      const tongQuan = _banDoTinh_(tamLo, true);
+      if (tongQuan) { soBanDo++; html += '<h4>Bản đồ tổng quan các lô</h4><img class="bando" src="' + tongQuan + '"><div class="phu">Ghim: ' + chuGiai.join(' · ') + '. Chi tiết ranh giới từng lô ở bên dưới.</div>'; }
     }
     if (!dsLo.length) html += '<div class="phu">Hợp đồng chưa có lô rừng.</div>';
-    dsLo.forEach(function (lo) {
+    const soHoacGach = function (v, le) { return Number(v) ? _soVN_(v, le) : '—'; };
+    dsLo.forEach(function (lo, iLo) {
       const diem = diemTheoLo[lo.idRung] || [];
       const nhom = h.nhom.filter(function (n) { return n.idRung === lo.idRung; })[0];
-      html += '<h4>Lô ' + e(lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + e(lo.diaChiRung) : '') + '</h4>' +
-        '<table class="tt"><tr><th>Diện tích ký / đo GPS</th><td>' + e(_soVN_(lo.dienTichM2)) + ' m² / ' + (lo.dienTichGPS ? e(_soVN_(lo.dienTichGPS)) + ' m²' : 'chưa đo') + '</td><th>Năm trồng</th><td>' + e(lo.namTrong) + '</td></tr>' +
-        '<tr><th>Khối lượng dự kiến / đã khai thác</th><td>' + e(_soVN_(lo.klDuKien, 2)) + ' / ' + e(_soVN_(lo.klThucHien, 2)) + ' tấn</td><th>Hồ sơ nguồn gốc</th><td>' + e(lo.hoSoNguonGoc) + (lo.soGiayTo ? ' số ' + e(lo.soGiayTo) : '') + '</td></tr></table>';
+      html += '<h4>Lô ' + (iLo + 1) + ' · ' + e(lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + e(lo.diaChiRung) : '') + '</h4>' +
+        '<table class="tt"><tr><th>Diện tích ký / đo GPS</th><td>' + (Number(lo.dienTichM2) ? e(_soVN_(lo.dienTichM2)) + ' m² (' + e(_soVN_(lo.dienTichM2 / 10000, 2)) + ' ha)' : '—') + ' / ' + (Number(lo.dienTichGPS) ? e(_soVN_(lo.dienTichGPS)) + ' m²' : 'chưa đo') + '</td><th>Năm trồng</th><td>' + e(lo.namTrong) + '</td></tr>' +
+        '<tr><th>Khối lượng dự kiến / đã khai thác</th><td>' + e(soHoacGach(lo.klDuKien, 2)) + ' / ' + e(soHoacGach(lo.klThucHien, 2)) + ' tấn</td><th>Hồ sơ nguồn gốc</th><td>' + e(lo.hoSoNguonGoc) + (lo.soGiayTo ? ' số ' + e(lo.soGiayTo) : '') + '</td></tr></table>';
       if (!diem.length) html += '<div class="canh">Lô chưa có tọa độ GPS.</div>';
       else {
         let banDo = '';
@@ -262,7 +272,7 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
         html += '</table>';
       }
       if (nhom && nhom.anh.length) {
-        html += '<div class="phu" style="margin-top:4px"><b>Hình ảnh lô ' + e(lo.maRung || lo.idRung) + '</b> (' + nhom.anh.length + ' ảnh — ảnh GPS có tọa độ chụp)</div><table class="luoi">';
+        html += '<div class="phu" style="margin-top:4px"><b>Hình ảnh lô ' + (iLo + 1) + ' · ' + e(lo.maRung || lo.idRung) + '</b> (' + nhom.anh.length + ' ảnh — ảnh GPS có tọa độ chụp)</div><table class="luoi">';
         for (let i = 0; i < nhom.anh.length; i += 2) {
           html += '<tr>';
           for (let j = i; j < i + 2; j++) {
