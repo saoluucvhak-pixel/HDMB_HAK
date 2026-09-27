@@ -14,7 +14,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 
 ## 2. Kết quả
 
-### Server (bộ giả lập Apps Script) — 32/32 đạt (f064f8a: 24/32 · 8cbf662: 8/32)
+### Server (bộ giả lập Apps Script) — 33/33 đạt (f064f8a: 24/32 · 8cbf662: 8/32)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -48,10 +48,11 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-AUTH-04 | Bảng quyền: mọi chức năng trang web gọi đều có trong bảng, trỏ tới hàm nội bộ (X_) có thật | ✅ PASS | FAIL — P.ctx._bangQuyenApi_ is not a function | FAIL — P.ctx._bangQuyenApi_ is not a function |
 | T-AUTH-05 | Hàm menu/trigger giữ tên cũ: trigger thật của project chạy được, người lạ giả triggerUid bị chặn | ✅ PASS | FAIL — fake trigger uid accepted | FAIL — fake trigger uid accepted |
 | T-TC-01 | Tra cứu: tên không dấu, CCCD/SĐT/STK 1 phần, số TK ở HD_STK; kết quả mới ký trước | ✅ PASS | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function | FAIL — P.ctx.TRA_CUU_HOP_DONG_ is not a function |
+| T-TC-03 | Tra cứu theo khoảng Ngày ký: chỉ chọn ngày (không từ khóa), ngày + từ khóa, 1 đầu mở, ngày ngược bị  | ✅ PASS | — (chưa có) | — (chưa có) |
 | T-TC-02 | Tra cứu: vai trò Chỉ xem thấy CCCD/SĐT/STK bị che, không có link hồ sơ pháp lý; Nhập liệu thấy đủ | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
 | T-AUDIT-01 | Nhật ký và cột Email người tạo ghi đúng người đăng nhập (trước đây trống khi dùng webapp) | ✅ PASS | FAIL — P.ctx._getNguoiDungSheet_ is not a function | FAIL — P.ctx._getNguoiDungSheet_ is not a function |
 
-### Trình duyệt (Chromium + giả lập google.script.run) — 36/36 đạt (f064f8a: 27/34 · 8cbf662: 13/33)
+### Trình duyệt (Chromium + giả lập google.script.run) — 37/37 đạt (f064f8a: 27/34 · 8cbf662: 13/33)
 
 | ID | Kịch bản | Mã mới | f064f8a (trước đăng nhập) | 8cbf662 (trước rà soát) |
 |---|---|---|---|---|
@@ -77,6 +78,7 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | UI-AUTH-04 | Lỗi [QUYEN]: trang nhận thông báo đã bỏ tiền tố, KHÔNG bị đăng xuất | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
 | UI-TC-01 | Tra cứu: tìm -> bảng kết quả; bấm HĐ -> chi tiết (lô rừng, TK, ảnh, hồ sơ); dữ liệu độc hại hiện dạn | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
 | UI-TC-02 | Tra cứu: từ khóa 1 ký tự không gọi server; bấm Tra cứu liên tục chỉ gửi 1 yêu cầu | ✅ PASS | FAIL — ENOENT: no such file or directory, open 'preauth/33_Page_TraCuuHopDong.html' | FAIL — ENOENT: no such file or directory, open 'prefix2/33_Page_TraCuuHopDong.html' |
+| UI-TC-03 | Tra cứu: lọc Từ ngày–Đến ngày gửi đúng ngày lên server; chọn nhanh "Tháng trước"; ngày ngược bị chặn | ✅ PASS | — (chưa có) | — (chưa có) |
 | UI-TL-ND | Thiết lập: danh sách người dùng hiện dạng chữ (email/tên độc hại không chạy), bấm Sửa nạp lại form | ✅ PASS | FAIL — page.click: Timeout 30000ms exceeded. | FAIL — page.click: Timeout 30000ms exceeded. |
 | UI-LOAD-07 | 07_Form_HopDong.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |
 | UI-LOAD-10 | 10_Page_BaoCao.html: tải trang không lỗi JS | ✅ PASS | PASS | PASS |
@@ -135,7 +137,7 @@ Test chỉ có ở mã cũ (trang đã xóa vì là mã chết): UI-LOAD-26.
 | Accessibility | ⚠️ Tĩnh | 0 thuộc tính `aria-*`/`role`, 169 `<label>` không gắn `for` → xem 09_TODO |
 | Login / Logout / Session | ✅ | T-AUTH-01..05, UI-AUTH-01..04: đăng nhập qua Cổng, dùng lại link, sửa chữ ký, hết hạn, email chưa cấp quyền, khóa tài khoản khi đang có phiên, đăng xuất, trang nhúng |
 | Permission / Role | ✅ | 38 hàm công khai gọi thẳng đều bị chặn; bảng quyền 123 chức năng; Chỉ xem không ghi được, Nhập liệu không quản lý người dùng; menu ẩn theo vai trò |
-| Search (Tra cứu hợp đồng) | ✅ | T-TC-01/02, UI-TC-01/02: không dấu, số 1 phần, che số theo vai trò, chống bấm lặp, dữ liệu độc hại |
+| Search (Tra cứu hợp đồng) | ✅ | T-TC-01/02/03, UI-TC-01/02/03: lọc Từ ngày–Đến ngày ký, không dấu, số 1 phần, che số theo vai trò, chống bấm lặp, dữ liệu độc hại |
 | LocalStorage / IndexedDB | N/A | Không dùng (trừ 1 chỗ ở trang 24) |
 | Dark Mode | N/A | Ứng dụng không có chế độ tối |
 

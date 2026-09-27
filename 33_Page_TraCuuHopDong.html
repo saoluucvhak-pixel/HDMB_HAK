@@ -151,6 +151,10 @@
   .tc-canh-bao { background: #fef3c7; color: #92400e; border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
   .tc-quay-lai { margin-bottom: 14px; }
   .tc-dang-tai { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
+  .tc-o-tim .field.tc-ngay { flex: none; min-width: 150px; width: 160px; }
+  .tc-nhanh { font-size: 12px; color: var(--text-muted); margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: #fff; border-radius: 14px; cursor: pointer; color: var(--heading); }
+  .tc-nhanh button:hover { border-color: var(--active-green); color: var(--active-green); }
 </style>
 </head>
 <body>
@@ -203,7 +207,7 @@
 
   <div class="app-main">
     <div class="page-title">🔍 Tra cứu hợp đồng</div>
-    <div class="page-subtitle">Tìm theo Số HĐ, tên chủ rừng / người ủy quyền (gõ có dấu hoặc không dấu), CCCD, số điện thoại, số tài khoản hoặc địa chỉ rừng. Bấm vào 1 hợp đồng để xem chi tiết.</div>
+    <div class="page-subtitle">Tìm theo Số HĐ, tên chủ rừng / người ủy quyền (gõ có dấu hoặc không dấu), CCCD, số điện thoại, số tài khoản hoặc địa chỉ rừng, và/hoặc lọc theo khoảng ngày ký. Bấm vào 1 hợp đồng để xem chi tiết.</div>
 
     <div class="card">
       <form class="tc-o-tim" id="tcForm" onsubmit="traCuu_(); return false;">
@@ -211,9 +215,24 @@
           <label for="tcTuKhoa">Từ khóa</label>
           <input id="tcTuKhoa" autocomplete="off" placeholder="vd 20260710010 · Nguyễn Văn A · 0490... · 0912..." maxlength="100">
         </div>
+        <div class="field tc-ngay">
+          <label for="tcTuNgay">Ngày ký từ ngày</label>
+          <input id="tcTuNgay" type="date">
+        </div>
+        <div class="field tc-ngay">
+          <label for="tcDenNgay">Đến ngày</label>
+          <input id="tcDenNgay" type="date">
+        </div>
         <div class="field" style="flex:none"><button class="btn btn-green" type="submit" id="tcNutTim">🔍 Tra cứu</button></div>
       </form>
-      <div class="tc-ghi-chu" id="tcGhiChu">Nhập ít nhất 2 ký tự. CCCD / SĐT / số tài khoản: nhập từ 4 chữ số trở lên (có thể chỉ nhập 1 phần).</div>
+      <div class="tc-nhanh">Chọn nhanh ngày ký:
+        <button type="button" data-kn="thangnay">Tháng này</button>
+        <button type="button" data-kn="thangtruoc">Tháng trước</button>
+        <button type="button" data-kn="quynay">Quý này</button>
+        <button type="button" data-kn="namnay">Năm nay</button>
+        <button type="button" data-kn="xoa">✕ Bỏ lọc ngày</button>
+      </div>
+      <div class="tc-ghi-chu" id="tcGhiChu">Từ khóa ít nhất 2 ký tự; CCCD / SĐT / số tài khoản nhập từ 4 chữ số (có thể chỉ 1 phần). Chỉ chọn ngày, để trống từ khóa = xem mọi hợp đồng ký trong khoảng đó.</div>
     </div>
 
     <div id="tcVungKetQua"></div>
@@ -239,16 +258,48 @@ function oTC_(nhan, giaTri) {
 var tcKetQuaCuoi_ = null;
 var tcDangTim_ = false;
 
+/** Ngày (Date) -> 'yyyy-MM-dd' theo giờ máy người dùng (ô <input type=date>). */
+function isoTC_(d) {
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+function chonNhanhNgay_(kieu) {
+  var h = new Date(), y = h.getFullYear(), m = h.getMonth(), tu = '', den = '';
+  if (kieu === 'thangnay') { tu = isoTC_(new Date(y, m, 1)); den = isoTC_(new Date(y, m + 1, 0)); }
+  else if (kieu === 'thangtruoc') { tu = isoTC_(new Date(y, m - 1, 1)); den = isoTC_(new Date(y, m, 0)); }
+  else if (kieu === 'quynay') { var q = Math.floor(m / 3) * 3; tu = isoTC_(new Date(y, q, 1)); den = isoTC_(new Date(y, q + 3, 0)); }
+  else if (kieu === 'namnay') { tu = y + '-01-01'; den = y + '-12-31'; }
+  document.getElementById('tcTuNgay').value = tu;
+  document.getElementById('tcDenNgay').value = den;
+  if (kieu !== 'xoa' || document.getElementById('tcTuKhoa').value.trim().length >= 2) traCuu_();
+  else { document.getElementById('tcVungKetQua').innerHTML = ''; document.getElementById('tcVungChiTiet').innerHTML = ''; }
+}
+(function () {
+  var nut = document.querySelectorAll('.tc-nhanh button[data-kn]');
+  for (var i = 0; i < nut.length; i++) nut[i].addEventListener('click', function () { chonNhanhNgay_(this.getAttribute('data-kn')); });
+})();
+function ngayVN_(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
+function moTaLoc_(kq) {
+  var p = [];
+  if (kq.tuKhoa) p.push('"' + kq.tuKhoa + '"');
+  if (kq.tuNgay || kq.denNgay) p.push('ngày ký ' + (kq.tuNgay ? 'từ ' + ngayVN_(kq.tuNgay) : '') + (kq.tuNgay && kq.denNgay ? ' ' : '') + (kq.denNgay ? 'đến ' + ngayVN_(kq.denNgay) : ''));
+  return p.join(', ');
+}
+
 function traCuu_() {
   var tk = document.getElementById('tcTuKhoa').value.trim();
+  var tuNgay = document.getElementById('tcTuNgay').value;
+  var denNgay = document.getElementById('tcDenNgay').value;
   var vung = document.getElementById('tcVungKetQua');
   document.getElementById('tcVungChiTiet').innerHTML = '';
-  if (tk.length < 2) { vung.innerHTML = '<div class="msg err">Nhập ít nhất 2 ký tự để tìm.</div>'; return; }
+  vung.style.display = '';
+  if (!tuNgay && !denNgay && tk.length < 2) { vung.innerHTML = '<div class="msg err">Nhập ít nhất 2 ký tự để tìm, hoặc chọn khoảng ngày ký.</div>'; return; }
+  if (tk.length === 1) { vung.innerHTML = '<div class="msg err">Từ khóa cần ít nhất 2 ký tự (hoặc để trống để xem mọi hợp đồng trong khoảng ngày).</div>'; return; }
+  if (tuNgay && denNgay && tuNgay > denNgay) { vung.innerHTML = '<div class="msg err">"Từ ngày" phải trước hoặc bằng "Đến ngày".</div>'; return; }
   if (tcDangTim_) return;
   tcDangTim_ = true;
   document.getElementById('tcNutTim').disabled = true;
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tìm…</div>';
-  try { google.script.history.replace(null, { page: 'tracuu', q: tk }); } catch (e) { /* ngoài Apps Script */ }
+  try { google.script.history.replace(null, { page: 'tracuu', q: tk, tu: tuNgay, den: denNgay }); } catch (e) { /* ngoài Apps Script */ }
   hakRun_()
     .withSuccessHandler(function (kq) {
       tcDangTim_ = false;
@@ -261,7 +312,7 @@ function traCuu_() {
       document.getElementById('tcNutTim').disabled = false;
       vung.innerHTML = '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
     })
-    .TRA_CUU_HOP_DONG(tk);
+    .TRA_CUU_HOP_DONG(tk, tuNgay, denNgay);
 }
 
 function veKetQua_(kq) {
@@ -270,11 +321,11 @@ function veKetQua_(kq) {
   if (!kq) { vung.innerHTML = ''; return; }
   if (kq.loi) { vung.innerHTML = '<div class="msg err">' + escTC_(kq.loi) + '</div>'; return; }
   if (!kq.ketQua.length) {
-    vung.innerHTML = '<div class="card"><div class="empty-hint">Không tìm thấy hợp đồng nào khớp "' + escTC_(kq.tuKhoa) + '".</div></div>';
+    vung.innerHTML = '<div class="card"><div class="empty-hint">Không tìm thấy hợp đồng nào khớp ' + escTC_(moTaLoc_(kq)) + '.</div></div>';
     return;
   }
-  var h = '<div class="card"><h3>Kết quả: ' + kq.tongSo + ' hợp đồng' +
-    (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất — nhập từ khóa cụ thể hơn để thu hẹp)</span>' : '') + '</h3>' +
+  var h = '<div class="card"><h3>Kết quả: ' + kq.tongSo + ' hợp đồng <span class="tc-khop">— ' + escTC_(moTaLoc_(kq)) + '</span>' +
+    (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất — nhập từ khóa hoặc thu hẹp khoảng ngày)</span>' : '') + '</h3>' +
     '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>CCCD chủ rừng</th><th>Địa chỉ rừng</th><th>Tình trạng</th><th>Khớp theo</th></tr></thead><tbody>';
   kq.ketQua.forEach(function (x, i) {
     h += '<tr><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
@@ -407,12 +458,18 @@ function veChiTiet_(ct) {
   window.scrollTo(0, 0);
 }
 
-// Mở lại đúng từ khóa khi tải lại trang (?q=...)
+// Mở lại đúng từ khóa / khoảng ngày khi tải lại trang (?q=...&tu=...&den=...)
 (function () {
   try {
     google.script.url.getLocation(function (loc) {
-      var q = loc && loc.parameter && loc.parameter.q;
-      if (q) { document.getElementById('tcTuKhoa').value = q; traCuu_(); }
+      var p = (loc && loc.parameter) || {};
+      var hopLe = function (v) { return /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : ''; };
+      if (p.q || p.tu || p.den) {
+        document.getElementById('tcTuKhoa').value = p.q || '';
+        document.getElementById('tcTuNgay').value = hopLe(p.tu);
+        document.getElementById('tcDenNgay').value = hopLe(p.den);
+        traCuu_();
+      }
     });
   } catch (e) { /* ngoài Apps Script */ }
 })();

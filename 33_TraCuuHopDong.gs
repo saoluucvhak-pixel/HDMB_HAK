@@ -3,14 +3,15 @@
  *  33_TraCuuHopDong.gs
  *  TRA CỨU HỢP ĐỒNG (trang ?page=tracuu) — chỉ đọc, vai trò "Chỉ xem" trở lên.
  *  - Tìm theo Số HĐ / ID_HD / tên chủ rừng / người ủy quyền (có dấu hoặc không dấu)
- *    / CCCD / SĐT / Số tài khoản / địa chỉ rừng.
+ *    / CCCD / SĐT / Số tài khoản / địa chỉ rừng, lọc theo khoảng Ngày ký (từ ngày – đến ngày).
  *  - Xem chi tiết: thông tin hợp đồng, tình hình thực hiện, lô rừng (kèm số điểm
  *    GPS), tài khoản nhận tiền, ảnh hiện trường, hồ sơ pháp lý.
  *  - Vai trò "Chỉ xem": CCCD / SĐT / Số TK bị che bớt và không mở được file hồ sơ
  *    pháp lý (bản scan CCCD, GCN QSDĐ...). Nhập liệu / Quản trị xem đầy đủ.
  * ============================================================
  */
-const TRA_CUU_GIOI_HAN_KET_QUA = 50;
+const TRA_CUU_GIOI_HAN_KET_QUA = 200;
+const MAU_NGAY_ISO_TRA_CUU = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Chuỗi so khớp: chữ thường, bỏ dấu tiếng Việt, gộp khoảng trắng. */
 function _chuoiSoKhop_(v) {
@@ -43,19 +44,30 @@ function _ngayHienThi_(v) {
 }
 
 /**
- * Tìm hợp đồng. tuKhoa >= 2 ký tự. Trả { tuKhoa, tongSo, gioiHan, ketQua: [...] }
+ * Tìm hợp đồng theo từ khóa (>= 2 ký tự) và/hoặc khoảng NGÀY KÝ [tuNgay, denNgay]
+ * ('yyyy-MM-dd', để trống 1 đầu = không giới hạn đầu đó). Chỉ chọn ngày, bỏ trống từ
+ * khóa = liệt kê mọi hợp đồng ký trong khoảng đó. Có lọc ngày thì hợp đồng chưa có
+ * Ngày ký bị loại. Trả { tuKhoa, tuNgay, denNgay, tongSo, gioiHan, ketQua: [...] }
  * (tối đa TRA_CUU_GIOI_HAN_KET_QUA dòng, mới ký trước).
  */
-function TRA_CUU_HOP_DONG_(tuKhoa) {
+function TRA_CUU_HOP_DONG_(tuKhoa, tuNgay, denNgay) {
   const tk = _chuoiSoKhop_(tuKhoa);
-  if (tk.length < 2) return { tuKhoa: tuKhoa || '', tongSo: 0, gioiHan: TRA_CUU_GIOI_HAN_KET_QUA, ketQua: [], loi: 'Nhập ít nhất 2 ký tự để tìm.' };
+  tuNgay = (tuNgay || '').toString().trim();
+  denNgay = (denNgay || '').toString().trim();
+  const traVe = { tuKhoa: tuKhoa || '', tuNgay: tuNgay, denNgay: denNgay, tongSo: 0, gioiHan: TRA_CUU_GIOI_HAN_KET_QUA, ketQua: [] };
+  if ((tuNgay && !MAU_NGAY_ISO_TRA_CUU.test(tuNgay)) || (denNgay && !MAU_NGAY_ISO_TRA_CUU.test(denNgay))) return Object.assign(traVe, { loi: 'Ngày không hợp lệ.' });
+  if (tuNgay && denNgay && tuNgay > denNgay) return Object.assign(traVe, { loi: '"Từ ngày" phải trước hoặc bằng "Đến ngày".' });
+  const locNgay = !!(tuNgay || denNgay);
+  if (!locNgay && tk.length < 2) return Object.assign(traVe, { loi: 'Nhập ít nhất 2 ký tự để tìm, hoặc chọn khoảng ngày ký.' });
+  if (locNgay && tk.length === 1) return Object.assign(traVe, { loi: 'Từ khóa cần ít nhất 2 ký tự (hoặc để trống để xem mọi hợp đồng trong khoảng ngày).' });
+  const coTuKhoa = tk.length >= 2;
   const tkSo = _chiLaySo_(tuKhoa);
   const timTheoSo = tkSo.length >= 4 && tkSo.length === tk.replace(/[\s.\-]/g, '').length; // từ khóa toàn chữ số (CCCD/SĐT/STK)
   const duocXemDu = _coQuyen_(QUYEN.NHAP_LIEU);
 
   // Số tài khoản nằm ở cả HD_NCC (TK chính) và HD_STK (các TK khác của hợp đồng)
   const idTheoStk = {};
-  if (timTheoSo) {
+  if (coTuKhoa && timTheoSo) {
     readData_(SHEET_NAME.HD_STK).forEach(function (r) {
       if (_chiLaySo_(r[STK_COL.SO_TK]).indexOf(tkSo) !== -1) idTheoStk[(r[STK_COL.ID_HD] || '').toString().trim()] = true;
     });
@@ -74,7 +86,9 @@ function TRA_CUU_HOP_DONG_(tuKhoa) {
   readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
     const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
     if (!idHD && !r[NCC_COL.SO_HD]) return;
-    let khopTheo = '';
+    const ngayKyIso = ngayToISO_(r[NCC_COL.NGAY_KY]);
+    if (locNgay && (!ngayKyIso || (tuNgay && ngayKyIso < tuNgay) || (denNgay && ngayKyIso > denNgay))) return;
+    let khopTheo = coTuKhoa ? '' : 'Ngày ký';
     for (let i = 0; i < truongChu.length && !khopTheo; i++) {
       if (_chuoiSoKhop_(r[truongChu[i][1]]).indexOf(tk) !== -1) khopTheo = truongChu[i][0];
     }
@@ -85,7 +99,6 @@ function TRA_CUU_HOP_DONG_(tuKhoa) {
       if (!khopTheo && idTheoStk[idHD]) khopTheo = 'Số tài khoản';
     }
     if (!khopTheo) return;
-    const ngayKyIso = ngayToISO_(r[NCC_COL.NGAY_KY]);
     khop.push({
       idHD: idHD,
       soHD: (r[NCC_COL.SO_HD] || '').toString(),
@@ -100,13 +113,11 @@ function TRA_CUU_HOP_DONG_(tuKhoa) {
     });
   });
   khop.sort(function (a, b) { return (b.ngayKyIso || '').localeCompare(a.ngayKyIso || ''); });
-  return {
-    tuKhoa: tuKhoa,
+  return Object.assign(traVe, {
     tongSo: khop.length,
-    gioiHan: TRA_CUU_GIOI_HAN_KET_QUA,
     ketQua: khop.slice(0, TRA_CUU_GIOI_HAN_KET_QUA).map(function (x) { delete x.ngayKyIso; return x; }),
     daCheSo: !duocXemDu
-  };
+  });
 }
 
 /** Dòng Draft báo cáo (khối lượng/giá trị thực hiện, phiếu cân) của 1 hợp đồng — {} nếu chưa có. */
