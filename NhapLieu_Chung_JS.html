@@ -43,8 +43,8 @@
   function renderBreadcrumb(items) {
     document.getElementById('breadcrumbBar').innerHTML = items.map(function (it, i) {
       var isLast = (i === items.length - 1);
-      if (isLast || !it.onClick) return '<span class="current">' + it.label + '</span>';
-      return '<a onclick="(' + it.onClick + ')()">' + it.label + '</a>';
+      if (isLast || !it.onClick) return '<span class="current">' + escAT_(it.label) + '</span>';
+      return '<a onclick="(' + escAT_(it.onClick) + ')()">' + escAT_(it.label) + '</a>';
     }).join('<span class="sep">/</span>');
   }
 
@@ -104,7 +104,7 @@
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { document.getElementById('goiYDonGiaText').textContent = '❌ ' + kq.loi; return; }
         var donGiaLamTron = Math.round(kq.donGiaBinhQuan / 1000) * 1000;
-        document.getElementById('goiYDonGiaText').innerHTML = '💰 Đơn giá bình quân: <b>' + donGiaLamTron.toLocaleString('vi-VN') + ' đ</b> (từ ' + kq.soDongDuLieu + ' dòng)';
+        document.getElementById('goiYDonGiaText').innerHTML = '💰 Đơn giá bình quân: <b>' + donGiaLamTron.toLocaleString('vi-VN') + ' đ</b> (từ ' + escAT_(kq.soDongDuLieu) + ' dòng)';
       })
       .withFailureHandler(function (err) { document.getElementById('goiYDonGiaText').textContent = '❌ Lỗi: ' + err.message; })
       .layDonGiaBinhQuanThang(ngayKy);
@@ -157,27 +157,27 @@
 
   function taiDanhSachHD(trang) {
     google.script.run
-      .withFailureHandler(function (err) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + err.message + '</td></tr>'; })
+      .withFailureHandler(function (err) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
       .withSuccessHandler(function (kq) {
         try {
-          if (kq && kq.loi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ ' + kq.loi + '</td></tr>'; return; }
+          if (kq && kq.loi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ ' + escAT_(kq.loi) + '</td></tr>'; return; }
           trangHDHienTai = kq.trang;
           var tbody = document.querySelector('#tblDSHopDong tbody'); tbody.innerHTML = '';
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
             var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
             var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
-            tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
-              '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.diaChiRung || '') + '</td>' +
-              '<td><span class="badge-status ' + badge + '">' + (r.tinhTrang || '') + '</span></td>' +
-              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + r.soDong + ')">Xem →</button></td>';
+            tr.innerHTML = '<td>' + escAT_(r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
+              '<td>' + escAT_(r.tenChuRung || '') + '</td><td>' + escAT_(r.diaChiRung || '') + '</td>' +
+              '<td><span class="badge-status ' + badge + '">' + escAT_(r.tinhTrang || '') + '</span></td>' +
+              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + escAT_(r.soDong) + ')">Xem →</button></td>';
             tbody.appendChild(tr);
           });
           var pgEl = document.getElementById('phanTrangHD');
           pgEl.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiDanhSachHD(' + (kq.trang - 1) + ')">‹ Trước</button>' +
-            '<span>Trang ' + kq.trang + ' / ' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)</span>' +
+            '<span>Trang ' + escAT_(kq.trang) + ' / ' + escAT_(kq.tongTrang) + ' (' + escAT_(kq.tongSo) + ' hợp đồng)</span>' +
             '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiDanhSachHD(' + (kq.trang + 1) + ')">Sau ›</button>';
-        } catch (exLoi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi hiển thị: ' + exLoi.message + '</td></tr>'; }
+        } catch (exLoi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi hiển thị: ' + escAT_(exLoi.message) + '</td></tr>'; }
       }).layDanhSachHopDong(trang || 1, 20, val('tuKhoaHD'), val('locTinhTrangHD'));
   }
 
@@ -248,7 +248,7 @@
       var key = r.idRung || r.tempId;
       var laNhap = !r.idRung;
       return '<div class="row-card' + (laNhap ? ' la-nhap' : '') + '" onclick="moTrangXemRung(\'' + key + '\')">' +
-        '<div><b>' + (r.idRung || '(chưa lưu chính thức)') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + (r.diaChiRung || '') + '<br>' +
+        '<div><b>' + escAT_(r.idRung || '(chưa lưu chính thức)') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + escAT_(r.diaChiRung || '') + '<br>' +
         '<span class="hint">DT: ' + formatSoNhap_(r.dienTichM2) + ' m² · Đơn giá: ' + formatSoNhap_(r.donGia) + ' đ/tấn · KL: ' + formatSoNhap_(r.khoiLuongDuKien) + ' tấn</span></div>' +
         '<span class="hint">Xem →</span></div>';
     }).join('');
@@ -471,7 +471,7 @@
           : '<span class="hint">Chưa đính kèm file nào.</span>';
         el.innerHTML = '<div class="anh-row"><span>Đã đính kèm:</span><span>' + dongFile + '</span></div>';
       })
-      .withFailureHandler(function (err) { el.innerHTML = '<p class="hint">❌ Lỗi tải hồ sơ đính kèm: ' + err.message + '</p>'; })
+      .withFailureHandler(function (err) { el.innerHTML = '<p class="hint">❌ Lỗi tải hồ sơ đính kèm: ' + escAT_(err.message) + '</p>'; })
       .layHoSoCuaHopDong(duNhap.idHD);
   }
 
@@ -505,8 +505,8 @@
         if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh riêng nào của lô rừng này.</p>'; return; }
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
-          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + a.soDong + ')">✅ Duyệt</button> ' +
-            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + a.soDong + ')">✖ Từ chối</button>';
+          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + escAT_(a.soDong) + ')">✅ Duyệt</button> ' +
+            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + escAT_(a.soDong) + ')">✖ Từ chối</button>';
           return '<div class="anh-row"><span>' + escAT_(a.tenFile || '') + ' ' + badge + '</span><span><a href="' + urlAT_(a.url) + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
         }).join('');
       })
@@ -556,8 +556,8 @@
     el.innerHTML = ds.map(function (t) {
       var key = t.soDong || t.tempId; var laNhap = !t.soDong;
       return '<div class="row-card' + (laNhap ? ' la-nhap' : '') + '" style="cursor:default">' +
-        '<div><b>' + (t.soTK || '') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + (t.nganHang || '') + '<br>' +
-        '<span class="hint">Ủy quyền TT: ' + (t.uyQuyenTT || 'Không') + (t.tenUyQuyen ? ' (' + escAT_(t.tenUyQuyen) + ')' : '') + '</span></div>' +
+        '<div><b>' + escAT_(t.soTK || '') + '</b>' + (laNhap ? '<span class="tag-nhap">NHÁP</span>' : '') + ' — ' + escAT_(t.nganHang || '') + '<br>' +
+        '<span class="hint">Ủy quyền TT: ' + escAT_(t.uyQuyenTT || 'Không') + (t.tenUyQuyen ? ' (' + escAT_(t.tenUyQuyen) + ')' : '') + '</span></div>' +
         '<div><button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="moFormTK(\'' + key + '\')">✏️ Sửa</button> ' +
         '<button class="btn" style="padding:5px 12px;font-size:12px;background:#dc2626;color:#fff" onclick="xoaTaiKhoanKhoiNhap(\'' + key + '\')">🗑️ Xóa</button></div></div>';
     }).join('');
@@ -652,17 +652,17 @@
     document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     google.script.run
       .withSuccessHandler(function (kq) {
-        if (!kq.thanhCong) { document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="msg err">❌ ' + kq.loi + '</p>'; return; }
+        if (!kq.thanhCong) { document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="msg err">❌ ' + escAT_(kq.loi) + '</p>'; return; }
         if (!kq.danhSach.length) { document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="hint">Không tìm thấy phiếu cân nào khớp tên chủ rừng này.</p>'; return; }
         var html = '<table class="data-table"><thead><tr><th>Ngày</th><th>Số phiếu</th><th>Khối lượng (tấn)</th><th>Đơn giá bổ sung</th><th>Thành tiền</th></tr></thead><tbody>';
         kq.danhSach.forEach(function (p) {
-          html += '<tr><td>' + (p.ngay ? new Date(p.ngay).toLocaleDateString('vi-VN') : '') + '</td><td>' + (p.soPhieu || '') + '</td>' +
+          html += '<tr><td>' + (p.ngay ? new Date(p.ngay).toLocaleDateString('vi-VN') : '') + '</td><td>' + escAT_(p.soPhieu || '') + '</td>' +
             '<td>' + formatSoNhap_(p.khoiLuong) + '</td><td>' + formatSoNhap_(p.donGia) + '</td><td>' + formatSoNhap_(p.thanhTien) + '</td></tr>';
         });
         html += '</tbody></table>';
         document.getElementById('modalPhieuCanNoiDung').innerHTML = html;
       })
-      .withFailureHandler(function (err) { document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="msg err">❌ Lỗi: ' + err.message + '</p>'; })
+      .withFailureHandler(function (err) { document.getElementById('modalPhieuCanNoiDung').innerHTML = '<p class="msg err">❌ Lỗi: ' + escAT_(err.message) + '</p>'; })
       .layPhieuCanTheoChuRung(tenChuRungHienTai || duNhap.hopDong.tenChuRung);
   }
 

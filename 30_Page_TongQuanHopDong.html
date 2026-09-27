@@ -264,7 +264,7 @@
         renderBangHD_(kq);
       })
       .withFailureHandler(function (err) {
-        document.getElementById('vungKpiTien').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>';
+        document.getElementById('vungKpiTien').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlTQ_(err.message) + '</div>';
         document.getElementById('vungTheThongKe').innerHTML = '';
         document.getElementById('vungBangHD').innerHTML = '';
       })
@@ -279,7 +279,7 @@
       { nhan: 'TỔNG GIÁ TRỊ ĐÃ THỰC HIỆN', gia: formatTienTQ_(kq.tongGiaTriThucHien) + ' đ' }
     ].forEach(function (t) {
       var div = document.createElement('div'); div.className = 'the-thongke'; div.style.cursor = 'default';
-      div.innerHTML = '<div class="so" style="font-size:19px">' + t.gia + '</div><div class="nhan">' + t.nhan + '</div>';
+      div.innerHTML = '<div class="so" style="font-size:19px">' + escHtmlTQ_(t.gia) + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
       el.appendChild(div);
     });
   }
@@ -295,7 +295,7 @@
     dsThe.forEach(function (t) {
       var div = document.createElement('div');
       div.className = 'the-thongke' + (t.ma === tinhTrangDangLoc_ ? ' active' : '');
-      div.innerHTML = '<div class="so">' + t.so + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
+      div.innerHTML = '<div class="so">' + escHtmlTQ_(t.so) + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
       div.addEventListener('click', function () {
         tinhTrangDangLoc_ = t.ma;
         document.getElementById('tieuDeDanhSach').textContent = '📋 ' + (t.ma ? 'Hợp đồng "' + t.ma + '"' : 'Tất cả hợp đồng') + ' (mới ký trước)';

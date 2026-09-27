@@ -622,7 +622,7 @@
       var dong = document.createElement('div');
       dong.className = 'ds-kh-dong';
       dong.innerHTML = '<div class="ten">' + escHtmlNL_(kh.tenChuRung) + '</div>' +
-        '<div class="phu">CCCD ' + escHtmlNL_(kh.cccd) + (kh.thuongTru ? ' — ' + escHtmlNL_(kh.thuongTru) : '') + ' — ' + kh.soLuongHopDong + ' hợp đồng trước đó</div>';
+        '<div class="phu">CCCD ' + escHtmlNL_(kh.cccd) + (kh.thuongTru ? ' — ' + escHtmlNL_(kh.thuongTru) : '') + ' — ' + escAT_(kh.soLuongHopDong) + ' hợp đồng trước đó</div>';
       dong.addEventListener('click', function () {
         dongModalChonKhachHang();
         moTrangTaoHopDong(kh);

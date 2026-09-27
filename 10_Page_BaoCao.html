@@ -517,7 +517,7 @@
           trCha.innerHTML = '<td><span class="mui-ten">▶</span></td>' +
             '<td>' + escHtmlKH_(r.tenChuRung) + '</td><td>' + escHtmlKH_(r.cccd) + '</td><td>' + escHtmlKH_(r.maSoThue) + '</td>' +
             '<td>' + escHtmlKH_(r.sdt) + '</td><td>' + escHtmlKH_(r.thuongTru) + '</td><td>' + escHtmlKH_(r.nhomKH) + '</td>' +
-            '<td>' + r.soLuongHopDong + ' hợp đồng' + (r.soLuongHopDong > 1 ? '<span class="badge-kh">nhiều HĐ</span>' : '') + '</td>';
+            '<td>' + escHtmlKH_(r.soLuongHopDong) + ' hợp đồng' + (r.soLuongHopDong > 1 ? '<span class="badge-kh">nhiều HĐ</span>' : '') + '</td>';
           trCha.addEventListener('click', function () { toggleHangKhachHangKH_(trCha); });
           tbody.appendChild(trCha);
 
@@ -538,7 +538,7 @@
         bS.disabled = kq.trang >= kq.tongTrang; bS.addEventListener('click', function () { taiDanhSachKhachHangKH_(kq.trang + 1); });
         elTrang.appendChild(bT); elTrang.appendChild(sp); elTrang.appendChild(bS);
       })
-      .withFailureHandler(function (err) { elBang.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; })
+      .withFailureHandler(function (err) { elBang.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; })
       .layDanhSachKhachHang(trang, 20, tuKhoa);
   }
 
@@ -570,7 +570,7 @@
         });
         table.appendChild(tbody); tdCon.innerHTML = ''; tdCon.appendChild(table);
       })
-      .withFailureHandler(function (err) { tdCon.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; })
+      .withFailureHandler(function (err) { tdCon.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; })
       .layHopDongTheoKhachHang(trCha.dataset.cccd);
   }
 
@@ -616,14 +616,14 @@
           tbody.appendChild(trRung); tbody.appendChild(trConRung);
         });
         table.appendChild(tbody); elND.innerHTML = ''; elND.appendChild(table);
-      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layDanhSachRung(idHD);
+      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layDanhSachRung(idHD);
     } else {
       google.script.run.withSuccessHandler(function (list) {
         if (!list || !list.length) { elND.innerHTML = '<div class="empty-hint">Chưa có số tài khoản nào.</div>'; return; }
         var h = '<table class="mecon-table"><thead><tr><th>Số TK</th><th>Ngân hàng</th><th>Ủy quyền TT</th><th>Người nhận</th></tr></thead><tbody>';
         list.forEach(function (r) { h += '<tr><td>' + escHtmlKH_(r.soTK) + '</td><td>' + escHtmlKH_(r.nganHang) + '</td><td>' + escHtmlKH_(r.uyQuyenTT) + '</td><td>' + escHtmlKH_(r.tenUyQuyen) + '</td></tr>'; });
         h += '</tbody></table>'; elND.innerHTML = h;
-      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layDanhSachTaiKhoan(idHD);
+      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layDanhSachTaiKhoan(idHD);
     }
   }
 
@@ -658,7 +658,7 @@
             '<td>' + (p.hinhAnh ? '<a href="' + urlKH_(p.hinhAnh) + '" target="_blank">🖼️ xem</a>' : '—') + '</td></tr>';
         });
         h += '</tbody></table>'; elND.innerHTML = h;
-      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layGPSCuaRung(idRung);
+      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layGPSCuaRung(idRung);
     } else {
       google.script.run.withSuccessHandler(function (list) {
         var hs = (list || []).find(function (x) { return (x.idRung || '').toString().trim() === idRung.toString().trim(); });
@@ -668,7 +668,7 @@
           '<tr><th>Số giấy tờ</th><td>' + escHtmlKH_(hs.soGiayTo || '(chưa nhập)') + '</td></tr>' +
           '<tr><th>File đính kèm</th><td>' + (hs.dinhKem && hs.dinhKem.url ? '<a href="' + urlKH_(hs.dinhKem.url) + '" target="_blank">📎 ' + escHtmlKH_(hs.dinhKem.ten) + '</a>' : '(chưa đính kèm)') + '</td></tr>' +
           '</tbody></table>'; elND.innerHTML = h;
-      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + err.message + '</div>'; }).layHoSoCuaHopDong(idHD);
+      }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layHoSoCuaHopDong(idHD);
     }
   }
 </script>
@@ -681,7 +681,7 @@
         if (!kq.thanhCong) { showMsg('msgDongBoMisa', '❌ ' + kq.loi, false); return; }
         var el = document.getElementById('msgDongBoMisa');
         el.style.display = 'block'; el.className = 'msg ok';
-        el.innerHTML = '✅ Đã đồng bộ — NCC: +' + kq.ncc.soThem + ' mới /' + kq.ncc.soCapNhat + ' cập nhật (dọn ' + kq.ncc.soDongTrongDaDon + ' dòng trống) — HĐMB: +' + kq.hdmb.soThem + ' mới /' + kq.hdmb.soCapNhat + ' cập nhật (dọn ' + kq.hdmb.soDongTrongDaDon + ' dòng trống).<br>👉 <a href="' + kq.masterUrl + '" target="_blank">Mở Sheet Update_Hopdong_NCC_DN</a>';
+        el.innerHTML = '✅ Đã đồng bộ — NCC: +' + escHtmlKH_(kq.ncc.soThem) + ' mới /' + escHtmlKH_(kq.ncc.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.ncc.soDongTrongDaDon) + ' dòng trống) — HĐMB: +' + escHtmlKH_(kq.hdmb.soThem) + ' mới /' + escHtmlKH_(kq.hdmb.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.hdmb.soDongTrongDaDon) + ' dòng trống).<br>👉 <a href="' + urlKH_(kq.masterUrl) + '" target="_blank">Mở Sheet Update_Hopdong_NCC_DN</a>';
       })
       .withFailureHandler(function (err) { showMsg('msgDongBoMisa', '❌ Lỗi: ' + err.message, false); })
       .DONG_BO_VAO_MISA_MASTER();
@@ -696,7 +696,7 @@
         var el = document.getElementById('msgXuatMisa');
         el.style.display = 'block';
         el.className = 'msg ok';
-        el.innerHTML = '✅ Đã đồng bộ (' + (kq.daLocNgay ? 'phạm vi đã chọn' : 'toàn bộ') + ') + xuất "' + kq.tenFile + '" — Sheet cố định hiện có ' + kq.soDongNCC + ' nhà cung cấp, ' + kq.soDongHDMB + ' dòng hợp đồng mua bán.<br>👉 <a href="' + kq.url + '" target="_blank">Mở/tải file</a>' + (kq.folderUrl ? ' — <a href="' + kq.folderUrl + '" target="_blank">Mở thư mục chứa file</a>' : '');
+        el.innerHTML = '✅ Đã đồng bộ (' + (kq.daLocNgay ? 'phạm vi đã chọn' : 'toàn bộ') + ') + xuất "' + escHtmlKH_(kq.tenFile) + '" — Sheet cố định hiện có ' + escHtmlKH_(kq.soDongNCC) + ' nhà cung cấp, ' + escHtmlKH_(kq.soDongHDMB) + ' dòng hợp đồng mua bán.<br>👉 <a href="' + urlKH_(kq.url) + '" target="_blank">Mở/tải file</a>' + (kq.folderUrl ? ' — <a href="' + urlKH_(kq.folderUrl) + '" target="_blank">Mở thư mục chứa file</a>' : '');
         window.open(kq.url, '_blank');
       })
       .withFailureHandler(function (err) { showMsg('msgXuatMisa', '❌ Lỗi: ' + err.message, false); })
@@ -765,7 +765,7 @@
     loc.forEach(function (m) {
       var tr = document.createElement('tr');
       if (m.giaTriConLai < 0) tr.className = 'row-do';
-      tr.innerHTML = '<td>' + (m.soHD || '') + '</td><td>' + (m.chuRung || '') + '</td>' +
+      tr.innerHTML = '<td>' + escHtmlKH_(m.soHD || '') + '</td><td>' + escHtmlKH_(m.chuRung || '') + '</td>' +
         '<td class="so-lieu">' + formatKL(m.tongKhoiLuongDuKien) + '</td><td class="so-lieu">' + formatKL(m.tongKhoiLuongThucHien) + '</td><td class="so-lieu">' + formatKL(m.khoiLuongConLai) + '</td>' +
         '<td class="so-lieu">' + formatTien(m.tongGiaTri) + '</td><td class="so-lieu">' + formatTien(m.tongGiaTriThucHien) + '</td><td class="so-lieu">' + formatTien(m.giaTriConLai) + '</td>' +
         '<td>' + (m.thucHienTuNgay ? new Date(m.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
@@ -793,20 +793,20 @@
       var tr = document.createElement('tr');
       if (r.mucDo === 'do') tr.className = 'row-do'; else if (r.mucDo === 'vang') tr.className = 'row-vang';
       var ghiChu = r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '✅');
-      tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
-        '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.cccdChuRung || '') + '</td><td>' + (r.tenUyQuyen || '') + '</td>' +
-        '<td class="so-lieu">' + (r.soTaiKhoan || 0) + '</td><td class="so-lieu">' + (r.soLoRung || 0) + '</td>' +
+      tr.innerHTML = '<td>' + escHtmlKH_(r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
+        '<td>' + escHtmlKH_(r.tenChuRung || '') + '</td><td>' + escHtmlKH_(r.cccdChuRung || '') + '</td><td>' + escHtmlKH_(r.tenUyQuyen || '') + '</td>' +
+        '<td class="so-lieu">' + escHtmlKH_(r.soTaiKhoan || 0) + '</td><td class="so-lieu">' + escHtmlKH_(r.soLoRung || 0) + '</td>' +
         '<td class="so-lieu">' + formatKL(r.khoiLuongDuKien) + '</td><td class="so-lieu">' + formatKL(r.khoiLuongThucHien) + '</td>' +
         '<td class="so-lieu">' + formatTien(r.giaTriHopDong) + '</td><td class="so-lieu">' + formatTien(r.giaTriThucHien) + '</td>' +
         '<td>' + (r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
         '<td>' + (r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
         '<td>' + (r.coAnh ? '✅' : '⚠️') + '</td><td>' + (r.daDoGPSDu ? '✅' : '⚠️') + '</td><td>' + (r.hoSoDu ? '✅' : '❌') + '</td>' +
-        '<td>' + r.tinhTrang + '</td><td style="font-size:11px">' + ghiChu + '</td>';
+        '<td>' + escHtmlKH_(r.tinhTrang) + '</td><td style="font-size:11px">' + ghiChu + '</td>';
       tbody.appendChild(tr);
     });
     var pg = document.getElementById('phanTrangBC');
     pg.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiBaoCaoHD(' + (kq.trang - 1) + ')">‹ Trước</button>' +
-      '<span>Trang ' + kq.trang + ' / ' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)</span>' +
+      '<span>Trang ' + escHtmlKH_(kq.trang) + ' / ' + escHtmlKH_(kq.tongTrang) + ' (' + escHtmlKH_(kq.tongSo) + ' hợp đồng)</span>' +
       '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiBaoCaoHD(' + (kq.trang + 1) + ')">Sau ›</button>';
   }
 
@@ -896,18 +896,18 @@
     if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có hợp đồng nào.</td></tr>';
     kq.items.forEach(function (r) {
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + (r.soHD || '') + '</td><td>' + (r.chuRung || '') + '</td><td>' + (r.nguoiUyQuyen || '') + '</td>' +
+      tr.innerHTML = '<td>' + escHtmlKH_(r.soHD || '') + '</td><td>' + escHtmlKH_(r.chuRung || '') + '</td><td>' + escHtmlKH_(r.nguoiUyQuyen || '') + '</td>' +
         '<td class="so-lieu">' + formatKL(r.khoiLuongHopDong) + '</td><td class="so-lieu">' + formatTien(r.giaTriHopDong) + '</td>' +
         '<td class="so-lieu">' + formatKL(r.khoiLuongThucHien) + '</td><td class="so-lieu">' + formatTien(r.giaTriThucHien) + '</td>' +
         '<td class="so-lieu">' + formatKL(r.khoiLuongConLai) + '</td>' +
         '<td>' + (r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
         '<td>' + (r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>' +
-        '<td><button class="btn btn-gold" style="padding:4px 8px;font-size:11px" onclick="thanhLyHopDong(\'' + r.idHD + '\')">Thanh lý</button></td>';
+        '<td><button class="btn btn-gold" style="padding:4px 8px;font-size:11px" onclick="thanhLyHopDong(\'' + escHtmlKH_(r.idHD) + '\')">Thanh lý</button></td>';
       tbody.appendChild(tr);
     });
     var pg = document.getElementById('phanTrangTL');
     pg.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiDanhSachThanhLy(' + (kq.trang - 1) + ')">‹ Trước</button>' +
-      '<span>Trang ' + kq.trang + ' / ' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)</span>' +
+      '<span>Trang ' + escHtmlKH_(kq.trang) + ' / ' + escHtmlKH_(kq.tongTrang) + ' (' + escHtmlKH_(kq.tongSo) + ' hợp đồng)</span>' +
       '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiDanhSachThanhLy(' + (kq.trang + 1) + ')">Sau ›</button>';
   }
 
@@ -1031,14 +1031,14 @@
     var locTrang = loc.slice(batDauHSR, batDauHSR + HSR_KT_TRANG);
     locTrang.forEach(function (r) {
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + (r.idRung || '') + '</td><td>' + (r.soHD || '') + '</td>' +
+      tr.innerHTML = '<td>' + escHtmlKH_(r.idRung || '') + '</td><td>' + escHtmlKH_(r.soHD || '') + '</td>' +
         '<td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
-        '<td>' + (r.tenChuRung || '') + '</td><td>' + (r.tinhTrang || '') + '</td>' +
-        '<td>' + (r.hoSoNguonGoc || '') + '</td><td>' + (r.soGiayTo || '') + '</td>' +
+        '<td>' + escHtmlKH_(r.tenChuRung || '') + '</td><td>' + escHtmlKH_(r.tinhTrang || '') + '</td>' +
+        '<td>' + escHtmlKH_(r.hoSoNguonGoc || '') + '</td><td>' + escHtmlKH_(r.soGiayTo || '') + '</td>' +
         '<td>' + (r.ngayGiayTo ? new Date(r.ngayGiayTo).toLocaleDateString('vi-VN') : '') + '</td>' +
         '<td class="so-lieu">' + formatSo_(r.dienTich) + '</td><td class="so-lieu">' + formatKL(r.khoiLuongDuKien) + '</td>' +
         '<td class="so-lieu">' + formatTien(r.donGia) + '</td><td class="so-lieu">' + formatTien(r.giaTri) + '</td>' +
-        '<td><button class="btn btn-outline" style="padding:4px 8px;font-size:11px" onclick="xemChiTietRung(\'' + r.idRung + '\')">📍 Xem chi tiết</button></td>';
+        '<td><button class="btn btn-outline" style="padding:4px 8px;font-size:11px" onclick="xemChiTietRung(\'' + escHtmlKH_(r.idRung) + '\')">📍 Xem chi tiết</button></td>';
       tbody.appendChild(tr);
     });
 
@@ -1075,7 +1075,7 @@
           elToaDo.innerHTML = kq.toaDo.map(function (p, i) {
             return '<div class="data-row"><span>Điểm ' + (i + 1) + (p.diaChi ? ' — ' + p.diaChi : '') + '</span>' +
               '<span><a href="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '" target="_blank">' + p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + ' 🗺️</a>' +
-              (p.hinhAnh ? ' <a href="' + p.hinhAnh + '" target="_blank">🖼️</a>' : '') + '</span></div>';
+              (p.hinhAnh ? ' <a href="' + urlKH_(p.hinhAnh) + '" target="_blank">🖼️</a>' : '') + '</span></div>';
           }).join('');
         }
         var elAnh = document.getElementById('dsChiTietAnhRung');
@@ -1083,7 +1083,7 @@
         if (kq.anh.length) {
           htmlAnh += '<p class="hint" style="margin:4px 0 2px">📌 Ảnh riêng của lô rừng này:</p>' +
             kq.anh.map(function (a) {
-              return '<div class="data-row"><span>' + (a.tenFile || a.ten || '') + '</span><span><a href="' + a.url + '" target="_blank">Xem ảnh</a></span></div>';
+              return '<div class="data-row"><span>' + (a.tenFile || a.ten || '') + '</span><span><a href="' + urlKH_(a.url) + '" target="_blank">Xem ảnh</a></span></div>';
             }).join('');
         }
         if (kq.anhChungHopDong && kq.anhChungHopDong.length) {
@@ -1092,7 +1092,7 @@
             : '📁 Ảnh chung của cả hợp đồng (hợp đồng có ' + kq.tongSoLoCuaHopDong + ' lô rừng, ảnh dưới đây CHƯA rõ thuộc lô nào — cần mở xem để xác nhận):';
           htmlAnh += '<p class="hint" style="margin:8px 0 2px">' + tieuDeAnhChung + '</p>' +
             kq.anhChungHopDong.map(function (a) {
-              return '<div class="data-row"><span>' + (a.ten || '') + '</span><span>' + (a.url ? '<a href="' + a.url + '" target="_blank">Xem ảnh</a>' : '<span class="hint">(không tìm thấy file trên Drive)</span>') + '</span></div>';
+              return '<div class="data-row"><span>' + escHtmlKH_(a.ten || '') + '</span><span>' + (a.url ? '<a href="' + urlKH_(a.url) + '" target="_blank">Xem ảnh</a>' : '<span class="hint">(không tìm thấy file trên Drive)</span>') + '</span></div>';
             }).join('');
         }
         elAnh.innerHTML = htmlAnh || '<p class="hint">Chưa có ảnh nào.</p>';
@@ -1102,15 +1102,15 @@
           elHoSo.innerHTML = '<p class="hint">Không tìm thấy lô rừng.</p>';
         } else {
           var hs = kq.hoSoPhapLy;
-          var dongLoai = '<div class="data-row"><span>Loại hồ sơ nguồn gốc</span><span>' + (hs.hoSoNguonGoc || '(chưa nhập)') + '</span></div>';
-          var dongSo = '<div class="data-row"><span>Số giấy tờ</span><span>' + (hs.soGiayTo || '(chưa nhập)') + '</span></div>';
+          var dongLoai = '<div class="data-row"><span>Loại hồ sơ nguồn gốc</span><span>' + escHtmlKH_(hs.hoSoNguonGoc || '(chưa nhập)') + '</span></div>';
+          var dongSo = '<div class="data-row"><span>Số giấy tờ</span><span>' + escHtmlKH_(hs.soGiayTo || '(chưa nhập)') + '</span></div>';
           var dongFile = '<div class="data-row"><span>File đính kèm</span><span>' +
-            (hs.dinhKem ? (hs.dinhKem.url ? '<a href="' + hs.dinhKem.url + '" target="_blank">' + hs.dinhKem.ten + ' 📎</a>' : hs.dinhKem.ten + ' <span class="hint">(không tìm thấy file trên Drive — kiểm tra lại tên/link đã lưu)</span>') : '<span class="hint">Chưa đính kèm file nào</span>') +
+            (hs.dinhKem ? (hs.dinhKem.url ? '<a href="' + urlKH_(hs.dinhKem.url) + '" target="_blank">' + escHtmlKH_(hs.dinhKem.ten) + ' 📎</a>' : hs.dinhKem.ten + ' <span class="hint">(không tìm thấy file trên Drive — kiểm tra lại tên/link đã lưu)</span>') : '<span class="hint">Chưa đính kèm file nào</span>') +
             '</span></div>';
           elHoSo.innerHTML = dongLoai + dongSo + dongFile;
         }
       })
-      .withFailureHandler(function (err) { document.getElementById('dsChiTietToaDoRung').innerHTML = '<p style="color:red">Lỗi: ' + err.message + '</p>'; })
+      .withFailureHandler(function (err) { document.getElementById('dsChiTietToaDoRung').innerHTML = '<p style="color:red">Lỗi: ' + escHtmlKH_(err.message) + '</p>'; })
       .layChiTietHoSoMotLoRung(idRung);
   }
 
@@ -1159,10 +1159,10 @@
     if (!loc.length) { tbody.innerHTML = '<tr><td colspan="8" class="hint" style="text-align:center">Không có dữ liệu khớp điều kiện lọc.</td></tr>'; return; }
     loc.forEach(function (r) {
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + (r.soTK || '') + '</td><td>' + (r.tenNguoiNhan || '') + '</td><td>' + (r.nganHang || '') + '</td>' +
-        '<td>' + (r.hopDongSo || '') + '</td><td>' + (r.tenChuRung || '') + '</td>' +
-        '<td class="so-lieu">' + r.soLanChuyen + '</td><td class="so-lieu">' + formatTien(r.tongTien) + '</td>' +
-        '<td style="font-size:11px">' + (r.danhSachSoPhieuCan || '') + '</td>';
+      tr.innerHTML = '<td>' + escHtmlKH_(r.soTK || '') + '</td><td>' + escHtmlKH_(r.tenNguoiNhan || '') + '</td><td>' + escHtmlKH_(r.nganHang || '') + '</td>' +
+        '<td>' + escHtmlKH_(r.hopDongSo || '') + '</td><td>' + escHtmlKH_(r.tenChuRung || '') + '</td>' +
+        '<td class="so-lieu">' + escHtmlKH_(r.soLanChuyen) + '</td><td class="so-lieu">' + formatTien(r.tongTien) + '</td>' +
+        '<td style="font-size:11px">' + escHtmlKH_(r.danhSachSoPhieuCan || '') + '</td>';
       tbody.appendChild(tr);
     });
   }
