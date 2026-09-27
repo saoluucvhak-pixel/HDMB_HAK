@@ -22,6 +22,7 @@
 
 /** ============ 1. CHẨN ĐOÁN MỒ CÔI / SÓT ID TOÀN HỆ THỐNG ============ */
 function CHAN_DOAN_MO_COI_TOAN_HE_THONG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const stkRows = readData_(SHEET_NAME.HD_STK);
@@ -125,39 +126,65 @@ function DONG_BO_THONG_TIN_MO_RONG_() {
   let soDaSuaGps = 0, soDaDienDiaChiGps = 0, soDaSuaStk = 0;
 
   // ---- HD_GPS: đồng bộ lại Tên chủ rừng, điền Địa chỉ còn trống theo Địa chỉ rừng ----
+  // ⚠️ HIỆU NĂNG: trước đây gọi getRange().setValue() RIÊNG cho TỪNG dòng cần sửa —
+  // với sheet nhiều nghìn dòng, mỗi lần bảo trì có thể tốn tới hàng nghìn lượt gọi
+  // API Sheets riêng lẻ (rất chậm). Giờ đọc/ghi CẢ CỘT 1 lần duy nhất (setValues),
+  // bất kể có bao nhiêu dòng cần sửa — chỉ 1 lệnh ghi/cột thay vì 1 lệnh/dòng.
   const shGps = getSheet_(SHEET_NAME.HD_GPS);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
-  gpsRows.forEach(function (r, idx) {
+  let coSuaCotTenGps = false, coSuaCotDiaChiGps = false;
+  const cotTenGpsMoi = [], cotDiaChiGpsMoi = [];
+  gpsRows.forEach(function (r) {
     const idRung = (r[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     const rung = rungTheoIdRung[idRung];
-    if (!rung) return; // mồ côi thật -> không đồng bộ được, để CHAN_DOAN_MO_COI báo riêng
-    const dong = idx + 2;
-    const tenChuRungDung = rung[RUNG_COL.TEN_CHU_RUNG] || '';
-    if ((r[GPS_COL.TEN_CHU_RUNG] || '') !== tenChuRungDung) {
-      shGps.getRange(dong, GPS_COL.TEN_CHU_RUNG + 1).setValue(tenChuRungDung);
-      soDaSuaGps++;
+    if (!rung) { // mồ côi thật -> không đồng bộ được, để CHAN_DOAN_MO_COI báo riêng — giữ nguyên giá trị cũ
+      cotTenGpsMoi.push([r[GPS_COL.TEN_CHU_RUNG] || '']);
+      cotDiaChiGpsMoi.push([r[GPS_COL.ADDRESS] || '']);
+      return;
     }
+    const tenChuRungDung = rung[RUNG_COL.TEN_CHU_RUNG] || '';
+    if ((r[GPS_COL.TEN_CHU_RUNG] || '') !== tenChuRungDung) { coSuaCotTenGps = true; soDaSuaGps++; }
+    cotTenGpsMoi.push([tenChuRungDung]);
     if (!(r[GPS_COL.ADDRESS] || '').toString().trim() && rung[RUNG_COL.DIA_CHI_RUNG]) {
-      shGps.getRange(dong, GPS_COL.ADDRESS + 1).setValue(rung[RUNG_COL.DIA_CHI_RUNG]);
-      soDaDienDiaChiGps++;
+      coSuaCotDiaChiGps = true; soDaDienDiaChiGps++;
+      cotDiaChiGpsMoi.push([rung[RUNG_COL.DIA_CHI_RUNG]]);
+    } else {
+      cotDiaChiGpsMoi.push([r[GPS_COL.ADDRESS] || '']);
     }
   });
+  if (coSuaCotTenGps) shGps.getRange(2, GPS_COL.TEN_CHU_RUNG + 1, gpsRows.length, 1).setValues(cotTenGpsMoi);
+  if (coSuaCotDiaChiGps) shGps.getRange(2, GPS_COL.ADDRESS + 1, gpsRows.length, 1).setValues(cotDiaChiGpsMoi);
 
   // ---- HD_STK: đồng bộ lại Tên chủ rừng/CCCD/Số HĐ theo đúng hợp đồng cha ----
+  // (cùng cách tối ưu: gộp thành tối đa 3 lệnh ghi/cột thay vì tới 3 lệnh/dòng)
   const shStk = getSheet_(SHEET_NAME.HD_STK);
   const stkRows = readData_(SHEET_NAME.HD_STK);
-  stkRows.forEach(function (r, idx) {
+  let coSuaCotTenStk = false, coSuaCotCccdStk = false, coSuaCotSoHDStk = false;
+  const cotTenStkMoi = [], cotCccdStkMoi = [], cotSoHDStkMoi = [];
+  stkRows.forEach(function (r) {
     const idHD = (r[STK_COL.ID_HD] || '').toString().trim();
     const ncc = nccTheoIdHD[idHD];
-    if (!ncc) return;
-    const dong = idx + 2;
+    if (!ncc) { // mồ côi thật -> không đồng bộ được — giữ nguyên giá trị cũ
+      cotTenStkMoi.push([r[STK_COL.TEN_CHU_RUNG] || '']);
+      cotCccdStkMoi.push([r[STK_COL.CCCD] || '']);
+      cotSoHDStkMoi.push([r[STK_COL.SO_HD] || '']);
+      return;
+    }
     const giaTriDung = { tenChuRung: ncc[NCC_COL.TEN_CHU_RUNG] || '', cccd: ncc[NCC_COL.CCCD_CHU_RUNG] || '', soHD: ncc[NCC_COL.SO_HD] || '' };
-    let coSua = false;
-    if ((r[STK_COL.TEN_CHU_RUNG] || '') !== giaTriDung.tenChuRung) { shStk.getRange(dong, STK_COL.TEN_CHU_RUNG + 1).setValue(giaTriDung.tenChuRung); coSua = true; }
-    if ((r[STK_COL.CCCD] || '') !== giaTriDung.cccd) { shStk.getRange(dong, STK_COL.CCCD + 1).setValue(giaTriDung.cccd); coSua = true; }
-    if ((r[STK_COL.SO_HD] || '') !== giaTriDung.soHD) { shStk.getRange(dong, STK_COL.SO_HD + 1).setValue(giaTriDung.soHD); coSua = true; }
-    if (coSua) soDaSuaStk++;
+    const tenKhac = (r[STK_COL.TEN_CHU_RUNG] || '') !== giaTriDung.tenChuRung;
+    const cccdKhac = (r[STK_COL.CCCD] || '') !== giaTriDung.cccd;
+    const soHDKhac = (r[STK_COL.SO_HD] || '') !== giaTriDung.soHD;
+    if (tenKhac || cccdKhac || soHDKhac) soDaSuaStk++;
+    if (tenKhac) coSuaCotTenStk = true;
+    if (cccdKhac) coSuaCotCccdStk = true;
+    if (soHDKhac) coSuaCotSoHDStk = true;
+    cotTenStkMoi.push([giaTriDung.tenChuRung]);
+    cotCccdStkMoi.push([giaTriDung.cccd]);
+    cotSoHDStkMoi.push([giaTriDung.soHD]);
   });
+  if (coSuaCotTenStk) shStk.getRange(2, STK_COL.TEN_CHU_RUNG + 1, stkRows.length, 1).setValues(cotTenStkMoi);
+  if (coSuaCotCccdStk) shStk.getRange(2, STK_COL.CCCD + 1, stkRows.length, 1).setValues(cotCccdStkMoi);
+  if (coSuaCotSoHDStk) shStk.getRange(2, STK_COL.SO_HD + 1, stkRows.length, 1).setValues(cotSoHDStkMoi);
 
   if (soDaSuaGps > 0 || soDaDienDiaChiGps > 0) xoaCacheBanDo_(); // dữ liệu HD_GPS vừa đổi -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
 
@@ -176,6 +203,7 @@ function DONG_BO_THONG_TIN_MO_RONG_TU_MENU() {
 
 /** ============ 3. CHẠY TOÀN BỘ BẢO TRÌ 1 LƯỢT (chẩn đoán + đồng bộ + trích xuất tọa độ còn sót) ============ */
 function CHAY_TOAN_BO_BAO_TRI_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const chanDoanTruoc = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
   const dongBo = DONG_BO_THONG_TIN_MO_RONG_();
   let toaDoDaTrichXuat = { thanhCong: true, soDaGhi: 0, tongSoLo: 0, loi: [] };

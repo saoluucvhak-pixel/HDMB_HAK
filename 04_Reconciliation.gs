@@ -33,6 +33,7 @@
  * Trả về { thanhCong, truong: {...}, urlFileGoc, tenFileGoc, loi }
  */
 function OCR_TU_BAN_SCAN_(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   if (!base64Data) return { thanhCong: false, loi: 'Không có dữ liệu file' };
   const loiFile = kiemTraFileTaiLen_(base64Data, mimeType);
   if (loiFile) return { thanhCong: false, loi: loiFile };
@@ -218,16 +219,17 @@ function soSanhTenKhongDauOCR_(ten1, ten2) {
 
 /** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi DOI_CHIEU_HO_SO_DINH_KY_ qua api(). */
 function DOI_CHIEU_HO_SO_DINH_KY(e) {
-  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
-  return DOI_CHIEU_HO_SO_DINH_KY_();
+  return DOI_CHIEU_HO_SO_DINH_KY_(e);
 }
 
 /**
  * CHẠY ĐỐI CHIẾU ĐỊNH KỲ cho toàn bộ hồ sơ (nên đặt Trigger chạy hàng tuần
  * qua menu Extensions > Apps Script > Triggers, vì OCR tốn thời gian).
  * Có giới hạn thời gian chạy để tránh timeout 6 phút của Apps Script.
+ * @param {*} _eTrigger Sự kiện trigger nếu chạy từ trigger hàng tuần (xem wrapper ở trên) — cho qua kiểm tra quyền đúng như trigger thật.
  */
-function DOI_CHIEU_HO_SO_DINH_KY_() {
+function DOI_CHIEU_HO_SO_DINH_KY_(_eTrigger) {
+  _yeuCauQuyenHoacTrigger_(_eTrigger, QUYEN.NHAP_LIEU);
   const startTime = new Date().getTime();
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const baoCao = [];
@@ -263,6 +265,7 @@ function DOI_CHIEU_HO_SO_DINH_KY_() {
  * bấm xem file gốc trước khi chạy đối chiếu OCR cho từng dòng hoặc chạy tất cả.
  */
 function layDuLieuOCRWebapp_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   return rungRows.map(function (r) {
     return {
@@ -275,6 +278,7 @@ function layDuLieuOCRWebapp_() {
 
 /** Chạy đối chiếu OCR cho MỘT lô rừng cụ thể (dùng khi bấm nút "Đối chiếu" ở từng dòng trong webapp) */
 function doiChieuMotLoRungTheoId_(idRung) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const row = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
   if (!row) return { loi: 'Không tìm thấy lô rừng: ' + idRung };
@@ -304,6 +308,7 @@ function THIET_LAP_TRIGGER_DINH_KY() {
  * trước khi tạo lại, tránh chạy trùng nhiều lần.
  */
 function THIET_LAP_TRIGGER_TUY_CHINH_(tanSuat, gio, danhSachViec) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   gio = Number(gio) || 6;
   HUY_TAT_CA_TRIGGER_();
 
@@ -319,6 +324,7 @@ function THIET_LAP_TRIGGER_TUY_CHINH_(tanSuat, gio, danhSachViec) {
 
 /** Hủy toàn bộ trigger tự động của hệ thống (kiểm tra hồ sơ/ảnh/OCR) */
 function HUY_TAT_CA_TRIGGER_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   let soDaXoa = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (['DOI_CHIEU_HO_SO_DINH_KY', 'KIEM_TRA_HO_SO_TOAN_BO', 'KIEM_TRA_ANH_TOAN_BO'].indexOf(t.getHandlerFunction()) !== -1) {
@@ -331,6 +337,7 @@ function HUY_TAT_CA_TRIGGER_() {
 
 /** Xem danh sách trigger hiện có của hệ thống (để hiển thị trạng thái lịch đang chạy) */
 function layDanhSachTrigger_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const tenViet = { KIEM_TRA_HO_SO_TOAN_BO_: 'Kiểm tra hồ sơ', KIEM_TRA_ANH_TOAN_BO_: 'Kiểm tra ảnh', DOI_CHIEU_HO_SO_DINH_KY_: 'Đối chiếu OCR' };
   return ScriptApp.getProjectTriggers()
     .filter(function (t) { return tenViet.hasOwnProperty(t.getHandlerFunction()); })

@@ -127,15 +127,19 @@ function fileTonTaiTrenDrive_(duongDan) {
 
 /** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi KIEM_TRA_HO_SO_TOAN_BO_ qua api(). */
 function KIEM_TRA_HO_SO_TOAN_BO(e) {
-  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
-  return KIEM_TRA_HO_SO_TOAN_BO_();
+  return KIEM_TRA_HO_SO_TOAN_BO_(undefined, undefined, e);
 }
 
 /**
  * CHẠY KIỂM TRA hợp đồng (tất cả lô rừng + tất cả HD_NCC, hoặc lọc theo khoảng
  * ngày ký nếu truyền tuNgay/denNgay) và xuất kết quả ra sheet "BaoCao_KiemTra".
+ * @param {*} _eTrigger Đối tượng sự kiện trigger (nếu chạy từ trigger hàng tuần
+ *   qua wrapper KIEM_TRA_HO_SO_TOAN_BO(e) ở trên) — dùng để cho qua kiểm tra
+ *   quyền đúng như trigger thật, KHÔNG chặn lượt chạy tự động hàng tuần (lúc đó
+ *   không có "người dùng đang hoạt động" nên _yeuCauQuyen_ thường sẽ luôn chặn).
  */
-function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay) {
+function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay, _eTrigger) {
+  _yeuCauQuyenHoacTrigger_(_eTrigger, QUYEN.NHAP_LIEU);
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const coLoc = !!(tuNgay || denNgay); // có lọc theo ngày hay không — ảnh hưởng việc dọn dòng cũ
@@ -250,6 +254,7 @@ function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay) {
  * ảnh-GPS (dòng vàng) để bổ sung, không cần rà từng hợp đồng thủ công.
  */
 function layBaoCaoHopDongPhanTrang_(boLoc, trang, kichThuoc, boBuoc) {
+  _yeuCauQuyen_(QUYEN.XEM);
   try {
     boLoc = boLoc || {};
     trang = trang || 1;
@@ -316,6 +321,7 @@ function layBaoCaoHopDongPhanTrang_(boLoc, trang, kichThuoc, boBuoc) {
  * thay vì chỉ xem kết quả tổng hợp trong sheet.
  */
 function layDuLieuKiemTraHoSoWebapp_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const nccById = {};
@@ -347,6 +353,7 @@ function layDuLieuKiemTraHoSoWebapp_() {
  * dùng cho trang webapp "Kiểm tra ảnh (đã lưu)".
  */
 function layDuLieuAnhWebapp_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const rows = readData_(SHEET_NAME.HD_PICTURE);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const soHDById = {};
@@ -373,6 +380,7 @@ function layDuLieuAnhWebapp_() {
  * duongDanList = [{ url, idHD }]
  */
 function KIEM_TRA_ANH_DA_CHON_(duongDanList) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const rungByHD = {};
   rungRows.forEach(function (r) {

@@ -17,6 +17,7 @@
  * @param {"xlsx"|"pdf"} dinhDang
  */
 function XUAT_BANG_RA_FILE_(tenFile, header, rows, dinhDang) {
+  _yeuCauQuyen_(QUYEN.XEM);
   if (!rows || !rows.length) return { thanhCong: false, loi: 'Không có dữ liệu để xuất (bảng đang trống).' };
   let ssTam;
   try {

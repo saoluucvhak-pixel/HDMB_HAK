@@ -416,6 +416,7 @@ function _bangQuyenApi_() {
     LAY_ANH_TRA_CUU: r(LAY_ANH_TRA_CUU_, X),
     LAY_DU_LIEU_ANH: r(LAY_DU_LIEU_ANH_, X),
     XUAT_PDF_ANH: r(XUAT_PDF_ANH_, X),
+    BAO_CAO_HOP_DONG_PDF: r(BAO_CAO_HOP_DONG_PDF_, X),
     LAY_FILE_HO_SO: r(LAY_FILE_HO_SO_, N),
     XEM_FILE_DRIVE: r(XEM_FILE_DRIVE_, X),
     // Kiểm tra & đối chiếu: chỉ đọc
@@ -526,6 +527,7 @@ function _bangQuyenApi_() {
 // ============================================================
 
 function LAY_DANH_SACH_NGUOI_DUNG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   _getNguoiDungSheet_();
   CacheService.getScriptCache().remove(AUTH_CFG.CACHE_KEY_NGUOI_DUNG);
   return {
@@ -539,6 +541,7 @@ function LAY_DANH_SACH_NGUOI_DUNG_() {
 
 /** Thêm mới hoặc cập nhật 1 người dùng (theo email). Không xóa — dùng trạng thái "Khóa". */
 function LUU_NGUOI_DUNG_(duLieu) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const email = _chuanHoaEmail_(duLieu && duLieu.email);
   const vaiTro = String((duLieu && duLieu.vaiTro) || '').trim().toUpperCase();
   const trangThai = (duLieu && duLieu.trangThai) === TRANG_THAI_NGUOI_DUNG.KHOA ? TRANG_THAI_NGUOI_DUNG.KHOA : TRANG_THAI_NGUOI_DUNG.HOAT_DONG;
@@ -570,6 +573,7 @@ function LUU_NGUOI_DUNG_(duLieu) {
 }
 
 function LAY_CAU_HINH_DANG_NHAP_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const appUrl = ScriptApp.getService().getUrl() || '';
   return {
     appUrl: appUrl,
@@ -579,6 +583,7 @@ function LAY_CAU_HINH_DANG_NHAP_() {
 }
 
 function LUU_LINK_CONG_DANG_NHAP_(url) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const u = String(url || '').trim();
   if (!MAU_URL_CONG_DANG_NHAP.test(u)) {
     return { success: false, message: '❌ Link Cổng đăng nhập phải có dạng https://script.google.com/macros/s/.../exec' };
@@ -590,6 +595,7 @@ function LUU_LINK_CONG_DANG_NHAP_(url) {
 
 /** Đổi mã bí mật (khi nghi bị lộ). Phải dán lại mã nguồn mới vào Cổng đăng nhập. */
 function TAO_LAI_MA_BI_MAT_DANG_NHAP_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   PropertiesService.getScriptProperties().setProperty(AUTH_CFG.PROP_SSO_SECRET, _taoMaNgauNhien_());
   ghiNhatKy_('Cấu hình đăng nhập', '', 'Tạo lại mã bí mật Cổng đăng nhập - cần dán lại mã nguồn Cổng đăng nhập.');
   return { success: true, message: '✅ Đã tạo mã bí mật mới. Hãy dán lại mã nguồn mới vào dự án Cổng đăng nhập và Deploy lại (Manage deployments > Edit > New version).' };

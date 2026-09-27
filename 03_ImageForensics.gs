@@ -277,11 +277,12 @@ function KIEM_TRA_ANH_TU_LINK_(url) {
 
 /** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi KIEM_TRA_ANH_TOAN_BO_ qua api(). */
 function KIEM_TRA_ANH_TOAN_BO(e) {
-  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
-  return KIEM_TRA_ANH_TOAN_BO_();
+  return KIEM_TRA_ANH_TOAN_BO_(e);
 }
 
-function KIEM_TRA_ANH_TOAN_BO_() {
+/** @param {*} _eTrigger Sự kiện trigger nếu chạy từ trigger hàng tuần (xem wrapper ở trên) — cho qua kiểm tra quyền đúng như trigger thật. */
+function KIEM_TRA_ANH_TOAN_BO_(_eTrigger) {
+  _yeuCauQuyenHoacTrigger_(_eTrigger, QUYEN.NHAP_LIEU);
   const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
 

@@ -166,6 +166,7 @@ function _thuThapAnh_(idHD, theoKhachHang) {
 
 /** CHỨC NĂNG: danh sách ảnh của hợp đồng (hoặc của khách hàng). */
 function LAY_ANH_TRA_CUU_(idHD, theoKhachHang) {
+  _yeuCauQuyen_(QUYEN.XEM);
   const kq = _thuThapAnh_(idHD, theoKhachHang);
   return kq || { khongTimThay: true, loi: 'Không tìm thấy hợp đồng ' + idHD + '.' };
 }
@@ -246,6 +247,7 @@ function _idAnhDuocPhep_(duLieu) {
  * lon=true -> ảnh cỡ lớn để phóng to (tối đa 1 ảnh/lần). Trả { anh: {id: dataUrl} }.
  */
 function LAY_DU_LIEU_ANH_(idHD, theoKhachHang, ids, lon) {
+  _yeuCauQuyen_(QUYEN.XEM);
   const duLieu = _thuThapAnh_(idHD, theoKhachHang);
   if (!duLieu) return { anh: {}, loi: 'Không tìm thấy hợp đồng.' };
   const choPhep = _idAnhDuocPhep_(duLieu);
@@ -269,6 +271,7 @@ function _escPdf_(s) {
  * Trả { thanhCong, base64, tenFile, mimeType, soAnh, boQua, loiTai, hoSoKem: [{id, ten, lo, ...}] }.
  */
 function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
+  _yeuCauQuyen_(QUYEN.XEM);
   tuyChon = tuyChon || {};
   const duLieu = _thuThapAnh_(idHD, theoKhachHang);
   if (!duLieu) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng.' };
@@ -378,6 +381,7 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
  * được chuyển sang PDF. Trả { thanhCong, base64, mimeType, ten } hoặc { thanhCong: false, loi }.
  */
 function LAY_FILE_HO_SO_(idHD, theoKhachHang, id) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const duLieu = _thuThapAnh_(idHD, theoKhachHang);
   if (!duLieu) return { thanhCong: false, loi: 'Không tìm thấy hợp đồng.' };
   id = String(id || '');
@@ -432,6 +436,7 @@ function _danhMucFileDrive_() {
  * File không thuộc dữ liệu hợp đồng -> { ngoaiDanhMuc: true } (trình duyệt mở link Drive như cũ).
  */
 function XEM_FILE_DRIVE_(id, cheDo) {
+  _yeuCauQuyen_(QUYEN.XEM);
   id = String(id || '');
   if (!MAU_ID_DRIVE.test(id)) return { thanhCong: false, ngoaiDanhMuc: true, loi: 'Link không hợp lệ.' };
   const loai = _danhMucFileDrive_()[id];
