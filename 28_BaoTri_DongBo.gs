@@ -22,6 +22,7 @@
 
 /** ============ 1. CHẨN ĐOÁN MỒ CÔI / SÓT ID TOÀN HỆ THỐNG ============ */
 function CHAN_DOAN_MO_COI_TOAN_HE_THONG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const stkRows = readData_(SHEET_NAME.HD_STK);
@@ -176,6 +177,7 @@ function DONG_BO_THONG_TIN_MO_RONG_TU_MENU() {
 
 /** ============ 3. CHẠY TOÀN BỘ BẢO TRÌ 1 LƯỢT (chẩn đoán + đồng bộ + trích xuất tọa độ còn sót) ============ */
 function CHAY_TOAN_BO_BAO_TRI_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const chanDoanTruoc = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
   const dongBo = DONG_BO_THONG_TIN_MO_RONG_();
   let toaDoDaTrichXuat = { thanhCong: true, soDaGhi: 0, tongSoLo: 0, loi: [] };

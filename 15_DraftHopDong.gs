@@ -43,6 +43,7 @@ function timDongDraft_(sh, idDraft) {
 
 /** Tạo 1 bản nháp TRẮNG cho hợp đồng MỚI (chưa có idHD). Trả về idDraft để front-end dùng cho các lần LUU_DRAFT_ tiếp theo. */
 function TAO_DRAFT_MOI_() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const idDraft = 'DRAFT_' + Utilities.getUuid().slice(0, 8).toUpperCase();
   const rong = { idHD: null, hopDong: {}, rung: [], taiKhoan: [], phuLuc: [] };
   const sh = getOrCreateDraftHopDongSheet_();
@@ -57,6 +58,7 @@ function TAO_DRAFT_MOI_() {
 
 /** Tiện ích cho front-end: bấm 1 dòng trong danh sách -> mở/tạo nháp luôn trong 1 lượt gọi */
 function MO_DRAFT_THEO_SO_DONG_(soDong) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const hd = layHopDongTheoSoDong_(soDong);
   if (!hd || hd.khongTimThay) return null;
   const ketQua = LAY_DRAFT_THEO_ID_HD_(hd.idHD);
@@ -168,6 +170,7 @@ function layHopDongTheoIdHD_ChoDraft_(idHD) {
 
 /** Ghi đè toàn bộ JSON của 1 bản nháp — gọi sau MỌI thay đổi ở màn hình (đổi field, thêm/sửa/xóa rừng-TK-phụ lục-GPS nháp) */
 function LUU_DRAFT_(idDraft, jsonDuLieu) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   try {
     const sh = getOrCreateDraftHopDongSheet_();
     const soDong = timDongDraft_(sh, idDraft);
@@ -183,6 +186,7 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
 
 /** Hủy bản nháp (bấm "Hủy" hoặc rời trang mà không lưu) — không đụng gì tới bảng gốc */
 function HUY_DRAFT_(idDraft) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftHopDongSheet_();
   const soDong = timDongDraft_(sh, idDraft);
   if (soDong !== -1) sh.deleteRow(soDong);
@@ -196,6 +200,7 @@ function HUY_DRAFT_(idDraft) {
  * Xóa bản nháp sau khi ghi xong thành công.
  */
 function LUU_CHINH_THUC_(idDraft) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftHopDongSheet_();
   const cache = CacheService.getScriptCache();
   const khoaDangLuu = 'LUU_CHINH_THUC_' + idDraft;

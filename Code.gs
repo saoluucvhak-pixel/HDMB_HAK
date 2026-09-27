@@ -210,6 +210,7 @@ function RUN_HAK_SYSTEM_FINAL_() {
 
 /** Lấy thời điểm chạy đồng bộ bản đồ (RUN_HAK_SYSTEM_FINAL_) gần nhất, để hiển thị "Cập nhật lúc: ..." trên bản đồ */
 function layThoiGianCapNhatBanDo_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const gia = PropertiesService.getScriptProperties().getProperty('LAN_CUOI_CHAY_BAN_DO');
   return gia || null;
 }
@@ -223,6 +224,7 @@ function layThoiGianCapNhatBanDo_() {
  * "xóa cache" riêng.
  */
 function getMapData_() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const cache = CacheService.getScriptCache();
   const daCache = cache.get('MAP_DATA_CACHE');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }

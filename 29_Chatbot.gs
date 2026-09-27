@@ -32,6 +32,7 @@ const MODEL_DA_NGUNG_HO_TRO_ = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-
 
 /** Đọc cấu hình chatbot (API key ẩn 1 phần khi trả về webapp, không lộ toàn bộ) */
 function LAY_CAI_DAT_CHATBOT_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
   const apiKey = p.getProperty('GEMINI_API_KEY') || '';
   return {
@@ -43,6 +44,7 @@ function LAY_CAI_DAT_CHATBOT_() {
 
 /** Lưu API key + model Gemini (Script Properties — không lưu trong code, không ai xem được qua giao diện) */
 function LUU_CAI_DAT_CHATBOT_(apiKey, model) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
   if (apiKey) p.setProperty('GEMINI_API_KEY', apiKey.toString().trim());
   p.setProperty('GEMINI_MODEL', (model || GEMINI_MODEL_MAC_DINH_).toString().trim());
@@ -52,6 +54,7 @@ function LUU_CAI_DAT_CHATBOT_(apiKey, model) {
 /** ============ HÀM CHÍNH: TRẢ LỜI 1 CÂU HỎI ============ */
 /** Nhận diện câu hỏi kiểu THỐNG KÊ/LỌC THEO ĐIỀU KIỆN (khác tra 1 đối tượng cụ thể theo tên) */
 function TRA_LOI_CHATBOT_(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
+  _yeuCauQuyen_(QUYEN.XEM);
   // ⚠️ MỚI: có ảnh đính kèm (anh = { base64, mimeType }) — đọc ảnh/OCR BẮT BUỘC
   // phải qua Gemini (không có luật cứng nào đọc được nội dung ảnh), nên tách
   // riêng luồng: không cần API key thì báo rõ luôn, không cố tra dữ liệu nữa.
