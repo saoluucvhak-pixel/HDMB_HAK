@@ -54,6 +54,10 @@ function doGet(e) {
     if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
     tmpl.phien = dangNhap.phien;
     tmpl.loiDangNhap = dangNhap.loi;
+  } else if (e.parameter.ph && _docPhien_(e.parameter.ph)) {
+    // Trình duyệt chặn bộ nhớ của trang nhúng (chặn cookie bên thứ ba): trang trước chuyển mã phiên
+    // qua link (?ph=...) để không phải đăng nhập lại mỗi lần chuyển trang. Chỉ nhận mã phiên còn hiệu lực.
+    tmpl.phien = e.parameter.ph;
   }
   return tmpl.evaluate()
     .setTitle(cauHinh.title)
@@ -77,7 +81,8 @@ var TRANG_WEBAPP_ = {
   // thể còn trong bookmark -> đưa sang cùng trang "hopdongmc" đang được bảo trì.
   meconn:    { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK', currentPage: 'hopdongmc' },
   tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' },
-  tracuu:    { file: '33_Page_TraCuuHopDong',   title: '🔍 Tra cứu hợp đồng HAK' }
+  tracuu:    { file: '33_Page_TraCuuHopDong',   title: '🔍 Tra cứu hợp đồng HAK' },
+  hinhanh:   { file: '35_Page_TraCuuHinhAnh',   title: '🖼️ Tra cứu hình ảnh HAK' }
 };
 
 function SETUP_SYNC_TOKEN() {
