@@ -116,6 +116,8 @@
 </style>
 </head>
 <body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -127,6 +129,9 @@
 
   <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
     <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
   </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
@@ -526,7 +531,7 @@
   var khachHangTheoTen_ = {}; // { tenThuongHoa: {...} } — tra theo tên (lưu ý: tên có thể trùng giữa nhiều người, ưu tiên khớp theo CCCD trước)
   var danhSachKhachHangArr_ = []; // mảng phẳng để lọc trong modal "Tạo hợp đồng mới"
   function naptDanhSachKhachHangCoSan() {
-    google.script.run.withSuccessHandler(function (kq) {
+    hakRun_().withSuccessHandler(function (kq) {
       var dl = document.getElementById('dlKhachHangCoSan'); dl.innerHTML = '';
       var dlTen = document.getElementById('dlKhachHangCoSanTheoTen'); dlTen.innerHTML = '';
       danhSachKhachHangArr_ = kq.items || [];
@@ -572,7 +577,7 @@
   }
 
   function naptDanhSachNoiCap() {
-    google.script.run.withSuccessHandler(function (list) {
+    hakRun_().withSuccessHandler(function (list) {
       var dl = document.getElementById('dlNoiCap'); dl.innerHTML = '';
       list.forEach(function (nc) { var opt = document.createElement('option'); opt.value = nc; dl.appendChild(opt); });
     }).withFailureHandler(function (err) { console.error('naptDanhSachNoiCap:', err); }).layGoiYNoiCap();
@@ -582,7 +587,7 @@
   function moTrangTaoHopDong(khachHangDaChon) {
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang tạo nháp...' }]);
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { thongBao_('❌ Lỗi tạo nháp: ' + err.message); veTrangDanhSach(); })
       .withSuccessHandler(function (kq) {
         idDraftHienTai = kq.idDraft;
@@ -672,7 +677,7 @@
       var reader = new FileReader();
       reader.onload = function (e) {
         var base64 = e.target.result.split(',')[1];
-        google.script.run
+        hakRun_()
           .withSuccessHandler(function (kq) {
             fi.value = ''; document.getElementById('tenFileAnhChoDiemGPS').textContent = '';
             ghiDiemGPSVaoNhap_(Number(lat), Number(lng), kq.thanhCong ? kq.url : '');

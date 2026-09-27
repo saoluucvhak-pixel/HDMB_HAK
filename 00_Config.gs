@@ -119,14 +119,14 @@ const LOAI_HO_SO_HOP_LE = [
 ];
 
 /** Lấy danh sách loại hồ sơ đầy đủ = danh mục gốc + các loại người dùng đã tự thêm (lưu ở Script Properties) */
-function layDanhSachLoaiHoSo() {
+function layDanhSachLoaiHoSo_() {
   const themVao = PropertiesService.getScriptProperties().getProperty('LOAI_HO_SO_THEM');
   const dsThem = themVao ? JSON.parse(themVao) : [];
   return LOAI_HO_SO_HOP_LE.concat(dsThem);
 }
 
 /** Thêm 1 loại hồ sơ nguồn gốc mới vào danh mục (bấm "+ Loại khác..." trên form) */
-function themLoaiHoSoMoi(loaiMoi) {
+function themLoaiHoSoMoi_(loaiMoi) {
   loaiMoi = (loaiMoi || '').toString().trim();
   if (!loaiMoi) return { thanhCong: false, loi: 'Tên loại hồ sơ trống' };
   const key = 'LOAI_HO_SO_THEM';
@@ -137,7 +137,7 @@ function themLoaiHoSoMoi(loaiMoi) {
     ds.push(loaiMoi);
     props.setProperty(key, JSON.stringify(ds));
   }
-  return { thanhCong: true, danhSach: layDanhSachLoaiHoSo() };
+  return { thanhCong: true, danhSach: layDanhSachLoaiHoSo_() };
 }
 
 // Sai số cho phép (mét) khi đối chiếu tọa độ GPS ảnh với tọa độ rừng đã ghi nhận
@@ -202,7 +202,7 @@ let _reportSSCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — trán
  * dùng cho trang Thiết lập trên webapp, để có thể XEM và ĐỔI sang dữ liệu/dự án
  * khác mà không cần sửa code.
  */
-function LAY_CAU_HINH_KET_NOI() {
+function LAY_CAU_HINH_KET_NOI_() {
   const props = PropertiesService.getScriptProperties();
   const ketQua = {
     draftUrl: '', draftTen: '', draftLoi: '',
@@ -261,7 +261,7 @@ function LAY_CAU_HINH_KET_NOI() {
  * URL rỗng để GIỮ NGUYÊN giá trị đang dùng (không đổi). Luôn xác minh mở được
  * TRƯỚC khi lưu — không lưu URL không hợp lệ.
  */
-function LUU_CAU_HINH_KET_NOI(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
+function LUU_CAU_HINH_KET_NOI_(draftUrl, folderUrl, misaFolderUrl, hoSoFolderUrl, gpsFolderUrl) {
   const props = PropertiesService.getScriptProperties();
   const ketQua = { thanhCong: true, thongBao: [] };
 
@@ -366,6 +366,7 @@ const QUYEN_CHIA_SE_NHAN_ = { reader: 'Xem', commenter: 'Bình luận', writer: 
  * Đổi 'DOI_MAT_KHAU_NAY_NGAY' thành mật khẩu thật của bạn trước khi chạy.
  */
 function SETUP_ADMIN_TOKEN() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè mật khẩu đã đặt.
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('ADMIN_TOKEN')) { Logger.log('ADMIN_TOKEN đã có — không ghi đè. Đổi trong Project Settings > Script Properties.'); return; }
@@ -396,7 +397,7 @@ function kiemTraAdminToken_(adminToken) {
  * cách DUY NHẤT hỗ trợ cấp quyền "Bình luận" (SpreadsheetApp/DriveApp chỉ có
  * addViewer/addEditor, không có mức Bình luận).
  */
-function CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen) {
+function CHIA_SE_DU_LIEU_CHO_EMAIL_(adminToken, email, quyen) {
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return { thanhCong: false, loi: loiToken };
   email = (email || '').toString().trim();
@@ -423,7 +424,7 @@ function CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen) {
  * luôn là tài khoản đã tạo file) và quyền không gắn với 1 email cụ thể (chia sẻ
  * kiểu "Bất kỳ ai có link") vì không có ai để "thu hồi" trong 2 trường hợp đó.
  */
-function LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken) {
+function LAY_DANH_SACH_QUYEN_TRUY_CAP_(adminToken) {
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return [{ ten: '', id: null, permissionId: null, email: '', quyen: '', loi: loiToken }];
   const ketQua = [];
@@ -442,8 +443,8 @@ function LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken) {
   return ketQua;
 }
 
-/** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
-function THU_HOI_QUYEN_TRUY_CAP(adminToken, id, permissionId) {
+/** Thu hồi (xóa) đúng 1 quyền truy cập — xác định bằng cặp (id tài nguyên, id quyền) lấy từ LAY_DANH_SACH_QUYEN_TRUY_CAP_(), không suy luận theo email để tránh xóa nhầm quyền của người khác trùng tên. */
+function THU_HOI_QUYEN_TRUY_CAP_(adminToken, id, permissionId) {
   const loiToken = kiemTraAdminToken_(adminToken);
   if (loiToken) return { thanhCong: false, loi: loiToken };
   if (!id || !permissionId) return { thanhCong: false, loi: 'Thiếu thông tin quyền cần thu hồi.' };
@@ -545,6 +546,7 @@ function tenCotChu_(chiSo0) {
 
 /** Menu: chấp nhận cấu trúc cột HIỆN TẠI làm mẫu mới (chỉ dùng sau khi đã cố ý đổi cột VÀ cập nhật *_COL). */
 function XAC_NHAN_CAU_TRUC_COT_HIEN_TAI() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const props = PropertiesService.getScriptProperties();
   const cache = CacheService.getScriptCache();
   const ds = [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE, SHEET_NAME.DM_DIACHI];
@@ -653,9 +655,9 @@ function kiemTraFileTaiLen_(base64Data, mimeType) {
 }
 
 /**
- * Xóa cache Bản đồ GPS (getMapData(), TTL 15 phút, xem Code.gs) — gọi ở MỌI điểm
+ * Xóa cache Bản đồ GPS (getMapData_(), TTL 15 phút, xem Code.gs) — gọi ở MỌI điểm
  * ghi thay đổi HD_GPS/HD_RUNG (thêm/sửa/xóa lô rừng, đồng bộ mở rộng, xóa vĩnh viễn
- * hợp đồng), không chỉ riêng CAP_NHAT_GPS_RUNG như trước đây, để tránh bản đồ hiện
+ * hợp đồng), không chỉ riêng CAP_NHAT_GPS_RUNG_ như trước đây, để tránh bản đồ hiện
  * dữ liệu cũ tới 15 phút sau khi đổi (CACHE-001).
  */
 function xoaCacheBanDo_() {
@@ -666,15 +668,16 @@ function xoaCacheBanDo_() {
 function ghiNhatKy_(hanhDong, idHD, chiTiet) {
   try {
     const sh = getOrCreateNhatKySheet_();
+    // Người đăng nhập qua webapp (phiên) hoặc người bấm menu trong Sheet (34_PhanQuyen.gs).
     let email = '';
-    try { email = Session.getActiveUser().getEmail(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
+    try { email = _emailNguoiThucHien_(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
     sh.appendRow([new Date(), email, hanhDong, idHD || '', chiTiet || '']);
   } catch (e) { log_('ERROR', 'ghiNhatKy_', 'Không ghi được nhật ký: ' + hanhDong + ' ' + (idHD || ''), e); /* không để lỗi ghi log làm hỏng thao tác chính */ }
 }
 
 /** Đọc Nhật ký hệ thống (NhatKy_SuaDoi), lọc theo khoảng ngày [tuNgay, denNgay] —
  *  để trống 1 trong 2 nghĩa là không giới hạn phía đó. Mới nhất hiện trước. */
-function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
+function LAY_NHAT_KY_THEO_NGAY_(tuNgay, denNgay) {
   const sh = getOrCreateNhatKySheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -699,8 +702,8 @@ function LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay) {
 }
 
 /**
- * ⚠️ BỔ SUNG HÀM ĐANG THIẾU: được gọi ở 4 chỗ trong dự án (layTinhHinhThucHien,
- * layBaoCaoHopDongPhanTrang, layDanhSachThanhLy, TAI_TRANG_BAO_CAO_TONG_HOP)
+ * ⚠️ BỔ SUNG HÀM ĐANG THIẾU: được gọi ở 4 chỗ trong dự án (layTinhHinhThucHien_,
+ * layBaoCaoHopDongPhanTrang_, layDanhSachThanhLy_, TAI_TRANG_BAO_CAO_TONG_HOP_)
  * nhưng CHƯA TỪNG được định nghĩa ở đâu — nghĩa là mỗi khi 1 trong các hàm đó
  * gặp lỗi thật, gọi hàm không tồn tại này sẽ ném ra 1 lỗi MỚI ("ghiLoiBackend_
  * is not defined"), CHE MẤT lỗi gốc thật sự đã xảy ra, khiến rất khó chẩn đoán.
@@ -857,9 +860,9 @@ let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nế
  * Đọc TRỰC TIẾP HD_RUNG + HD_GPS + HD_Picture (đọc TOÀN BỘ sheet đúng 1 LẦN,
  * không đọc theo từng dòng) để tính "Có ảnh" / "Đã đo GPS đủ" / "Tọa độ trung
  * bình" THẬT — dùng làm lớp GHI ĐÈ lên Draft trong docToanBoDraftBaoCao_() và
- * layBaoCaoHoSoRung().
+ * layBaoCaoHoSoRung_().
  *
- * LÝ DO CẦN LỚP NÀY: Draft chỉ đúng NẾU đúng hàm CAP_NHAT_DRAFT_MOT_HOP_DONG /
+ * LÝ DO CẦN LỚP NÀY: Draft chỉ đúng NẾU đúng hàm CAP_NHAT_DRAFT_MOT_HOP_DONG_ /
  * CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_ được gọi mỗi khi ảnh/GPS thay đổi. Nếu dữ
  * liệu GPS/ảnh được NHẬP THẲNG vào sheet HD_GPS/HD_Picture bằng tay (không qua
  * webapp), hoặc lỡ sót 1 hàm ghi nào đó quên gọi cập nhật Draft, Draft sẽ hiện
@@ -883,8 +886,8 @@ function layCoAnhVaGpsTrucTiep_() {
     const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (!idRung) return;
     const type = g[GPS_COL.HE_TOA_DO];
-    const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-    const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+    const lat = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
     if (isNaN(lat) || isNaN(lng)) return;
     if (!gpsByIdRung[idRung]) gpsByIdRung[idRung] = { latTong: 0, lngTong: 0, dem: 0 };
     gpsByIdRung[idRung].latTong += lat; gpsByIdRung[idRung].lngTong += lng; gpsByIdRung[idRung].dem++;
@@ -893,7 +896,7 @@ function layCoAnhVaGpsTrucTiep_() {
   // ---- coAnh theo "định danh thô" trong HD_Picture (đúng 1 lượt đọc HD_Picture) ----
   // ⚠️ Không dùng thẳng làm coAnhByIdHD nữa: đã phát hiện một số dòng CŨ trong
   // HD_Picture lưu NHẦM giá trị ID_RUNG vào cột ID_HD (xác nhận qua đối chiếu
-  // trực tiếp dữ liệu thật — xem layAnhCuaHopDong() ở 06_CreateUpdate.gs). Nên
+  // trực tiếp dữ liệu thật — xem layAnhCuaHopDong_() ở 06_CreateUpdate.gs). Nên
   // giữ nguyên "định danh thô" (có thể là ID_HD thật HOẶC lỡ là ID_RUNG) rồi
   // đối chiếu lại theo CẢ HAI khả năng ở bước gộp theo hợp đồng bên dưới.
   const coAnhByDinhDanhTho = {};

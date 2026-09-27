@@ -125,11 +125,17 @@ function fileTonTaiTrenDrive_(duongDan) {
   }
 }
 
+/** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi KIEM_TRA_HO_SO_TOAN_BO_ qua api(). */
+function KIEM_TRA_HO_SO_TOAN_BO(e) {
+  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
+  return KIEM_TRA_HO_SO_TOAN_BO_();
+}
+
 /**
  * CHẠY KIỂM TRA hợp đồng (tất cả lô rừng + tất cả HD_NCC, hoặc lọc theo khoảng
  * ngày ký nếu truyền tuNgay/denNgay) và xuất kết quả ra sheet "BaoCao_KiemTra".
  */
-function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
+function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay) {
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const coLoc = !!(tuNgay || denNgay); // có lọc theo ngày hay không — ảnh hưởng việc dọn dòng cũ
@@ -243,13 +249,13 @@ function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
  * đích: nhanh chóng thấy hợp đồng nào thiếu hồ sơ bắt buộc (dòng đỏ)/thiếu
  * ảnh-GPS (dòng vàng) để bổ sung, không cần rà từng hợp đồng thủ công.
  */
-function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
+function layBaoCaoHopDongPhanTrang_(boLoc, trang, kichThuoc, boBuoc) {
   try {
     boLoc = boLoc || {};
     trang = trang || 1;
     kichThuoc = kichThuoc || 20;
 
-    if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ từ đầu
+    if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI_(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ từ đầu
 
     const tatCa = docToanBoDraftBaoCao_().map(function (m) {
       const toaDo = m.toaDoTrungBinh ? (function () {
@@ -309,7 +315,7 @@ function layBaoCaoHopDongPhanTrang(boLoc, trang, kichThuoc, boBuoc) {
  * webapp "Kiểm tra hồ sơ" — để người dùng bấm xem file DinhKemGiayTo trực tiếp
  * thay vì chỉ xem kết quả tổng hợp trong sheet.
  */
-function layDuLieuKiemTraHoSoWebapp() {
+function layDuLieuKiemTraHoSoWebapp_() {
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const nccById = {};
@@ -340,7 +346,7 @@ function layDuLieuKiemTraHoSoWebapp() {
  * Lấy toàn bộ ảnh (Picture1..10) của mọi hợp đồng KÈM LINK DRIVE bấm mở được,
  * dùng cho trang webapp "Kiểm tra ảnh (đã lưu)".
  */
-function layDuLieuAnhWebapp() {
+function layDuLieuAnhWebapp_() {
   const rows = readData_(SHEET_NAME.HD_PICTURE);
   const nccRows = readData_(SHEET_NAME.HD_NCC);
   const soHDById = {};
@@ -366,7 +372,7 @@ function layDuLieuAnhWebapp() {
  * bằng checkbox trên webapp) — thay vì luôn phải chạy toàn bộ ảnh trong hệ thống.
  * duongDanList = [{ url, idHD }]
  */
-function KIEM_TRA_ANH_DA_CHON(duongDanList) {
+function KIEM_TRA_ANH_DA_CHON_(duongDanList) {
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const rungByHD = {};
   rungRows.forEach(function (r) {
@@ -393,8 +399,8 @@ function KIEM_TRA_ANH_DA_CHON(duongDanList) {
       let latTong = 0, lngTong = 0, dem = 0;
       rows.forEach(function (g) {
         const type = g[GPS_COL.HE_TOA_DO];
-        const lat = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
-        const lng = (type === 'DMS') ? convertDmsToDd(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
+        const lat = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LAT]) : parseFloat(g[GPS_COL.LAT]);
+        const lng = (type === 'DMS') ? convertDmsToDd_(g[GPS_COL.LNG]) : parseFloat(g[GPS_COL.LNG]);
         if (!isNaN(lat) && !isNaN(lng)) { latTong += lat; lngTong += lng; dem++; }
       });
       kq = dem ? { lat: latTong / dem, lng: lngTong / dem } : null;
@@ -428,7 +434,7 @@ function KIEM_TRA_ANH_DA_CHON(duongDanList) {
   return duongDanList.map(function (item) {
     const idHDChuan = (item.idHD || '').toString().trim();
     const toaDoDangKy = toaDoTrungBinhCuaHD(idHDChuan);
-    const kq = kiemTraMotAnh(item.url, toaDoDangKy ? toaDoDangKy.lat : null, toaDoDangKy ? toaDoDangKy.lng : null);
+    const kq = kiemTraMotAnh_(item.url, toaDoDangKy ? toaDoDangKy.lat : null, toaDoDangKy ? toaDoDangKy.lng : null);
     const rowNCC = timHopDongDungCach_(idHDChuan);
     return {
       url: item.url, idHD: item.idHD, tenFile: item.tenFile || item.url.split('/').pop(),

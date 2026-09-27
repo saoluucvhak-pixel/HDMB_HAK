@@ -12,9 +12,9 @@
  *  GPS coi như "chưa đo tọa độ", dù thực ra tọa độ đã có sẵn dạng chữ.
  *
  *  2 hàm chính:
- *    - XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG() : chỉ QUÉT + BÁO CÁO, KHÔNG ghi gì.
- *    - GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS() : quét rồi GHI THẬT vào HD_GPS
- *      (gọi CAP_NHAT_GPS_RUNG() ở 06_CreateUpdate.gs cho từng lô, y hệt như
+ *    - XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_() : chỉ QUÉT + BÁO CÁO, KHÔNG ghi gì.
+ *    - GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_() : quét rồi GHI THẬT vào HD_GPS
+ *      (gọi CAP_NHAT_GPS_RUNG_() ở 06_CreateUpdate.gs cho từng lô, y hệt như
  *      nhập tay 1 điểm GPS mới — không đụng tới các điểm GPS đã có).
  *  Cả 2 đều CHỈ xét lô rừng CHƯA có điểm nào trong HD_GPS (idempotent —
  *  chạy lại nhiều lần không tạo trùng điểm, vì lô đã có GPS sẽ tự bị bỏ qua).
@@ -93,14 +93,15 @@ function _quetToaDoTuDiaChiRung_() {
 }
 
 /** Chỉ QUÉT + BÁO CÁO, KHÔNG ghi gì vào HD_GPS — dùng để kiểm tra trước khi ghi thật. */
-function XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG() {
+function XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_() {
   const danhSach = _quetToaDoTuDiaChiRung_();
   return { thanhCong: true, tongSoLo: danhSach.length, danhSach: danhSach };
 }
 
 /** Chạy từ menu Sheets — hiện popup xem trước, không ghi gì. */
 function XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_TU_MENU() {
-  const kq = XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG();
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const kq = XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_();
   if (kq.tongSoLo === 0) {
     SpreadsheetApp.getUi().alert('✅ Không phát hiện lô rừng nào còn ghi tọa độ dạng chữ trong "Địa chỉ rừng" mà chưa có trong HD_GPS.');
     return;
@@ -116,19 +117,19 @@ function XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_TU_MENU() {
 }
 
 /**
- * Quét rồi GHI THẬT tọa độ dò được vào HD_GPS (gọi CAP_NHAT_GPS_RUNG() —
+ * Quét rồi GHI THẬT tọa độ dò được vào HD_GPS (gọi CAP_NHAT_GPS_RUNG_() —
  * y hệt như nhập tay 1 điểm GPS mới cho lô rừng đó). KHÔNG xóa/sửa "Địa chỉ
  * rừng" gốc và KHÔNG đụng tới điểm GPS đã có của lô khác.
  * Trả về { thanhCong, soDaGhi, tongSoLo, loi } — đúng hợp đồng mà
- * CHAY_TOAN_BO_BAO_TRI() ở 28_BaoTri_DongBo.gs đang đọc (soDaGhi/tongSoLo).
+ * CHAY_TOAN_BO_BAO_TRI_() ở 28_BaoTri_DongBo.gs đang đọc (soDaGhi/tongSoLo).
  */
-function GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS() {
+function GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_() {
   const danhSach = _quetToaDoTuDiaChiRung_();
   let soDaGhi = 0;
   const loi = [];
   danhSach.forEach(function (d) {
     try {
-      const kq = CAP_NHAT_GPS_RUNG(d.idRung, { lat: d.lat, lng: d.lng, diaChi: d.diaChiGoc }, false);
+      const kq = CAP_NHAT_GPS_RUNG_(d.idRung, { lat: d.lat, lng: d.lng, diaChi: d.diaChiGoc }, false);
       if (kq.thanhCong) soDaGhi++;
       else loi.push({ idRung: d.idRung, maRung: d.maRung, loi: kq.loi });
     } catch (e) {
@@ -140,8 +141,9 @@ function GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS() {
 
 /** Chạy từ menu Sheets — xác nhận rồi ghi thật, hiện popup kết quả. */
 function GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_TU_MENU() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const ui = SpreadsheetApp.getUi();
-  const xemTruoc = XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG();
+  const xemTruoc = XEM_TRUOC_TOA_DO_TU_DIA_CHI_RUNG_();
   if (xemTruoc.tongSoLo === 0) {
     ui.alert('✅ Không có lô rừng nào cần trích tọa độ từ "Địa chỉ rừng".');
     return;
@@ -153,7 +155,7 @@ function GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_TU_MENU() {
   );
   if (xacNhan !== ui.Button.OK) return;
 
-  const kq = GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS();
+  const kq = GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_();
   let tb = '✅ Đã ghi tọa độ cho ' + kq.soDaGhi + '/' + kq.tongSoLo + ' lô rừng vào HD_GPS.';
   if (kq.loi.length) tb += '\n\n⚠️ ' + kq.loi.length + ' lô bị lỗi khi ghi (xem chi tiết trong Log > Executions).';
   Logger.log(JSON.stringify(kq, null, 2));

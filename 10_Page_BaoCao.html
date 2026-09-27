@@ -161,6 +161,8 @@
   </style>
 </head>
 <body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -172,6 +174,9 @@
 
   <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
     <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
   </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
@@ -505,7 +510,7 @@
     var tuKhoa = document.getElementById('mcTimKH').value;
     var elBang = document.getElementById('mcVungBang');
     elBang.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.items || !kq.items.length) { elBang.innerHTML = '<div class="empty-hint">Không có khách hàng nào khớp.</div>'; document.getElementById('mcPhanTrang').innerHTML = ''; return; }
         var table = document.createElement('table'); table.className = 'mecon-table';
@@ -550,7 +555,7 @@
     var tdCon = trCon.firstChild;
     if (tdCon.dataset.daTai === '1') return;
     tdCon.innerHTML = '<p class="hint">⌛ Đang tải hợp đồng...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (list) {
         tdCon.dataset.daTai = '1';
         if (!list || !list.length) { tdCon.innerHTML = '<div class="empty-hint">Khách hàng này chưa có hợp đồng nào.</div>'; return; }
@@ -597,7 +602,7 @@
     var elND = tdCon.querySelector('.vung-tab-noidung');
     elND.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     if (tab === 'rung') {
-      google.script.run.withSuccessHandler(function (list) {
+      hakRun_().withSuccessHandler(function (list) {
         if (!list || !list.length) { elND.innerHTML = '<div class="empty-hint">Chưa có lô rừng nào.</div>'; return; }
         var table = document.createElement('table'); table.className = 'mecon-table';
         table.innerHTML = '<thead><tr><th style="width:26px"></th><th>Mã rừng</th><th>Địa chỉ</th><th class="so-lieu">Diện tích (m²)</th><th class="so-lieu">KL dự kiến (Tấn)</th><th>Hồ sơ pháp lý</th></tr></thead>';
@@ -618,7 +623,7 @@
         table.appendChild(tbody); elND.innerHTML = ''; elND.appendChild(table);
       }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layDanhSachRung(idHD);
     } else {
-      google.script.run.withSuccessHandler(function (list) {
+      hakRun_().withSuccessHandler(function (list) {
         if (!list || !list.length) { elND.innerHTML = '<div class="empty-hint">Chưa có số tài khoản nào.</div>'; return; }
         var h = '<table class="mecon-table"><thead><tr><th>Số TK</th><th>Ngân hàng</th><th>Ủy quyền TT</th><th>Người nhận</th></tr></thead><tbody>';
         list.forEach(function (r) { h += '<tr><td>' + escHtmlKH_(r.soTK) + '</td><td>' + escHtmlKH_(r.nganHang) + '</td><td>' + escHtmlKH_(r.uyQuyenTT) + '</td><td>' + escHtmlKH_(r.tenUyQuyen) + '</td></tr>'; });
@@ -650,7 +655,7 @@
     var elND = tdCon.querySelector('.vung-tab-noidung');
     elND.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     if (tab === 'gps') {
-      google.script.run.withSuccessHandler(function (list) {
+      hakRun_().withSuccessHandler(function (list) {
         if (!list || !list.length) { elND.innerHTML = '<div class="empty-hint">Chưa có điểm GPS nào cho lô này.</div>'; return; }
         var h = '<table class="mecon-table"><thead><tr><th>Điểm</th><th>Tọa độ</th><th>Ảnh minh chứng</th></tr></thead><tbody>';
         list.forEach(function (p, i) {
@@ -660,7 +665,7 @@
         h += '</tbody></table>'; elND.innerHTML = h;
       }).withFailureHandler(function (err) { elND.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtmlKH_(err.message) + '</div>'; }).layGPSCuaRung(idRung);
     } else {
-      google.script.run.withSuccessHandler(function (list) {
+      hakRun_().withSuccessHandler(function (list) {
         var hs = (list || []).find(function (x) { return (x.idRung || '').toString().trim() === idRung.toString().trim(); });
         if (!hs) { elND.innerHTML = '<div class="empty-hint">Không tìm thấy thông tin hồ sơ.</div>'; return; }
         var h = '<table class="mecon-table"><tbody>' +
@@ -676,7 +681,7 @@
 <script>
   function dongBoMisa() {
     showMsg('msgDongBoMisa', '⌛ Đang đồng bộ (có thể mất vài chục giây nếu nhiều hợp đồng)...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { showMsg('msgDongBoMisa', '❌ ' + kq.loi, false); return; }
         var el = document.getElementById('msgDongBoMisa');
@@ -690,7 +695,7 @@
     var tuNgay = document.getElementById('misaTuNgay').value;
     var denNgay = document.getElementById('misaDenNgay').value;
     showMsg('msgXuatMisa', '⌛ Đang đồng bộ + xuất báo cáo (có thể mất vài chục giây nếu nhiều hợp đồng)...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { showMsg('msgXuatMisa', '❌ ' + kq.loi, false); return; }
         var el = document.getElementById('msgXuatMisa');
@@ -728,7 +733,7 @@
   function xuatBangRaFile_(idMsg, tenFile, header, rows, dinhDang) {
     if (!rows || !rows.length) { showMsg(idMsg, '⚠️ Không có dữ liệu để xuất — lọc/tải bảng trước đã.', false); return; }
     showMsg(idMsg, '⌛ Đang tạo file ' + dinhDang.toUpperCase() + ' (' + rows.length + ' dòng, có thể mất chút thời gian nếu nhiều dữ liệu)...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { showMsg(idMsg, '❌ ' + kq.loi, false); return; }
         taiFileTuBase64_(kq.base64, kq.tenFile, kq.mimeType);
@@ -813,7 +818,7 @@
   function xuatBaoCaoHD_(dinhDang) {
     var boLoc = layBoLocBaoCaoHD();
     showMsg('msgLocBC', '⌛ Đang lấy toàn bộ dữ liệu khớp bộ lọc (không chỉ trang hiện tại)...', true);
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { showMsg('msgLocBC', '❌ Lỗi: ' + err.message, false); })
       .withSuccessHandler(function (kq) {
         var header = ['Số HĐ', 'Ngày ký', 'Chủ rừng', 'CCCD', 'Người ủy quyền', 'Số TK', 'Số lô rừng', 'KL dự kiến (Tấn)', 'KL thực hiện (Tấn)', 'Giá trị HĐ (đ)', 'Giá trị TH (đ)', 'Từ ngày TH', 'Đến ngày TH', 'Có ảnh', 'Đủ GPS', 'Đủ hồ sơ', 'Tình trạng', 'Ghi chú'];
@@ -830,7 +835,7 @@
   function taiBaoCaoHD(trang, forceLamMoi) {
     var boLoc = layBoLocBaoCaoHD();
     showMsg('msgLocBC', '⌛ Đang lọc...', true);
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { showMsg('msgLocBC', '❌ Lỗi tải báo cáo hợp đồng: ' + err.message, false); })
       .withSuccessHandler(function (kq) {
         renderBangBaoCaoHD(kq);
@@ -867,12 +872,12 @@
 
   function chayTongHop(forceLamMoi) {
     showMsg('msg', '⌛ Đang tổng hợp...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) { renderTongHopWebapp(kq, forceLamMoi); })
       .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
       .layTongHopChoWebapp(!!forceLamMoi);
 
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi tải Tình hình thực hiện: ' + err.message, false); })
       .withSuccessHandler(function (kq) { renderTinhHinhThucHien(kq); })
       .layTinhHinhThucHien();
@@ -913,14 +918,14 @@
 
   function taiDanhSachThanhLy(trang, forceLamMoi) {
     var boLoc = layBoLocThanhLy();
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { showMsg('msgTL', '❌ Lỗi tải danh sách thanh lý: ' + err.message, false); })
       .withSuccessHandler(function (kq) { renderBangThanhLy(kq); })
       .layDanhSachThanhLy(trang || 1, 20, boLoc, !!forceLamMoi);
   }
 
   function thanhLyHopDong(idHD, boQua) {
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (kq.thanhCong) { showMsg('msgTL', '✅ Đã thanh lý hợp đồng ' + idHD, true); taiDanhSachThanhLy(trangTLHienTai); return; }
         if (kq.canXacNhan) {
@@ -949,7 +954,7 @@
     showMsg('msg', '⌛ Đang tổng hợp...', true);
     var boLocBC = layBoLocBaoCaoHD();
     var boLocTL = layBoLocThanhLy();
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         renderBangBaoCaoHD(kq.baoCaoHopDong);
         showMsg('msgLocBC', '✅ Đã tải — tìm thấy ' + kq.baoCaoHopDong.tongSo + ' hợp đồng.', true);
@@ -989,7 +994,7 @@
   }
   function taiBaoCaoHoSoRung() {
     showMsg('msgHoSoRung', '⌛ Đang tải...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (list) {
         dsHoSoRungGoc = list;
         renderBangHoSoRung();
@@ -1066,7 +1071,7 @@
     document.getElementById('dsChiTietToaDoRung').innerHTML = '<p class="hint">Đang tải...</p>';
     document.getElementById('dsChiTietAnhRung').innerHTML = '';
     document.getElementById('dsChiTietHoSoPhapLyRung').innerHTML = '';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         var elToaDo = document.getElementById('dsChiTietToaDoRung');
         if (!kq.toaDo.length) {
@@ -1118,7 +1123,7 @@
   var dsThanhToanGoc = [];
   function taiBaoCaoThanhToan() {
     showMsg('msgThanhToan', '⌛ Đang tải...', true);
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { showMsg('msgThanhToan', '❌ ' + kq.loi, false); return; }
         dsThanhToanGoc = kq.items;

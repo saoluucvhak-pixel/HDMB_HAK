@@ -107,7 +107,7 @@
     var tinCho = document.createElement('div'); tinCho.className = 'chatbot-tin chatbot-tin-bot'; tinCho.textContent = anhDangGui ? '⌛ Đang đọc ảnh...' : '⌛ Đang tra cứu...';
     vungTin.appendChild(tinCho);
     vungTin.scrollTop = vungTin.scrollHeight;
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         var traLoi = kq.thanhCong ? (kq.khongDungAI ? '🔧 ' : '') + kq.traLoi : '❌ ' + kq.loi;
         tinCho.innerHTML = chatbotTaoLinkBamDuoc_(traLoi); // ⚠️ MỚI: trước đây .textContent hiện link dạng chữ thô, không bấm được — giờ tự nhận diện URL trong câu trả lời và biến thành link bấm mở tab mới, tải/xem ảnh và hồ sơ pháp lý ngay

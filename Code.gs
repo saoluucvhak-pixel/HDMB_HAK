@@ -29,7 +29,7 @@ function doGet(e) {
              .setMimeType(ContentService.MimeType.TEXT);
     }
     try {
-      var result = RUN_HAK_SYSTEM_FINAL();
+      var result = RUN_HAK_SYSTEM_FINAL_();
       return ContentService.createTextOutput("⚡ HỆ THỐNG HAK 2026: Cập nhật dữ liệu thành công! Kết quả: " + result)
              .setMimeType(ContentService.MimeType.TEXT);
     } catch (err) {
@@ -45,6 +45,16 @@ function doGet(e) {
   var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
   tmpl.baseUrl = ScriptApp.getService().getUrl();
   tmpl.currentPage = cauHinh.currentPage || tenTrang;
+  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
+  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
+  tmpl.phien = '';
+  tmpl.loiDangNhap = '';
+  if (e.parameter.sso) {
+    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
+    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
+    tmpl.phien = dangNhap.phien;
+    tmpl.loiDangNhap = dangNhap.loi;
+  }
   return tmpl.evaluate()
     .setTitle(cauHinh.title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -66,10 +76,12 @@ var TRANG_WEBAPP_ = {
   // "meconn" từng là trang 26_Page_QuanLyMeCon (bản cũ, đã xóa khỏi dự án). URL cũ có
   // thể còn trong bookmark -> đưa sang cùng trang "hopdongmc" đang được bảo trì.
   meconn:    { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK', currentPage: 'hopdongmc' },
-  tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' }
+  tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' },
+  tracuu:    { file: '33_Page_TraCuuHopDong',   title: '🔍 Tra cứu hợp đồng HAK' }
 };
 
 function SETUP_SYNC_TOKEN() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   // Hàm công khai -> ai có URL webapp cũng gọi được qua google.script.run: KHÔNG được ghi đè token đã đặt
   // (trước đây gọi hàm này rồi dùng ?action=run&token=<giá trị mẫu> là chạy được đồng bộ).
   var props = PropertiesService.getScriptProperties();
@@ -79,7 +91,7 @@ function SETUP_SYNC_TOKEN() {
 }
 
 // --- HÀM NGUYÊN BẢN (GIỮ NGUYÊN 100%) ---
-function convertDmsToDd(input) {
+function convertDmsToDd_(input) {
   if (!input) return null;
   let str = input.toString().toUpperCase().trim();
   let direction = str.slice(-1);
@@ -108,14 +120,14 @@ function convertDmsToDd(input) {
  * ĐÃ CẬP NHẬT: dùng tên cột thống nhất từ 00_Config.gs
  * (GPS_COL.HE_TOA_DO thay cho GPS_COL.TYPE cũ).
  */
-function getLatLngFromRow(row) {
+function getLatLngFromRow_(row) {
   var type = row[GPS_COL.HE_TOA_DO];
-  var lat = (type === "DMS") ? convertDmsToDd(row[GPS_COL.LAT]) : parseFloat(row[GPS_COL.LAT]);
-  var lng = (type === "DMS") ? convertDmsToDd(row[GPS_COL.LNG]) : parseFloat(row[GPS_COL.LNG]);
+  var lat = (type === "DMS") ? convertDmsToDd_(row[GPS_COL.LAT]) : parseFloat(row[GPS_COL.LAT]);
+  var lng = (type === "DMS") ? convertDmsToDd_(row[GPS_COL.LNG]) : parseFloat(row[GPS_COL.LNG]);
   return { lat: lat, lng: lng };
 }
 
-function RUN_HAK_SYSTEM_FINAL() {
+function RUN_HAK_SYSTEM_FINAL_() {
   const startTime = new Date().getTime();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const gpsSh = ss.getSheetByName("HD_GPS");
@@ -131,7 +143,7 @@ function RUN_HAK_SYSTEM_FINAL() {
   for (let i = 1; i < gpsData.length; i++) {
     // ĐÃ CẬP NHẬT: GPS_COL.ID_KEY_GPS thay cho GPS_COL.ID cũ
     let id = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
-    let { lat, lng } = getLatLngFromRow(gpsData[i]);
+    let { lat, lng } = getLatLngFromRow_(gpsData[i]);
 
     if (id && !isNaN(lat) && lat !== 0 && !isNaN(lng)) {
       if (!forestGroups[id]) forestGroups[id] = [];
@@ -191,8 +203,8 @@ function RUN_HAK_SYSTEM_FINAL() {
   return "OK (đã geocode " + geocodedCount + " dòng)";
 }
 
-/** Lấy thời điểm chạy đồng bộ bản đồ (RUN_HAK_SYSTEM_FINAL) gần nhất, để hiển thị "Cập nhật lúc: ..." trên bản đồ */
-function layThoiGianCapNhatBanDo() {
+/** Lấy thời điểm chạy đồng bộ bản đồ (RUN_HAK_SYSTEM_FINAL_) gần nhất, để hiển thị "Cập nhật lúc: ..." trên bản đồ */
+function layThoiGianCapNhatBanDo_() {
   const gia = PropertiesService.getScriptProperties().getProperty('LAN_CUOI_CHAY_BAN_DO');
   return gia || null;
 }
@@ -205,7 +217,7 @@ function layThoiGianCapNhatBanDo() {
  * THỐNG" vẫn gọi đúng hàm này nên sau 15 phút sẽ tự làm mới, không cần thêm nút
  * "xóa cache" riêng.
  */
-function getMapData() {
+function getMapData_() {
   const cache = CacheService.getScriptCache();
   const daCache = cache.get('MAP_DATA_CACHE');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }
@@ -258,7 +270,7 @@ function getMapData_ThucThi_() {
     let idGPS = gpsData[i][GPS_COL.ID_KEY_GPS] ? gpsData[i][GPS_COL.ID_KEY_GPS].toString().trim() : "";
     if (!idGPS) continue;
 
-    let { lat, lng } = getLatLngFromRow(gpsData[i]);
+    let { lat, lng } = getLatLngFromRow_(gpsData[i]);
     let address = gpsData[i][GPS_COL.ADDRESS] || "Chưa xác định địa chỉ";
 
     if (!isNaN(lat) && lat !== 0 && !isNaN(lng)) {
@@ -269,4 +281,10 @@ function getMapData_ThucThi_() {
     }
   }
   return mapGroups;
+}
+
+/** Menu "🗺️ Mở bản đồ": đồng bộ tọa độ/địa chỉ HD_GPS (ghi dữ liệu) — cần quyền Nhập liệu. ?action=run (có SYNC_TOKEN) gọi thẳng RUN_HAK_SYSTEM_FINAL_. */
+function RUN_HAK_SYSTEM_FINAL() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  return RUN_HAK_SYSTEM_FINAL_();
 }

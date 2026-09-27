@@ -8,11 +8,12 @@
  * ============================================================
  */
 function CHAN_DOAN_GPS_TOAN_BO() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
 
   // Gom TẤT CẢ dòng GPS theo ID_KEY_GPS (idRung) — kể cả dòng rỗng/sai định dạng,
-  // không lọc gì cả, để so sánh với layGPSCuaRung() (hàm CÓ lọc) bên dưới.
+  // không lọc gì cả, để so sánh với layGPSCuaRung_() (hàm CÓ lọc) bên dưới.
   const rawByIdRung = {};
   gpsRows.forEach(function (g) {
     const idRungRaw = g[GPS_COL.ID_KEY_GPS];
@@ -28,10 +29,10 @@ function CHAN_DOAN_GPS_TOAN_BO() {
     if (!idRung) return;
     const raw = rawByIdRung[idRung] || [];
     if (!raw.length) return; // lô này CHƯA CÓ dòng GPS nào trong HD_GPS -> không phải lỗi, đúng là chưa đo
-    const daParseDuoc = layGPSCuaRung(idRung);
+    const daParseDuoc = layGPSCuaRung_(idRung);
     if (daParseDuoc.length > 0) return; // parse được bình thường -> không phải lỗi
 
-    // Tới đây: HD_GPS CÓ dòng cho lô này, nhưng layGPSCuaRung() KHÔNG lấy được điểm nào -> ghi lại chi tiết
+    // Tới đây: HD_GPS CÓ dòng cho lô này, nhưng layGPSCuaRung_() KHÔNG lấy được điểm nào -> ghi lại chi tiết
     chiTietLoi.push({
       idRung: idRung,
       kieuIdRungTrongHDRung: typeof idRungRaw, // 'string' hay 'number' — nếu khác kiểu so với ID_KEY_GPS bên dưới là đầu mối
@@ -73,12 +74,13 @@ function CHAN_DOAN_GPS_TOAN_BO() {
 /**
  * Chẩn đoán vì sao 1 số ảnh trong HD_Picture không có link mở được ("Xem ảnh").
  * Quét TOÀN BỘ HD_Picture, với mỗi ô có giá trị, thử resolveDriveLink_() (đúng
- * hàm mà layAnhCuaHopDong() dùng) và ghi lại các ô KHÔNG ra được url — kèm giá
+ * hàm mà layAnhCuaHopDong_() dùng) và ghi lại các ô KHÔNG ra được url — kèm giá
  * trị thô để biết chính xác lý do (ô lưu chỉ tên file mà không tìm thấy file
  * đó trên Drive — có thể do file nằm ở Drive/tài khoản khác, đã bị xóa/đổi
  * tên, hoặc quyền chia sẻ không đủ để script thấy).
  */
 function CHAN_DOAN_ANH_TOAN_BO() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const rows = readData_(SHEET_NAME.HD_PICTURE);
   const tongOCoDuLieu = [];
   const oKhongCoLink = [];
@@ -130,7 +132,7 @@ function CHAN_DOAN_ANH_TOAN_BO() {
  * Chẩn đoán CHÍNH XÁC cho 1 lô rừng cụ thể: vì sao "Ảnh chung của hợp đồng"
  * báo trống dù HD_Picture có vẻ đã có dòng ảnh liên quan. Kiểm tra xem ID_HD
  * thật của hợp đồng cha (lấy từ HD_RUNG.ID_KEY_HD) có KHỚP với ID_HD lưu trong
- * các dòng HD_Picture có cùng Tên chủ rừng hay không — layAnhCuaHopDong() lọc
+ * các dòng HD_Picture có cùng Tên chủ rừng hay không — layAnhCuaHopDong_() lọc
  * CHÍNH XÁC theo ID_HD, nên nếu 2 giá trị này lệch nhau (dù cùng 1 chủ rừng),
  * ảnh sẽ không hiện ra dù rõ ràng "thuộc về" hợp đồng đó.
  *
@@ -138,6 +140,7 @@ function CHAN_DOAN_ANH_TOAN_BO() {
  * bạn muốn kiểm tra, hoặc dùng menu (sẽ hỏi qua hộp thoại prompt).
  */
 function CHAN_DOAN_ANH_THEO_RUNG_TU_MENU() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const ui = SpreadsheetApp.getUi();
   const kq = ui.prompt('Chẩn đoán ảnh theo lô rừng', 'Nhập ID_RUNG cần kiểm tra (vd: HAK2026071600101-ffa):', ui.ButtonSet.OK_CANCEL);
   if (kq.getSelectedButton() !== ui.Button.OK) return;
@@ -159,7 +162,7 @@ function CHAN_DOAN_ANH_THEO_RUNG_(idRung) {
   const tenChuRung = (rung[RUNG_COL.TEN_CHU_RUNG] || '').toString().trim();
 
   const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
-  const khopIdHD = [];      // dòng HD_Picture có ID_HD khớp CHÍNH XÁC -> layAnhCuaHopDong() SẼ thấy
+  const khopIdHD = [];      // dòng HD_Picture có ID_HD khớp CHÍNH XÁC -> layAnhCuaHopDong_() SẼ thấy
   const khopTenNhungLechId = []; // dòng cùng tên chủ rừng nhưng ID_HD KHÁC -> đây là nguyên nhân nếu có
 
   pictureRows.forEach(function (r, idx) {
@@ -177,7 +180,7 @@ function CHAN_DOAN_ANH_THEO_RUNG_(idRung) {
   });
 
   let thongBao = 'ID_RUNG: ' + idRung + '\nID_HD THẬT của hợp đồng cha (từ HD_RUNG): "' + idHDThat + '"\nTên chủ rừng: ' + tenChuRung + '\n\n';
-  thongBao += '✅ Số dòng HD_Picture khớp ĐÚNG ID_HD (layAnhCuaHopDong sẽ thấy): ' + khopIdHD.length + '\n';
+  thongBao += '✅ Số dòng HD_Picture khớp ĐÚNG ID_HD (layAnhCuaHopDong_ sẽ thấy): ' + khopIdHD.length + '\n';
   thongBao += '⚠️ Số dòng HD_Picture CÙNG TÊN CHỦ RỪNG nhưng ID_HD LỆCH (sẽ KHÔNG hiện): ' + khopTenNhungLechId.length + '\n';
 
   if (khopTenNhungLechId.length) {
@@ -200,6 +203,7 @@ function CHAN_DOAN_ANH_THEO_RUNG_(idRung) {
  * hoặc bị lỗi lúc ghi).
  */
 function CHAN_DOAN_SO_HD_HOSORUNG() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const rungRows = readData_(SHEET_NAME.HD_RUNG);
   const soHdGocTheoIdRung = {};
   rungRows.forEach(function (r) {
@@ -209,7 +213,7 @@ function CHAN_DOAN_SO_HD_HOSORUNG() {
 
   const sh = getOrCreateDraftHoSoRungSheet_();
   const lastRow = sh.getLastRow();
-  if (lastRow < 2) { SpreadsheetApp.getUi().alert('Draft_HoSoRung chưa có dữ liệu — bấm "Tải báo cáo" ở tab Hồ sơ rừng trước, hoặc chạy XAY_DUNG_LAI_DRAFT_HOSORUNG().'); return; }
+  if (lastRow < 2) { SpreadsheetApp.getUi().alert('Draft_HoSoRung chưa có dữ liệu — bấm "Tải báo cáo" ở tab Hồ sơ rừng trước, hoặc chạy XAY_DUNG_LAI_DRAFT_HOSORUNG_().'); return; }
   const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
   const c = DRAFT_HSR_COL;
 
@@ -236,7 +240,7 @@ function CHAN_DOAN_SO_HD_HOSORUNG() {
   thongBao += '⚠️ Số dòng có Số HĐ LỆCH so với gốc: ' + soLech + '\n';
   if (viDuTrong.length) thongBao += '\nVí dụ dòng trống:\n' + viDuTrong.map(function (x) { return '• Dòng ' + x.dong + ' (ID_RUNG ' + x.idRung + '): cache trống, gốc HD_RUNG = "' + x.soHdGoc + '"'; }).join('\n');
   if (viDuLech.length) thongBao += '\n\nVí dụ dòng lệch:\n' + viDuLech.map(function (x) { return '• Dòng ' + x.dong + ' (ID_RUNG ' + x.idRung + '): cache = "' + x.soHdTrongCache + '", gốc HD_RUNG = "' + x.soHdGoc + '"'; }).join('\n');
-  if (soTrong > 0 || soLech > 0) thongBao += '\n\n👉 Chạy XAY_DUNG_LAI_DRAFT_HOSORUNG() (menu) để tính lại toàn bộ cache từ đầu, sẽ khắc phục các dòng này.';
+  if (soTrong > 0 || soLech > 0) thongBao += '\n\n👉 Chạy XAY_DUNG_LAI_DRAFT_HOSORUNG_() (menu) để tính lại toàn bộ cache từ đầu, sẽ khắc phục các dòng này.';
 
   SpreadsheetApp.getUi().alert(thongBao);
   Logger.log(thongBao);

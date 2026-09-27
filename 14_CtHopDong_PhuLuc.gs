@@ -126,7 +126,7 @@ function CAP_NHAT_CT_HOPDONG_(idHD) {
 // ============================================================
 
 /** Danh sách phụ lục của 1 hợp đồng, sắp theo "Lần phụ lục" tăng dần */
-function layDanhSachPhuLuc(idHD) {
+function layDanhSachPhuLuc_(idHD) {
   const sh = getOrCreatePhuLucSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
@@ -148,7 +148,7 @@ function layDanhSachPhuLuc(idHD) {
 
 /** Thêm mới (không có d.soDong) hoặc cập nhật (có d.soDong) 1 phụ lục hợp đồng.
  *  Thành tiền LUÔN tự tính = Đơn giá × Khối lượng (không cho nhập tay để tránh sai lệch). */
-function LUU_PHU_LUC(d) {
+function LUU_PHU_LUC_(d) {
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
   const donGia = Number(d.donGia) || 0;
   const khoiLuong = Number(d.khoiLuong) || 0;
@@ -195,8 +195,8 @@ function LUU_PHU_LUC(d) {
   }
 }
 
-/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc) */
-function XOA_PHU_LUC(soDong) {
+/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc_) */
+function XOA_PHU_LUC_(soDong) {
   const sh = getOrCreatePhuLucSheet_();
   if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
   sh.deleteRow(soDong);
@@ -228,7 +228,7 @@ function XOA_PHU_LUC(soDong) {
  * Nếu cấu trúc cột của sheet thay đổi sau này (chèn/xóa cột), hàm sẽ TỰ DÒ LẠI
  * theo từ khóa tiêu đề (dòng 1) thay vì dùng vị trí cố định.
  */
-function layPhieuCanTheoChuRung(tenChuRung) {
+function layPhieuCanTheoChuRung_(tenChuRung) {
   try {
     if (!tenChuRung) return { thanhCong: false, loi: 'Thiếu tên chủ rừng', danhSach: [] };
     const boDauTV = function (s) {
@@ -298,9 +298,9 @@ function layPhieuCanTheoChuRung(tenChuRung) {
 
 /** Trích GPS (EXIF) từ 1 ảnh tải lên trực tiếp ở tab "Tọa độ GPS". Dùng chung
  *  hàm đọc EXIF đã có sẵn ở 03_ImageForensics.gs (docExifTuBytes_). Sau khi có
- *  lat/lng, front-end gọi tiếp CAP_NHAT_GPS_RUNG(idRung, {lat,lng}, false) như
+ *  lat/lng, front-end gọi tiếp CAP_NHAT_GPS_RUNG_(idRung, {lat,lng}, false) như
  *  nhập tay bình thường — không cần thêm hàm ghi dữ liệu riêng. */
-function TRICH_XUAT_GPS_TU_ANH(base64Data, mimeType) {
+function TRICH_XUAT_GPS_TU_ANH_(base64Data, mimeType) {
   try {
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType || 'image/jpeg', 'anh_gps.jpg');
     const exif = docExifTuBytes_(blob);

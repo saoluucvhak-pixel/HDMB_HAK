@@ -7,7 +7,7 @@
  *
  *  2 CHỨC NĂNG:
  *  1. HỎI-ĐÁP: ai nhắn tin trong nhóm, bot dùng ĐÚNG logic tra cứu dữ liệu của
- *     chatbot webapp (TRA_LOI_CHATBOT ở 29_Chatbot.gs) để trả lời — không viết
+ *     chatbot webapp (TRA_LOI_CHATBOT_ ở 29_Chatbot.gs) để trả lời — không viết
  *     logic tra cứu riêng, tránh lệch dữ liệu giữa webapp và Telegram.
  *  2. THÔNG BÁO TỰ ĐỘNG: chạy định kỳ (trigger hàng ngày), báo vào nhóm nếu có
  *     ảnh/hồ sơ chờ duyệt, hoặc phát hiện dữ liệu mồ côi.
@@ -27,7 +27,7 @@
  * YÊU CẦU: đã lưu Bot Token trước, và có nhắn ít nhất 1 tin trong nhóm sau khi
  * thêm bot vào (Telegram chỉ trả về tin nhắn MỚI, chưa đọc qua getUpdates).
  */
-function TU_DONG_LAY_CHAT_ID_TELEGRAM() {
+function TU_DONG_LAY_CHAT_ID_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return { thanhCong: false, loi: 'Chưa lưu Bot Token — nhập Bot Token và bấm "Lưu cấu hình" trước.' };
@@ -100,7 +100,7 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
 
     const tenNguoiHoi = (msg.from && (msg.from.first_name || msg.from.username)) || '';
     let kq;
-    try { kq = TRA_LOI_CHATBOT(cauHoi, [], []); } catch (err) { kq = { thanhCong: false, loi: err.message }; }
+    try { kq = TRA_LOI_CHATBOT_(cauHoi, [], []); } catch (err) { kq = { thanhCong: false, loi: err.message }; }
     const traLoi = kq.thanhCong ? (kq.khongDungAI ? '🔧 ' : '') + kq.traLoi : '❌ ' + kq.loi;
     try { guiTinTelegram_((tenNguoiHoi ? tenNguoiHoi + ' hỏi: ' : '') + '\n\n' + traLoi, chatIdTinNhan); } catch (e) { ghiLoiBackend_('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_ (gửi trả lời)', e); }
   });
@@ -109,7 +109,7 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
 }
 
 /** Bật polling — XÓA webhook trước (2 chế độ không dùng chung được), rồi bật trigger chạy mỗi phút */
-function BAT_POLLING_TELEGRAM() {
+function BAT_POLLING_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return { thanhCong: false, loi: 'Chưa lưu Bot Token.' };
@@ -123,20 +123,20 @@ function BAT_POLLING_TELEGRAM() {
   ScriptApp.newTrigger('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_').timeBased().everyMinutes(1).create();
   return { thanhCong: true, thongBao: 'Đã bật chế độ Polling — bot sẽ kiểm tra tin nhắn mới mỗi phút (có thể chờ tới 1 phút mới thấy trả lời, không phải tức thì như webhook).' };
 }
-function TAT_POLLING_TELEGRAM() {
+function TAT_POLLING_TELEGRAM_() {
   let daXoa = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_') { ScriptApp.deleteTrigger(t); daXoa = true; }
   });
   return { thanhCong: true, thongBao: daXoa ? 'Đã tắt Polling.' : 'Chưa từng bật, không có gì để tắt.' };
 }
-function KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM() {
+function KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM_() {
   return { daBat: ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_'; }) };
 }
 
 /** Hỏi thẳng Telegram xem webhook đang ở trạng thái nào — cho biết CHÍNH XÁC
  *  lỗi gì nếu bot không nhận được tin nhắn (vd URL sai, deploy chưa public...) */
-function KIEM_TRA_WEBHOOK_TELEGRAM() {
+function KIEM_TRA_WEBHOOK_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return { thanhCong: false, loi: 'Chưa lưu Bot Token.' };
@@ -157,7 +157,7 @@ function KIEM_TRA_WEBHOOK_TELEGRAM() {
 }
 
 /** Đọc cấu hình bot đã lưu (Script Properties) */
-function LAY_CAI_DAT_TELEGRAM() {
+function LAY_CAI_DAT_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN') || '';
   const chatId = p.getProperty('TELEGRAM_CHAT_ID') || '';
@@ -168,7 +168,7 @@ function LAY_CAI_DAT_TELEGRAM() {
 }
 
 /** Lưu Bot Token + Chat ID */
-function LUU_CAI_DAT_TELEGRAM(token, chatId) {
+function LUU_CAI_DAT_TELEGRAM_(token, chatId) {
   const p = PropertiesService.getScriptProperties();
   if (token) p.setProperty('TELEGRAM_BOT_TOKEN', token.toString().trim());
   if (chatId) p.setProperty('TELEGRAM_CHAT_ID', chatId.toString().trim());
@@ -190,7 +190,7 @@ function guiTinTelegram_(text, chatIdRieng) {
 }
 
 /** Gửi thử 1 tin nhắn — dùng để kiểm tra cấu hình đúng chưa (nút "Gửi thử" ở Thiết lập) */
-function GUI_THU_TELEGRAM() {
+function GUI_THU_TELEGRAM_() {
   try {
     guiTinTelegram_('✅ Kết nối thành công! Bot HAK GROUP đã sẵn sàng — nhắn câu hỏi vào nhóm để tra cứu dữ liệu, vd: "Hợp đồng của Nguyễn Văn A có mấy lô rừng?"');
     return { thanhCong: true, thongBao: 'Đã gửi tin nhắn thử vào nhóm — kiểm tra Telegram xem có nhận được không.' };
@@ -204,7 +204,7 @@ function GUI_THU_TELEGRAM() {
  * đúng webapp này (doPost trong Code.gs). Chỉ cần chạy 1 lần sau khi deploy,
  * chạy lại nếu deploy phiên bản mới (URL webapp có thể đổi).
  */
-function BAT_WEBHOOK_TELEGRAM() {
+function BAT_WEBHOOK_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return { thanhCong: false, loi: 'Chưa nhập Bot Token.' };
@@ -217,7 +217,7 @@ function BAT_WEBHOOK_TELEGRAM() {
 }
 
 /** Tắt webhook — dùng khi cần tạm dừng bot */
-function TAT_WEBHOOK_TELEGRAM() {
+function TAT_WEBHOOK_TELEGRAM_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return { thanhCong: false, loi: 'Chưa nhập Bot Token.' };
@@ -230,7 +230,7 @@ function TAT_WEBHOOK_TELEGRAM() {
 /**
  * ⚠️ ĐIỂM VÀO CHÍNH khi Telegram gửi tin nhắn tới — Google Apps Script tự gọi
  * hàm này mỗi khi có request POST vào đúng URL webapp (đã đăng ký qua
- * BAT_WEBHOOK_TELEGRAM). KHÔNG cần gọi tay hàm này bao giờ.
+ * BAT_WEBHOOK_TELEGRAM_). KHÔNG cần gọi tay hàm này bao giờ.
  */
 function doPost(e) {
   try {
@@ -255,7 +255,7 @@ function doPost(e) {
     const tenNguoiHoi = (msg.from && (msg.from.first_name || msg.from.username)) || '';
     let kq;
     try {
-      kq = TRA_LOI_CHATBOT(cauHoi, [], []); // Telegram nhóm đông người hỏi xen kẽ -> KHÔNG dùng bộ nhớ ngữ cảnh (tránh nhầm câu hỏi của người này sang người khác), mỗi câu hỏi độc lập
+      kq = TRA_LOI_CHATBOT_(cauHoi, [], []); // Telegram nhóm đông người hỏi xen kẽ -> KHÔNG dùng bộ nhớ ngữ cảnh (tránh nhầm câu hỏi của người này sang người khác), mỗi câu hỏi độc lập
     } catch (err) {
       kq = { thanhCong: false, loi: err.message };
     }
@@ -272,7 +272,8 @@ function doPost(e) {
  * có việc cần chú ý: ảnh/hồ sơ chờ duyệt, dữ liệu mồ côi phát hiện được.
  * Chỉ gửi tin khi CÓ việc thật — tránh spam tin "không có gì" mỗi ngày.
  */
-function KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY() {
+function KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY(e) {
+  _yeuCauQuyenHoacTrigger_(e, QUYEN.QUAN_TRI);
   const dong = [];
 
   // Ảnh chờ duyệt
@@ -284,7 +285,7 @@ function KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY() {
 
   // Dữ liệu mồ côi
   try {
-    const kqMoCoi = CHAN_DOAN_MO_COI_TOAN_HE_THONG();
+    const kqMoCoi = CHAN_DOAN_MO_COI_TOAN_HE_THONG_();
     if (kqMoCoi.tongSoVanDe > 0) dong.push('⚠️ Phát hiện ' + kqMoCoi.tongSoVanDe + ' vấn đề dữ liệu mồ côi/thiếu ID — xem chi tiết ở Thiết lập → Bảo trì dữ liệu.');
   } catch (e) { /* bỏ qua nếu lỗi */ }
 
@@ -337,20 +338,20 @@ function KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY() {
 }
 
 /** Bật trigger chạy thông báo hàng ngày (8h sáng) */
-function BAT_TRIGGER_THONG_BAO_TELEGRAM() {
+function BAT_TRIGGER_THONG_BAO_TELEGRAM_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY').timeBased().everyDays(1).atHour(8).create();
   return { thanhCong: true, thongBao: 'Đã bật thông báo tự động hàng ngày lúc 8h sáng.' };
 }
-function TAT_TRIGGER_THONG_BAO_TELEGRAM() {
+function TAT_TRIGGER_THONG_BAO_TELEGRAM_() {
   let daXoa = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY') { ScriptApp.deleteTrigger(t); daXoa = true; }
   });
   return { thanhCong: true, thongBao: daXoa ? 'Đã tắt thông báo tự động.' : 'Chưa từng bật, không có gì để tắt.' };
 }
-function KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM() {
+function KIEM_TRA_TRIGGER_THONG_BAO_TELEGRAM_() {
   return { daBat: ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'KIEM_TRA_VA_THONG_BAO_TELEGRAM_HANG_NGAY'; }) };
 }

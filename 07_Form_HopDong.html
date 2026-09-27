@@ -359,6 +359,8 @@
   </div>
 </div>
 
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 <?!= include('NhapLieu_Chung_JS') ?>
 <script>
   // ============ TRẠNG THÁI TOÀN CỤC ============
@@ -412,7 +414,7 @@
     var reader = new FileReader();
     reader.onload = function (e) {
       var base64 = e.target.result.split(',')[1];
-      google.script.run
+      hakRun_()
         .withSuccessHandler(function (kq) { if (!kq.thanhCong) { showMsg('msgBanScan', '❌ ' + kq.loi, false); return; } apDungKetQuaBanScan(kq, loai); })
         .withFailureHandler(function (err) { showMsg('msgBanScan', '❌ Lỗi: ' + err.message, false); })
         .OCR_TU_BAN_SCAN(loai, base64, file.type, file.name);
@@ -445,7 +447,7 @@
   function moTrangTaoHopDong() {
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang tạo nháp...' }]);
-    google.script.run
+    hakRun_()
       .withFailureHandler(function (err) { thongBao_('❌ Lỗi tạo nháp: ' + err.message); veTrangDanhSach(); })
       .withSuccessHandler(function (kq) {
         idDraftHienTai = kq.idDraft;

@@ -52,6 +52,7 @@ function onOpen() {
 
 /** Hiện hướng dẫn sử dụng đầy đủ trong 1 cửa sổ dialog ngay trong Google Sheet */
 function HIEN_HUONG_DAN_SU_DUNG() {
+  _yeuCauQuyen_(QUYEN.XEM);
   const html = HtmlService.createHtmlOutputFromFile('13_HuongDan')
     .setWidth(900).setHeight(650);
   SpreadsheetApp.getUi().showModalDialog(html, '📖 Hướng dẫn sử dụng — Hệ thống HAK');
@@ -59,12 +60,14 @@ function HIEN_HUONG_DAN_SU_DUNG() {
 
 /** Hiện link file Google Sheet riêng chứa Draft/Cache báo cáo (tách khỏi file dữ liệu chính) */
 function MO_FILE_BAO_CAO_RIENG() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const url = getReportSS_().getUrl();
   SpreadsheetApp.getUi().alert('File Báo cáo/Cache riêng:\n' + url + '\n\n(Copy link này để mở trong tab mới)');
 }
 
 /** Mở sidebar nhập liệu Tạo hợp đồng / Thêm rừng / Thêm tài khoản / Sửa rừng */
 function moFormNhapLieu() {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const html = HtmlService.createTemplateFromFile('07_Form_HopDong')
     .evaluate()
     .setTitle('📝 Nhập liệu HAK')

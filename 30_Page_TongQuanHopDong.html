@@ -140,6 +140,8 @@
 </style>
 </head>
 <body>
+<div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
+<?!= include('PhanQuyen_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -151,6 +153,9 @@
 
   <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
     <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
   </a>
   <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
     <span class="icon">🗺️</span> Bản đồ GPS
@@ -257,7 +262,7 @@
     document.getElementById('vungKpiTien').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
     document.getElementById('vungTheThongKe').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
     document.getElementById('vungBangHD').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
-    google.script.run
+    hakRun_()
       .withSuccessHandler(function (kq) {
         renderKpiTien_(kq);
         renderTheThongKe_(kq);

@@ -191,7 +191,7 @@ function docToaDoTuChuTrenAnh_(fileId) {
   }
 }
 
-function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
+function kiemTraMotAnh_(duongDanFile, latRungKyVong, lngRungKyVong) {
   const blob = layBlobTheoTen_(duongDanFile);
   if (!blob) {
     return { file: duongDanFile, loi: 'Không tìm thấy file trên Drive', dauHieu: ['file_khong_ton_tai'] };
@@ -270,12 +270,18 @@ function kiemTraMotAnh(duongDanFile, latRungKyVong, lngRungKyVong) {
  * tương ứng lấy từ HD_GPS (join theo ID_HD <-> ID_KEY_GPS), xuất báo cáo.
  */
 /** Kiểm tra 1 ảnh ĐÃ CÓ SẴN trên Drive qua link dán tay — không cần upload lại, dùng khi hộp thoại chọn file bị đơ trên máy người dùng */
-function KIEM_TRA_ANH_TU_LINK(url) {
+function KIEM_TRA_ANH_TU_LINK_(url) {
   if (!url) return { loi: 'Thiếu link ảnh' };
-  return kiemTraMotAnh(url, null, null);
+  return kiemTraMotAnh_(url, null, null);
 }
 
-function KIEM_TRA_ANH_TOAN_BO() {
+/** Menu Sheet + trigger hàng tuần (trigger đã cài trỏ vào tên này — giữ nguyên tên). Webapp gọi KIEM_TRA_ANH_TOAN_BO_ qua api(). */
+function KIEM_TRA_ANH_TOAN_BO(e) {
+  _yeuCauQuyenHoacTrigger_(e, QUYEN.NHAP_LIEU);
+  return KIEM_TRA_ANH_TOAN_BO_();
+}
+
+function KIEM_TRA_ANH_TOAN_BO_() {
   const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
   const gpsRows = readData_(SHEET_NAME.HD_GPS);
 
@@ -285,8 +291,8 @@ function KIEM_TRA_ANH_TOAN_BO() {
     const id = (r[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (!id) return;
     const type = r[GPS_COL.HE_TOA_DO];
-    const lat = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
-    const lng = (type === 'DMS') ? convertDmsToDd(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
+    const lat = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
+    const lng = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
     if (isNaN(lat) || isNaN(lng)) return;
     if (!gpsByRung[id]) gpsByRung[id] = [];
     gpsByRung[id].push({ lat: lat, lng: lng });
@@ -307,7 +313,7 @@ function KIEM_TRA_ANH_TOAN_BO() {
     for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
       const duongDan = row[c];
       if (!duongDan) continue;
-      const kq = kiemTraMotAnh(duongDan, toaDo ? toaDo.lat : null, toaDo ? toaDo.lng : null);
+      const kq = kiemTraMotAnh_(duongDan, toaDo ? toaDo.lat : null, toaDo ? toaDo.lng : null);
       baoCao.push({
         idHD: idHD,
         chuRung: row[PICTURE_COL.TEN_CHU_RUNG],
