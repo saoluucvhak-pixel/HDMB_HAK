@@ -30,7 +30,7 @@ Chi phí cũ tăng **bậc hai** theo số hợp đồng (N lần × đọc cả
 
 | ID | Mức | Vị trí | Vấn đề | Đề xuất |
 |---|---|---|---|---|
-| PERF-002 | 🟠 | `docToanBoDraftBaoCao_` → `layCoAnhVaGpsTrucTiep_` (00) | Mỗi lần mở báo cáo đọc thêm toàn bộ HD_RUNG + HD_GPS + HD_Picture để tính lại "có ảnh / đủ GPS" dù Draft đã có sẵn 2 cột này | Tin cột Draft (đã cập nhật ở mọi điểm ghi) hoặc cache kết quả trong ScriptCache 5 phút, xóa ở các điểm ghi ảnh/GPS (cùng danh sách với `xoaCacheBanDo_`) |
+| PERF-002 | 🟡 **Quyết định sản phẩm** | `docToanBoDraftBaoCao_` → `layCoAnhVaGpsTrucTiep_` (00) | Mỗi lần mở báo cáo đọc thêm toàn bộ HD_RUNG + HD_GPS + HD_Picture. Tác giả **cố ý** làm vậy để báo cáo luôn đúng cả khi dữ liệu GPS/ảnh được **sửa tay trực tiếp trên Sheet** (Draft không biết) | Giữ nguyên. Nếu muốn nhanh hơn: cache 2–5 phút (chấp nhận báo cáo có thể trễ vài phút với dữ liệu sửa tay) hoặc bật bẫy onEdit (menu có sẵn) rồi bỏ lớp đọc lại |
 | PERF-003 | 🟡 | `DONG_BO_THONG_TIN_MO_RONG` (28) | Ghi từng ô `setValue` trong vòng lặp | Gom thay đổi, ghi theo cột bằng `setValues` (chỉ chạy từ menu bảo trì) |
 | PERF-004 | 🟡 | `CHUYEN_DOI_*_SANG_URL` (20) | Đọc/ghi từng dòng | Xử lý theo khối 500 dòng, vẫn giữ cơ chế dừng an toàn |
 | SCALE-002 | 🟡 | Xem chi tiết 1 hợp đồng | Đọc toàn bộ HD_RUNG/HD_STK/HD_Picture/HD_GPS rồi lọc | Cache ngắn hạn theo `idHD`, hoặc sheet chỉ mục `idHD → dòng` |

@@ -2,6 +2,18 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 27/09/2026 — Đợt 3: dọn mã chết, gộp mã trùng, XSS còn lại, chặn ghi lệch cột
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `d15c9fa` | 🔀 Merge | Gộp nhánh `main` (đổi bảng màu giao diện của chủ dự án). Xung đột giữ bản có `ADMIN_TOKEN` và ghép màu mới với phần escape | 00_Config, 07, 11, 24, … |
+| `e5d5680` | 🧹 Mã chết | Xóa `26_Page_QuanLyMeCon.html`, `08_Sidebar.html`, `09_Style.html`; 19 hàm server + 1 hàm client không ai gọi (bớt 12 hàm công khai gọi được ẩn danh, gồm hàm ghi `THEM_LINK_ANH_HOP_DONG`). `doGet` 29/29 trường hợp giống hệt | 01, 02, 03, 04, 06, 14, 15, Code, 10 |
+| `534ac14` | ♻️ Gộp mã trùng | 67 hàm giống hệt của sidebar 07 và trang 11 chuyển vào `NhapLieu_Chung_JS.html`; 4 hàm khác nhau có chủ đích giữ ở từng trang | 07, 11, NhapLieu_Chung_JS (mới) |
+| `64cde28` | ♻️🔒 Gộp + bảo mật | Widget chatbot của 10/27/30 chuyển vào `ChatbotWidget.html`; sửa chèn thuộc tính qua link trong trả lời chatbot (SEC-011) | 10, 27, 30, ChatbotWidget (mới) |
+| `a72c265` | 🔒 Bảo mật | Escape 116 dòng còn lại chèn dữ liệu vào `innerHTML` (dữ liệu Sheet, dữ liệu tra cứu ngân hàng bên ngoài); `href` chỉ nhận http(s) | 10, 11, 12, 24, 27, 30, NhapLieu_Chung_JS |
+| `38482b9` | 🛡️ Toàn vẹn dữ liệu | MAP-001: phát hiện cột bị chèn/xóa tay ở 6 sheet dữ liệu → **dừng ghi** và báo rõ cột nào lệch; menu "Xác nhận cấu trúc cột hiện tại" | 00_Config, 05_Menu |
+| (commit tài liệu) | 📄 | Cập nhật 10 báo cáo | docs/qa |
+
 ## 27/09/2026 — Đợt 2: rà soát toàn dự án + nâng cấp
 
 | Commit | Loại | Thay đổi | File |
@@ -13,7 +25,7 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `f20ae5a` | ⚡ Hiệu năng | Kiểm tra ảnh đọc HD_GPS 1 lần thay vì mỗi ảnh (PERF-005) | 02_DocumentChecker |
 | `564270e` | 🔒 Bảo mật | `SETUP_*_TOKEN` công khai không còn ghi đè token đã đặt (SEC-007) | 00_Config, Code |
 | `07eda6b` | 🔒 Bảo mật | Chỉ nhận ảnh/PDF ≤ 20 MB ở 4 hàm tải lên (SEC-009) | 00_Config, 04_Reconciliation, 06_CreateUpdate |
-| (commit tài liệu) | 📄 | Thư mục `docs/qa/` — 10 báo cáo này | docs/qa |
+| `ac6c3d4` | 📄 | Thư mục `docs/qa/` — 10 báo cáo này | docs/qa |
 
 ## 24/09/2026 — Đợt 1: sửa theo QA Audit (đã được chủ dự án duyệt)
 
@@ -28,5 +40,5 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 |---|---|
 | `a1f876e` | Tính năng chia sẻ dữ liệu (cấp/xem/thu hồi quyền 2 Sheet + 4 thư mục) |
 
-## Thống kê (a1f876e → nay)
-19 file mã nguồn, +790 / −315 dòng (chưa tính tài liệu). Không xóa chức năng nào, không đổi tên cột/sheet, không đổi bố cục giao diện (chỉ thêm 1 khung "Ảnh chung của cả hợp đồng" còn thiếu ở sidebar 07 và thông báo nổi thay cho hộp `alert`).
+## Thống kê (a1f876e → nay, không tính tài liệu)
+27 file, +1.856 / −4.059 dòng — phần xóa chủ yếu là mã chết (1.393 dòng trang 26) và mã trùng được gộp vào 2 partial. Không xóa chức năng nào đang dùng, không đổi tên cột/sheet, không đổi bố cục giao diện (chỉ thêm khung "Ảnh chung của cả hợp đồng" còn thiếu ở sidebar 07 và thông báo nổi thay cho hộp `alert`).

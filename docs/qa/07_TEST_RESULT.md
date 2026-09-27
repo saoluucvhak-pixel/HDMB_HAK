@@ -7,14 +7,14 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | Lớp | Công cụ | Chạy gì |
 |---|---|---|
 | **Server** | Bộ giả lập Apps Script trong Node (`gasmock.js`): nạp **cả 24 file `.gs` cùng lúc** như Apps Script, giả lập SpreadsheetApp (bảng trong bộ nhớ, **mô phỏng cách Sheets ép kiểu khi ghi**: chuỗi số mất số 0 đầu nếu ô không định dạng TEXT, chuỗi ngày thành ngày lúc 00:00 múi giờ bảng tính), Utilities.formatDate, LockService (ghi nhận khóa lồng), CacheService, PropertiesService, Session. Chạy với `TZ=Asia/Ho_Chi_Minh` | Luồng nghiệp vụ thật: tạo → mở nháp → sửa → lưu chính thức, rồi đọc lại ô trong Sheet |
-| **Trình duyệt** | Playwright + Chromium, trang HTML thật, `google.script.run` giả lập trả dữ liệu (kể cả dữ liệu độc hại) | Hiển thị, escape, chống bấm lặp, toast, tải trang không lỗi JS |
-| **Tương đương** | Ghi lại toàn bộ hành vi trước/sau khi tái cấu trúc | `doGet` (29 trường hợp), `KIEM_TRA_ANH_DA_CHON` (103 ảnh) |
+| **Trình duyệt** | Playwright + Chromium, trang HTML thật (đã **ghép các partial** `include(...)` như Apps Script làm), `google.script.run` giả lập trả dữ liệu (kể cả dữ liệu độc hại) | Hiển thị, escape, chống bấm lặp, toast, tải trang không lỗi JS |
+| **Tương đương** | Ghi lại toàn bộ hành vi trước/sau khi tái cấu trúc | `doGet` (29 trường hợp), `KIEM_TRA_ANH_DA_CHON` (103 ảnh), tập hàm sau khi ghép partial |
 
-**Nguyên tắc chấm đạt:** mỗi lỗi được coi là đã sửa khi test của nó **thất bại trên mã cũ** (commit `8cbf662`, trước đợt này) và **đạt trên mã mới**. Các test đạt trên cả hai là test hồi quy cho lỗi đã sửa ở đợt trước (24/09).
+**Nguyên tắc chấm đạt:** mỗi lỗi được coi là đã sửa khi test của nó **thất bại trên mã cũ** (commit `8cbf662`, trước khi bắt đầu rà soát) và **đạt trên mã mới**. Các test đạt trên cả hai là test hồi quy cho lỗi đã sửa ở đợt trước (24/09).
 
 ## 2. Kết quả
 
-### Server (bộ giả lập Apps Script) — 22/22 đạt (mã cũ trước đợt này: 8/22)
+### Server (bộ giả lập Apps Script) — 24/24 đạt (mã cũ 8cbf662: 8/24)
 
 | ID | Kịch bản | Mã mới | Mã cũ (8cbf662) |
 |---|---|---|---|
@@ -35,13 +35,15 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | T-TEXT-01 | CCCD/SĐT/MST giữ số 0 đầu khi tạo và khi sửa | ✅ PASS | FAIL — CCCD on create: expected "049012345678", got "49012345678" |
 | T-TK-01 | THEM_TAI_KHOAN_MOI trả đúng số dòng vừa ghi và giữ số 0 đầu của Số TK | ✅ PASS | PASS |
 | T-DOUBLE-01 | Bấm "Lưu chính thức" 2 lần (request thứ 2 tới khi request 1 đang chạy) chỉ tạo 1 hợp đồng | ✅ PASS | FAIL — number of contracts created: expected 1, got 2 |
-| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_UUID-0CB |
+| T-DRAFTDEL-01 | Lưu chính thức không xóa NHẦM nháp của người khác khi các dòng nháp bị dịch chuyển | ✅ PASS | FAIL — draft C (another user) was deleted by mistake; remaining: DRAFT_UUID-FFA |
 | T-LOG-01 | log_: ERROR/WARNING/INFO ra đúng console.*, DEBUG chỉ khi bật LOG_DEBUG | ✅ PASS | FAIL — P.ctx.log_ is not a function |
 | T-LOG-02 | Lỗi tổng hợp ct_hopdong không còn bị nuốt im lặng | ✅ PASS | FAIL — error was not logged |
 | T-SEC-006 | Người lạ gọi SETUP_*_TOKEN không ghi đè được token đã cấu hình; token mẫu bị từ chối | ✅ PASS | FAIL — SYNC_TOKEN overwritten: expected "that-su-bi-mat", got "DAT_TOKEN_CUA_BAN_O_DAY" |
-| T-SEC-009 | Tải lên: từ chối file html/exe và file > 20MB trước khi ghi vào Drive; ảnh/PDF vẫn qua | ✅ PASS | FAIL — TAI_ANH_GPS_LEN_DRIVE accepted html: {"thanhCong":false,"loi":"[gasmock] DriveApp.getFolde |
+| T-SEC-009 | Tải lên: từ chối file html/exe và file > 20MB trước khi ghi vào Drive; ảnh/PDF vẫn qua | ✅ PASS | FAIL — TAI_ANH_GPS_LEN_DRIVE accepted html: {"thanhCong":false,"loi":"[gasmock] DriveApp.getFoldersByName not mocked" |
+| T-COL-01 | Chèn cột tay vào HD_NCC -> hệ thống DỪNG ghi (không ghi lệch cột); đổi tên chỉ cảnh báo; thêm cột cuối hợp lệ | ✅ PASS | FAIL — P.ctx.kiemTraCauTrucCot_ is not a function |
+| T-COL-02 | Kiểm tra cấu trúc cột được nhớ 60s: không đọc lại tiêu đề ở mỗi lượt gọi | ✅ PASS | FAIL — P.ctx.kiemTraCauTrucCot_ is not a function |
 
-### Trình duyệt (Chromium + giả lập google.script.run) — 18/18 đạt (mã cũ: 10/18)
+### Trình duyệt (Chromium + giả lập google.script.run) — 27/27 đạt (mã cũ 8cbf662: 13/26)
 
 | ID | Kịch bản | Mã mới | Mã cũ (8cbf662) |
 |---|---|---|---|
@@ -53,16 +55,27 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | UI-11-DOUBLE | 11: bấm "Lưu chính thức" 2 lần chỉ gửi 1 yêu cầu | ✅ PASS | FAIL — LUU_CHINH_THUC sent 3 times |
 | UI-27-DOUBLE | 27: bấm "Lưu" hợp đồng mới 2 lần chỉ gửi 1 TAO_HOP_DONG_MOI | ✅ PASS | FAIL — TAO_HOP_DONG_MOI sent 2 times |
 | UI-11-TOAST | 11: lỗi hiện dạng thông báo nổi (không dùng alert chặn màn hình) | ✅ PASS | FAIL — alert() still called |
+| UI-CHAT-10 | 10: chatbot mở được, gửi câu hỏi, hiện trả lời có link bấm được | ✅ PASS | PASS |
+| UI-CHATXSS-10 | 10: link trong trả lời của bot không chèn được thuộc tính | ✅ PASS | FAIL — onmouseover attribute injected into bot link |
+| UI-CHAT-27 | 27: chatbot mở được, gửi câu hỏi, hiện trả lời có link bấm được | ✅ PASS | PASS |
+| UI-CHATXSS-27 | 27: link trong trả lời của bot không chèn được thuộc tính | ✅ PASS | FAIL — onmouseover attribute injected into bot link |
+| UI-CHAT-30 | 30: chatbot mở được, gửi câu hỏi, hiện trả lời có link bấm được | ✅ PASS | PASS |
+| UI-CHATXSS-30 | 30: link trong trả lời của bot không chèn được thuộc tính | ✅ PASS | FAIL — onmouseover attribute injected into bot link |
+| UI-10-XSS-TL | 10: tên chủ rừng / người ủy quyền độc hại trong bảng Thanh lý hiển thị dạng chữ | ✅ PASS | FAIL — name rendered as HTML (<img> injected) |
+| UI-27-XSS-TK | 27: tên chủ TK trả về từ dịch vụ tra cứu bên ngoài hiển thị dạng chữ | ✅ PASS | FAIL — external bank-lookup name rendered as HTML |
 | UI-LOAD-07 | 07_Form_HopDong.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-10 | 10_Page_BaoCao.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-11 | 11_Page_NhapLieu.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-12 | 12_Page_KiemTra.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-13 | 13_HuongDan.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-24 | 24_Page_ThietLap.html: tải trang không lỗi JS | ✅ PASS | PASS |
-| UI-LOAD-26 | 26_Page_QuanLyMeCon.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-27 | 27_Page_HopDongMeCon.html: tải trang không lỗi JS | ✅ PASS | PASS |
 | UI-LOAD-30 | 30_Page_TongQuanHopDong.html: tải trang không lỗi JS | ✅ PASS | PASS |
+| UI-LOAD-Ch | ChatbotWidget.html: tải trang không lỗi JS | ✅ PASS | — (trang/tính năng chưa tách ở mã cũ) |
 | UI-LOAD-Ma | MapContainer.html: tải trang không lỗi JS | ✅ PASS | PASS |
+| UI-LOAD-Nh | NhapLieu_Chung_JS.html: tải trang không lỗi JS | ✅ PASS | — (trang/tính năng chưa tách ở mã cũ) |
+
+Test chỉ có ở mã cũ (trang đã xóa vì là mã chết): UI-LOAD-26.
 
 ### Kiểm thử tương đương (tái cấu trúc không đổi hành vi)
 
@@ -71,11 +84,15 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | `doGet` — 29 trường hợp (16 giá trị `?page=` gồm cả `constructor`, `__proto__`, `MAP`, trang lạ; 13 tổ hợp `action=run` × trạng thái token) | **25/29 giống hệt từng lệnh gọi**. 4 khác biệt đều là trường hợp token mẫu — cố ý đổi từ "chạy đồng bộ" sang "từ chối" (SEC-006) |
 | `KIEM_TRA_ANH_DA_CHON` — 103 ảnh, 25 hợp đồng, điểm DD/DMS/sai định dạng, ID lạ/rỗng | Kết quả và tọa độ truyền vào `kiemTraMotAnh` **giống từng bit**; HD_GPS đọc 103 → 1 lần |
 | `capNhatDraftHangLoat_` so với gọi từng hợp đồng | Bảng Draft **giống hệt** (T-PERF-001) |
+| Xóa mã chết (`e5d5680`): `doGet` 29 trường hợp chạy lại | **29/29 giống hệt** trước khi xóa — không route nào trỏ tới trang/hàm đã xóa |
+| Partial `NhapLieu_Chung_JS` (`534ac14`): tập hàm của trang sau khi ghép | 07: **73/73**, 11: **82/82** hàm giống hệt từng byte so với trước khi tách |
+| Partial `ChatbotWidget` (`64cde28`) | CSS/HTML/JS giống hệt ở 3 trang trước khi tách; UI-CHAT-10/27/30 đạt |
 
 ### Kiểm tra tĩnh
-- `node --check` cho cả 24 `.gs` và `<script>` của 12 `.html`: không lỗi cú pháp.
+- `node --check` cho cả 24 `.gs` và `<script>` của 11 `.html` (sau khi ghép partial): không lỗi cú pháp.
+- Bộ phân tích tĩnh chạy lại sau khi xóa: **0 hàm server không ai gọi** (ngoài 6 hàm chạy tay/trigger giữ lại có chủ đích), **0 hàm client không ai gọi**.
 - Không trùng tên hàm/hằng số toàn cục giữa các file `.gs` (lỗi làm hỏng cả project Apps Script).
-- Mọi lời gọi `google.script.run` thật đều có `withFailureHandler` (2 trường hợp bộ phân tích nghi ngờ ở trang 10 là dòng chú thích).
+- Mọi `google.script.run` đều có `withFailureHandler`.
 - Mọi `getElementById` đều trỏ tới id có thật hoặc được dựng động (đã kiểm tra tay các trường hợp bộ phân tích nghi ngờ).
 
 ## 3. Hạng mục trong yêu cầu — phạm vi kiểm thử
@@ -90,9 +107,10 @@ Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 l
 | Data race | ✅ | Mô phỏng yêu cầu thứ 2 đến giữa chừng; nháp bị dịch dòng |
 | Upload | ✅ | Loại + dung lượng file |
 | Permission / Token | ✅ | ADMIN_TOKEN, SYNC_TOKEN, SETUP_* |
-| XSS / Injection | ✅ | Tên file, link `javascript:`, dấu nháy trong thuộc tính |
+| XSS / Injection | ✅ | Tên file, link `javascript:`, dấu nháy trong thuộc tính, bảng thanh lý, dữ liệu tra cứu ngân hàng, link chatbot |
+| Cấu trúc Sheet (chèn/xóa cột tay) | ✅ | T-COL-01/02: dừng ghi khi cột bị dịch, đổi tên chỉ cảnh báo |
 | Unhandled error / Try-catch | ✅ | Log lỗi thay vì nuốt im lặng; lỗi RPC hiện toast |
-| Page load / Console error | ✅ | 10 trang đang dùng, 0 lỗi JS |
+| Page load / Console error | ✅ | 9 trang đang dùng, 0 lỗi JS |
 | Search / Filter / Sort / Pagination | ⚠️ Tĩnh | Đã đọc code; chưa có test tự động |
 | Import / Export / Excel / PDF / Print / Report | ⚠️ Chưa | Cần DriveApp/UrlFetch thật (xuất qua `docs.google.com/.../export`) |
 | Trigger | ⚠️ Một phần | Logic của hàm trigger được test (PERF-001); việc cài trigger cần runtime thật |

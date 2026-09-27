@@ -71,15 +71,22 @@ Mức độ: 🔴 CRITICAL · 🟠 HIGH · 🟡 MEDIUM · ⚪ LOW
 
 Tất cả đều có test hồi quy trong bộ test hiện tại (T-LOCK-001, T-CACHE-001, T-PERF-001, T-SEC-001…).
 
+## B2. Đợt 3 (cùng ngày, sau khi chủ dự án yêu cầu "xử lý tiếp, mã chết thì xóa")
+
+| ID | Mức | Nội dung | Commit / Test |
+|---|---|---|---|
+| MAP-001 | 🟡 | Chèn/xóa/kéo cột tay trên Sheet làm mọi đọc/ghi lệch cột âm thầm → nay **dừng đọc/ghi** sheet đó và báo rõ cột nào đã dịch (mẫu tiêu đề lưu ở Script Properties; đổi tên chỉ cảnh báo; thêm cột cuối hợp lệ; menu "🧱 Xác nhận cấu trúc cột hiện tại") | `38482b9` / T-COL-01, T-COL-02 |
+| XSS-rest | 🟡 | 116 dòng chèn dữ liệu vào `innerHTML` chưa escape ở 6 trang — gồm tên chủ rừng/người ủy quyền ở bảng Thanh lý (10) và **tên chủ TK do dịch vụ tra cứu bên ngoài trả về** (27) | `a72c265` / UI-10-XSS-TL, UI-27-XSS-TK |
+| SEC-011 | 🟡 | Chatbot: link trong câu trả lời chèn được thuộc tính (`https://a.com/"onmouseover=…`) | `64cde28` / UI-CHATXSS-10/27/30 |
+| DRY | — | Gộp 67 hàm trùng của 07/11 vào `NhapLieu_Chung_JS.html`; gộp widget chatbot của 10/27/30 vào `ChatbotWidget.html`; xóa 3 file + 19 hàm mã chết | `534ac14`, `64cde28`, `e5d5680` |
+
 ## C. Lỗi còn tồn tại (chưa sửa — cần quyết định hoặc rủi ro cao)
 
 | ID | Mức | Nội dung | Lý do chưa sửa |
 |---|---|---|---|
-| SEC-002 | 🔴 | 182 hàm công khai gọi được ẩn danh (IDOR, không phân quyền) | Quyết định kiến trúc — xem 02_SECURITY_REPORT §3 |
-| MAP-001 | 🟡 | Cột `*_COL` cố định theo vị trí; chèn/xóa cột tay làm lệch âm thầm | Ảnh hưởng mọi CRUD — cần test hồi quy toàn bộ trên dữ liệu thật |
+| SEC-002 | 🔴 | 171 hàm công khai gọi được ẩn danh (IDOR, không phân quyền) | Quyết định kiến trúc — xem 02_SECURITY_REPORT §3 |
 | LOCK-004/006/008 | 🟡 | TOCTOU theo số dòng ở một số hàm sửa/xóa; lớp cache Draft không khóa | Rủi ro lồng lock — cần xác minh `LockService` có tái nhập trong cùng lượt chạy trên runtime thật |
 | BUG-11 | 🟡 | Nháp lưu JSON trong 1 ô: > 50.000 ký tự (hợp đồng rất nhiều lô + điểm GPS) sẽ lưu nháp thất bại | Chưa gặp trên dữ liệu thật; cần đo kích thước nháp lớn nhất |
 | BUG-12 | ⚪ | Tạo hợp đồng qua `LUU_HOP_DONG_DAY_DU` ghi Ngày ký kèm giờ 07:00 (`new Date('yyyy-mm-dd')` là nửa đêm UTC) | Hiển thị đúng; chỉ ảnh hưởng so sánh chính xác theo thời điểm |
 | BUG-13 | ⚪ | Tên file xuất ở trang 10 dùng ngày UTC (từ 0–7 giờ sáng ra ngày hôm trước) | Chỉ là tên file |
 | DATA-001 | ⚪ | `HD_Picture` cũ lưu nhầm ID_RUNG vào cột ID_HD | Đã có lớp đối chiếu 2 chiều |
-| XSS-rest | 🟡 | ~100 điểm chèn `err.message`/`kq.loi`/nhãn vào `innerHTML` chưa escape | Nguồn chủ yếu do server sinh; đã xử lý nhóm do người dùng tải lên. Xem 02 §4 |

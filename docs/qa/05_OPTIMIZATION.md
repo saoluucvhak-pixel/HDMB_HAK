@@ -15,16 +15,19 @@ Danh sách kỹ thuật tối ưu trong yêu cầu, đối chiếu với **kiế
 | **Template reuse / bảng cấu hình** | `TRANG_WEBAPP_` thay 10 khối `if` chép lại trong `doGet` | 135 → 43 dòng, thêm trang mới = thêm 1 dòng |
 | **Non-blocking UI** | `thongBao_` thay `alert()` (46 chỗ) | Không còn chặn luồng giao diện |
 | **Debounce** | Lưu nháp (700 ms), ô tìm kiếm | Có sẵn — giữ nguyên |
+| **Partial dùng chung (`include`)** | `NhapLieu_Chung_JS.html` (67 hàm của 07/11), `ChatbotWidget.html` (widget của 10/27/30) | ~1.900 dòng trùng còn 1 bản; nhóm hàm trùng 79 → 2 |
+| **Dead code elimination** | 3 trang + 19 hàm server + 1 hàm client không ai gọi (`e5d5680`) | Toàn dự án 19.058 → 16.356 dòng (gồm cả phần gộp partial); bớt 12 hàm công khai gọi được ẩn danh |
+| **Fail-fast kiểm tra cấu trúc (có cache)** | `kiemTraCauTrucCot_` trong `getSheet_` (MAP-001) | Dừng trước khi ghi lệch cột; kiểm tra 1 lần/lượt chạy, nhớ 60 s |
 
 ## 2. Đề xuất (chưa làm — có lợi rõ ràng)
 
 | Kỹ thuật | Ở đâu | Lợi ích | Rủi ro |
 |---|---|---|---|
-| Cache ngắn hạn + xóa khi ghi | `layCoAnhVaGpsTrucTiep_` (PERF-002), `readData_(HD_NCC)` cho danh sách (SCALE-003) | Bớt 3 lượt đọc toàn sheet mỗi lần mở báo cáo | Phải liệt kê đủ điểm ghi để xóa cache (bài học CACHE-001) |
+| Cache ngắn hạn + xóa khi ghi | `readData_(HD_NCC)` cho danh sách (SCALE-003) | Bớt 1 lượt đọc toàn sheet mỗi lần tìm/đổi trang danh sách (PERF-002 giữ nguyên theo thiết kế của tác giả — xem 03) | Phải liệt kê đủ điểm ghi để xóa cache (bài học CACHE-001) |
 | Batch write theo cột | `DONG_BO_THONG_TIN_MO_RONG`, `CHUYEN_DOI_*` | Giảm số lượt ghi từ O(số ô) xuống O(số cột) | Thấp — chỉ chạy từ menu |
 | Event Delegation | Nút trong bảng dựng bằng `onclick="f('…')"` (195 chỗ) | Bỏ được lỗi JS-in-attribute (xem 02), code gọn hơn | Trung bình — nhiều chỗ |
 | DocumentFragment | Bảng cây ở trang 10 (`appendChild` từng dòng) | Nhỏ ở 20 dòng/trang | Thấp |
-| Partial dùng chung (`include`) | JS chung 07/11, widget chatbot, helper | Bớt ~1.000 dòng trùng, hết lỗi "vá 1 bản quên bản kia" | Trung bình — xem 06_REFACTOR_PLAN |
+| Partial helper nhỏ | `thongBao_` (4 bản), `showMsg` (3 bản) | Bớt vài chục dòng | Thấp — lợi ích nhỏ nên để sau |
 
 ## 3. Không áp dụng (N/A) và lý do
 
