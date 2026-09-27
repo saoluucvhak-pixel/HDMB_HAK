@@ -46,6 +46,7 @@ function onOpen() {
     .addItem('🔍 Chẩn đoán ID/Key mồ côi toàn hệ thống', 'CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU')
     .addItem('🔄 Đồng bộ thông tin lặp lại + điền địa chỉ GPS trống', 'DONG_BO_THONG_TIN_MO_RONG_TU_MENU')
     .addItem('🔧 Chạy TOÀN BỘ bảo trì (chẩn đoán + đồng bộ + trích tọa độ)', 'CHAY_TOAN_BO_BAO_TRI_TU_MENU')
+    .addItem('🧱 Xác nhận cấu trúc cột hiện tại (chỉ sau khi CỐ Ý chèn/xóa cột và đã sửa mã)', 'XAC_NHAN_CAU_TRUC_COT_HIEN_TAI')
     .addToUi();
 }
 

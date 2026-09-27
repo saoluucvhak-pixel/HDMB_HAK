@@ -478,10 +478,81 @@ function getReportSS_() {
   }
 }
 
+const _cauTrucDaKiemTra_ = {};
 function getSheet_(name) {
   const sh = getSS_().getSheetByName(name);
   if (!sh) throw new Error('Không tìm thấy sheet: ' + name);
+  if (!_cauTrucDaKiemTra_[name] && laSheetCoMapCot_(name)) {
+    kiemTraCauTrucCot_(sh);
+    _cauTrucDaKiemTra_[name] = true;
+  }
   return sh;
+}
+
+/** Các sheet được đọc/ghi theo CHỈ SỐ cột cố định (*_COL) — chèn/xóa cột tay sẽ làm lệch âm thầm. */
+function laSheetCoMapCot_(name) {
+  return [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE, SHEET_NAME.DM_DIACHI].indexOf(name) !== -1;
+}
+
+/**
+ * Chống ghi LỆCH CỘT (MAP-001): mã đọc/ghi các sheet chính theo vị trí cột cố định, nên nếu ai đó
+ * chèn/xóa/kéo cột trực tiếp trên Sheet, mọi thao tác sẽ đọc sai cột và GHI ĐÈ nhầm cột mà không
+ * báo lỗi. Lần đầu chạy: lưu tiêu đề hiện tại làm MẪU (Script Property CAU_TRUC_COT_<sheet>).
+ * Các lần sau: nếu 1 tiêu đề của mẫu nay nằm ở VỊ TRÍ KHÁC -> cột đã bị dịch -> DỪNG đọc/ghi sheet
+ * đó và báo rõ cột nào. Chỉ đổi tên tiêu đề (không dịch cột) -> chỉ ghi cảnh báo. Thêm cột mới ở
+ * cuối -> hợp lệ, tự cập nhật mẫu. Kết quả "đạt" được nhớ 60 giây để không phải đọc tiêu đề mỗi lượt.
+ * Sau khi cố ý đổi cấu trúc VÀ đã sửa *_COL tương ứng: chạy menu "Xác nhận cấu trúc cột hiện tại".
+ */
+function kiemTraCauTrucCot_(sh) {
+  const ten = sh.getName();
+  const cache = CacheService.getScriptCache();
+  const khoaCache = 'CAU_TRUC_OK_' + ten;
+  try { if (cache.get(khoaCache)) return; } catch (e) { /* không có cache thì kiểm tra thật */ }
+  const soCot = sh.getLastColumn();
+  if (soCot < 1) return;
+  const hienTai = sh.getRange(1, 1, 1, soCot).getValues()[0].map(function (v) { return String(v).trim(); });
+  const props = PropertiesService.getScriptProperties();
+  const khoaMau = 'CAU_TRUC_COT_' + ten;
+  const mauJson = props.getProperty(khoaMau);
+  if (!mauJson) {
+    props.setProperty(khoaMau, JSON.stringify(hienTai));
+    log_('INFO', 'kiemTraCauTrucCot_', 'Đã lưu cấu trúc cột mẫu của ' + ten + ' (' + soCot + ' cột)');
+  } else {
+    const mau = JSON.parse(mauJson);
+    const lech = [], doiTen = [];
+    for (let k = 0; k < mau.length; k++) {
+      if (!mau[k] || hienTai[k] === mau[k]) continue;
+      const j = hienTai.indexOf(mau[k]);
+      if (j !== -1) lech.push('"' + mau[k] + '" từ cột ' + tenCotChu_(k) + ' sang cột ' + tenCotChu_(j));
+      else doiTen.push(tenCotChu_(k) + ': "' + mau[k] + '" → "' + (hienTai[k] || '') + '"');
+    }
+    if (lech.length) {
+      log_('ERROR', 'kiemTraCauTrucCot_', 'Cột của ' + ten + ' đã bị dịch', lech);
+      throw new Error('⛔ Cấu trúc cột sheet "' + ten + '" đã thay đổi (' + lech.slice(0, 3).join('; ') + (lech.length > 3 ? '; …' : '') +
+        '). Hệ thống tạm DỪNG đọc/ghi sheet này để không ghi nhầm cột. Hãy trả các cột về đúng vị trí cũ; nếu thay đổi là cố ý và mã nguồn đã được cập nhật theo, chạy menu "🧱 Xác nhận cấu trúc cột hiện tại".');
+    }
+    if (doiTen.length) log_('WARNING', 'kiemTraCauTrucCot_', 'Tiêu đề cột của ' + ten + ' đã đổi tên (vị trí không đổi)', doiTen);
+    if (hienTai.length > mau.length) props.setProperty(khoaMau, JSON.stringify(hienTai)); // thêm cột mới ở cuối: hợp lệ
+  }
+  try { cache.put(khoaCache, '1', 60); } catch (e) { /* bỏ qua */ }
+}
+
+function tenCotChu_(chiSo0) {
+  let n = chiSo0 + 1, s = '';
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+/** Menu: chấp nhận cấu trúc cột HIỆN TẠI làm mẫu mới (chỉ dùng sau khi đã cố ý đổi cột VÀ cập nhật *_COL). */
+function XAC_NHAN_CAU_TRUC_COT_HIEN_TAI() {
+  const props = PropertiesService.getScriptProperties();
+  const cache = CacheService.getScriptCache();
+  const ds = [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE, SHEET_NAME.DM_DIACHI];
+  ds.forEach(function (ten) { props.deleteProperty('CAU_TRUC_COT_' + ten); try { cache.remove('CAU_TRUC_OK_' + ten); } catch (e) {} delete _cauTrucDaKiemTra_[ten]; });
+  ds.forEach(function (ten) { const sh = getSS_().getSheetByName(ten); if (sh) kiemTraCauTrucCot_(sh); });
+  const thongBao = 'Đã lưu cấu trúc cột hiện tại của ' + ds.length + ' sheet làm mẫu mới.';
+  try { SpreadsheetApp.getUi().alert('✅ ' + thongBao); } catch (e) { /* chạy từ editor */ }
+  return thongBao;
 }
 
 /**
