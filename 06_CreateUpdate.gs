@@ -919,7 +919,7 @@ function layDanhSachKhachHang(trang, kichThuoc, tuKhoa) {
     if (!theoCccd[cccd]) {
       theoCccd[cccd] = {
         cccd: cccd, tenChuRung: r[NCC_COL.TEN_CHU_RUNG], sdt: r[NCC_COL.SDT_CHU_RUNG],
-        thuongTru: r[NCC_COL.DIA_CHI_TT], ngayCap: r[NCC_COL.NGAY_CAP] ? new Date(r[NCC_COL.NGAY_CAP]).toISOString() : '',
+        thuongTru: r[NCC_COL.DIA_CHI_TT], ngayCap: ngayToISO_(r[NCC_COL.NGAY_CAP]),
         noiCap: r[NCC_COL.NOI_CAP], nhomKH: r[NCC_COL.NHOM_KH], maSoThue: r[NCC_COL.MA_SO_THUE], soLuongHopDong: 0
       };
     }
@@ -954,7 +954,7 @@ function layHopDongTheoKhachHang(cccd) {
       const r = x.r;
       return {
         idHD: r[NCC_COL.ID_HD], soHD: r[NCC_COL.SO_HD], soDong: x.soDong,
-        ngayKy: r[NCC_COL.NGAY_KY] ? new Date(r[NCC_COL.NGAY_KY]).toISOString() : '',
+        ngayKy: ngayToISO_(r[NCC_COL.NGAY_KY]),
         tenChuRung: r[NCC_COL.TEN_CHU_RUNG], tinhTrang: (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim()
       };
     })
@@ -1815,7 +1815,7 @@ function layDanhSachHopDong_ThucThi_(trang, kichThuoc, tuKhoa, tinhTrangLoc) {
     return {
       soDong: x.soDong,
       idHD: r[NCC_COL.ID_HD], soHD: r[NCC_COL.SO_HD],
-      ngayKy: r[NCC_COL.NGAY_KY] ? new Date(r[NCC_COL.NGAY_KY]).toISOString() : '', // chuỗi ISO, KHÔNG truyền Date object thô qua google.script.run
+      ngayKy: ngayToISO_(r[NCC_COL.NGAY_KY]), // chuỗi ngày thuần yyyy-MM-dd, KHÔNG truyền Date object thô qua google.script.run
       tenChuRung: r[NCC_COL.TEN_CHU_RUNG],
       diaChiRung: r[NCC_COL.DIA_CHI_RUNG], tinhTrang: (r[NCC_COL.TINH_TRANG] || 'Đang thực hiện').toString().trim()
     };
@@ -1861,18 +1861,8 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
   const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
   const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
 
-  // Chuyển an toàn 1 giá trị ngày (có thể là Date object thô từ getValues(), chuỗi rỗng,
-  // hoặc chuỗi có sẵn) sang chuỗi ISO — tránh truyền thẳng Date object thô qua
-  // google.script.run (nghi ngờ đây là nguyên nhân client nhận về null dù hàm chạy đúng
-  // khi gọi trực tiếp trong Apps Script editor).
-  const ngayToISO_ = function (v) {
-    if (!v) return '';
-    try {
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? '' : d.toISOString();
-    } catch (e) { return ''; }
-  };
-
+  // Ngày dùng ngayToISO_() DÙNG CHUNG (00_Config.gs) — trả "yyyy-MM-dd" theo múi giờ
+  // bảng tính; bản sao cục bộ cũ trả toISOString() (UTC) làm form hiện lùi 1 ngày.
   return {
     soDong: soDong,
     idHD: idHD,
@@ -2124,9 +2114,15 @@ function LUU_HOP_DONG_DAY_DU(payload) {
       // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
       // TAO_HOP_DONG_MOI() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
       row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
+      // ⚠️ ĐÃ SỬA: trước đây appendRow() -> CCCD/SĐT/Số TK/MST mất số 0 đầu (049... thành 49...)
+      // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI: định dạng TEXT trước rồi mới ghi.
       const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
-      shTaoMoi.appendRow(row);
-      soDongVuaTao = shTaoMoi.getLastRow(); // appendRow luôn thêm vào cuối -> đây chính là số dòng thật của hợp đồng vừa tạo
+      soDongVuaTao = shTaoMoi.getLastRow() + 1;
+      [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
+        .forEach(function (c) { shTaoMoi.getRange(soDongVuaTao, c + 1).setNumberFormat('@'); });
+      const soCotNCC = Math.max(row.length, shTaoMoi.getLastColumn());
+      for (let k = 0; k < soCotNCC; k++) if (row[k] === undefined) row[k] = '';
+      shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([row]);
       ghiNhatKy_('Tạo hợp đồng mới', idHD, 'Chủ rừng: ' + d.tenChuRung + ' — Số HĐ: ' + soHD);
     } finally {
       lock.releaseLock();

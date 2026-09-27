@@ -491,13 +491,47 @@ function getSheet_(name) {
  * trong Apps Script editor (xem ngayToISO_ cục bộ từng dùng ở 06_CreateUpdate.gs
  * để vá đúng lỗi này — giờ tách thành hàm DÙNG CHUNG để mọi hàm khác trong dự
  * án đều gọi được, tránh quên convert ở chỗ mới thêm sau này).
+ *
+ * ⚠️ ĐÃ SỬA (lỗi LÙI 1 NGÀY): trước đây trả d.toISOString() (giờ UTC). Ô ngày
+ * "10/05/2026" trong Sheet múi giờ UTC+7 là thời điểm 2026-05-09T17:00:00Z, nên
+ * form nhập (07/11 dùng toISOString().split('T')[0], 27 dùng split('T')[0]) hiện
+ * 09/05/2026 và khi Lưu thì GHI ĐÈ ngày sai vào Sheet — mỗi lần mở+lưu lùi thêm 1
+ * ngày. Giờ trả chuỗi NGÀY THUẦN "yyyy-MM-dd" theo đúng múi giờ của bảng tính, nên
+ * cả 3 form đều ra đúng ngày mà không phải sửa HTML; hiển thị bằng
+ * new Date(x).toLocaleDateString('vi-VN') vẫn đúng như cũ.
  */
+const _ngayToISOCache_ = {};
+let _muiGioBangTinh_ = null;
 function ngayToISO_(v) {
-  if (!v) return '';
+  if (v === null || v === undefined || v === '') return '';
   try {
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? '' : d.toISOString();
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // đã là ngày thuần -> giữ nguyên, không đổi múi giờ
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // ô TEXT kiểu Việt Nam dd/mm/yyyy (new Date() sẽ hiểu nhầm thành mm/dd)
+      if (m) {
+        const ngay = Number(m[1]), thang = Number(m[2]), nam = Number(m[3]);
+        const kt = new Date(nam, thang - 1, ngay);
+        if (kt.getFullYear() !== nam || kt.getMonth() !== thang - 1 || kt.getDate() !== ngay) return ''; // loại 31/02, 00/13...
+        return m[3] + '-' + ('0' + thang).slice(-2) + '-' + ('0' + ngay).slice(-2);
+      }
+    }
+    const d = v instanceof Date ? v : new Date(v);
+    const t = d.getTime();
+    if (isNaN(t)) return '';
+    if (_ngayToISOCache_.hasOwnProperty(t)) return _ngayToISOCache_[t];
+    const kq = Utilities.formatDate(d, layMuiGioBangTinh_(), 'yyyy-MM-dd');
+    _ngayToISOCache_[t] = kq; // nhiều dòng trùng ngày -> gọi Utilities.formatDate 1 lần/ngày khác nhau
+    return kq;
   } catch (e) { return ''; }
+}
+
+/** Múi giờ của bảng tính chính (ô ngày được lưu là 00:00 theo múi giờ này) — đọc 1 lần/lượt chạy. */
+function layMuiGioBangTinh_() {
+  if (_muiGioBangTinh_) return _muiGioBangTinh_;
+  try { _muiGioBangTinh_ = getSS_().getSpreadsheetTimeZone(); } catch (e) { /* rơi xuống múi giờ script */ }
+  if (!_muiGioBangTinh_) _muiGioBangTinh_ = Session.getScriptTimeZone();
+  return _muiGioBangTinh_;
 }
 
 /**

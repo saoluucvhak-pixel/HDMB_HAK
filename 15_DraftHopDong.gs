@@ -85,13 +85,37 @@ function LAY_DRAFT_THEO_ID_HD(idHD) {
       const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
       for (let i = 0; i < data.length; i++) {
         if ((data[i][DRAFT_HD_COL.ID_HD_GOC] || '').toString().trim() === idHD.toString().trim()) {
-          return { idDraft: data[i][DRAFT_HD_COL.ID_DRAFT], du: JSON.parse(data[i][DRAFT_HD_COL.JSON_DATA]), moiTao: false };
+          const du = JSON.parse(data[i][DRAFT_HD_COL.JSON_DATA]);
+          chuanHoaDuNhapCu_(du, idHD);
+          return { idDraft: data[i][DRAFT_HD_COL.ID_DRAFT], du: du, moiTao: false };
         }
       }
     }
     return LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/**
+ * Sửa tại chỗ 1 bản nháp đã lưu TRƯỚC khi vá 2 lỗi dưới đây (bản nháp có thể còn
+ * nằm trong Draft_HopDong rất lâu nếu người dùng chưa Lưu chính thức):
+ *  1) Thiếu nhomKH/maSoThue: form 11 hiện ô trống rồi khi Lưu ghi "" ĐÈ LÊN giá trị
+ *     thật trong HD_NCC -> lấy lại từ hợp đồng gốc nếu nháp chưa có 2 khóa này.
+ *  2) Ngày lưu dạng UTC ISO (2026-05-09T17:00:00Z) làm form hiện lùi 1 ngày ->
+ *     đổi về ngày thuần yyyy-MM-dd đúng múi giờ bảng tính (ngayToISO_ giữ nguyên
+ *     chuỗi đã là yyyy-MM-dd nên chạy lại nhiều lần không sao).
+ */
+function chuanHoaDuNhapCu_(du, idHD) {
+  const h = du && du.hopDong;
+  if (!h) return;
+  ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'].forEach(function (k) { if (h[k]) h[k] = ngayToISO_(h[k]); });
+  if (!h.hasOwnProperty('nhomKH') || !h.hasOwnProperty('maSoThue')) {
+    const goc = layHopDongTheoIdHD_ChoDraft_(idHD);
+    if (goc) {
+      if (!h.hasOwnProperty('nhomKH')) h.nhomKH = goc.nhomKH || '';
+      if (!h.hasOwnProperty('maSoThue')) h.maSoThue = goc.maSoThue || '';
+    }
   }
 }
 
@@ -106,7 +130,9 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
       tenChuRung: hd.tenChuRung, cccdChuRung: hd.cccdChuRung, soHD: hd.soHD, ngayKy: hd.ngayKy,
       ngayCap: hd.ngayCap, noiCap: hd.noiCap, sdtChuRung: hd.sdtChuRung, diaChiThuongTru: hd.diaChiThuongTru,
       tinhTrang: hd.tinhTrang, uyQuyenTT: hd.uyQuyenTT, tenUyQuyen: hd.tenUyQuyen, cccdUyQuyen: hd.cccdUyQuyen,
-      ngayCapUyQuyen: hd.ngayCapUyQuyen, noiCapUyQuyen: hd.noiCapUyQuyen, sdtUyQuyen: hd.sdtUyQuyen, diaChiUyQuyen: hd.diaChiUyQuyen
+      ngayCapUyQuyen: hd.ngayCapUyQuyen, noiCapUyQuyen: hd.noiCapUyQuyen, sdtUyQuyen: hd.sdtUyQuyen, diaChiUyQuyen: hd.diaChiUyQuyen,
+      // ⚠️ ĐÃ SỬA: trước đây KHÔNG sao chép 2 trường này -> form 11 hiện trống rồi khi Lưu ghi "" ĐÈ LÊN Nhóm KH / Mã số thuế thật
+      nhomKH: hd.nhomKH || '', maSoThue: hd.maSoThue || ''
     },
     rung: (hd.danhSachRung || []).map(function (r) {
       return { idRung: r.idRung, tempId: null, diaChiRung: r.diaChiRung, dienTichM2: r.dienTichM2, donGia: r.donGia,

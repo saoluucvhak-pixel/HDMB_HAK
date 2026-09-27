@@ -106,8 +106,22 @@ function DINH_DANG_NGAY_THANG_NAM_DONG_BO() {
 
 /** Mở dialog cài đặt Vùng (Locale) — cho phép chọn vùng bất kỳ, không chỉ cố định Việt Nam */
 function MO_DIALOG_CAI_DAT_VUNG() {
-  const html = HtmlService.createHtmlOutputFromFile('23_CaiDatVung').setWidth(480).setHeight(420);
-  SpreadsheetApp.getUi().showModalDialog(html, '⚙️ Cài đặt Vùng (Locale)');
+  const ui = SpreadsheetApp.getUi();
+  let html = null;
+  try {
+    html = HtmlService.createHtmlOutputFromFile('23_CaiDatVung').setWidth(480).setHeight(420);
+  } catch (e) {
+    // ⚠️ File 23_CaiDatVung.html không có trong bản mã nguồn trên GitHub -> trước đây mục menu
+    // này luôn báo lỗi "No HTML file named 23_CaiDatVung". Dự phòng: hỏi mã vùng bằng hộp nhập.
+  }
+  if (html) { ui.showModalDialog(html, '⚙️ Cài đặt Vùng (Locale)'); return; }
+  const dsVung = Object.keys(MAU_NGAY_THEO_VUNG_);
+  const tl = ui.prompt('⚙️ Cài đặt Vùng (Locale)',
+    'Nhập mã vùng (một trong: ' + dsVung.join(', ') + '). Mặc định Việt Nam: vi_VN', ui.ButtonSet.OK_CANCEL);
+  if (tl.getSelectedButton() !== ui.Button.OK) return;
+  const locale = (tl.getResponseText() || 'vi_VN').trim();
+  if (dsVung.indexOf(locale) === -1) { ui.alert('❌ Mã vùng không hợp lệ: "' + locale + '".'); return; }
+  ui.alert('✅ ' + DAT_VUNG_HE_THONG(locale).thongBao);
 }
 
 /** Đọc Locale hiện tại của cả 2 file — dùng để hiện sẵn lựa chọn đúng trong dialog */
