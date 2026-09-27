@@ -826,15 +826,19 @@
   }
 
   /** ✅ LƯU CHÍNH THỨC — điểm duy nhất ghi thật vào hệ thống */
+  var dangLuuChinhThuc_ = false;
   function luuChinhThuc() {
     capNhatDuNhapTuFormHopDong_();
     if (!duNhap.hopDong.tenChuRung || !duNhap.hopDong.cccdChuRung || !duNhap.hopDong.ngayKy) {
       showMsg('msgLuuChinhThuc', '❌ Vui lòng điền Họ tên / CCCD / Ngày ký (bắt buộc).', false); return;
     }
+    if (dangLuuChinhThuc_) return; // chặn bấm 2 lần (server cũng tự chặn — xem LUU_CHINH_THUC)
+    dangLuuChinhThuc_ = true;
     showMsg('msgLuuChinhThuc', '⌛ Đang lưu chính thức vào hệ thống...', true);
     google.script.run
-      .withFailureHandler(function (err) { showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message, false); })
+      .withFailureHandler(function (err) { dangLuuChinhThuc_ = false; showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message, false); })
       .withSuccessHandler(function (kq) {
+        dangLuuChinhThuc_ = false;
         if (!kq.thanhCong) { showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }
         var thongBao = '✅ Đã lưu chính thức hợp đồng ' + kq.soHD + ' vào hệ thống.';
         if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Một số mục gặp lỗi khi ghi:\n• ' + kq.canhBao.join('\n• ');

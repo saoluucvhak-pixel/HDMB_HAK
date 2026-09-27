@@ -206,15 +206,50 @@ function HUY_DRAFT(idDraft) {
  */
 function LUU_CHINH_THUC(idDraft) {
   const sh = getOrCreateDraftHopDongSheet_();
-  const soDong = timDongDraft_(sh, idDraft);
-  if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp — có thể đã được lưu chính thức ở nơi khác.' };
-  const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
-  const du = JSON.parse(r[DRAFT_HD_COL.JSON_DATA]);
-
-  if (!du.hopDong || !du.hopDong.tenChuRung || !du.hopDong.cccdChuRung || !du.hopDong.ngayKy) {
-    return { thanhCong: false, loi: 'Thiếu Họ tên chủ rừng / CCCD hợp lệ / Ngày ký hợp đồng.' };
+  const cache = CacheService.getScriptCache();
+  const khoaDangLuu = 'LUU_CHINH_THUC_' + idDraft;
+  let du;
+  // ⚠️ ĐÃ SỬA (bấm "Lưu chính thức" 2 lần / 2 tab): trước đây 2 lượt chạy song song cùng
+  // đọc được bản nháp (nháp chỉ bị xóa ở cuối) -> với hợp đồng MỚI sinh ra 2 HỢP ĐỒNG TRÙNG.
+  // Giờ "nhận" bản nháp nguyên tử dưới 1 lock ngắn (đánh dấu trong ScriptCache, tự hết hạn
+  // 10 phút nếu lượt chạy chết giữa chừng) rồi NHẢ lock trước khi gọi các hàm ghi bên dưới
+  // (các hàm đó tự lấy lock riêng — không lồng lock).
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  try {
+    const soDong = timDongDraft_(sh, idDraft);
+    if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp — có thể đã được lưu chính thức ở nơi khác.' };
+    if (cache.get(khoaDangLuu)) return { thanhCong: false, loi: 'Bản nháp này đang được lưu chính thức (có thể do bấm "Lưu" 2 lần) — vui lòng chờ kết quả, không bấm lại.' };
+    const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
+    du = JSON.parse(r[DRAFT_HD_COL.JSON_DATA]);
+    if (!du.hopDong || !du.hopDong.tenChuRung || !du.hopDong.cccdChuRung || !du.hopDong.ngayKy) {
+      return { thanhCong: false, loi: 'Thiếu Họ tên chủ rừng / CCCD hợp lệ / Ngày ký hợp đồng.' };
+    }
+    cache.put(khoaDangLuu, '1', 600);
+  } finally {
+    lock.releaseLock();
   }
 
+  try {
+    const kq = luuChinhThucThucThi_(du);
+    if (kq.thanhCong) {
+      // Tìm LẠI dòng nháp theo idDraft ngay trước khi xóa: lượt lưu mất vài giây, trong lúc đó nháp
+      // khác phía trên có thể đã bị xóa -> số dòng lấy từ đầu hàm đã lệch và xóa NHẦM nháp của người khác.
+      const lockXoa = LockService.getScriptLock();
+      lockXoa.waitLock(15000);
+      try {
+        const soDongHienTai = timDongDraft_(sh, idDraft);
+        if (soDongHienTai !== -1) sh.deleteRow(soDongHienTai);
+      } finally { lockXoa.releaseLock(); }
+    }
+    return kq;
+  } finally {
+    cache.remove(khoaDangLuu);
+  }
+}
+
+/** Ghi dữ liệu của 1 bản nháp vào các bảng chính (không xóa nháp — LUU_CHINH_THUC lo việc đó). */
+function luuChinhThucThucThi_(du) {
   // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật
   const ketQuaHD = LUU_HOP_DONG_DAY_DU({ idHD: du.idHD, soDong: null, hopDong: du.hopDong, rung: [], taiKhoan: [] });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
@@ -270,7 +305,6 @@ function LUU_CHINH_THUC(idDraft) {
   });
 
   CAP_NHAT_CT_HOPDONG_(idHD);
-  sh.deleteRow(soDong); // xóa nháp sau khi đã ghi chính thức xong
 
   return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null };
 }

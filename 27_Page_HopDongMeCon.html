@@ -494,9 +494,12 @@
         diaChiUyQuyen: document.getElementById('nfDiaChiUyQuyen').value.trim(),
         soTK: document.getElementById('nfSoTK').value.trim(), nganHang: document.getElementById('nfNganHang').value.trim()
       };
+      if (dangTaoHopDong_) return; // chặn bấm 2 lần -> tạo 2 hợp đồng trùng
+      dangTaoHopDong_ = true;
       showMsgModal_('⌛ Đang lưu...');
       google.script.run
         .withSuccessHandler(function (kq) {
+          dangTaoHopDong_ = false;
           if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
           if (!d.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
           var patchTK = { idHD: kq.idHD, tenChuRung: d.tenChuRung, cccd: d.cccdChuRung, soHD: d.soHD, soTK: d.soTK, nganHang: d.nganHang, uyQuyenTT: d.uyQuyenTT, tenUyQuyen: d.uyQuyenTT === 'Có' ? d.tenUyQuyen : d.tenChuRung };
@@ -515,7 +518,7 @@
             .withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi tải danh sách STK: ' + err.message); })
             .layDanhSachTaiKhoan(kq.idHD);
         })
-        .withFailureHandler(function (err) { showMsgModal_('❌ Lỗi: ' + err.message); })
+        .withFailureHandler(function (err) { dangTaoHopDong_ = false; showMsgModal_('❌ Lỗi: ' + err.message); })
         .TAO_HOP_DONG_MOI(d);
     });
   }
@@ -809,7 +812,10 @@
     moModal(html);
     document.getElementById('btnLuuWizard').addEventListener('click', luuHopDongWizard_);
   }
+  var dangTaoHopDong_ = false; // true trong lúc đang chờ TAO_HOP_DONG_MOI trả về — chặn bấm Lưu 2 lần tạo 2 hợp đồng trùng
   function luuHopDongWizard_() {
+    if (dangTaoHopDong_) return;
+    dangTaoHopDong_ = true;
     showMsgModal_('⌛ Đang lưu...');
     var d = {
       tenChuRung: wz.tenChuRung, cccdChuRung: wz.cccdChuRung, sdtChuRung: wz.sdtChuRung, diaChiThuongTru: wz.diaChiThuongTru,
@@ -820,6 +826,7 @@
     };
     google.script.run
       .withSuccessHandler(function (kq) {
+        dangTaoHopDong_ = false;
         if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
         if (!wz.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
         var patchTK = { idHD: kq.idHD, tenChuRung: wz.tenChuRung, cccd: wz.cccdChuRung, soHD: wz.soHD, soTK: wz.soTK, nganHang: wz.nganHang, uyQuyenTT: wz.uyQuyenTT, tenUyQuyen: wz.uyQuyenTT === 'Có' ? wz.tenUyQuyen : wz.tenChuRung };
@@ -838,7 +845,7 @@
           .withFailureHandler(function (err) { showMsgModal_('⚠️ Đã tạo hợp đồng nhưng lỗi tải danh sách STK: ' + err.message); })
           .layDanhSachTaiKhoan(kq.idHD);
       })
-      .withFailureHandler(function (err) { showMsgModal_('❌ Lỗi: ' + err.message); })
+      .withFailureHandler(function (err) { dangTaoHopDong_ = false; showMsgModal_('❌ Lỗi: ' + err.message); })
       .TAO_HOP_DONG_MOI(d);
   }
   function truong_(id, nhan, giaTri, thuocTinh, full) {
