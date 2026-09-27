@@ -13,49 +13,6 @@
  */
 
 /**
- * OCR 1 file (ảnh hoặc PDF) bằng GEMINI (dùng chung API key/model đã cấu hình
- * ở trang Thiết lập → 🤖 Chatbot — KHÔNG cần bật Advanced Drive Service nữa).
- * ⚠️ ĐÃ THAY: cách cũ dùng Drive.Files.insert(ocr:true) bị Google hạn chế cho
- * phần lớn tài khoản (đặc biệt Gmail cá nhân), thường xuyên báo lỗi. Gemini
- * đọc ảnh/PDF trực tiếp, ổn định hơn nhiều và không cần bật thêm dịch vụ nào.
- */
-function ocrFile_(fileId) {
-  const p = PropertiesService.getScriptProperties();
-  const apiKey = p.getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('Chưa cấu hình API key Gemini. Vào trang Thiết lập → mục "🤖 Chatbot" để nhập (OCR giờ dùng chung API key này).');
-  let model = p.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
-  const MODEL_DU_PHONG_OCR_ = ['gemini-3.6-flash', 'gemini-3.5-flash'];
-  if (['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].indexOf(model) !== -1) model = 'gemini-3.5-flash-lite';
-
-  const blob = DriveApp.getFileById(fileId).getBlob();
-  const mimeGoc = blob.getContentType();
-  // Nếu file GỐC đã bị Google Drive tự động chuyển thành Google Doc/Sheet, đọc
-  // thẳng nội dung văn bản có sẵn (đã là text, không cần OCR gì cả)
-  if (mimeGoc === MimeType.GOOGLE_DOCS) return DocumentApp.openById(fileId).getBody().getText();
-  if (mimeGoc === MimeType.GOOGLE_SHEETS) return SpreadsheetApp.openById(fileId).getDataRange().getValues().map(function (r) { return r.join(' '); }).join('\n');
-
-  const base64 = Utilities.base64Encode(blob.getBytes());
-  const promptOCR = 'Đọc và trích xuất TOÀN BỘ chữ/số trong ảnh hoặc file PDF này, giữ nguyên định dạng xuống dòng như trong ảnh, không tóm tắt, không diễn giải thêm — chỉ trả về đúng nguyên văn chữ đọc được.';
-  const payload = { contents: [{ parts: [{ text: promptOCR }, { inline_data: { mime_type: mimeGoc, data: base64 } }] }] };
-  const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
-
-  function goiGemini_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
-  }
-
-  let json = goiGemini_(model);
-  for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_OCR_.length; i++) {
-    if (MODEL_DU_PHONG_OCR_[i] === model) continue;
-    model = MODEL_DU_PHONG_OCR_[i];
-    json = goiGemini_(model);
-  }
-  if (json.error) throw new Error('Lỗi Gemini OCR: ' + json.error.message);
-  const text = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
-  return text || '';
-}
-
-/**
  * ============================================================
  *  ĐỌC BẢN SCAN ĐỂ TỰ ĐỘNG ĐIỀN FORM
  * ============================================================
@@ -152,20 +109,6 @@ function xayPromptTrichXuatScan_(loaiTaiLieu) {
   return chung + 'Tìm giấy tờ chứng minh nguồn gốc đất/rừng (Giấy chứng nhận QSDĐ, Hợp đồng mua bán, Giấy xác nhận, hoặc Đơn xác nhận của UBND xã/phường) trong file, trả về JSON:\n' +
     '{"hoSoNguonGoc": "ĐÚNG 1 trong 4 giá trị: Giấy chứng nhận QSDĐ | Hợp đồng mua bán | Giấy xác nhận | Đơn xác nhận của UBNN Xã/Phường — chọn đúng loại theo tiêu đề văn bản đọc được", ' +
     '"soGiayTo": "số hiệu/số văn bản ghi trên giấy tờ", "dienTichM2": "diện tích, quy đổi ra m² dạng số nguyên không có dấu phẩy/chấm (nếu ghi bằng ha thì nhân 10000), để trống nếu không tìm thấy diện tích"}';
-}
-
-/** Chuyển ngày dạng dd/mm/yyyy (OCR đọc được) về yyyy-mm-dd để đổ thẳng vào input type="date" */
-function chuyenNgayVeISO_(ngayStr) {
-  const m = ngayStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (!m) return '';
-  const dd = m[1].padStart(2, '0'), mm = m[2].padStart(2, '0'), yyyy = m[3];
-  return yyyy + '-' + mm + '-' + dd;
-}
-
-/** Tìm chuỗi 12 chữ số liên tiếp trong text OCR (nghi là số CCCD) */
-function timCCCDTrongText_(text) {
-  const matches = text.match(/\b\d{12}\b/g);
-  return matches ? matches : [];
 }
 
 /**

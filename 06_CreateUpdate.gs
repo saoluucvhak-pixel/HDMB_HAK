@@ -39,17 +39,6 @@ function soHopDongTuDong(ngayKy) {
   return tienTo + sttMoi;
 }
 
-/** (Giữ lại để tương thích ngược) Lấy số hợp đồng tiếp theo kiểu số tăng dần đơn giản = MAX(SoHD hiện có) + 1 */
-function soHopDongTiepTheo() {
-  const rows = readData_(SHEET_NAME.HD_NCC);
-  let max = 0;
-  rows.forEach(function (r) {
-    const so = parseInt(r[NCC_COL.SO_HD], 10);
-    if (!isNaN(so) && so > max) max = so;
-  });
-  return max + 1;
-}
-
 /**
  * Đọc ĐƠN GIÁ BÌNH QUÂN THÁNG từ Google Sheet Báo giá ngoài (sheet Baogia_DN_SAVE,
  * xem BAOGIA_URL/BAOGIA_SHEET_NAME ở 00_Config.gs), lấy các dòng có ngày rơi vào
@@ -72,61 +61,6 @@ function soHopDongTiepTheo() {
  * Trả về { thanhCong, theoSoHD: { [soHD]: {khoiLuong, giaTri} }, loi }
  */
 /**
- * XEM TRƯỚC dữ liệu đọc được từ DNTT_GK_DN_CT — hiện rõ đã dò cột nào là
- * Số HĐ/Khối lượng/Giá trị + 10 dòng đầu đã gộp theo Số HĐ, để NGƯỜI DÙNG TỰ
- * KIỂM TRA đúng chưa trước khi bật dùng thật (tránh lặp lại lỗi lấy sai cột
- * làm sai cả báo cáo như lần trước).
- */
-function layXemTruocDNTT() {
-  try {
-    const ss = SpreadsheetApp.openByUrl(DNTT_URL);
-    const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
-    const data = sh.getDataRange().getValues();
-    if (data.length < 2) return { thanhCong: false, loi: 'Sheet chưa có dữ liệu.' };
-
-    const boDauTV = function (s) {
-      return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-    };
-    const COT_KHOI_LUONG_THANH_TOAN = 12; // cột M — "Khối lượng" (theo xác nhận người dùng, thay cột I trước đây)
-    let colKL = -1;
-    if (boDauTV(data[0][COT_KHOI_LUONG_THANH_TOAN]).indexOf('khoi luong') !== -1) colKL = COT_KHOI_LUONG_THANH_TOAN;
-
-    let colSoHD = -1, colGiaTri = -1, dongHeader = -1;
-    const tuKhoaSoHD = ['so hd', 'sohd', 'so hop dong', 'ma hd', 'ma hop dong'];
-    const tuKhoaKL = ['khoi luong', 'so luong', 'san luong'];
-    const tuKhoaGiaTri = ['gia tri', 'thanh tien', 'tong tien', 'so tien'];
-    for (let d = 0; d < Math.min(5, data.length - 1) && (colSoHD === -1 || (colKL === -1 && colGiaTri === -1)); d++) {
-      const h = data[d].map(boDauTV);
-      h.forEach(function (v, i) {
-        if (colSoHD === -1 && tuKhoaSoHD.some(function (tk) { return v.indexOf(tk) !== -1; })) colSoHD = i;
-        if (colKL === -1 && tuKhoaKL.some(function (tk) { return v.indexOf(tk) !== -1; })) colKL = i;
-        if (colGiaTri === -1 && tuKhoaGiaTri.some(function (tk) { return v.indexOf(tk) !== -1; })) colGiaTri = i;
-      });
-      if (colSoHD !== -1 || colKL !== -1 || colGiaTri !== -1) dongHeader = d;
-    }
-    if (dongHeader === -1) dongHeader = 0;
-
-    const tieuDeCot = data[0].map(function (h, i) { return { cot: i + 1, tieuDe: h }; });
-    const mauDong = [];
-    for (let i = dongHeader + 1; i < Math.min(data.length, dongHeader + 11); i++) {
-      mauDong.push({
-        soHD: colSoHD !== -1 ? data[i][colSoHD] : '(chưa dò được)',
-        khoiLuong: colKL !== -1 ? data[i][colKL] : '(chưa dò được)',
-        giaTri: colGiaTri !== -1 ? data[i][colGiaTri] : '(chưa dò được)'
-      });
-    }
-
-    return {
-      thanhCong: true, tieuDeCot: tieuDeCot,
-      cotDaDo: { soHD: colSoHD + 1, khoiLuong: colKL + 1, giaTri: colGiaTri + 1 },
-      mauDong: mauDong
-    };
-  } catch (e) {
-    return { thanhCong: false, loi: 'Lỗi: ' + e.message };
-  }
-}
-
-/**
  * Tính "Thực hiện từ ngày" (ngày cân 1 nhỏ nhất) và "Thực hiện đến ngày" (ngày cân 1 lớn
  * nhất) cho từng hợp đồng, dùng cho báo cáo Thanh lý:
  *  1. Đọc DNTT_GK_DN_CT, lấy danh sách "Số CT" (cột L, index 11) theo từng Số HĐ.
@@ -135,12 +69,6 @@ function layXemTruocDNTT() {
  * ⚠️ Cột Số HĐ trong DNTT_GK_DN_CT vẫn tự dò theo từ khóa (chưa được xác nhận cột cụ thể).
  * Trả về { thanhCong, theoSoHD: { [soHD]: {tuNgay, denNgay} }, loi }
  */
-/** Wrapper có cache cho layNgayCanMinMaxTheoHopDong_ — hàm gốc phải mở 2 sheet NGOÀI
- *  (DNTT_GK_DN_CT, PhieuCan_DN) nên khá chậm, cache lại tránh mở lại mỗi lần tải báo cáo. */
-function layNgayCanMinMaxTheoHopDong_(boBuoc) {
-  return layHoacTinhBaoCao_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_, boBuoc).duLieu;
-}
-
 function layNgayCanMinMaxTheoHopDong_KhongCache_() {
   try {
     const boDauTV = function (s) {
@@ -270,19 +198,6 @@ function layDuLieuThucHienTuDNTT_() {
   } catch (e) {
     return { thanhCong: false, loi: 'Không đọc được sheet DNTT_GK_DN_CT (kiểm tra quyền chia sẻ file): ' + e.message, theoSoHD: {} };
   }
-}
-
-/**
- * Kiểm tra nhanh việc đọc sheet DNTT_GK_DN_CT có thành công không, dùng để hiện
- * banner trạng thái trên trang Báo cáo tổng hợp (không phải để lấy dữ liệu).
- */
-function kiemTraKetNoiDNTT() {
-  const kq = layDuLieuThucHienTuDNTT_();
-  return {
-    thanhCong: kq.thanhCong,
-    loi: kq.loi,
-    soHopDongCoDuLieu: kq.thanhCong ? Object.keys(kq.theoSoHD).length : 0
-  };
 }
 
 function layDonGiaBinhQuanThang(ngayKy) {
@@ -864,38 +779,6 @@ function layDanhSachTaiKhoan(idHD) {
 
 /** Lấy danh sách các lô rừng của 1 hợp đồng (để hiển thị lên form cập nhật) */
 /**
- * Lấy TOÀN BỘ dữ liệu con (lô rừng, tài khoản, ảnh, hồ sơ) của 1 hợp đồng theo idHD.
- * Dùng SAU KHI đã có đầy đủ thông tin chính của hợp đồng (lấy thẳng từ danh sách,
- * xem layDanhSachHopDong) — hàm này CHỈ lấy phần dữ liệu CON, dùng filter đơn giản
- * qua idHD (không phải tìm kiếm 1 dòng đơn lẻ như timHopDongTheoId), nên không có
- * rủi ro "không tìm thấy".
- */
-function layDuLieuConCuaHopDong(idHD) {
-  return {
-    danhSachRung: layDanhSachRung(idHD),
-    danhSachTaiKhoan: layDanhSachTaiKhoan(idHD),
-    anh: layAnhCuaHopDong(idHD),
-    hoSo: layHoSoCuaHopDong(idHD)
-  };
-}
-
-/** Danh sách Số tài khoản của 1 hợp đồng — dùng cho trang Quản lý mẹ-con */
-function layDanhSachSTK(idHD) {
-  idHD = (idHD || '').toString().trim();
-  if (!idHD) return [];
-  const rows = readData_(SHEET_NAME.HD_STK);
-  return rows
-    .filter(function (r) { return (r[STK_COL.ID_HD] || '').toString().trim() === idHD; })
-    .map(function (r, i) {
-      return {
-        idStk: r[STK_COL.ID_STK] || (idHD + '_stk_' + i),
-        soTK: r[STK_COL.SO_TK], nganHang: r[STK_COL.NGAN_HANG],
-        uyQuyenTT: r[STK_COL.UY_QUYEN_TT], tenUyQuyen: r[STK_COL.TEN_UY_QUYEN]
-      };
-    });
-}
-
-/**
  * ============================================================
  *  KHÁCH HÀNG (nhóm theo CCCD) — 1 khách hàng có thể có NHIỀU hợp đồng.
  *  ⚠️ KHÔNG tạo bảng mới, KHÔNG di chuyển dữ liệu — vì HD_NCC hiện lưu thông
@@ -1274,23 +1157,6 @@ function layHoacTaoThuMucAnhGPS_() {
   const it = DriveApp.getFoldersByName(ten);
   if (it.hasNext()) return it.next();
   return DriveApp.createFolder(ten);
-}
-
-/** Thêm 1 link ảnh CÓ SẴN (đã có trên Drive, dán trực tiếp) vào HD_Picture của 1 hợp đồng — không qua luồng nháp/EXIF vì đây là link có sẵn, không phải file mới tải lên. */
-function THEM_LINK_ANH_HOP_DONG(idHD, url) {
-  idHD = (idHD || '').toString().trim();
-  url = (url || '').toString().trim();
-  if (!idHD || !url) return { thanhCong: false, loi: 'Thiếu ID_HD hoặc link ảnh' };
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  const row = nccRows.find(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
-  ghiAnhVaoHDPicture_(idHD, row ? row[NCC_COL.TEN_CHU_RUNG] : '', url);
-  ghiNhatKy_('Thêm link ảnh', idHD, url);
-  // ⚠️ TRƯỚC ĐÂY THIẾU: không gọi cập nhật Draft sau khi ghi ảnh -> cờ "Có ảnh"
-  // trong Draft_BaoCaoHopDong bị CŨ (vẫn hiện "chưa có ảnh" dù ảnh đã lưu vào
-  // HD_Picture) cho tới khi có 1 thao tác KHÁC (sửa hợp đồng/rừng) vô tình kích
-  // hoạt cập nhật Draft. Giờ gọi ngay tại đây để Draft luôn đúng ngay lập tức.
-  CAP_NHAT_DRAFT_MOT_HOP_DONG(idHD);
-  return { thanhCong: true };
 }
 
 /** Lấy (hoặc tạo mới) thư mục Drive lưu hồ sơ pháp lý (CCCD/GCN QSDĐ/giấy xác nhận/ủy quyền...) */
@@ -1951,7 +1817,7 @@ function XOA_TAI_KHOAN(soDong) {
 
 /**
  * Danh sách hợp đồng cho form Thanh lý (chưa "Đã thanh lý"), phân trang 20/trang,
- * kèm số lượng/giá trị hợp đồng, đã thực hiện, còn lại — lấy từ tongHopHopDong().
+ * kèm số lượng/giá trị hợp đồng, đã thực hiện, còn lại — lấy từ Draft báo cáo (docToanBoDraftBaoCao_).
  */
 function layDanhSachThanhLy(trang, kichThuoc, boLoc, boBuoc) {
   try {

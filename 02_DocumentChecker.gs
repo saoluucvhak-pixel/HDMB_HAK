@@ -237,7 +237,7 @@ function KIEM_TRA_HO_SO_TOAN_BO(tuNgay, denNgay) {
 
 /**
  * Báo cáo hợp đồng cho webapp: đọc TOÀN BỘ chi tiết từ CACHE (rất nhanh, chỉ
- * tính lại nếu có thay đổi dữ liệu mới — xem layHoacTinhBaoCao_), rồi mới lọc
+ * tính lại nếu có thay đổi dữ liệu mới), rồi mới lọc
  * + phân trang theo bộ lọc người dùng (lọc trong bộ nhớ, cực nhanh, không đọc
  * lại sheet). Đây là báo cáo TỔNG HỢP hồ sơ + tọa độ của TẤT CẢ hợp đồng, mục
  * đích: nhanh chóng thấy hợp đồng nào thiếu hồ sơ bắt buộc (dòng đỏ)/thiếu

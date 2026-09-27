@@ -73,7 +73,7 @@ function moFormNhapLieu() {
 
 /**
  * Dùng trong các file HTML templated (createTemplateFromFile) để ghép các phần
- * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('09_Style') ?>
+ * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('TenFileHtml') ?>
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();

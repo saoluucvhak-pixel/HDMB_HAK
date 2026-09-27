@@ -683,14 +683,6 @@ function log_(mucDo, nguCanh, thongDiep, chiTiet) {
 const CACHE_SHEET_NAME = 'Cache_BaoCao';
 const CACHE_CHUNK_SIZE = 45000; // 1 ô Google Sheets chứa được ~50.000 ký tự, để dư an toàn
 
-/** Thời điểm có thay đổi dữ liệu gần nhất, dựa vào dòng cuối cùng của nhật ký */
-function layThoiGianThayDoiGanNhat_() {
-  const sh = getOrCreateNhatKySheet_();
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return new Date(0); // chưa có thay đổi nào ghi nhận -> luôn coi cache còn mới
-  return new Date(sh.getRange(lastRow, 1).getValue());
-}
-
 function getOrCreateCacheSheet_() {
   const ss = getReportSS_(); // đổi sang file RIÊNG cho báo cáo/cache — không dùng file chính nữa
   let sh = ss.getSheetByName(CACHE_SHEET_NAME);
@@ -720,44 +712,9 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
   } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); }
 }
 
-/** Đọc cache đã lưu, trả về null nếu chưa có hoặc đã cũ (có thay đổi mới hơn) */
-function docCacheBaoCao_(tenCache) {
-  try {
-    const sh = getOrCreateCacheSheet_();
-    const data = sh.getDataRange().getValues();
-    const dongCuaCache = data.filter(function (r) { return r[0] === tenCache; });
-    if (!dongCuaCache.length) return null;
-
-    const thoiGianTao = new Date(dongCuaCache[0][1]);
-    const thoiGianThayDoi = layThoiGianThayDoiGanNhat_();
-    if (thoiGianThayDoi > thoiGianTao) return null; // đã có thay đổi mới hơn -> cache cũ, phải tính lại
-
-    const json = dongCuaCache.map(function (r) { return r[2]; }).join('');
-    return JSON.parse(json);
-  } catch (e) {
-    return null; // đọc lỗi (JSON hỏng, sheet lỗi...) -> coi như không có cache, tính lại từ đầu
-  }
-}
-
 /**
- * Lấy kết quả báo cáo — dùng cache nếu còn mới, tính lại nếu cache cũ/chưa có/bị ép làm mới.
- * hamTinh: function không tham số, trả về dữ liệu cần cache (phải là JSON-serializable).
- * boBuoc: true = luôn tính lại bất kể cache (dùng cho nút "Làm mới cưỡng bức" nếu cần).
- */
-function layHoacTinhBaoCao_(tenCache, hamTinh, boBuoc) {
-  if (!boBuoc) {
-    const cached = docCacheBaoCao_(tenCache);
-    if (cached !== null) return { tuCache: true, duLieu: cached };
-  }
-  const ketQua = hamTinh();
-  luuCacheBaoCao_(tenCache, ketQua);
-  return { tuCache: false, duLieu: ketQua };
-}
-
-/**
- * Đọc cache "CHỈ ĐỌC" — khác với docCacheBaoCao_ (kiểm tra hạn theo nhật ký
- * CHUNG của mọi thay đổi hợp đồng/rừng/tài khoản), hàm này đọc thẳng bất kể
- * nhật ký chung có gì mới hay không. Dùng cho dữ liệu mà độ mới của nó do 1
+ * Đọc cache "CHỈ ĐỌC" — đọc thẳng giá trị đã lưu, không kiểm tra hạn theo nhật ký
+ * chung của mọi thay đổi hợp đồng/rừng/tài khoản. Dùng cho dữ liệu mà độ mới của nó do 1
  * trigger RIÊNG quyết định (vd dữ liệu thanh toán DNTT_GK_DN_CT — chỉ nên làm
  * mới bởi trigger đồng bộ thanh toán 30 phút/lần, KHÔNG phải bởi việc sửa 1
  * hợp đồng bất kỳ — nếu không sẽ bị tính lại toàn bộ mỗi lần sửa 1 hợp đồng,

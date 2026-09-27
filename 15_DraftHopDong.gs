@@ -181,15 +181,6 @@ function LUU_DRAFT(idDraft, jsonDuLieu) {
   }
 }
 
-/** Đọc lại 1 bản nháp theo idDraft (dùng khi tải lại trang / mở lại nháp dở) */
-function LAY_DRAFT(idDraft) {
-  const sh = getOrCreateDraftHopDongSheet_();
-  const soDong = timDongDraft_(sh, idDraft);
-  if (soDong === -1) return null;
-  const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
-  return { idDraft: r[DRAFT_HD_COL.ID_DRAFT], idHDGoc: r[DRAFT_HD_COL.ID_HD_GOC] || null, du: JSON.parse(r[DRAFT_HD_COL.JSON_DATA]) };
-}
-
 /** Hủy bản nháp (bấm "Hủy" hoặc rời trang mà không lưu) — không đụng gì tới bảng gốc */
 function HUY_DRAFT(idDraft) {
   const sh = getOrCreateDraftHopDongSheet_();

@@ -173,7 +173,7 @@ function khoangCachMet_(lat1, lng1, lat2, lng2) {
  * Trích xuất tọa độ GPS từ CHỮ IN SẴN TRÊN ẢNH (không phải EXIF) — rất phổ biến
  * với các app "GPS Map Camera"/"Camera địa lý" hay dùng khi chụp hiện trường rừng:
  * app vẽ chữ tọa độ/địa chỉ/giờ chụp trực tiếp lên ảnh thay vì (hoặc thêm vào) EXIF.
- * Dùng OCR (ocrFile_ ở 04_Reconciliation.gs) đọc chữ trên ảnh rồi dò mẫu tọa độ
+ * Dùng Gemini đọc chữ trên ảnh rồi lấy tọa độ (xem ghi chú ngay bên dưới) — các mẫu tọa độ thường gặp
  * dạng độ-phút-giây (vd: 15°44'4.872" N 108°4'57.026" E).
  */
 /** ⚠️ ĐÃ SỬA: trước đây tự OCR rồi bóc tách bằng regex CHỈ bắt đúng 1 định dạng

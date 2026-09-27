@@ -63,7 +63,7 @@ var TRANG_WEBAPP_ = {
   huongdan:  { file: '13_HuongDan',             title: '📖 Hướng dẫn sử dụng HAK' },
   thietlap:  { file: '24_Page_ThietLap',        title: '⚙️ Thiết lập HAK' },
   hopdongmc: { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK' },
-  // "meconn" từng là 26_Page_QuanLyMeCon (bản cũ, lỗi thời, có bug mất file đính kèm). URL cũ có
+  // "meconn" từng là trang 26_Page_QuanLyMeCon (bản cũ, đã xóa khỏi dự án). URL cũ có
   // thể còn trong bookmark -> đưa sang cùng trang "hopdongmc" đang được bảo trì.
   meconn:    { file: '27_Page_HopDongMeCon',    title: '📝 Thêm/Sửa hợp đồng HAK', currentPage: 'hopdongmc' },
   tongquan:  { file: '30_Page_TongQuanHopDong', title: '📊 Tổng quan hợp đồng HAK' }

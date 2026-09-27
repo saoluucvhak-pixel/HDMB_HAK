@@ -7,110 +7,6 @@
  */
 
 /**
- * Gom toàn bộ HD_RUNG + HD_STK theo ID_KEY_HD / ID_HD và tính:
- *  - Tổng khối lượng dự kiến (m3/tấn tùy đơn vị nhập)
- *  - Tổng giá trị = SUM(DonGia * KhoiLuongDuKien) theo từng lô rừng
- *  - Tổng diện tích ký hợp đồng & diện tích đo GPS thực tế
- *  - Số lô rừng, số tài khoản nhận tiền của hợp đồng
- * Trả về object map: { [ID_HD]: {...} }
- */
-/** Wrapper có cache — dùng bản này ở mọi nơi thay vì gọi tongHopHopDong_KhongCache trực tiếp */
-function tongHopHopDong(dungDNTT, boBuoc) {
-  const tenCache = 'tongHopHopDong_' + (dungDNTT !== false ? 'dntt' : 'nodntt');
-  return layHoacTinhBaoCao_(tenCache, function () { return tongHopHopDong_KhongCache(dungDNTT); }, boBuoc).duLieu;
-}
-
-function tongHopHopDong_KhongCache(dungDNTT) {
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const stkRows  = readData_(SHEET_NAME.HD_STK);
-  const map = {};
-
-  rungRows.forEach(function (r) {
-    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
-    if (!idHD) return;
-    if (!map[idHD]) {
-      map[idHD] = {
-        idHD: idHD,
-        soHD: r[RUNG_COL.SO_HD],
-        chuRung: r[RUNG_COL.TEN_CHU_RUNG],
-        soLoRung: 0,
-        tongDienTichKy: 0,
-        tongDienTichGPS: 0,
-        tongKhoiLuongDuKien: 0,
-        tongGiaTri: 0,
-        tongKhoiLuongThucHien: 0,
-        tongGiaTriThucHien: 0,
-        soTaiKhoan: 0,
-        chenhLechDienTich: 0,       // DienTichGPS - DienTichKy (âm = đo thực tế nhỏ hơn hợp đồng)
-        chenhLechDienTichPhanTram: 0
-      };
-    }
-    const m = map[idHD];
-    const dienTichKy = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const dienTichGPS = Number(r[RUNG_COL.DIEN_TICH_GPS]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-    const khoiLuongThucHien = Number(r[RUNG_COL.KHOI_LUONG_THUC_HIEN]) || 0; // cột mở rộng, mặc định 0 nếu chưa nhập
-
-    m.soLoRung += 1;
-    m.tongDienTichKy += dienTichKy;
-    m.tongDienTichGPS += dienTichGPS;
-    m.tongKhoiLuongDuKien += khoiLuong;
-    m.tongGiaTri += donGia * khoiLuong;
-    m.tongKhoiLuongThucHien += khoiLuongThucHien;
-    m.tongGiaTriThucHien += donGia * khoiLuongThucHien;
-  });
-
-  stkRows.forEach(function (r) {
-    const idHD = (r[STK_COL.ID_HD] || '').toString().trim();
-    if (idHD && map[idHD]) map[idHD].soTaiKhoan += 1;
-  });
-
-  Object.keys(map).forEach(function (idHD) {
-    const m = map[idHD];
-    m.chenhLechDienTich = m.tongDienTichGPS - m.tongDienTichKy;
-    m.chenhLechDienTichPhanTram = m.tongDienTichKy
-      ? Number((m.chenhLechDienTich / m.tongDienTichKy * 100).toFixed(2))
-      : 0;
-    m.khoiLuongConLai = m.tongKhoiLuongDuKien - m.tongKhoiLuongThucHien;
-    m.giaTriConLai = m.tongGiaTri - m.tongGiaTriThucHien;
-    m.nguonDuLieuThucHien = 'HD_RUNG (KhoiLuongThucHien tự nhập)';
-  });
-
-  // ⚠️ TẠM NGỪNG tự động đè bằng DNTT_GK_DN_CT — lần trước tự dò cột bị SAI (số liệu
-  // ra âm/lệch hàng nghìn lần), gây sai cả báo cáo. Giờ chỉ dùng khi gọi
-  // tongHopHopDong(true) tường minh (sau khi đã xem trước và xác nhận cột đúng qua
-  // layXemTruocDNTT() — xem 06_CreateUpdate.gs). Mặc định vẫn dùng cột
-  // KhoiLuongThucHien tự nhập trong HD_RUNG (an toàn, không tự đoán sai).
-  // Đã xác nhận cột đúng qua "Xem trước dữ liệu DNTT" (Số HĐ, Khối lượng, Giá trị) — BẬT MẶC ĐỊNH.
-  // Chỉ tắt khi gọi tongHopHopDong(false) tường minh (vd nếu sau này phát hiện lại sai cột).
-  if (dungDNTT !== false) {
-    const dntt = layDuLieuThucHienTuDNTT_();
-    if (dntt.thanhCong) {
-      Object.keys(map).forEach(function (idHD) {
-        const m = map[idHD];
-        const soHDChuan = (m.soHD || '').toString().trim();
-        const khop = dntt.theoSoHD[soHDChuan];
-        if (khop) {
-          m.tongKhoiLuongThucHien = khop.khoiLuong;
-          m.tongGiaTriThucHien = khop.giaTri;
-          m.khoiLuongConLai = m.tongKhoiLuongDuKien - m.tongKhoiLuongThucHien;
-          m.giaTriConLai = m.tongGiaTri - m.tongGiaTriThucHien;
-          m.nguonDuLieuThucHien = 'DNTT_GK_DN_CT (thực tế, đã xác nhận cột)';
-        }
-      });
-    }
-  }
-
-  return map;
-}
-
-/**
- * Xuất bảng tổng hợp ra 1 sheet "TongHop_HopDong" (tạo mới hoặc ghi đè),
- * để người dùng xem tổng khối lượng / giá trị / chênh lệch diện tích GPS
- * theo từng hợp đồng mà không cần cộng tay.
- */
-/**
  * Dọn dẹp 1 LẦN: xóa hẳn sheet "TongHop_HopDong" cũ (nếu trước đây đã từng chạy
  * xuatBaoCaoTongHopHopDong() tạo ra) — báo cáo này đã dư thừa so với Draft_BaoCaoHopDong
  * (Draft đầy đủ hơn và tự động cập nhật, không cần chạy tay nữa).
@@ -153,23 +49,6 @@ function layTongHopChoWebapp(boBuoc) {
       };
     })
   };
-}
-
-/**
- * BÁO CÁO HỢP ĐỒNG (đơn giản) — Số HĐ, ngày ký, chủ rừng, địa chỉ thường trú,
- * CCCD, ngày cấp, nơi cấp, người ủy quyền, CCCD ủy quyền, khối lượng dự kiến,
- * đơn giá trung bình, giá trị hợp đồng, tình trạng.
- */
-function layBaoCaoHopDongDonGian() {
-  return docToanBoDraftBaoCao_().map(function (m) {
-    return {
-      soHD: m.soHD, ngayKy: m.ngayKy, tenChuRung: m.tenChuRung, diaChiThuongTru: m.diaChiThuongTru,
-      cccdChuRung: m.cccdChuRung, ngayCap: m.ngayCap, noiCap: m.noiCap,
-      tenUyQuyen: m.tenUyQuyen, cccdUyQuyen: m.cccdUyQuyen,
-      khoiLuongDuKien: m.khoiLuongDuKien, donGiaTrungBinh: m.donGiaDuKien, giaTriHopDong: m.giaTriHopDong,
-      tinhTrang: m.tinhTrang
-    };
-  }).sort(function (a, b) { return (b.soHD || 0) - (a.soHD || 0); });
 }
 
 /**
@@ -285,7 +164,7 @@ function layTinhHinhThucHien() {
  *
  * ⚠️ ĐÃ SỬA: trước đây CHỈ lấy ảnh từ Draft_AnhRung (bảng nháp của luồng "Tải ảnh
  * kiểm tra -> Duyệt") — bảng này CHỈ có dữ liệu nếu ảnh đi đúng luồng đó và có
- * gán rõ ID_RUNG. Ảnh thêm bằng "dán link ảnh có sẵn" (THEM_LINK_ANH_HOP_DONG)
+ * gán rõ ID_RUNG. Ảnh thêm bằng "dán link ảnh có sẵn" (chức năng cũ, đã gỡ)
  * hoặc ảnh import sẵn từ trước ghi THẲNG vào HD_Picture và KHÔNG hề có mặt
  * trong Draft_AnhRung -> "Xem chi tiết" trước đây luôn trống với các ảnh này.
  * Lưu ý cấu trúc gốc: HD_Picture chỉ lưu theo ID_HD (cả hợp đồng), KHÔNG lưu
@@ -386,19 +265,6 @@ function layBaoCaoThanhToan() {
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi đọc DNTT_GK_DN_CT: ' + e.message, items: [] };
   }
-}
-
-/**
- * Cảnh báo các hợp đồng có chênh lệch diện tích GPS thực tế so với diện tích
- * ký kết vượt ngưỡng % cho trước (mặc định 15%) — dấu hiệu cần kiểm tra lại đo đạc.
- */
-function canhBaoChenhLechDienTich(nguongPhanTram) {
-  nguongPhanTram = nguongPhanTram || 15;
-  const map = tongHopHopDong();
-  return Object.keys(map)
-    .map(function (k) { return map[k]; })
-    .filter(function (m) { return Math.abs(m.chenhLechDienTichPhanTram) >= nguongPhanTram; })
-    .sort(function (a, b) { return Math.abs(b.chenhLechDienTichPhanTram) - Math.abs(a.chenhLechDienTichPhanTram); });
 }
 
 /**

@@ -121,26 +121,6 @@ function CAP_NHAT_CT_HOPDONG_(idHD) {
   } catch (e) { log_('ERROR', 'CAP_NHAT_CT_HOPDONG_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e); }
 }
 
-/** Đọc "Chi tiết hợp đồng" (ct_hopdong) của 1 hợp đồng. Nếu chưa có dòng nào
- *  (hợp đồng mới chưa từng thêm lô rừng), tính nhanh 1 lần rồi trả kết quả rỗng hợp lệ. */
-function layChiTietHopDong(idHD) {
-  const sh = getOrCreateCtHopDongSheet_();
-  let soDong = timDongCtHopDong_(sh, idHD);
-  if (soDong === -1) {
-    CAP_NHAT_CT_HOPDONG_(idHD);
-    soDong = timDongCtHopDong_(sh, idHD);
-    if (soDong === -1) return null; // hợp đồng chưa có lô rừng nào — chưa có gì để hiển thị
-  }
-  const c = CT_HOPDONG_COL;
-  const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
-  return {
-    idHD: r[c.ID_HD], soHD: r[c.SO_HD], dienTichKy: r[c.DIEN_TICH_KY], donGia: r[c.DON_GIA],
-    khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], giaTriDuKien: r[c.GIA_TRI_DU_KIEN],
-    hoSoNguonGoc: r[c.LOAI_HO_SO_NGUON_GOC], soGiayTo: r[c.SO_GIAY_TO], diaChiRung: r[c.DIA_CHI_RUNG],
-    soLoRung: r[c.SO_LO_RUNG], capNhatLuc: r[c.CAP_NHAT_LUC]
-  };
-}
-
 // ============================================================
 //  PHỤ LỤC HỢP ĐỒNG (PhuLucHopDong) — bảng con của HD_NCC
 // ============================================================
