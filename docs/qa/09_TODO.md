@@ -53,3 +53,10 @@
 - [ ] BUG-11: đo kích thước JSON nháp lớn nhất; nếu gần 50.000 ký tự thì tách nháp ra nhiều ô.
 - [ ] Accessibility: gắn `<label for>` (169 nhãn chưa gắn), `aria-label` cho nút chỉ có biểu tượng, kiểm tra tương phản màu.
 - [ ] Test tự động cho Tìm kiếm / Lọc / Sắp xếp / Phân trang và Xuất MISA/Excel (cần môi trường có Drive thật).
+
+## E. Rà soát tổng thể 28/09/2026 — xem `11_AUDIT_TONG_THE_28092026.md`
+
+- [ ] 🔴 C-01 Tài khoản/phụ lục sửa-xóa theo số dòng → sửa/xóa nhầm tài khoản của hợp đồng khác
+- [ ] 🔴 C-02 Sửa hợp đồng theo số dòng cũ (trang 27, `LUU_HOP_DONG_DAY_DU_`) → ghi đè hợp đồng khác
+- [ ] 🔴 C-03 Số HĐ không kiểm tra trùng; ID_RUNG sinh từ Số HĐ; đổi Số HĐ/Ngày ký không lan xuống bảng con
+- [ ] 🟠 H-01 … H-13 và 🟡/⚪ còn lại: xem mục 15 của báo cáo

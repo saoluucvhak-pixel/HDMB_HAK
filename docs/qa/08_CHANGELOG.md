@@ -2,6 +2,12 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 28/09/2026 — Đợt 6: rà soát tổng thể trước phát hành (chỉ báo cáo, chưa sửa mã)
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (commit này) | 📄 | Báo cáo `11_AUDIT_TONG_THE_28092026.md`: 3 Critical, 13 High, 18 Medium, 12 Low mới | docs/qa |
+
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 
 | Commit | Loại | Thay đổi | File |
