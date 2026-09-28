@@ -123,11 +123,47 @@ function hakPhanSauTienTo_(msg, tienTo) {
   return i >= 0 ? msg.slice(i + tienTo.length) : '';
 }
 
+/**
+ * A1 (rà soát 28/09): CHỐNG BẤM LẶP cho mọi nút gọi hàm GHI dữ liệu — trước đây chỉ nút Lưu hợp đồng có chặn; Duyệt/Từ chối
+ * ảnh, Thêm GPS, Thêm/Xóa tài khoản, Duyệt hàng loạt, Xuất file bấm 2 lần là gửi 2 lệnh. Nút vừa bấm (trong 1 giây trước
+ * lời gọi) bị khóa + mờ tới khi máy chủ trả kết quả (thành công hay lỗi), rồi mở lại TRƯỚC khi chạy xử lý của trang (trang
+ * vẫn tự khóa tiếp được nếu muốn). Chỉ áp dụng cho hàm ghi — lời gọi đọc dữ liệu không bị ảnh hưởng.
+ */
+var HAK_HAM_GHI_ = /^(THEM_|CAP_NHAT_|XOA_|DUYET_|TU_CHOI_|GAN_|LUU_|TAO_|HUY_|THANH_LY|TAI_|XUAT_|DONG_BO|DOC_TOA_DO|TRICH_XUAT|OCR_|KIEM_TRA_ANH_DA_CHON|KIEM_TRA_ANH_TU_LINK|KIEM_TRA_HO_SO_TOAN_BO|DOI_CHIEU|themLoaiHoSoMoi|doiChieuMotLoRung)/;
+var hakNutVuaBam_ = null, hakLucBam_ = 0;
+document.addEventListener('click', function (e) {
+  var n = e.target && e.target.closest ? e.target.closest('button, a.btn, a.lnk-sua, a.lnk-huy, input[type=button], input[type=submit]') : null;
+  if (!n) return;
+  if (n.getAttribute('data-hak-dang-chay')) { e.stopImmediatePropagation(); e.preventDefault(); return; } // đang chạy -> bỏ cú bấm
+  hakNutVuaBam_ = n; hakLucBam_ = Date.now();
+}, true);
+function hakKhoaNutVuaBam_(tenHam) {
+  if (!HAK_HAM_GHI_.test(tenHam) || !hakNutVuaBam_ || Date.now() - hakLucBam_ > 1000) return null;
+  var n = hakNutVuaBam_;
+  hakNutVuaBam_ = null; // 1 cú bấm chỉ khóa cho lời gọi ĐẦU TIÊN nó gây ra
+  if (n.getAttribute('data-hak-dang-chay')) return null;
+  var daTatTruoc = !!n.disabled;
+  n.setAttribute('data-hak-dang-chay', '1');
+  n.setAttribute('aria-busy', 'true');
+  if ('disabled' in n) n.disabled = true;
+  n.style.pointerEvents = 'none';
+  n.style.opacity = '0.6';
+  return function () {
+    n.removeAttribute('data-hak-dang-chay');
+    n.removeAttribute('aria-busy');
+    if ('disabled' in n && !daTatTruoc) n.disabled = false;
+    n.style.pointerEvents = '';
+    n.style.opacity = '';
+  };
+}
+
 /** Thay cho google.script.run: cùng cách dùng, nhưng mọi lời gọi đi qua api(phien, tên, [tham số]). */
 function hakRun_() {
-  var runner = google.script.run, coXuLyLoi = false;
+  var runner = google.script.run, coXuLyLoi = false, fThanhCong = null, fLoi = null, moKhoa = null;
+  var xong = function () { if (moKhoa) { var m = moKhoa; moKhoa = null; try { m(); } catch (e) { /* phần tử đã bị vẽ lại */ } } };
   var boc = function (f) {
     return function (err, userObj) {
+      xong();
       var msg = String((err && err.message) || err || '');
       var loiDangNhap = hakPhanSauTienTo_(msg, HAK_LOI_DANG_NHAP);
       if (loiDangNhap) { hakHienDangNhap_(loiDangNhap); return; }
@@ -138,12 +174,15 @@ function hakRun_() {
     };
   };
   var p = new Proxy({}, { get: function (_, ten) {
-    if (ten === 'withSuccessHandler') return function (f) { runner = runner.withSuccessHandler(f); return p; };
-    if (ten === 'withFailureHandler') return function (f) { coXuLyLoi = true; runner = runner.withFailureHandler(boc(f)); return p; };
+    if (ten === 'withSuccessHandler') return function (f) { fThanhCong = f; return p; };
+    if (ten === 'withFailureHandler') return function (f) { coXuLyLoi = true; fLoi = f; return p; };
     if (ten === 'withUserObject') return function (o) { runner = runner.withUserObject(o); return p; };
     return function () {
       var thamSo = Array.prototype.slice.call(arguments);
-      if (!coXuLyLoi) runner = runner.withFailureHandler(boc(null));
+      moKhoa = hakKhoaNutVuaBam_(String(ten));
+      runner = runner
+        .withSuccessHandler(function (kq, userObj) { xong(); if (fThanhCong) fThanhCong(kq, userObj); })
+        .withFailureHandler(boc(coXuLyLoi ? fLoi : null));
       return runner.api(hakPhien_(), String(ten), thamSo);
     };
   } });

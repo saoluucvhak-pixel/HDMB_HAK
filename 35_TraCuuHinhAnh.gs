@@ -529,7 +529,22 @@ function LAY_FILE_HO_SO_(idHD, theoKhachHang, id) {
 // ============================================================
 
 /** { idDrive: 'anh' | 'hoso' } — mọi file được phép xem qua hệ thống. */
-function _danhMucFileDrive_() {
+/**
+ * P-06 (rà soát 28/09): nhớ danh mục 5 phút (DocumentCache) — trước đây MỖI lần bấm xem 1 file đọc lại cả 4 sheet.
+ * File mới thêm chưa có trong bản nhớ -> XEM_FILE_DRIVE_ gọi lại với boQuaCache=true (không bao giờ chặn nhầm file mới).
+ */
+function _danhMucFileDrive_(boQuaCache) {
+  let cache = null;
+  try { cache = CacheService.getDocumentCache(); } catch (e) { /* không có -> luôn đọc sheet */ }
+  if (cache && !boQuaCache) {
+    const daNho = cache.get('danhMucFileDrive');
+    if (daNho) { try { return JSON.parse(daNho); } catch (e) { /* hỏng -> đọc lại */ } }
+  }
+  const kq = _danhMucFileDriveTuSheet_();
+  if (cache) { try { const s = JSON.stringify(kq); if (s.length < 95000) cache.put('danhMucFileDrive', s, 300); } catch (e) { /* quá lớn -> không nhớ */ } }
+  return kq;
+}
+function _danhMucFileDriveTuSheet_() {
   const kq = {};
   const them = function (v, loai) {
     const id = _idDriveTuLink_(v);
@@ -557,7 +572,7 @@ function XEM_FILE_DRIVE_(id, cheDo) {
   _yeuCauQuyen_(QUYEN.XEM);
   id = String(id || '');
   if (!MAU_ID_DRIVE.test(id)) return { thanhCong: false, ngoaiDanhMuc: true, loi: 'Link không hợp lệ.' };
-  const loai = _danhMucFileDrive_()[id];
+  const loai = _danhMucFileDrive_()[id] || _danhMucFileDrive_(true)[id]; // P-06: không thấy trong bản nhớ -> đọc lại sheet
   if (!loai) return { thanhCong: false, ngoaiDanhMuc: true, loi: 'File không thuộc dữ liệu hợp đồng — mở bằng link Drive.' };
   if (loai === 'hoso' && !_coQuyen_(QUYEN.NHAP_LIEU)) return { thanhCong: false, loi: 'Hồ sơ pháp lý chỉ vai trò Nhập liệu / Quản trị xem được.' };
   let f;

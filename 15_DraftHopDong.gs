@@ -162,14 +162,9 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
 
 /** Đọc lại thông tin hợp đồng hiện tại (dùng nội bộ để khởi tạo nháp) — không phụ thuộc UI */
 function layHopDongTheoIdHD_ChoDraft_(idHD) {
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  for (let i = 0; i < nccRows.length; i++) {
-    if ((nccRows[i][NCC_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) {
-      const soDong = i + 2;
-      return layHopDongTheoSoDong_(soDong);
-    }
-  }
-  return null;
+  // P-09: chỉ đọc cột ID_HD để tìm dòng (trước đây đọc cả 33 cột HD_NCC)
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
+  return soDong === -1 ? null : layHopDongTheoSoDong_(soDong);
 }
 
 /** Ghi đè toàn bộ JSON của 1 bản nháp — gọi sau MỌI thay đổi ở màn hình (đổi field, thêm/sửa/xóa rừng-TK-phụ lục-GPS nháp) */
@@ -310,7 +305,7 @@ function _truongHopDongCanGhi_(du, canhBao) {
   const ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
   const chuan = function (k, v) { return ngay.indexOf(k) !== -1 ? ngayToISO_(v) : (v === null || v === undefined ? '' : String(v).trim()); };
   let hienTai = null;
-  try { hienTai = layHopDongTheoIdHD_ChoDraft_(du.idHD); } catch (e) { /* không đọc được -> không cảnh báo xung đột */ }
+  try { hienTai = _thongTinHopDongHienTai_(du.idHD); } catch (e) { /* không đọc được -> không cảnh báo xung đột */ }
   const ghi = {};
   Object.keys(h).forEach(function (k) {
     if (chuan(k, h[k]) === chuan(k, du.hopDongGoc[k])) return; // người dùng không đổi trường này -> KHÔNG ghi
@@ -322,6 +317,21 @@ function _truongHopDongCanGhi_(du, canhBao) {
   return ghi;
 }
 
+/** P-10: chỉ các trường thông tin của 1 hợp đồng (1 dòng HD_NCC) — không kèm lô rừng/tài khoản như layHopDongTheoSoDong_. */
+function _thongTinHopDongHienTai_(idHD) {
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
+  if (soDong === -1) return null;
+  const sh = getSheet_(SHEET_NAME.HD_NCC);
+  const r = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), NCC_COL.MA_SO_THUE + 1)).getValues()[0];
+  const kq = {};
+  const map = { tenChuRung: 'TEN_CHU_RUNG', cccdChuRung: 'CCCD_CHU_RUNG', soHD: 'SO_HD', ngayKy: 'NGAY_KY', ngayCap: 'NGAY_CAP', noiCap: 'NOI_CAP',
+    sdtChuRung: 'SDT_CHU_RUNG', diaChiThuongTru: 'DIA_CHI_TT', tinhTrang: 'TINH_TRANG', uyQuyenTT: 'UY_QUYEN_TT', tenUyQuyen: 'TEN_UY_QUYEN',
+    cccdUyQuyen: 'CCCD_UY_QUYEN', ngayCapUyQuyen: 'NGAY_CAP_UQ', noiCapUyQuyen: 'NOI_CAP_UQ', sdtUyQuyen: 'SDT_UQ', diaChiUyQuyen: 'DIA_CHI_UQ',
+    nhomKH: 'NHOM_KH', maSoThue: 'MA_SO_THUE', diaChiRung: 'DIA_CHI_RUNG', soTK: 'SO_TK', nganHang: 'NGAN_HANG' };
+  Object.keys(map).forEach(function (k) { kq[k] = r[NCC_COL[map[k]]]; });
+  return kq;
+}
+
 /** Ghi dữ liệu của 1 bản nháp vào các bảng chính (không xóa nháp — LUU_CHINH_THUC_ lo việc đó). */
 function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
   ghiTienDo = ghiTienDo || function () {};
@@ -329,7 +339,8 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
   // dùng lại hợp đồng đã tạo thay vì tạo hợp đồng thứ 2 (xem _hdDaTaoTheoMaThaoTac_).
   const loiChiTiet = [];
   const hd = _truongHopDongCanGhi_(du, loiChiTiet);
-  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac });
+  // boQuaTongHopRung: cuối hàm này đã tổng hợp lô rừng 1 lần (sau khi ghi xong lô) — không làm 2 lần (P-10)
+  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac, boQuaTongHopRung: true });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
   const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
   if (!du.idHD) { du.idHD = idHD; ghiTienDo(); }

@@ -648,3 +648,32 @@ mã **đã sửa 22/22 đạt**; mã **gốc (`4d3d673`) trượt 14/16 ca** ch�
 **Kiểm chứng:** bộ giả lập — **33/33 đạt**; bản trước đợt này (`9e92e9d`) trượt 3 ca mới (M-18: tên/địa chỉ thành công thức; M-15: DM_DIACHI còn dòng trùng; L-01).
 
 **Giữ nguyên theo yêu cầu chủ dự án:** M-03; H-08; H-06, H-09, H-10; các mục liên quan đăng nhập L-07, L-08; L-11 (mã bí mật webhook). M-13 (link ảnh công khai không hết hạn) thuộc nhóm bảo mật — chưa xử lý.
+
+---
+
+## ✅ Cập nhật: Đợt 1 nâng cấp — H-12 phần còn lại + A1 chống bấm lặp
+
+| ID | Thay đổi | File |
+|---|---|---|
+| P-02 | Dữ liệu thanh toán trong `Cache_BaoCao` nhớ trong lượt chạy (trước đây đọc lại cả sheet JSON mỗi lần cập nhật Draft) | 00 |
+| P-07a | Trang Báo cáo không còn nhận danh sách chi tiết "Tình hình thực hiện" (chỉ dùng số đếm) | 18, 01 |
+| P-05 | Ảnh của hợp đồng / lô rừng: đọc sheet ảnh 1 lần cho mọi lô; tên file Drive nhớ trong lượt + DocumentCache 6 giờ | 06, 01 |
+| P-06 | Danh mục file được phép xem nhớ 5 phút; file mới chưa có trong bản nhớ thì đọc lại (không chặn nhầm) | 35 |
+| P-09 | Mở nháp tìm hợp đồng chỉ đọc cột ID; kiểm tra xung đột nháp chỉ đọc 1 dòng HD_NCC | 15 |
+| P-10 | Cache "Hồ sơ rừng" cập nhật theo lô: đọc HD_RUNG / HD_NCC / HD_GPS 1 lần cho mọi lô, ghi 1 lệnh (trước đây 3 lượt đọc cả sheet cho MỖI lô); sửa tay trên Sheet và "Làm mới" cũng gom; Lưu chính thức không tổng hợp lô rừng 2 lần | 16, 01, 06, 15 |
+| A1 | Chống bấm lặp cho **mọi** nút gọi hàm ghi (qua `hakRun_`): nút vừa bấm bị khóa + mờ tới khi có kết quả; cú bấm vào nút đang chạy bị bỏ; lời gọi đọc không ảnh hưởng | PhanQuyen_JS |
+
+**Đo trên bộ giả lập** (300 hợp đồng, 600 lô, 1.200 điểm GPS; so với bản ngay trước `462b8e1`):
+
+| Thao tác | Trước | Sau |
+|---|---|---|
+| Lưu chính thức HĐ mới (3 lô, 6 GPS, 2 TK) | 78 lệnh đọc / 357.016 ô | 64 lệnh / 272.594 ô (−24% ô) |
+| Mở nháp, sửa 1 trường, Lưu HĐ có sẵn | 57 / 255.582 | 45 / 177.487 (−31% ô) |
+| Sửa tay 40 dòng HD_GPS (onEdit) | 65 / 634.516 | 11 / 115.228 (−82% ô) |
+| Duyệt HĐ ở trang 27 | 21 / 137.191 | 15 / 106.135 (−23% ô) |
+
+So với mã gốc trước mọi đợt sửa (`4d3d673`), Lưu chính thức HĐ mới: 168 → 64 lệnh đọc. Thời gian thật phụ thuộc máy chủ Google — chưa đo trên project thật.
+
+**Kiểm chứng:** 37/37 test máy chủ; 7/7 test trình duyệt (Chromium) cho A1: bấm 3 lần → 1 lệnh; nút khóa khi chờ, mở lại khi xong; thẻ `<a>` cũng chặn; lời gọi đọc không bị khóa; không lỗi JS.
+
+**Còn lại của H-12 (cần quyết định):** P-07b (chia trang bảng Tổng hợp ở máy chủ + máy chủ tự dựng file xuất), P-08 (thu gọn dữ liệu gửi chatbot), P-11 (giãn polling Telegram 5 phút).

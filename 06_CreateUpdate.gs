@@ -1942,6 +1942,24 @@ function timFileTheoTenTrongThuMucHeThong_(tenFile) {
   return kq;
 }
 
+/**
+ * P-05 (rà soát 28/09): tên thật của file Drive theo ID — nhớ trong lượt chạy + DocumentCache 6 giờ. Trước đây mở chi tiết
+ * 1 hợp đồng gọi DriveApp.getFileById() cho TỪNG ảnh/hồ sơ, mỗi lần mở lại gọi lại từ đầu. '' nếu không đọc được.
+ */
+const _tenFileDriveTrongLuot_ = {};
+function _tenFileDrive_(id) {
+  if (_tenFileDriveTrongLuot_.hasOwnProperty(id)) return _tenFileDriveTrongLuot_[id];
+  let cache = null;
+  try { cache = CacheService.getDocumentCache(); } catch (e) { /* không có -> chỉ nhớ trong lượt */ }
+  let ten = cache ? cache.get('tenfile_' + id) : null;
+  if (!ten) {
+    try { ten = DriveApp.getFileById(id).getName(); } catch (e) { ten = ''; } // file bị xóa/mất quyền -> tên đoán từ URL
+    if (ten && cache) { try { cache.put('tenfile_' + id, ten, 21600); } catch (e) { /* bỏ qua */ } }
+  }
+  _tenFileDriveTrongLuot_[id] = ten || '';
+  return _tenFileDriveTrongLuot_[id];
+}
+
 function resolveDriveLink_(value) {
   if (!value) return null;
   const v = value.toString().trim();
@@ -1954,8 +1972,8 @@ function resolveDriveLink_(value) {
     // cách đoán cũ nếu không lấy được tên thật (file bị xóa/mất quyền xem).
     const khop = v.match(/\/d\/([a-zA-Z0-9_-]+)/) || v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (khop && khop[1]) {
-      try { return { ten: DriveApp.getFileById(khop[1]).getName(), url: v }; }
-      catch (e) { /* file bị xóa/mất quyền xem -> rơi xuống dùng tạm tên đoán từ URL */ }
+      const ten = _tenFileDrive_(khop[1]);
+      if (ten) return { ten: ten, url: v };
     }
     return { ten: v.split('/').pop(), url: v };
   }
@@ -1987,10 +2005,10 @@ function resolveDriveLink_(value) {
  * layAnhCuaHopDong_() (gộp cả hợp đồng) và layChiTietHoSoMotLoRung_() (tách
  * riêng theo từng lô).
  */
-function layAnhTheoDinhDanhHDPicture_(dinhDanh) {
+function layAnhTheoDinhDanhHDPicture_(dinhDanh, rowsDaDoc) {
   dinhDanh = (dinhDanh || '').toString().trim();
   if (!dinhDanh) return [];
-  const rows = readData_(SHEET_NAME.HD_PICTURE);
+  const rows = rowsDaDoc || readData_(SHEET_NAME.HD_PICTURE); // P-05: nơi gọi nhiều lần truyền sẵn dữ liệu đã đọc
   const ketQua = [];
   rows.forEach(function (r) {
     if ((r[PICTURE_COL.ID_HD] || '').toString().trim() !== dinhDanh) return;
@@ -2018,7 +2036,8 @@ function layAnhCuaHopDong_(idHD) {
   });
 
   let ketQua = [];
-  dinhDanhCanTra.forEach(function (dd) { ketQua = ketQua.concat(layAnhTheoDinhDanhHDPicture_(dd)); });
+  const rowsAnh = readData_(SHEET_NAME.HD_PICTURE); // P-05: đọc 1 lần cho mọi lô (trước đây 1 lần/lô)
+  dinhDanhCanTra.forEach(function (dd) { ketQua = ketQua.concat(layAnhTheoDinhDanhHDPicture_(dd, rowsAnh)); });
   return ketQua;
 }
 
@@ -2538,7 +2557,7 @@ function luuHopDongDayDuThucThi_(payload) {
 
   // Z/T/AA của HD_NCC theo tổng lô rừng — màn hình nhập KHÔNG gửi slDuKien/dienTichKy/donGia
   // cấp hợp đồng (trước đây tạo xong Z = 0, app Thanh toán thấy "không có khối lượng dự kiến").
-  dongBoTongHopRungVaoHdNcc_(idHD);
+  if (!payload.boQuaTongHopRung) dongBoTongHopRungVaoHdNcc_(idHD); // Lưu chính thức tự tổng hợp 1 lần ở cuối (P-10)
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); // cập nhật Draft NGAY sau khi mọi thứ (hợp đồng + rừng + tài khoản) đã ghi xong
   return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK, nhacDuyet: nhacDuyet };
 }

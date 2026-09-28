@@ -151,8 +151,8 @@ function layTinhHinhThucHien_() {
       theoTrangThai: theoTrangThai,
       soHDDaDoGPSDu: chiTiet.filter(function (c) { return c.daDoGPSDuChua; }).length,
       soHDDuHoSo: chiTiet.filter(function (c) { return c.hoSoDuChua; }).length,
-      soHDCoAnh: chiTiet.filter(function (c) { return c.coAnh; }).length,
-      chiTiet: chiTiet
+      soHDCoAnh: chiTiet.filter(function (c) { return c.coAnh; }).length
+      // P-07a: không trả "chiTiet" — trang Báo cáo chỉ dùng số đếm
     };
   } catch (e) {
     ghiLoiBackend_('layTinhHinhThucHien', e);
@@ -192,13 +192,14 @@ function layChiTietHoSoMotLoRung_(idRung) {
   // "Ảnh riêng của lô rừng này" — KHÔNG phải "ảnh chung chưa gán" như trước.
   // Chỉ ảnh khớp ID_HD thật của hợp đồng, hoặc khớp ID_RUNG của MỘT LÔ KHÁC
   // (không phải lô đang xem), mới thật sự là "ảnh chung/mơ hồ, chưa rõ của lô nào".
-  const anhTuHDPictureTheoDungLoNay = layAnhTheoDinhDanhHDPicture_(idRung);
+  const rowsAnh = readData_(SHEET_NAME.HD_PICTURE); // P-05: đọc 1 lần, dùng cho mọi định danh bên dưới
+  const anhTuHDPictureTheoDungLoNay = layAnhTheoDinhDanhHDPicture_(idRung, rowsAnh);
   const anhRiengCuaLo = layDraftAnhChoRung_(idRung, idHD).filter(function (a) { return a.trangThai === 'Đã duyệt'; }).concat(anhTuHDPictureTheoDungLoNay);
 
-  let anhChungMoHo = idHD ? layAnhTheoDinhDanhHDPicture_(idHD) : [];
+  let anhChungMoHo = idHD ? layAnhTheoDinhDanhHDPicture_(idHD, rowsAnh) : [];
   rungCungHopDong.forEach(function (r) {
     const idRungKhac = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
-    if (idRungKhac && idRungKhac !== idRung) anhChungMoHo = anhChungMoHo.concat(layAnhTheoDinhDanhHDPicture_(idRungKhac));
+    if (idRungKhac && idRungKhac !== idRung) anhChungMoHo = anhChungMoHo.concat(layAnhTheoDinhDanhHDPicture_(idRungKhac, rowsAnh));
   });
 
   return {
@@ -385,7 +386,7 @@ function ketThucGomDraft_(laNguoiGom) {
   const g = _draftDangGom_;
   _draftDangGom_ = null;
   if (g.hd.size) capNhatDraftHangLoat_(Array.from(g.hd));
-  g.rung.forEach(function (idRung) { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); });
+  if (g.rung.size) capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)); // P-10: 1 lần cho mọi lô
 }
 
 function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
@@ -573,7 +574,8 @@ function LAM_MOI_DRAFT_THEO_THAY_DOI_() {
   });
 
   capNhatDraftHangLoat_(Array.from(idsCanCapNhat)); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG_
-  idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); }); // cache "Hồ sơ rừng" — ngoài phạm vi PERF-001, giữ nguyên
+  const gomHSR = batDauGomDraft_(); // P-10: gom lô rừng của mọi HĐ đổi, cập nhật cache "Hồ sơ rừng" 1 lần
+  try { idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); }); } finally { ketThucGomDraft_(gomHSR); }
   props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
 
   return {
@@ -779,9 +781,12 @@ function xuLyOnEditDraft_(e) {
     });
 
     idsHDSuaRung.forEach(function (idHD) { dongBoTongHopRungVaoHdNcc_(idHD); });
-    if (idsHD.size) capNhatDraftHangLoat_(Array.from(idsHD));
-    idsHDHoSoRung.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); });
-    idsRung.forEach(function (idRung) { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); });
+    const gom = batDauGomDraft_(); // P-10: Draft báo cáo + Hồ sơ rừng cập nhật 1 lần cho cả vùng sửa
+    try {
+      idsHD.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); });
+      idsHDHoSoRung.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); });
+      idsRung.forEach(function (idRung) { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); });
+    } finally { ketThucGomDraft_(gom); }
   } catch (err) {
     // Không để lỗi trigger làm gián đoạn việc sửa sheet của người dùng — nhưng ghi log để còn biết Draft chưa cập nhật
     log_('ERROR', 'xuLyOnEditDraft_', 'Không cập nhật được Draft sau khi sửa tay trên Sheet', err);

@@ -823,6 +823,7 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
     const sh = getOrCreateCacheSheet_();
     // Xóa các dòng cache cũ của tenCache này (nếu có) — M-11: theo khối, không deleteRow từng dòng
     _xoaCacDongKhop_(sh, 0, [tenCache]);
+    _cacheBaoCaoTrongLuot_[tenCache] = duLieuObj; // P-02: lượt chạy này đọc lại thì dùng bản vừa lưu
     const json = JSON.stringify(duLieuObj);
     const soDong = Math.ceil(json.length / CACHE_CHUNK_SIZE) || 1;
     const rows = [];
@@ -841,7 +842,16 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
  * hợp đồng bất kỳ — nếu không sẽ bị tính lại toàn bộ mỗi lần sửa 1 hợp đồng,
  * gây chậm/timeout). Nếu chưa từng có cache, tính 1 lần đầu tiên rồi lưu lại.
  */
+// P-02 (rà soát 28/09): nhớ trong 1 lượt chạy — trước đây MỖI lần cập nhật Draft đọc lại cả sheet Cache_BaoCao (chuỗi
+// JSON thanh toán hàng trăm KB) 2 lần; 1 thao tác lưu có thể gọi nhiều lần.
+const _cacheBaoCaoTrongLuot_ = {};
 function docCacheBaoCao_ChiDoc_(tenCache, hamTinhNeuChuaCo) {
+  if (_cacheBaoCaoTrongLuot_.hasOwnProperty(tenCache)) return _cacheBaoCaoTrongLuot_[tenCache];
+  const ketQua = docCacheBaoCao_ChiDocThat_(tenCache, hamTinhNeuChuaCo);
+  _cacheBaoCaoTrongLuot_[tenCache] = ketQua;
+  return ketQua;
+}
+function docCacheBaoCao_ChiDocThat_(tenCache, hamTinhNeuChuaCo) {
   try {
     const sh = getOrCreateCacheSheet_();
     const data = sh.getDataRange().getValues();

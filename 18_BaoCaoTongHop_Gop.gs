@@ -150,8 +150,9 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
       theoTrangThai: theoTrangThai,
       soHDDaDoGPSDu: chiTietTH.filter(function (c) { return c.daDoGPSDuChua; }).length,
       soHDDuHoSo: chiTietTH.filter(function (c) { return c.hoSoDuChua; }).length,
-      soHDCoAnh: chiTietTH.filter(function (c) { return c.coAnh; }).length,
-      chiTiet: chiTietTH
+      soHDCoAnh: chiTietTH.filter(function (c) { return c.coAnh; }).length
+      // P-07a (rà soát 28/09): bỏ "chiTiet" (1 dòng/hợp đồng) — trang Báo cáo chỉ dùng các số đếm ở trên; danh sách này
+      // làm phản hồi tăng theo số hợp đồng mà không ai đọc.
     };
 
     // ================================================================
