@@ -401,11 +401,13 @@ function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
     const dong = tinhDongDraftChoHopDong_(idHD, row, rungRows, stkRows, gpsByIdRung, coAnh, dntt, ngayCan);
 
     const sh = getOrCreateDraftBaoCaoSheet_();
-    const soDong = timDongDraftBaoCao_(sh, idHD);
-    if (soDong === -1) {
+    const cacDong = timCacDongDraftBaoCao_(sh, idHD);
+    if (!cacDong.length) {
       sh.appendRow(dong);
     } else {
-      sh.getRange(soDong, 1, 1, dong.length).setValues([dong]);
+      sh.getRange(cacDong[0], 1, 1, dong.length).setValues([dong]);
+      // H-05: 2 lượt cập nhật cùng lúc cho HĐ mới có thể đã append 2 dòng -> tổng Tổng quan/Báo cáo bị cộng đôi. Tự dọn.
+      cacDong.slice(1).reverse().forEach(function (d) { sh.deleteRow(d); });
     }
     _draftDataCache = null; // xóa bộ nhớ đệm — nếu cùng lượt chạy có đọc lại Draft sau đây, phải thấy đúng dữ liệu vừa ghi
   } catch (e) {
@@ -435,7 +437,7 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
  */
 function capNhatDraftHangLoat_(idsHopDong) {
   idsHopDong = Array.from(new Set((idsHopDong || []).map(function (id) { return (id || '').toString().trim(); }).filter(Boolean)));
-  if (!idsHopDong.length) return;
+  if (!idsHopDong.length) return true;
   try {
     const nccRows = readData_(SHEET_NAME.HD_NCC);
     const nccTheoId = {};
@@ -499,11 +501,16 @@ function capNhatDraftHangLoat_(idsHopDong) {
     });
 
     const duLieuCuoiCung = duLieuHienTai.filter(function (r) { return r !== null; });
-    if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, soCot).clearContent();
-    if (duLieuCuoiCung.length) sh.getRange(2, 1, duLieuCuoiCung.length, soCot).setValues(duLieuCuoiCung);
+    // H-04: ghi đè cả vùng bằng 1 lệnh (đệm dòng trống nếu ít dòng hơn) — trước đây clearContent() rồi mới
+    // setValues(): lỗi giữa 2 lệnh là Draft TRỐNG, mọi báo cáo trống.
+    const soDongGhi = Math.max(lastRow - 1, duLieuCuoiCung.length);
+    while (duLieuCuoiCung.length < soDongGhi) duLieuCuoiCung.push(new Array(soCot).fill(''));
+    if (soDongGhi) sh.getRange(2, 1, soDongGhi, soCot).setValues(duLieuCuoiCung);
     _draftDataCache = null;
+    return true;
   } catch (e) {
     ghiNhatKy_('LỖI cập nhật Draft báo cáo hàng loạt', '', e.message);
+    return false;
   }
 }
 
@@ -822,8 +829,8 @@ function dongBoThanhToanNeuCoThayDoi_() {
     const coThayDoiNoiDung = thoiGianSuaGanNhat !== null && thoiGianSuaGanNhat !== thoiGianLanTruoc;
     if (!coThayDoiSoDong && !coThayDoiNoiDung) return; // không có gì mới (cả số dòng lẫn thời điểm sửa đều giữ nguyên), khỏi cập nhật
 
-    props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDongHienTai.toString());
-    if (thoiGianSuaGanNhat !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSuaGanNhat.toString());
+    // H-04 (rà soát 28/09): mốc "đã xử lý" chỉ ghi SAU KHI làm xong (cuối hàm). Trước đây ghi ở đây, lượt chạy
+    // lỗi / bị ngắt ở phút 6 thì lần sau tưởng "không có gì mới" -> khối lượng thực hiện cũ mãi.
 
     // Làm mới 2 cache liên quan đến thanh toán TRƯỚC (tính 1 LẦN DUY NHẤT ở đây,
     // không phải để mỗi hợp đồng tự đọc lại DNTT_GK_DN_CT/PhieuCan_DN riêng lẻ)
@@ -833,7 +840,9 @@ function dongBoThanhToanNeuCoThayDoi_() {
     // Sau khi cache đã mới, cập nhật lại phần "đã thực hiện" cho TẤT CẢ hợp đồng —
     // lúc này CAP_NHAT_DRAFT_MOT_HOP_DONG_ chỉ ĐỌC cache vừa làm mới, không đọc lại sheet ngoài
     const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
-    capNhatDraftHangLoat_(idsHopDong); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG_
+    if (!capNhatDraftHangLoat_(idsHopDong)) throw new Error('Cập nhật Draft báo cáo hàng loạt thất bại — lượt sau sẽ thử lại.'); // PERF-001
+    props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDongHienTai.toString());
+    if (thoiGianSuaGanNhat !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSuaGanNhat.toString());
   } catch (e) {
     ghiNhatKy_('LỖI đồng bộ thanh toán định kỳ', '', e.message);
   }

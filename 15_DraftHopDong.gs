@@ -141,10 +141,11 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
         khoiLuongDuKien: r.khoiLuongDuKien, hoSoNguonGoc: r.hoSoNguonGoc, soGiayTo: r.soGiayTo, xoa: false, gpsMoi: [] };
     }),
     taiKhoan: (hd.danhSachTaiKhoan || []).map(function (t) {
-      return { soDong: t.soDong, tempId: null, soTK: t.soTK, nganHang: t.nganHang, uyQuyenTT: t.uyQuyenTT, tenUyQuyen: t.tenUyQuyen, xoa: false };
+      // soTKGoc: Số TK lúc mở nháp — để Lưu chính thức xác minh đúng tài khoản dù số dòng đã dịch (C-01)
+      return { soDong: t.soDong, tempId: null, soTK: t.soTK, soTKGoc: String(t.soTK === null || t.soTK === undefined ? '' : t.soTK), nganHang: t.nganHang, uyQuyenTT: t.uyQuyenTT, tenUyQuyen: t.tenUyQuyen, xoa: false };
     }),
     phuLuc: layDanhSachPhuLuc_(idHD).map(function (p) {
-      return { soDong: p.soDong, tempId: null, donGia: p.donGia, khoiLuong: p.khoiLuong, ghiChu: p.ghiChu, xoa: false };
+      return { soDong: p.soDong, idPhuLuc: p.idPhuLuc, tempId: null, donGia: p.donGia, khoiLuong: p.khoiLuong, ghiChu: p.ghiChu, xoa: false };
     })
   };
   const row = [];
@@ -336,36 +337,38 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
     if (coGpsMoi) ghiTienDo();
   });
 
-  // 3) TÀI KHOẢN — thêm mới / cập nhật / xóa
-  (du.taiKhoan || []).forEach(function (tk) {
-    if (tk.xoa) {
-      if (tk.soDong && !tk.daXoaXong) {
-        const kq = XOA_TAI_KHOAN_(tk.soDong);
-        if (kq.thanhCong) { tk.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa tài khoản dòng ' + tk.soDong + ': ' + kq.loi);
-      }
-      return;
-    }
-    if (tk.daTao) return;
+  // 3) TÀI KHOẢN — C-01 (rà soát 28/09): số dòng trong nháp có thể đã cũ (nháp để nhiều ngày, dòng của hợp
+  // đồng khác bị xóa -> dịch lên). Mọi thao tác theo dòng giờ xác minh lại ID_HD + Số TK gốc trước khi ghi,
+  // và làm SỬA/THÊM trước, XÓA sau (từ dòng dưới lên) để các lần xóa trong cùng lượt không làm lệch nhau.
+  const dsTK = du.taiKhoan || [];
+  dsTK.forEach(function (tk) {
+    if (tk.xoa || tk.daTao) return;
     const dTK = { idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung, soTK: tk.soTK, nganHang: tk.nganHang, uyQuyenTT: tk.uyQuyenTT, tenUyQuyen: tk.tenUyQuyen };
-    const kq = tk.soDong ? CAP_NHAT_TAI_KHOAN_(tk.soDong, dTK) : THEM_TAI_KHOAN_MOI_(dTK);
+    const kq = tk.soDong ? CAP_NHAT_TAI_KHOAN_(tk.soDong, dTK, idHD, tk.soTKGoc) : THEM_TAI_KHOAN_MOI_(dTK);
     if (!kq.thanhCong) loiChiTiet.push('Tài khoản ' + (tk.soTK || '') + ': ' + kq.loi);
     else if (!tk.soDong) { tk.daTao = true; ghiTienDo(); }
   });
+  dsTK.filter(function (tk) { return tk.xoa && tk.soDong && !tk.daXoaXong; })
+    .sort(function (a, b) { return Number(b.soDong) - Number(a.soDong); })
+    .forEach(function (tk) {
+      const kq = XOA_TAI_KHOAN_(tk.soDong, idHD, tk.soTKGoc);
+      if (kq.thanhCong) { tk.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa tài khoản ' + (tk.soTKGoc || tk.soTK || '') + ': ' + kq.loi);
+    });
 
-  // 4) PHỤ LỤC HỢP ĐỒNG — thêm mới / cập nhật / xóa
-  (du.phuLuc || []).forEach(function (pl) {
-    if (pl.xoa) {
-      if (pl.soDong && !pl.daXoaXong) {
-        const kq = XOA_PHU_LUC_(pl.soDong);
-        if (kq.thanhCong) { pl.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi);
-      }
-      return;
-    }
-    if (pl.daTao) return;
-    const kq = LUU_PHU_LUC_({ idHD: idHD, soHD: soHD, soDong: pl.soDong, donGia: pl.donGia, khoiLuong: pl.khoiLuong, ghiChu: pl.ghiChu });
+  // 4) PHỤ LỤC HỢP ĐỒNG — cùng nguyên tắc (khóa ID_PHU_LUC + ID_HD)
+  const dsPL = du.phuLuc || [];
+  dsPL.forEach(function (pl) {
+    if (pl.xoa || pl.daTao) return;
+    const kq = LUU_PHU_LUC_({ idHD: idHD, soHD: soHD, soDong: pl.soDong, idPhuLuc: pl.idPhuLuc, donGia: pl.donGia, khoiLuong: pl.khoiLuong, ghiChu: pl.ghiChu });
     if (!kq.thanhCong) loiChiTiet.push('Phụ lục: ' + kq.loi);
     else if (!pl.soDong) { pl.daTao = true; ghiTienDo(); }
   });
+  dsPL.filter(function (pl) { return pl.xoa && pl.soDong && !pl.daXoaXong; })
+    .sort(function (a, b) { return Number(b.soDong) - Number(a.soDong); })
+    .forEach(function (pl) {
+      const kq = XOA_PHU_LUC_(pl.soDong, idHD, pl.idPhuLuc);
+      if (kq.thanhCong) { pl.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi);
+    });
 
   dongBoTongHopRungVaoHdNcc_(idHD); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA
 

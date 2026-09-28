@@ -520,8 +520,8 @@
         if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh riêng nào của lô rừng này.</p>'; return; }
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
-          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + escAT_(a.soDong) + ')">✅ Duyệt</button> ' +
-            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + escAT_(a.soDong) + ')">✖ Từ chối</button>';
+          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + escAT_(a.soDong) + ', \'' + escAT_(a.idDraft || '') + '\')">✅ Duyệt</button> ' +
+            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + escAT_(a.soDong) + ', \'' + escAT_(a.idDraft || '') + '\')">✖ Từ chối</button>';
           return '<div class="anh-row"><span>' + escAT_(a.tenFile || '') + ' ' + badge + '</span><span><a href="' + urlAT_(a.url) + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
         }).join('');
       })
@@ -551,9 +551,9 @@
     }
   }
 
-  function duyetAnh(soDong) { var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong); }
+  function duyetAnh(soDong, idDraft) { var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong, idDraft); }
 
-  function tuChoiAnh(soDong) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong); }
+  function tuChoiAnh(soDong, idDraft) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft); }
 
   function chonTabRung(tab) {
     tabRungHienTai = tab;

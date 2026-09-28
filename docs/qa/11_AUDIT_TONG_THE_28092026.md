@@ -571,3 +571,30 @@ function xaDraftBan_() { if (_draftBan_ && _draftBan_.size) capNhatDraftHangLoat
 | TC-NET-01 | Network/Offline | Mất mạng khi đang Lưu chính thức rồi bấm lại | Không tạo trùng; hoàn tất phần còn lại |
 | TC-TAB-01 | Multi-tab | 2 tab cùng sửa 1 HĐ | Tab thứ 2 thấy cảnh báo; không mất dữ liệu tab 1 |
 | TC-NAV-01 | Refresh/Back/Forward | F5 / Back sau khi Lưu | Không gửi lại yêu cầu ghi; phiên giữ nguyên |
+
+---
+
+## ✅ Cập nhật: đã sửa (đợt 6b, cùng ngày)
+
+| ID | Trạng thái | Thay đổi chính | File |
+|---|---|---|---|
+| C-01 | ✅ Đã sửa | `CAP_NHAT_TAI_KHOAN_` / `XOA_TAI_KHOAN_` / `LUU_PHU_LUC_` / `XOA_PHU_LUC_` bắt buộc kèm ID_HD, xác minh lại dòng (Số TK gốc / ID_PHU_LUC) **dưới lock**; không xác định chắc thì từ chối. Nháp lưu thêm `soTKGoc`, `idPhuLuc`. Lưu chính thức: sửa/thêm trước, xóa sau từ dòng dưới lên. Trang 27 không còn ghi đè `list[0]`. Xóa TK / phụ lục có ghi nhật ký | 06, 14, 15, 27 |
+| C-02 | ✅ Đã sửa | `CAP_NHAT_HOP_DONG_(soDong, patch, idHD)` bắt buộc ID_HD, dòng lệch thì tìm lại theo khóa, dưới lock. `LUU_HOP_DONG_DAY_DU_` luôn tìm theo ID_HD, không còn tự đổi sang hợp đồng ở dòng đó (và không còn tải ảnh qua Drive khi lưu). Trang 27 (sửa, duyệt, duyệt hàng loạt) gửi kèm ID_HD | 06, 27 |
+| C-03 | ✅ Đã sửa | Chặn Số HĐ trùng khi tạo và khi sửa; lô mới không bao giờ trùng `ID_RUNG` (giữ định dạng `HAK<SoHD>_<STT>`, bỏ qua STT đã dùng ở mọi hợp đồng); đổi Số HĐ / Ngày ký lan xuống HD_RUNG, HD_STK, PhuLucHopDong, cache Hồ sơ rừng | 06 |
+| H-01 | ✅ Đã sửa | API `CAP_NHAT_HOP_DONG` trỏ sang `CAP_NHAT_HOP_DONG_WEB_`: chỉ cho các bước chuyển của trang 27 (Chờ → Đang/Hủy, Đang → Hoàn thành, Hoàn thành → Thanh lý), chỉ sửa thông tin khi Chờ/Đang thực hiện, ghi nhật ký "trường: cũ → mới", cập nhật Draft báo cáo | 06, 34 |
+| H-03 | ✅ Đã sửa | Ảnh nháp định danh bằng `ID_DRAFT`; duyệt "nhận" ảnh nguyên tử (Chờ duyệt → Đang duyệt → Đã duyệt, lỗi thì trả về Chờ duyệt); không từ chối ảnh đã duyệt; gán ảnh kiểm tra lô rừng thuộc đúng hợp đồng | 06, 12, 27, NhapLieu_Chung_JS |
+| H-04 | ✅ Đã sửa | Mốc đồng bộ DNTT ghi sau khi xong; Draft hàng loạt ghi đè 1 lệnh (không còn `clearContent` trước) | 01 |
+| H-05 | ✅ Đã sửa | Đọc Draft bỏ dòng trùng (giữ bản mới nhất); cập nhật 1 hợp đồng tự dọn dòng trùng | 00, 01 |
+| M-01 | ✅ Đã sửa | Không hủy HĐ đã hủy/thanh lý; không thanh lý HĐ đã hủy/thanh lý; thiếu hồ sơ **bắt buộc** chỉ Quản trị được bỏ qua | 06 |
+| M-06 | ✅ Đã sửa | Lô rừng mới ghi CCCD / Số HĐ / ID dạng văn bản (giữ số 0 đầu) | 06 |
+
+**Kiểm chứng:** bộ giả lập Apps Script (Node, nạp cả 26 file `.gs` như Apps Script, mô phỏng Sheets tự ép chuỗi số thành số) + 22 ca kiểm thử:
+mã **đã sửa 22/22 đạt**; mã **gốc (`4d3d673`) trượt 14/16 ca** chạy được — trong đó tái hiện đúng: xóa 2 TK của HĐ A thì **mất TK `2222` của HĐ B**; sửa Số TK của A sau khi dòng dịch thì **Số TK mới ghi vào HĐ B**; Số HĐ trùng được tạo; 2 lô `HAK293_1`; CCCD lô rừng mất số 0; duyệt ảnh 2 lần ghi 2 ảnh + 2 điểm GPS; Draft 2 dòng cho 1 HĐ. Không có ScriptLock lồng nhau.
+
+**Lưu ý triển khai:**
+- API đổi tham số: trang đang mở từ trước khi triển khai bấm Sửa/Duyệt/Xóa TK sẽ nhận thông báo "tải lại trang" (không ghi sai) — người dùng chỉ cần F5.
+- Nháp tạo trước bản sửa không có `soTKGoc`: vẫn an toàn với hợp đồng khác (bắt buộc dòng thuộc đúng ID_HD, không thì từ chối), nhưng nếu dòng đã dịch thì lưu sẽ báo lỗi ở tài khoản đó → mở lại hợp đồng (Hủy nháp rồi Sửa lại) để tạo nháp mới.
+- Sau triển khai chạy 1 lần *Xây dựng lại Draft báo cáo* để sửa các trạng thái đã lệch do H-01 trước đây.
+- **Vẫn nên kiểm tra dữ liệu thật** HD_STK: TK nào từng bị xóa/ghi đè nhầm (đối chiếu nhật ký "Cập nhật rừng/tài khoản" với ĐNTT).
+
+**Còn mở:** H-02, H-06 … H-13, M-02 … M-05, M-07 … M-18, L-01 … L-12 (H-08 và M-03 cần chủ dự án quyết định).

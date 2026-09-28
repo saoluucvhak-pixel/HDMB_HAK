@@ -56,7 +56,9 @@
 
 ## E. Rà soát tổng thể 28/09/2026 — xem `11_AUDIT_TONG_THE_28092026.md`
 
-- [ ] 🔴 C-01 Tài khoản/phụ lục sửa-xóa theo số dòng → sửa/xóa nhầm tài khoản của hợp đồng khác
-- [ ] 🔴 C-02 Sửa hợp đồng theo số dòng cũ (trang 27, `LUU_HOP_DONG_DAY_DU_`) → ghi đè hợp đồng khác
-- [ ] 🔴 C-03 Số HĐ không kiểm tra trùng; ID_RUNG sinh từ Số HĐ; đổi Số HĐ/Ngày ký không lan xuống bảng con
-- [ ] 🟠 H-01 … H-13 và 🟡/⚪ còn lại: xem mục 15 của báo cáo
+- [x] ✅ (đợt 6b) 🔴 C-01 Tài khoản/phụ lục sửa-xóa theo số dòng → sửa/xóa nhầm tài khoản của hợp đồng khác
+- [x] ✅ (đợt 6b) 🔴 C-02 Sửa hợp đồng theo số dòng cũ (trang 27, `LUU_HOP_DONG_DAY_DU_`) → ghi đè hợp đồng khác
+- [x] ✅ (đợt 6b) 🔴 C-03 Số HĐ không kiểm tra trùng; ID_RUNG sinh từ Số HĐ; đổi Số HĐ/Ngày ký không lan xuống bảng con
+- [x] ✅ (đợt 6b) H-01, H-03, H-04, H-05, M-01, M-06
+- [ ] Sau triển khai: chạy *Xây dựng lại Draft báo cáo*; kiểm tra HD_STK thật có TK bị xóa/ghi đè nhầm trước đây
+- [ ] 🟠 H-02, H-06 … H-13 và 🟡/⚪ còn lại: xem mục 15 của báo cáo

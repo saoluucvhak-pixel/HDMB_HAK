@@ -431,7 +431,7 @@ function _bangQuyenApi_() {
     // --- Nhập liệu: hợp đồng, lô rừng, tài khoản, ảnh, GPS, hồ sơ, kiểm tra ---
     layHopDongTheoIdHD: r(layHopDongTheoIdHD_, N),
     TAO_HOP_DONG_MOI: r(TAO_HOP_DONG_MOI_, N),
-    CAP_NHAT_HOP_DONG: r(CAP_NHAT_HOP_DONG_, N),
+    CAP_NHAT_HOP_DONG: r(CAP_NHAT_HOP_DONG_WEB_, N), // H-01: bản cho trang web — kiểm tra bước chuyển trạng thái, ghi nhật ký, cập nhật Draft
     THEM_LO_RUNG_MOI: r(THEM_LO_RUNG_MOI_, N),
     CAP_NHAT_LO_RUNG: r(CAP_NHAT_LO_RUNG_, N),
     XOA_LO_RUNG: r(XOA_LO_RUNG_, N),

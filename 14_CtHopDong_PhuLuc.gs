@@ -258,13 +258,19 @@ function LUU_PHU_LUC_(d) {
   const sh = getOrCreatePhuLucSheet_();
   const c = PHU_LUC_COL;
 
-  if (d.soDong) {
-    if (d.soDong < 2 || d.soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
-    sh.getRange(d.soDong, c.DON_GIA + 1).setValue(donGia);
-    sh.getRange(d.soDong, c.KHOI_LUONG + 1).setValue(khoiLuong);
-    sh.getRange(d.soDong, c.THANH_TIEN + 1).setValue(thanhTien);
-    sh.getRange(d.soDong, c.GHI_CHU + 1).setValue(d.ghiChu || '');
-    return { thanhCong: true, soDong: d.soDong, thanhTien: thanhTien };
+  if (d.soDong || d.idPhuLuc) {
+    // C-01 (rà soát 28/09): trước đây ghi thẳng vào d.soDong (số dòng lưu trong nháp, có thể đã dịch) ->
+    // sửa NHẦM phụ lục của hợp đồng khác. Giờ tìm lại theo ID_PHU_LUC (duy nhất) + ID_HD, dưới lock.
+    const lockSua = LockService.getScriptLock();
+    try { lockSua.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+    try {
+      const dong = _timDongBangCon_(sh, d.soDong, d.idHD, c.ID_HD, c.ID_PHU_LUC, d.idPhuLuc);
+      if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      sh.getRange(dong, c.DON_GIA + 1, 1, 4).setValues([[donGia, khoiLuong, thanhTien, d.ghiChu || '']]); // ĐƠN GIÁ..GHI CHÚ liền nhau
+      return { thanhCong: true, soDong: dong, thanhTien: thanhTien };
+    } finally {
+      lockSua.releaseLock();
+    }
   }
 
   const lock = LockService.getScriptLock();
@@ -297,11 +303,20 @@ function LUU_PHU_LUC_(d) {
   }
 }
 
-/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc_) */
-function XOA_PHU_LUC_(soDong) {
+/** Xóa 1 phụ lục — xác minh lại theo ID_HD (+ ID_PHU_LUC nếu có) dưới lock trước khi xóa (C-01). */
+function XOA_PHU_LUC_(soDong, idHD, idPhuLuc) {
   const sh = getOrCreatePhuLucSheet_();
-  if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
-  sh.deleteRow(soDong);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  try {
+    const dong = _timDongBangCon_(sh, soDong, idHD, PHU_LUC_COL.ID_HD, PHU_LUC_COL.ID_PHU_LUC, idPhuLuc);
+    if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+    idPhuLuc = sh.getRange(dong, PHU_LUC_COL.ID_PHU_LUC + 1).getValue();
+    sh.deleteRow(dong);
+  } finally {
+    lock.releaseLock();
+  }
+  ghiNhatKy_('Xóa phụ lục', idHD, 'Phụ lục ' + idPhuLuc);
   return { thanhCong: true };
 }
 

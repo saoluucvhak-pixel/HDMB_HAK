@@ -6,7 +6,8 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 
 | Commit | Loại | Thay đổi | File |
 |---|---|---|---|
-| (commit này) | 📄 | Báo cáo `11_AUDIT_TONG_THE_28092026.md`: 3 Critical, 13 High, 18 Medium, 12 Low mới | docs/qa |
+| `ce0acfe` | 📄 | Báo cáo `11_AUDIT_TONG_THE_28092026.md`: 3 Critical, 13 High, 18 Medium, 12 Low mới | docs/qa |
+| (commit tiếp) | 🐛🔒 | Sửa C-01, C-02, C-03, H-01, H-03, H-04, H-05, M-01, M-06 — 22/22 test giả lập đạt (mã gốc trượt 14/16) | 00, 01, 06, 14, 15, 34, 12, 27, NhapLieu_Chung_JS |
 
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 

@@ -673,18 +673,18 @@
                   if (!kqGan.thanhCong) { msg.textContent = '❌ ' + kqGan.loi; return; }
                   hakRun_().withSuccessHandler(function (kqDuyet) {
                     if (kqDuyet.thanhCong) taiTatCaDraft(); else msg.textContent = '❌ ' + kqDuyet.loi;
-                  }).withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; }).DUYET_ANH_RUNG(a.soDong);
+                  }).withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; }).DUYET_ANH_RUNG(a.soDong, a.idDraft);
                 })
                 .withFailureHandler(function (err) { msg.textContent = '❌ Lỗi: ' + err.message; })
-                .GAN_ANH_VAO_RUNG(a.soDong, idHDKhop, idRungKhop);
+                .GAN_ANH_VAO_RUNG(a.soDong, idHDKhop, idRungKhop, a.idDraft);
             });
           } else {
             var nutDuyet = document.createElement('button'); nutDuyet.className = 'btn btn-green'; nutDuyet.style.marginTop = '6px'; nutDuyet.textContent = '✅ Duyệt';
-            nutDuyet.addEventListener('click', function () { duyetDraftChung(a.soDong); });
+            nutDuyet.addEventListener('click', function () { duyetDraftChung(a.soDong, a.idDraft); });
             box.appendChild(nutDuyet);
           }
           var nutTuChoi = document.createElement('button'); nutTuChoi.style.marginTop = '6px'; nutTuChoi.style.marginLeft = '6px'; nutTuChoi.style.background = '#dc2626'; nutTuChoi.style.color = '#fff'; nutTuChoi.className = 'btn'; nutTuChoi.textContent = '❌ Từ chối';
-          nutTuChoi.addEventListener('click', function () { tuChoiDraftChung(a.soDong); });
+          nutTuChoi.addEventListener('click', function () { tuChoiDraftChung(a.soDong, a.idDraft); });
           box.appendChild(nutTuChoi);
         }
         el.appendChild(box);
@@ -692,12 +692,12 @@
     }).withFailureHandler(function (err) { document.getElementById('dsTatCaDraft').innerHTML = '<p class="hint">❌ Lỗi tải danh sách: ' + escAT_(err.message) + '</p>'; }).layTatCaDraftAnh();
   }
 
-  function duyetDraftChung(soDong) {
-    hakRun_().withSuccessHandler(function (kq) { if (kq.thanhCong) taiTatCaDraft(); else thongBao_(kq.loi); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).DUYET_ANH_RUNG(soDong);
+  function duyetDraftChung(soDong, idDraft) {
+    hakRun_().withSuccessHandler(function (kq) { if (kq.thanhCong) taiTatCaDraft(); else thongBao_(kq.loi); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).DUYET_ANH_RUNG(soDong, idDraft);
   }
-  function tuChoiDraftChung(soDong) {
+  function tuChoiDraftChung(soDong, idDraft) {
     if (!confirm('Từ chối ảnh này?')) return;
-    hakRun_().withSuccessHandler(function () { taiTatCaDraft(); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).TU_CHOI_ANH_RUNG(soDong);
+    hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_(kq.loi); taiTatCaDraft(); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft);
   }
 
   // ============ 4. ĐỐI CHIẾU OCR (MỤC RIÊNG) ============

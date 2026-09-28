@@ -885,6 +885,18 @@ function timDongDraftBaoCao_(sh, idHD) {
   return -1;
 }
 
+/** Mọi số dòng (tăng dần) của 1 hợp đồng trong Draft — bình thường 1 dòng; > 1 là trùng cần dọn (H-05). */
+function timCacDongDraftBaoCao_(sh, idHD) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  const can = idHD.toString().trim();
+  const kq = [];
+  sh.getRange(2, DRAFT_BAOCAO_COL.ID_HD + 1, lastRow - 1, 1).getValues().forEach(function (r, i) {
+    if ((r[0] || '').toString().trim() === can) kq.push(i + 2);
+  });
+  return kq;
+}
+
 /** Đọc toàn bộ dữ liệu Draft đã tổng hợp sẵn, trả về mảng object (dùng cho mọi báo cáo) */
 let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nếu cùng 1 request cần đọc Draft nhiều lần, chỉ đọc thật từ file ngoài đúng 1 lần
 
@@ -985,8 +997,19 @@ function docToanBoDraftBaoCao_() {
   const sh = getOrCreateDraftBaoCaoSheet_();
   const lastRow = sh.getLastRow();
   if (lastRow < 2) { _draftDataCache = []; return _draftDataCache; }
-  const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
   const c = DRAFT_BAOCAO_COL;
+  // H-05: nếu 1 hợp đồng lỡ có 2 dòng Draft (ghi đồng thời) -> chỉ giữ dòng cập nhật SAU CÙNG, tránh cộng đôi KPI
+  const tatCa = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+  const moiNhatTheoId = {};
+  tatCa.forEach(function (r, i) {
+    const id = (r[c.ID_HD] || '').toString().trim();
+    if (!id) { moiNhatTheoId['#' + i] = i; return; }
+    const truoc = moiNhatTheoId[id];
+    if (truoc === undefined || new Date(r[c.CAP_NHAT_LUC] || 0) >= new Date(tatCa[truoc][c.CAP_NHAT_LUC] || 0)) moiNhatTheoId[id] = i;
+  });
+  const giu = {};
+  Object.keys(moiNhatTheoId).forEach(function (k) { giu[moiNhatTheoId[k]] = true; });
+  const data = tatCa.filter(function (r, i) { return giu[i]; });
   _draftDataCache = data.map(function (r) {
     return {
       idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
