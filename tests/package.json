@@ -1,0 +1,13 @@
+{
+  "name": "hdmb-hak-tests",
+  "private": true,
+  "description": "Kiểm thử tự động cho webapp HĐMB (giả lập Apps Script + Playwright). Không đẩy lên Apps Script.",
+  "scripts": {
+    "test": "node chay_tat_ca.cjs",
+    "test:may-chu": "node test_may_chu.cjs",
+    "test:cu-phap": "node kiem_tra_cu_phap.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

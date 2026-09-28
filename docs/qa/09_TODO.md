@@ -73,5 +73,6 @@
 - [x] ✅ Đợt 1: P-02, P-07a, P-05, P-06, P-09, P-10, A1 chống bấm lặp
 - [x] ✅ Đợt 2: A2, A3, A4 + P-07b, P-08, P-11
 - [ ] Sau triển khai: Thiết lập › Telegram → Tắt rồi Bật lại polling (để trigger chuyển sang 5 phút)
-- [ ] Đợt 3: đưa bộ giả lập + test lên CI; nhật ký chi tiết cũ → mới + lưu trữ khi xóa
+- [x] ✅ Đợt 3: B2 nhật ký chi tiết cũ → mới + lưu trữ khi xóa / khôi phục; B3 `tests/` + GitHub Actions
+- [ ] Sau triển khai: bật GitHub Actions cho repo (tab Actions) nếu đang tắt; thử 1 lần *Thiết lập › Các đợt đã xóa* trên dữ liệu thật
 - [ ] Chờ quyết định: A5, B1, B4, B5

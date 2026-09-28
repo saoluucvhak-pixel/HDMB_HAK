@@ -401,6 +401,18 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">🗂️ Lịch sử thay đổi &amp; khôi phục dữ liệu đã xóa</h3>
+      <p class="hint" style="margin-top:-4px">Mỗi lần sửa hợp đồng / lô rừng / tài khoản / phụ lục, hệ thống ghi <b>từng trường: giá trị cũ → mới</b> (sheet <code>NhatKy_ChiTiet</code>). Mỗi lần xóa (tài khoản, lô rừng, phụ lục, ghi đè GPS, xóa vĩnh viễn hợp đồng), các dòng bị xóa được <b>chép nguyên vào sheet <code>LuuTru_DaXoa</code></b> trước — có thể khôi phục lại cả đợt tại đây.</p>
+      <div class="field-row" style="align-items:flex-end">
+        <div class="field" style="max-width:260px"><label>ID_HD cần xem lịch sử sửa</label><input id="lsIdHD" type="text" placeholder="VD: HD_..."></div>
+        <div class="field" style="flex:none"><button class="btn btn-green" onclick="taiLichSuChiTiet()">🔍 Xem lịch sử</button></div>
+        <div class="field" style="flex:none"><button class="btn btn-outline" onclick="taiDsLuuTruXoa()">🗑️ Các đợt đã xóa</button></div>
+      </div>
+      <div id="vungLichSuChiTiet" style="margin-top:10px"></div>
+      <div id="vungLuuTruXoa" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">⚙️ Cài đặt Vùng (Locale)</h3>
       <p class="hint" style="margin-top:-4px">Quyết định cách Google Sheets hiểu <b>ngày tháng</b> (vd Việt Nam = dd/mm/yyyy, United States = mm/dd/yyyy) <b>và cách hiển thị số</b> (dấu phân cách hàng nghìn/thập phân, vd Việt Nam "1.234.567,89" khác United States "1,234,567.89") khi gõ tay trực tiếp vào Sheet. Áp dụng cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng.</p>
       <p class="hint" style="margin-top:-4px">⚠️ Chỉ thay đổi khi bạn bấm nút "✅ Áp dụng" bên dưới — mở lại trang này bất cứ lúc nào cũng chỉ HIỂN THỊ vùng đang dùng, không tự đặt lại.</p>
@@ -1039,6 +1051,59 @@
       .LAY_NHAT_KY_THEO_NGAY(tuNgay, denNgay);
   }
   taiNhatKy(); // tự tải sẵn 7 ngày gần nhất lúc mở trang
+
+  // ---- B2: lịch sử cũ -> mới + khôi phục dữ liệu đã xóa ----
+  function taiLichSuChiTiet() {
+    var idHD = document.getElementById('lsIdHD').value.trim();
+    var el = document.getElementById('vungLichSuChiTiet');
+    if (!idHD) { el.innerHTML = '<p class="hint">Nhập ID_HD trước.</p>'; return; }
+    el.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    hakRun_()
+      .withSuccessHandler(function (list) {
+        if (!list || !list.length) { el.innerHTML = '<div class="msg" style="display:block">Chưa có thay đổi chi tiết nào được ghi cho ' + escHtmlBT_(idHD) + '.</div>'; return; }
+        var h = '<table class="mecon-table"><thead><tr><th>Thời điểm</th><th>Người</th><th>Hành động</th><th>Dòng</th><th>Trường</th><th>Cũ</th><th>Mới</th></tr></thead><tbody>';
+        list.forEach(function (r) {
+          h += '<tr><td>' + (r.thoiGian ? new Date(r.thoiGian).toLocaleString('vi-VN') : '') + '</td><td>' + escHtmlBT_(r.email) + '</td><td>' + escHtmlBT_(r.hanhDong) +
+            '</td><td>' + escHtmlBT_(r.khoa) + '</td><td>' + escHtmlBT_(r.truong) + '</td><td style="color:#c0392b">' + escHtmlBT_(r.cu) + '</td><td style="color:#1e8449">' + escHtmlBT_(r.moi) + '</td></tr>';
+        });
+        el.innerHTML = h + '</tbody></table>' + (list.length >= 500 ? '<p class="hint">⚠️ Chỉ hiện 500 thay đổi gần nhất.</p>' : '');
+      })
+      .withFailureHandler(function (err) { el.innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + escHtmlBT_(err.message) + '</div>'; })
+      .LAY_NHAT_KY_CHI_TIET(idHD);
+  }
+  function taiDsLuuTruXoa() {
+    var el = document.getElementById('vungLuuTruXoa');
+    el.innerHTML = '<p class="hint">⌛ Đang tải...</p>';
+    hakRun_()
+      .withSuccessHandler(function (list) {
+        if (!list || !list.length) { el.innerHTML = '<div class="msg" style="display:block">Chưa có đợt xóa nào được lưu trữ.</div>'; return; }
+        var h = '<table class="mecon-table"><thead><tr><th>Thời điểm</th><th>Người xóa</th><th>Hành động</th><th>ID_HD</th><th>Số dòng</th><th></th></tr></thead><tbody>';
+        list.forEach(function (d) {
+          var chiTiet = Object.keys(d.theoSheet || {}).map(function (k) { return k + ': ' + d.theoSheet[k]; }).join(', ');
+          h += '<tr><td>' + (d.thoiGian ? new Date(d.thoiGian).toLocaleString('vi-VN') : '') + '</td><td>' + escHtmlBT_(d.email) + '</td><td>' + escHtmlBT_(d.hanhDong) +
+            '</td><td>' + escHtmlBT_(d.idHD) + '</td><td title="' + escHtmlBT_(chiTiet) + '">' + d.soDong + '</td><td>' +
+            (d.daKhoiPhuc ? '✅ Đã khôi phục ' + new Date(d.daKhoiPhuc).toLocaleString('vi-VN')
+              : '<button type="button" class="btn btn-outline" style="padding:3px 8px;font-size:11px" data-madot="' + escHtmlBT_(d.maDot) + '">♻️ Khôi phục</button>') + '</td></tr>';
+        });
+        el.innerHTML = h + '</tbody></table>';
+        el.querySelectorAll('button[data-madot]').forEach(function (b) { b.addEventListener('click', function () { khoiPhucDotXoa(b.getAttribute('data-madot'), b); }); });
+      })
+      .withFailureHandler(function (err) { el.innerHTML = '<div class="msg err" style="display:block">❌ Lỗi: ' + escHtmlBT_(err.message) + '</div>'; })
+      .LAY_DS_LUU_TRU_XOA(100);
+  }
+  async function khoiPhucDotXoa(maDot, nut) {
+    if (!(await hakXacNhan_('Khôi phục toàn bộ dòng của đợt xóa ' + maDot + ' về sheet gốc? (dòng nào có khóa đã tồn tại lại sẽ được bỏ qua)'))) return;
+    if (nut) nut.disabled = true;
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        if (kq && kq.thanhCong) {
+          hakHopThoai_('✅ Đã khôi phục ' + kq.soKhoiPhuc + ' dòng.' + (kq.boQua && kq.boQua.length ? '\n⚠️ Bỏ qua ' + kq.boQua.length + ': ' + kq.boQua.slice(0, 5).join('; ') : ''));
+        } else hakHopThoai_('❌ ' + ((kq && kq.loi) || 'Không khôi phục được.'));
+        taiDsLuuTruXoa();
+      })
+      .withFailureHandler(function (err) { if (nut) nut.disabled = false; hakHopThoai_('❌ Lỗi: ' + err.message); })
+      .KHOI_PHUC_DU_LIEU_DA_XOA(maDot);
+  }
 
   // ---- Chuyển tên file ảnh/hồ sơ pháp lý sang URL thật + chạy định kỳ ----
   function renderTrangThaiTriggerAnh_(kq) {

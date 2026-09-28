@@ -697,3 +697,26 @@ So với mã gốc trước mọi đợt sửa (`4d3d673`), Lưu chính thức H
 - **P-11:** trigger polling đang chạy vẫn là 1 phút cho tới khi vào *Thiết lập › Telegram* bấm **Tắt polling** rồi **Bật polling** lại.
 - **A3** dùng `async/await` — cần trình duyệt hiện đại (Chrome/Edge/Firefox/Safari từ 2017 trở lên); mọi trang đã dùng `Proxy` nên yêu cầu không đổi.
 - **P-08:** câu hỏi đếm/lọc rất đặc thù (theo địa chỉ, theo tên) trên hệ thống > 300 HĐ khớp — AI chỉ thấy 300 HĐ ký gần nhất + số liệu tổng hợp; đã ghi rõ trong dữ liệu gửi đi để AI không đếm nhầm.
+
+---
+
+## ✅ Cập nhật: Đợt 3 nâng cấp — B2 (nhật ký chi tiết + lưu trữ khi xóa) và B3 (kiểm thử tự động trên CI)
+
+### B2 — "Ai sửa gì, từ gì thành gì" + khôi phục dữ liệu đã xóa
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Sheet `NhatKy_ChiTiet` (tự tạo) | Mỗi trường bị sửa = 1 dòng: thời gian, người, hành động, sheet, ID_HD, khóa dòng, **trường, giá trị cũ, giá trị mới**. Ghi khi: sửa hợp đồng (`CAP_NHAT_HOP_DONG_` — mọi đường: trang 27, lưu nháp, duyệt/đổi tình trạng), sửa lô rừng, sửa tài khoản, sửa phụ lục. Chỉ ghi trường thực sự đổi; lỗi ghi nhật ký không làm hỏng thao tác chính. `NhatKy_SuaDoi` giữ nguyên | 00, 06, 14 |
+| Sheet `LuuTru_DaXoa` (tự tạo) | **Trước** khi xóa, chép nguyên dòng (JSON theo **tên cột**) kèm mã đợt: xóa tài khoản, xóa lô rừng (+ điểm GPS), xóa phụ lục, ghi đè GPS, **xóa vĩnh viễn hợp đồng** (mọi sheet liên quan trong 1 đợt). Lưu trữ lỗi → **không xóa** | 00, 06, 14 |
+| Khôi phục (Quản trị) | `KHOI_PHUC_DU_LIEU_DA_XOA(maDot)`: ghi lại đúng cột theo tên tiêu đề, ngày về dạng ngày, ô chữ-số (Số TK, CCCD) giữ dạng chữ + số 0 đầu; **bỏ qua** dòng có khóa (ID_HD / ID_RUNG / ID_PhuLuc) đã tồn tại lại; mỗi đợt chỉ khôi phục 1 lần; xong tự tổng hợp lại lô rừng, Draft báo cáo, Hồ sơ rừng, cache bản đồ | 00 |
+| Giao diện | *Thiết lập › 🗂️ Lịch sử thay đổi & khôi phục*: xem lịch sử cũ → mới theo ID_HD; danh sách các đợt xóa + nút ♻️ Khôi phục (hộp thoại xác nhận, chống bấm lặp) | 24, 34, PhanQuyen_JS |
+
+Ghi chú: các sheet cache (Draft báo cáo, Draft Hồ sơ rừng, Draft_HopDong, ct_hopdong) được dựng lại từ dữ liệu gốc nên không cần khôi phục riêng; `Draft_HopDong`/`ct_hopdong` vẫn được lưu trữ khi xóa vĩnh viễn để đủ vết. Hai sheet mới lớn dần — có thể xóa bớt dòng cũ bằng tay khi cần (không ảnh hưởng dữ liệu).
+
+### B3 — Kiểm thử tự động trong repo
+
+- Thư mục `tests/`: bộ giả lập Apps Script (`gasmock.cjs`), **57 test máy chủ** (`test_may_chu.cjs`), kiểm tra cú pháp 46 khối mã `.gs` + `<script>` (`kiem_tra_cu_phap.cjs`), **15 test giao diện** Playwright (`ui_khoa_nut.cjs`, `ui_hop_thoai_bo_loc.cjs`), `chay_tat_ca.cjs`, `README.md`.
+- GitHub Actions `.github/workflows/kiem-thu.yml`: chạy mỗi lần push / pull request (Node 20, TZ Asia/Ho_Chi_Minh, Chromium).
+- File đuôi `.cjs/.json/.md/.yml` → không lẫn vào dự án Apps Script khi đồng bộ.
+
+**Kiểm chứng:** 57/57 test máy chủ (thêm 12 test B2: ghi cũ → mới khi sửa HĐ và lô rừng; xóa vĩnh viễn → 1 đợt đủ HD_NCC/HD_RUNG/HD_STK/Phụ lục; khôi phục → dữ liệu **y hệt trước khi xóa** kể cả CCCD số 0 đầu, Số TK dạng chữ, ngày; Draft báo cáo có lại HĐ; khôi phục lần 2 bị từ chối; HĐ khác không ảnh hưởng; xóa TK / xóa lô + GPS thành đợt riêng và khôi phục đúng; khóa đã tồn tại lại → bỏ qua). 15/15 test giao diện. Kiểm tra cú pháp phát hiện đúng lỗi cố ý chèn.

@@ -779,6 +779,9 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
     dinhKemGiayTo: RUNG_COL.DINH_KEM_GIAY_TO, diaChiRung: RUNG_COL.DIA_CHI_RUNG, thuongTru: RUNG_COL.THUONG_TRU,
     namTrong: RUNG_COL.NAM_TRONG
   };
+  const dongCuLo = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), RUNG_COL.NAM_TRONG + 1)).getValues()[0];
+  ghiNhatKyChiTiet_('Sửa lô rừng', SHEET_NAME.HD_RUNG, dongCuLo[RUNG_COL.ID_KEY_HD], idRung, Object.keys(patch).filter(function (k) { return map.hasOwnProperty(k); })
+    .map(function (k) { return { truong: k, cu: dongCuLo[map[k]], moi: k === 'ngayGiayTo' ? ngayToISO_(patch[k]) : patch[k] }; })); // B2
   Object.keys(patch).forEach(function (key) {
     if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : giaTriAnToan_(patch[key])); // M-18
   });
@@ -868,7 +871,7 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
   }
   try {
     if (ghiDe) {
-      _xoaCacDongKhop_(sh, GPS_COL.ID_KEY_GPS, [idRung]); // P-04: xóa theo khối
+      _xoaCacDongKhop_(sh, GPS_COL.ID_KEY_GPS, [idRung], { maDot: taoMaDotXoa_(), hanhDong: 'Ghi đè điểm GPS lô ' + idRung, idHD: '' }); // P-04 + B2
     }
     const rungRows = readData_(SHEET_NAME.HD_RUNG);
     const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
@@ -914,6 +917,9 @@ function CAP_NHAT_TAI_KHOAN_(soDong, patch, idHD, soTKGoc) {
     if (dong === -1 && soTKGoc && patch.soTK) dong = _timDongBangCon_(sh, soDong, idHD, STK_COL.ID_HD, STK_COL.SO_TK, patch.soTK);
     if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
     cu = sh.getRange(dong, STK_COL.SO_TK + 1).getValue();
+    const dongCuTK = sh.getRange(dong, 1, 1, STK_COL.TIMESTAMP + 1).getValues()[0];
+    ghiNhatKyChiTiet_('Sửa tài khoản', SHEET_NAME.HD_STK, idHD, 'Số TK ' + cu, Object.keys(patch).filter(function (k) { return map.hasOwnProperty(k); })
+      .map(function (k) { return { truong: k, cu: dongCuTK[map[k]], moi: patch[k] }; })); // B2
     Object.keys(patch).forEach(function (key) {
       if (!map.hasOwnProperty(key)) return;
       const oCell = sh.getRange(dong, map[key] + 1);
@@ -1226,6 +1232,7 @@ function CAP_NHAT_HOP_DONG_(soDong, patch, idHDMongDoi) {
     lock.releaseLock();
   }
 
+  ghiNhatKyChiTiet_('Sửa hợp đồng', SHEET_NAME.HD_NCC, idHDMongDoi, idHDMongDoi, thayDoi); // B2: từng trường cũ -> mới
   // Đồng bộ DM_DIACHI nếu có sửa tên/địa chỉ/ngân hàng
   const canDongBo = ['tenChuRung', 'diaChiThuongTru', 'diaChiRung', 'nganHang'].some(function (k) { return patch.hasOwnProperty(k); });
   if (canDongBo) {
@@ -1382,6 +1389,7 @@ function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
 
   try {
     let soDongDaXoa = 0;
+    const luuTruXoa = { maDot: taoMaDotXoa_(), hanhDong: 'Xóa vĩnh viễn hợp đồng', idHD: idHD }; // B2: lưu trữ để khôi phục
 
     // Lấy danh sách ID_RUNG thuộc hợp đồng này trước khi xóa HD_RUNG (để còn dùng xóa HD_GPS/HD_Picture theo ID_RUNG nếu cần)
     const danhSachRung = layDanhSachRung_(idHD);
@@ -1391,7 +1399,7 @@ function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
       // Sheet phụ (nháp, phụ lục, ct_hopdong...) có thể chưa từng được tạo -> bỏ qua; sheet chính qua getSheet_ (kiểm tra cột)
       const sh = laSheetCoMapCot_(sheetName) ? getSheet_(sheetName) : getSS_().getSheetByName(sheetName);
       if (!sh) return;
-      soDongDaXoa += _xoaCacDongKhop_(sh, colIndex0, [giaTri]);
+      soDongDaXoa += _xoaCacDongKhop_(sh, colIndex0, [giaTri], luuTruXoa);
     }
 
     xoaTheoCot(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
@@ -1423,7 +1431,7 @@ function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
       });
     }
 
-    ghiNhatKy_('XÓA VĨNH VIỄN', idHD, 'Đã xóa ' + soDongDaXoa + ' dòng dữ liệu liên quan khỏi các sheet.');
+    ghiNhatKy_('XÓA VĨNH VIỄN', idHD, 'Đã xóa ' + soDongDaXoa + ' dòng dữ liệu liên quan khỏi các sheet — lưu trữ đợt ' + luuTruXoa.maDot + ' (khôi phục được ở Thiết lập).');
     XOA_DRAFT_MOT_HOP_DONG_(idHD);
     xoaCacheBanDo_(); // đã xóa toàn bộ HD_GPS của hợp đồng này -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
     return { thanhCong: true, soDongDaXoa: soDongDaXoa };
@@ -1436,12 +1444,16 @@ function XOA_VINH_VIEN_HOP_DONG_(idHD, xacNhan) {
  * Xóa mọi dòng (trừ tiêu đề) có cột colIndex0 thuộc danhSachGiaTri — xóa theo từng KHỐI dòng liền nhau, từ dưới lên
  * (P-04: trước đây deleteRow từng dòng, mỗi lệnh 0,2–1 giây; lô rừng 50 điểm GPS ≈ 20 giây). Trả số dòng đã xóa.
  */
-function _xoaCacDongKhop_(sh, colIndex0, danhSachGiaTri) {
+function _xoaCacDongKhop_(sh, colIndex0, danhSachGiaTri, luuTru) {
   const can = {};
   danhSachGiaTri.forEach(function (v) { const k = (v === null || v === undefined ? '' : v).toString().trim(); if (k) can[k] = true; });
   const last = sh.getLastRow();
   if (last < 2 || !Object.keys(can).length) return 0;
   const cot = sh.getRange(2, colIndex0 + 1, last - 1, 1).getValues();
+  if (luuTru) { // B2: chép nguyên các dòng sắp xóa vào LuuTru_DaXoa TRƯỚC (lỗi lưu trữ -> ném lỗi, không xóa)
+    const day = sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), 1)).getValues();
+    luuTruDongBiXoa_(luuTru.maDot, luuTru.hanhDong, sh, day.filter(function (r, i) { return can[(cot[i][0] || '').toString().trim()]; }), luuTru.idHD);
+  }
   let daXoa = 0, i = cot.length - 1;
   while (i >= 0) {
     if (!can[(cot[i][0] || '').toString().trim()]) { i--; continue; }
@@ -2243,10 +2255,13 @@ function XOA_LO_RUNG_(idRung) {
 
   const shRung = getSheet_(SHEET_NAME.HD_RUNG);
   const idHDCuaRung = shRung.getRange(soDong, RUNG_COL.ID_KEY_HD + 1).getValue(); // lấy TRƯỚC khi xóa dòng
+  const luuTruLo = { maDot: taoMaDotXoa_(), hanhDong: 'Xóa lô rừng ' + idRung, idHD: idHDCuaRung };
+  luuTruDongBiXoa_(luuTruLo.maDot, luuTruLo.hanhDong, shRung, [shRung.getRange(soDong, 1, 1, Math.max(shRung.getLastColumn(), 1)).getValues()[0]], idHDCuaRung); // B2
   shRung.deleteRow(soDong);
+  ghiNhatKy_('Xóa lô rừng', idHDCuaRung, idRung + ' — lưu trữ đợt ' + luuTruLo.maDot);
 
   // Xóa các điểm GPS con của lô rừng này
-  _xoaCacDongKhop_(getSheet_(SHEET_NAME.HD_GPS), GPS_COL.ID_KEY_GPS, [idRung]); // P-04: xóa theo khối
+  _xoaCacDongKhop_(getSheet_(SHEET_NAME.HD_GPS), GPS_COL.ID_KEY_GPS, [idRung], luuTruLo); // P-04: xóa theo khối; B2: lưu trữ
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHDCuaRung);
   dongBoTongHopRungVaoHdNcc_(idHDCuaRung); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
   XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); // xóa khỏi cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
@@ -2266,11 +2281,13 @@ function XOA_TAI_KHOAN_(soDong, idHD, soTKGoc) {
     const dong = _timDongBangCon_(sh, soDong, idHD, STK_COL.ID_HD, STK_COL.SO_TK, soTKGoc); // C-01: không xóa nhầm TK của hợp đồng khác
     if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
     soTK = sh.getRange(dong, STK_COL.SO_TK + 1).getValue();
+    var maDotTK = taoMaDotXoa_();
+    luuTruDongBiXoa_(maDotTK, 'Xóa tài khoản', sh, [sh.getRange(dong, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0]], idHD); // B2
     sh.deleteRow(dong);
   } finally {
     lock.releaseLock();
   }
-  ghiNhatKy_('Xóa tài khoản', idHD, 'Số TK: ' + soTK);
+  ghiNhatKy_('Xóa tài khoản', idHD, 'Số TK: ' + soTK + ' — lưu trữ đợt ' + maDotTK);
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
   return { thanhCong: true };
 }

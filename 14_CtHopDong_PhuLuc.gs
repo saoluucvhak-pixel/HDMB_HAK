@@ -266,6 +266,10 @@ function LUU_PHU_LUC_(d) {
     try {
       const dong = _timDongBangCon_(sh, d.soDong, d.idHD, c.ID_HD, c.ID_PHU_LUC, d.idPhuLuc);
       if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      const cuPL = sh.getRange(dong, c.DON_GIA + 1, 1, 4).getValues()[0];
+      ghiNhatKyChiTiet_('Sửa phụ lục', SHEET_PHU_LUC, d.idHD, sh.getRange(dong, c.ID_PHU_LUC + 1).getValue(), [
+        { truong: 'donGia', cu: cuPL[0], moi: donGia }, { truong: 'khoiLuong', cu: cuPL[1], moi: khoiLuong },
+        { truong: 'thanhTien', cu: cuPL[2], moi: thanhTien }, { truong: 'ghiChu', cu: cuPL[3], moi: d.ghiChu || '' }]); // B2
       sh.getRange(dong, c.DON_GIA + 1, 1, 4).setValues([[donGia, khoiLuong, thanhTien, giaTriAnToan_(d.ghiChu || '')]]); // M-18 // ĐƠN GIÁ..GHI CHÚ liền nhau
       return { thanhCong: true, soDong: dong, thanhTien: thanhTien };
     } finally {
@@ -312,6 +316,7 @@ function XOA_PHU_LUC_(soDong, idHD, idPhuLuc) {
     const dong = _timDongBangCon_(sh, soDong, idHD, PHU_LUC_COL.ID_HD, PHU_LUC_COL.ID_PHU_LUC, idPhuLuc);
     if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
     idPhuLuc = sh.getRange(dong, PHU_LUC_COL.ID_PHU_LUC + 1).getValue();
+    luuTruDongBiXoa_(taoMaDotXoa_(), 'Xóa phụ lục', sh, [sh.getRange(dong, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0]], idHD); // B2
     sh.deleteRow(dong);
   } finally {
     lock.releaseLock();

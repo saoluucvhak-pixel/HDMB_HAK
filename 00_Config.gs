@@ -1082,3 +1082,185 @@ function readData_(sheetName) {
   if (lastRow < 2) return [];
   return sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
 }
+
+/**
+ * ============================================================
+ *  B2 (rà soát 28/09): NHẬT KÝ CHI TIẾT "CŨ → MỚI" + LƯU TRỮ DỮ LIỆU BỊ XÓA (khôi phục được)
+ * ============================================================
+ *  - NhatKy_ChiTiet: mỗi trường bị sửa = 1 dòng (thời gian, người, hành động, sheet, ID_HD, khóa dòng, trường, cũ, mới).
+ *    NhatKy_SuaDoi vẫn giữ như cũ (1 dòng/thao tác) — sheet mới bổ sung phần "sửa từ gì thành gì".
+ *  - LuuTru_DaXoa: TRƯỚC khi xóa bất kỳ dòng dữ liệu nào (xóa TK / lô rừng / phụ lục / GPS ghi đè / xóa vĩnh viễn HĐ),
+ *    chép nguyên dòng (theo TÊN cột) vào đây. Mỗi lần xóa = 1 "đợt" (mã đợt) — Quản trị khôi phục cả đợt ở Thiết lập.
+ *  Hai sheet nằm trong file dữ liệu chính (cùng quyền truy cập với dữ liệu gốc).
+ */
+const SHEET_NHAT_KY_CHI_TIET = 'NhatKy_ChiTiet';
+const NHAT_KY_CHI_TIET_HEADER = ['Thời gian', 'Người thực hiện', 'Hành động', 'Sheet', 'ID_HD', 'Khóa dòng', 'Trường', 'Giá trị cũ', 'Giá trị mới'];
+const SHEET_LUU_TRU_XOA = 'LuuTru_DaXoa';
+const LUU_TRU_XOA_HEADER = ['Thời gian', 'Người thực hiện', 'Mã đợt', 'Hành động', 'Sheet gốc', 'ID_HD', 'Dữ liệu dòng (JSON theo tên cột)', 'Đã khôi phục lúc'];
+const LTX_COL = { THOI_GIAN: 0, EMAIL: 1, MA_DOT: 2, HANH_DONG: 3, SHEET: 4, ID_HD: 5, JSON: 6, DA_KHOI_PHUC: 7 };
+
+function _layHoacTaoSheetCoTieuDe_(ten, header) {
+  const ss = getSS_();
+  let sh = ss.getSheetByName(ten);
+  if (!sh) {
+    sh = ss.insertSheet(ten);
+    sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/** Giá trị ô -> chuỗi để so sánh/ghi nhật ký (ngày -> yyyy-MM-dd). */
+function _chuoiNhatKy_(v) {
+  if (v instanceof Date) return ngayToISO_(v);
+  return v === null || v === undefined ? '' : String(v);
+}
+
+/** Ghi các thay đổi [{truong, cu, moi}] của 1 dòng vào NhatKy_ChiTiet bằng 1 lệnh. Không ném lỗi. */
+function ghiNhatKyChiTiet_(hanhDong, tenSheet, idHD, khoaDong, thayDoi) {
+  try {
+    const ds = (thayDoi || []).filter(function (t) { return _chuoiNhatKy_(t.cu) !== _chuoiNhatKy_(t.moi); });
+    if (!ds.length) return;
+    const sh = _layHoacTaoSheetCoTieuDe_(SHEET_NHAT_KY_CHI_TIET, NHAT_KY_CHI_TIET_HEADER);
+    let email = '';
+    try { email = _emailNguoiThucHien_(); } catch (e) { /* chạy nền */ }
+    const bayGio = new Date();
+    const dong = ds.map(function (t) {
+      return dongAnToan_([bayGio, email, hanhDong, tenSheet, idHD || '', khoaDong || '', t.truong, _chuoiNhatKy_(t.cu), _chuoiNhatKy_(t.moi)]);
+    });
+    sh.getRange(sh.getLastRow() + 1, 1, dong.length, NHAT_KY_CHI_TIET_HEADER.length).setValues(dong);
+  } catch (e) { log_('ERROR', 'ghiNhatKyChiTiet_', 'Không ghi được nhật ký chi tiết: ' + hanhDong, e); }
+}
+
+/** So 2 dòng (cũ/mới, cùng tiêu đề) -> [{truong, cu, moi}] cho các cột khác nhau. */
+function soSanhDong_(header, cu, moi) {
+  const kq = [];
+  for (let i = 0; i < header.length; i++) {
+    if (_chuoiNhatKy_(cu[i]) !== _chuoiNhatKy_(moi[i])) kq.push({ truong: String(header[i] || ('Cột ' + tenCotChu_(i))), cu: cu[i], moi: moi[i] });
+  }
+  return kq;
+}
+
+/** Tiêu đề cột dùng làm khóa JSON: trống -> '#n', trùng tên -> 'Tên#n' (không để 2 cột đè nhau khi lưu trữ/khôi phục). */
+function _tieuDeDuyNhat_(sh, soCot) {
+  const daCo = {};
+  return sh.getRange(1, 1, 1, soCot).getValues()[0].map(function (h, i) {
+    let t = String(h || '').trim() || ('#' + (i + 1));
+    if (daCo[t]) t = t + '#' + (i + 1);
+    daCo[t] = true;
+    return t;
+  });
+}
+
+function taoMaDotXoa_() { return 'XOA_' + Utilities.formatDate(new Date(), layMuiGioBangTinh_(), 'yyyyMMdd_HHmmss') + '_' + Utilities.getUuid().slice(0, 6); }
+
+/**
+ * Chép các dòng SẮP bị xóa của 1 sheet vào LuuTru_DaXoa (dữ liệu theo TÊN cột, để khôi phục đúng cột dù cấu trúc
+ * thêm cột cuối). cacDong: mảng các mảng giá trị (đủ cột). Lỗi lưu trữ -> ném lỗi (KHÔNG xóa khi chưa lưu được).
+ */
+function luuTruDongBiXoa_(maDot, hanhDong, sh, cacDong, idHD) {
+  if (!cacDong || !cacDong.length) return;
+  const soCot = Math.max(sh.getLastColumn(), 1);
+  const header = _tieuDeDuyNhat_(sh, soCot);
+  const shLT = _layHoacTaoSheetCoTieuDe_(SHEET_LUU_TRU_XOA, LUU_TRU_XOA_HEADER);
+  let email = '';
+  try { email = _emailNguoiThucHien_(); } catch (e) { /* chạy nền */ }
+  const bayGio = new Date();
+  const dong = cacDong.map(function (r) {
+    const o = {};
+    header.forEach(function (h, i) { o[h] = r[i] === undefined ? '' : r[i]; });
+    return [bayGio, email, maDot, hanhDong, sh.getName(), idHD || '', "'" + JSON.stringify(o), ''];
+  });
+  shLT.getRange(shLT.getLastRow() + 1, 1, dong.length, LUU_TRU_XOA_HEADER.length).setValues(dong);
+}
+
+/** QUẢN TRỊ: danh sách các đợt xóa gần nhất (mới nhất trước). */
+function LAY_DS_LUU_TRU_XOA_(soDot) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const sh = getSS_().getSheetByName(SHEET_LUU_TRU_XOA);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const data = sh.getRange(2, 1, sh.getLastRow() - 1, LUU_TRU_XOA_HEADER.length).getValues();
+  const theoDot = {}, thuTu = [];
+  data.forEach(function (r) {
+    const ma = String(r[LTX_COL.MA_DOT] || '');
+    if (!ma) return;
+    if (!theoDot[ma]) { theoDot[ma] = { maDot: ma, thoiGian: r[LTX_COL.THOI_GIAN] ? new Date(r[LTX_COL.THOI_GIAN]).toISOString() : '', email: r[LTX_COL.EMAIL], hanhDong: r[LTX_COL.HANH_DONG], idHD: r[LTX_COL.ID_HD], soDong: 0, theoSheet: {}, daKhoiPhuc: '' }; thuTu.push(ma); }
+    const d = theoDot[ma];
+    d.soDong++;
+    d.theoSheet[r[LTX_COL.SHEET]] = (d.theoSheet[r[LTX_COL.SHEET]] || 0) + 1;
+    if (r[LTX_COL.DA_KHOI_PHUC]) d.daKhoiPhuc = new Date(r[LTX_COL.DA_KHOI_PHUC]).toISOString();
+  });
+  return thuTu.reverse().slice(0, Math.min(Number(soDot) || 100, 300)).map(function (ma) { return theoDot[ma]; });
+}
+
+/** QUẢN TRỊ: lịch sử thay đổi chi tiết (cũ → mới) của 1 hợp đồng, mới nhất trước (tối đa 500 dòng). */
+function LAY_NHAT_KY_CHI_TIET_(idHD) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return [];
+  const sh = getSS_().getSheetByName(SHEET_NHAT_KY_CHI_TIET);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, NHAT_KY_CHI_TIET_HEADER.length).getValues()
+    .filter(function (r) { return String(r[4]).trim() === idHD; })
+    .map(function (r) { return { thoiGian: r[0] ? new Date(r[0]).toISOString() : '', email: r[1], hanhDong: r[2], sheet: r[3], khoa: String(r[5]), truong: r[6], cu: String(r[7]), moi: String(r[8]) }; })
+    .reverse().slice(0, 500);
+}
+
+/**
+ * QUẢN TRỊ: khôi phục TOÀN BỘ dòng của 1 đợt xóa về đúng sheet gốc (ghép theo TÊN cột). Bỏ qua dòng mà khóa chính của nó
+ * (ID_HD ở HD_NCC, ID_RUNG ở HD_RUNG, ID_PhuLuc ở PhuLucHopDong) đã tồn tại lại — tránh sinh bản trùng. Đánh dấu đã khôi phục.
+ */
+function KHOI_PHUC_DU_LIEU_DA_XOA_(maDot) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  maDot = (maDot || '').toString().trim();
+  const shLT = getSS_().getSheetByName(SHEET_LUU_TRU_XOA);
+  if (!maDot || !shLT || shLT.getLastRow() < 2) return { thanhCong: false, loi: 'Không có dữ liệu lưu trữ cho đợt này.' };
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  const idsHD = new Set();
+  let soKhoiPhuc = 0;
+  const boQua = [];
+  try {
+    const data = shLT.getRange(2, 1, shLT.getLastRow() - 1, LUU_TRU_XOA_HEADER.length).getValues();
+    const cacDong = [];
+    data.forEach(function (r, i) { if (String(r[LTX_COL.MA_DOT]) === maDot) cacDong.push({ r: r, i: i }); });
+    if (!cacDong.length) return { thanhCong: false, loi: 'Không tìm thấy đợt xóa ' + maDot + '.' };
+    if (cacDong.some(function (x) { return x.r[LTX_COL.DA_KHOI_PHUC]; })) return { thanhCong: false, loi: 'Đợt này đã được khôi phục trước đó.' };
+    const cotKhoaChinh = {}; cotKhoaChinh[SHEET_NAME.HD_NCC] = NCC_COL.ID_HD; cotKhoaChinh[SHEET_NAME.HD_RUNG] = RUNG_COL.ID_RUNG; cotKhoaChinh[SHEET_PHU_LUC] = PHU_LUC_COL.ID_PHU_LUC;
+    const theoSheet = {};
+    cacDong.forEach(function (x) { (theoSheet[x.r[LTX_COL.SHEET]] = theoSheet[x.r[LTX_COL.SHEET]] || []).push(x); });
+    const laNgayISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
+    Object.keys(theoSheet).forEach(function (ten) {
+      const sh = getSS_().getSheetByName(ten);
+      if (!sh) { boQua.push(ten + ': sheet không còn tồn tại'); return; }
+      const soCot = Math.max(sh.getLastColumn(), 1);
+      const header = _tieuDeDuyNhat_(sh, soCot);
+      const cotKhoa = cotKhoaChinh.hasOwnProperty(ten) ? cotKhoaChinh[ten] : -1;
+      const khoaDaCo = {};
+      if (cotKhoa !== -1 && sh.getLastRow() >= 2) sh.getRange(2, cotKhoa + 1, sh.getLastRow() - 1, 1).getValues().forEach(function (v) { khoaDaCo[String(v[0]).trim()] = true; });
+      theoSheet[ten].forEach(function (x) {
+        let o;
+        try { o = JSON.parse(String(x.r[LTX_COL.JSON])); } catch (e) { boQua.push(ten + ': dữ liệu lưu trữ hỏng'); return; }
+        const dong = header.map(function (h) {
+          const v = o.hasOwnProperty(h) ? o[h] : '';
+          return typeof v === 'string' && laNgayISO.test(v) ? new Date(v) : v;
+        });
+        if (cotKhoa !== -1 && khoaDaCo[String(dong[cotKhoa]).trim()]) { boQua.push(ten + ': ' + dong[cotKhoa] + ' đã tồn tại lại'); return; }
+        const soDong = sh.getLastRow() + 1;
+        dong.forEach(function (v, c) { if (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim())) sh.getRange(soDong, c + 1).setNumberFormat('@'); }); // ô gốc là CHỮ số (Số TK, CCCD...) -> giữ dạng chữ, không mất số 0 đầu
+        sh.getRange(soDong, 1, 1, dong.length).setValues([dongAnToan_(dong)]);
+        shLT.getRange(x.i + 2, LTX_COL.DA_KHOI_PHUC + 1).setValue(new Date());
+        soKhoiPhuc++;
+        const idHD = String(x.r[LTX_COL.ID_HD] || '').trim();
+        if (idHD) idsHD.add(idHD);
+      });
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  const gom = batDauGomDraft_();
+  try { idsHD.forEach(function (id) { dongBoTongHopRungVaoHdNcc_(id); CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(id); }); } finally { ketThucGomDraft_(gom); }
+  xoaCacheBanDo_();
+  ghiNhatKy_('Khôi phục dữ liệu đã xóa', Array.from(idsHD).join(', '), 'Đợt ' + maDot + ': khôi phục ' + soKhoiPhuc + ' dòng' + (boQua.length ? '; bỏ qua ' + boQua.length + ': ' + boQua.slice(0, 5).join('; ') : ''));
+  return { thanhCong: soKhoiPhuc > 0, soKhoiPhuc: soKhoiPhuc, boQua: boQua, loi: soKhoiPhuc ? '' : 'Không khôi phục được dòng nào: ' + boQua.join('; ') };
+}

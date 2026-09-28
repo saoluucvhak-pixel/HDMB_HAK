@@ -11,7 +11,8 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `9e92e9d` | 🐛⚡ | Đợt 6c: H-02, H-07, H-11, H-12, H-13, M-02, M-04, M-05, M-07, M-08, M-09, M-11, M-12, M-14, M-16, M-17, L-02/03/04/06 — 29/29 test đạt | 00, 01, 02, 03, 04, 05, 06, 14, 15, 16, 18, 23, 31, 35, 07, 10, 11, 27, NhapLieu_Chung_JS |
 | `462b8e1` | 🧹 | Đợt 6d: M-10, M-15, M-18, L-01, L-05, L-09, L-10, L-12 — 33/33 test đạt | 00, 01, 04, 05, 06, 14, 29, 32, 35 + 13 file HTML (`include_`) |
 | `04752c0` | ⚡ | Nâng cấp đợt 1: H-12 (P-02, P-05, P-06, P-07a, P-09, P-10) + A1 chống bấm lặp — 37/37 test máy chủ, 7/7 test trình duyệt | 00, 01, 06, 15, 16, 18, 35, PhanQuyen_JS |
-| (commit tiếp) | ✨⚡ | Nâng cấp đợt 2: A2, A3, A4, P-07b (+ hoàn tất H-13), P-08, P-11 — 45/45 test máy chủ, 15/15 test trình duyệt | 01, 06, 18, 23, 29, 31, 34, PhanQuyen_JS, 10, 12, 24, 27, 30, NhapLieu_Chung_JS |
+| `bb92f22` | ✨⚡ | Nâng cấp đợt 2: A2, A3, A4, P-07b (+ hoàn tất H-13), P-08, P-11 — 45/45 test máy chủ, 15/15 test trình duyệt | 01, 06, 18, 23, 29, 31, 34, PhanQuyen_JS, 10, 12, 24, 27, 30, NhapLieu_Chung_JS |
+| (commit tiếp) | ✨🧪 | Nâng cấp đợt 3: B2 nhật ký chi tiết cũ → mới + lưu trữ khi xóa & khôi phục (Thiết lập); B3 thư mục `tests/` + GitHub Actions — 57/57 test máy chủ, 15/15 test giao diện | 00, 06, 14, 34, 24, PhanQuyen_JS, tests/, .github/ |
 
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 

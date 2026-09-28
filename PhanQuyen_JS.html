@@ -129,7 +129,7 @@ function hakPhanSauTienTo_(msg, tienTo) {
  * lời gọi) bị khóa + mờ tới khi máy chủ trả kết quả (thành công hay lỗi), rồi mở lại TRƯỚC khi chạy xử lý của trang (trang
  * vẫn tự khóa tiếp được nếu muốn). Chỉ áp dụng cho hàm ghi — lời gọi đọc dữ liệu không bị ảnh hưởng.
  */
-var HAK_HAM_GHI_ = /^(THEM_|CAP_NHAT_|XOA_|DUYET_|TU_CHOI_|GAN_|LUU_|TAO_|HUY_|THANH_LY|TAI_|XUAT_|DONG_BO|DOC_TOA_DO|TRICH_XUAT|OCR_|KIEM_TRA_ANH_DA_CHON|KIEM_TRA_ANH_TU_LINK|KIEM_TRA_HO_SO_TOAN_BO|DOI_CHIEU|themLoaiHoSoMoi|doiChieuMotLoRung)/;
+var HAK_HAM_GHI_ = /^(THEM_|CAP_NHAT_|XOA_|DUYET_|TU_CHOI_|GAN_|LUU_|TAO_|HUY_|THANH_LY|KHOI_PHUC_|TAI_|XUAT_|DONG_BO|DOC_TOA_DO|TRICH_XUAT|OCR_|KIEM_TRA_ANH_DA_CHON|KIEM_TRA_ANH_TU_LINK|KIEM_TRA_HO_SO_TOAN_BO|DOI_CHIEU|themLoaiHoSoMoi|doiChieuMotLoRung)/;
 var hakNutVuaBam_ = null, hakLucBam_ = 0;
 document.addEventListener('click', function (e) {
   var n = e.target && e.target.closest ? e.target.closest('button, a.btn, a.lnk-sua, a.lnk-huy, input[type=button], input[type=submit]') : null;

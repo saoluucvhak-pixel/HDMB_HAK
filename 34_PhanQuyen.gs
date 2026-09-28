@@ -477,6 +477,9 @@ function _bangQuyenApi_() {
     CHIA_SE_DU_LIEU_CHO_EMAIL: r(CHIA_SE_DU_LIEU_CHO_EMAIL_, Q),
     THU_HOI_QUYEN_TRUY_CAP: r(THU_HOI_QUYEN_TRUY_CAP_, Q),
     LAY_NHAT_KY_THEO_NGAY: r(LAY_NHAT_KY_THEO_NGAY_, Q),
+    LAY_DS_LUU_TRU_XOA: r(LAY_DS_LUU_TRU_XOA_, Q),               // B2: các đợt xóa đã lưu trữ
+    LAY_NHAT_KY_CHI_TIET: r(LAY_NHAT_KY_CHI_TIET_, Q),           // B2: lịch sử cũ -> mới theo ID_HD
+    KHOI_PHUC_DU_LIEU_DA_XOA: r(KHOI_PHUC_DU_LIEU_DA_XOA_, Q),   // B2: khôi phục 1 đợt xóa
     LAY_CAI_DAT_CHATBOT: r(LAY_CAI_DAT_CHATBOT_, Q),
     LUU_CAI_DAT_CHATBOT: r(LUU_CAI_DAT_CHATBOT_, Q),
     LAY_CAI_DAT_TRA_CUU_NH: r(LAY_CAI_DAT_TRA_CUU_NH_, Q),
