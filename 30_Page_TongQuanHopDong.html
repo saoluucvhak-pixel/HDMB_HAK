@@ -227,6 +227,7 @@
   var tinhTrangDangLoc_ = ''; // rỗng = Tất cả
 
   window.addEventListener('DOMContentLoaded', function () {
+    hakNhoBoLoc_('tongquan', ['locSoHD', 'locTenChuRung']); // A4: nhớ ô lọc Số HĐ / tên chủ rừng
     // Điền sẵn khoảng ngày mặc định (Từ = đầu tháng hiện hành, Đến = hôm nay) để
     // người dùng chỉnh nhanh nếu muốn — nhưng KHÔNG tự áp dụng lọc ngay, số liệu
     // load ban đầu vẫn là TẤT CẢ (không giới hạn ngày) cho tới khi bấm "Lọc".

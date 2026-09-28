@@ -410,7 +410,7 @@ function _bangQuyenApi_() {
     traCuuDiaChiThamChieu: r(traCuuDiaChiThamChieu_, X),
     layPhieuCanTheoChuRung: r(layPhieuCanTheoChuRung_, X),
     LAY_DANH_SACH_NGAN_HANG_VIETQR: r(LAY_DANH_SACH_NGAN_HANG_VIETQR_, X),
-    XUAT_BANG_RA_FILE: r(XUAT_BANG_RA_FILE_, X),
+    XUAT_BAO_CAO_FILE: r(XUAT_BAO_CAO_FILE_, X), // P-07b/H-13: máy chủ tự dựng dữ liệu file xuất (thay XUAT_BANG_RA_FILE nhận bảng từ trình duyệt)
     TRA_LOI_CHATBOT: r(TRA_LOI_CHATBOT_, X),
     TRA_CUU_HOP_DONG: r(TRA_CUU_HOP_DONG_, X),
     CHI_TIET_TRA_CUU_HOP_DONG: r(CHI_TIET_TRA_CUU_HOP_DONG_, X),
@@ -431,6 +431,7 @@ function _bangQuyenApi_() {
     // --- Nhập liệu: hợp đồng, lô rừng, tài khoản, ảnh, GPS, hồ sơ, kiểm tra ---
     layHopDongTheoIdHD: r(layHopDongTheoIdHD_, N),
     TAO_HOP_DONG_MOI: r(TAO_HOP_DONG_MOI_, N),
+    DOI_TINH_TRANG_HANG_LOAT: r(DOI_TINH_TRANG_HANG_LOAT_, N), // A2: duyệt/hủy nhiều hợp đồng trong 1 lệnh
     CAP_NHAT_HOP_DONG: r(CAP_NHAT_HOP_DONG_WEB_, N), // H-01: bản cho trang web — kiểm tra bước chuyển trạng thái, ghi nhật ký, cập nhật Draft
     THEM_LO_RUNG_MOI: r(THEM_LO_RUNG_MOI_, N),
     CAP_NHAT_LO_RUNG: r(CAP_NHAT_LO_RUNG_, N),

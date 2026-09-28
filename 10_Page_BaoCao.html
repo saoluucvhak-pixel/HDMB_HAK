@@ -328,6 +328,7 @@
             <tbody></tbody>
           </table>
         </div>
+        <div id="phanTrangTT" style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px"></div>
       </div>
     </div>
 
@@ -736,9 +737,9 @@
   }
 
   /** Gọi backend xuất file dùng chung — idMsg là id thẻ hiện thông báo trạng thái của tab đang xuất */
-  function xuatBangRaFile_(idMsg, tenFile, header, rows, dinhDang) {
-    if (!rows || !rows.length) { showMsg(idMsg, '⚠️ Không có dữ liệu để xuất — lọc/tải bảng trước đã.', false); return; }
-    showMsg(idMsg, '⌛ Đang tạo file ' + dinhDang.toUpperCase() + ' (' + rows.length + ' dòng, có thể mất chút thời gian nếu nhiều dữ liệu)...', true);
+  /** P-07b: máy chủ tự dựng file theo loại báo cáo + bộ lọc (trình duyệt không gửi bảng dữ liệu lên nữa). */
+  function xuatBaoCaoMayChu_(idMsg, loai, boLoc, dinhDang) {
+    showMsg(idMsg, '⌛ Đang tạo file ' + dinhDang.toUpperCase() + ' từ toàn bộ dữ liệu khớp bộ lọc (có thể mất chút thời gian nếu nhiều dữ liệu)...', true);
     hakRun_()
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { showMsg(idMsg, '❌ ' + kq.loi, false); return; }
@@ -746,8 +747,9 @@
         showMsg(idMsg, '✅ Đã tạo xong "' + kq.tenFile + '" (' + kq.soDong + ' dòng) — kiểm tra thư mục Tải xuống của trình duyệt.', true);
       })
       .withFailureHandler(function (err) { showMsg(idMsg, '❌ Lỗi: ' + err.message, false); })
-      .XUAT_BANG_RA_FILE(tenFile, header, rows, dinhDang);
+      .XUAT_BAO_CAO_FILE(loai, boLoc, dinhDang);
   }
+
 
   // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — CHỈ ảnh hưởng
   // ngày tháng ghi vào FILE XUẤT (Excel/PDF), KHÔNG ảnh hưởng giao diện webapp:
@@ -780,19 +782,25 @@
 
   // ============ 1. BÁO CÁO HỢP ĐỒNG ============
   var trangBCHienTai = 1;
-  var dsChiTietGoc = [];
 
-  function locBangChiTiet() {
-    var tkSoHD = (document.getElementById('ttLocSoHD').value || '').toLowerCase();
-    var tkTen = (document.getElementById('ttLocTenChuRung').value || '').toLowerCase();
-    var loc = dsChiTietGoc.filter(function (m) {
-      if (tkSoHD && (m.soHD || '').toString().toLowerCase().indexOf(tkSoHD) === -1) return false;
-      if (tkTen && (m.chuRung || '').toLowerCase().indexOf(tkTen) === -1) return false;
-      return true;
-    });
+  // P-07b: bảng chi tiết lọc + chia trang ở MÁY CHỦ (trước đây tải chi tiết mọi hợp đồng rồi lọc trên trình duyệt)
+  var henGioLocTT_ = null;
+  function layBoLocTongHop_() {
+    return { soHD: document.getElementById('ttLocSoHD').value, tenChuRung: document.getElementById('ttLocTenChuRung').value };
+  }
+  function locBangChiTiet() { clearTimeout(henGioLocTT_); henGioLocTT_ = setTimeout(function () { taiTongHop_(1); }, 350); }
+  function taiTongHop_(trang, forceLamMoi) {
+    hakRun_()
+      .withSuccessHandler(function (kq) { renderTongHopWebapp(kq, forceLamMoi); })
+      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
+      .layTongHopChoWebapp(!!forceLamMoi, layBoLocTongHop_(), trang || 1, 20);
+  }
+  function veBangChiTiet_(kq) {
+    var loc = kq.chiTiet || [];
     var tbody = document.querySelector('#tblChiTiet tbody');
     tbody.innerHTML = '';
-    if (!loc.length) { tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có dòng nào khớp bộ lọc.</td></tr>'; return; }
+    var pg = document.getElementById('phanTrangTT');
+    if (!loc.length) { tbody.innerHTML = '<tr><td colspan="10" class="hint" style="text-align:center">Không có dòng nào khớp bộ lọc.</td></tr>'; if (pg) pg.innerHTML = ''; return; }
     loc.forEach(function (m) {
       var tr = document.createElement('tr');
       if (m.giaTriConLai < 0) tr.className = 'row-do';
@@ -803,6 +811,9 @@
         '<td>' + (m.thucHienDenNgay ? new Date(m.thucHienDenNgay).toLocaleDateString('vi-VN') : '') + '</td>';
       tbody.appendChild(tr);
     });
+    if (pg) pg.innerHTML = '<button class="pagination-btn" ' + (kq.trang <= 1 ? 'disabled' : '') + ' onclick="taiTongHop_(' + (kq.trang - 1) + ')">‹ Trước</button>' +
+      '<span>Trang ' + escHtmlKH_(kq.trang) + ' / ' + escHtmlKH_(kq.tongTrang) + ' (' + escHtmlKH_(kq.tongSo) + ' hợp đồng)</span>' +
+      '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiTongHop_(' + (kq.trang + 1) + ')">Sau ›</button>';
   }
 
   function layBoLocBaoCaoHD() {
@@ -841,22 +852,8 @@
       '<button class="pagination-btn" ' + (kq.trang >= kq.tongTrang ? 'disabled' : '') + ' onclick="taiBaoCaoHD(' + (kq.trang + 1) + ')">Sau ›</button>';
   }
 
-  function xuatBaoCaoHD_(dinhDang) {
-    var boLoc = layBoLocBaoCaoHD();
-    showMsg('msgLocBC', '⌛ Đang lấy toàn bộ dữ liệu khớp bộ lọc (không chỉ trang hiện tại)...', true);
-    hakRun_()
-      .withFailureHandler(function (err) { showMsg('msgLocBC', '❌ Lỗi: ' + err.message, false); })
-      .withSuccessHandler(function (kq) {
-        var header = ['Số HĐ', 'Ngày ký', 'Chủ rừng', 'CCCD', 'Người ủy quyền', 'Số TK', 'Số lô rừng', 'KL dự kiến (Tấn)', 'KL thực hiện (Tấn)', 'Giá trị HĐ (đ)', 'Giá trị TH (đ)', 'Từ ngày TH', 'Đến ngày TH', 'Có ảnh', 'Đủ GPS', 'Đủ hồ sơ', 'Tình trạng', 'Ghi chú'];
-        var rows = kq.items.map(function (r) {
-          return [r.soHD || '', r.ngayKy ? ngayXuatFile_(r.ngayKy) : '', r.tenChuRung || '', r.cccdChuRung || '', r.tenUyQuyen || '',
-            r.soTaiKhoan || 0, r.soLoRung || 0, Math.round(r.khoiLuongDuKien) || 0, Math.round(r.khoiLuongThucHien) || 0, Math.round(r.giaTriHopDong) || 0, Math.round(r.giaTriThucHien) || 0,
-            r.thucHienTuNgay ? ngayXuatFile_(r.thucHienTuNgay) : '', r.thucHienDenNgay ? ngayXuatFile_(r.thucHienDenNgay) : '',
-            r.coAnh ? 'Có' : 'Chưa', r.daDoGPSDu ? 'Đủ' : 'Chưa đủ', r.hoSoDu ? 'Đủ' : 'Chưa đủ', r.tinhTrang || '', r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '')];
-        });
-        xuatBangRaFile_('msgLocBC', 'BaoCaoHopDong_' + ngayHomNay_(), header, rows, dinhDang);
-      }).layBaoCaoHopDongPhanTrang(boLoc, 1, 100000, false);
-  }
+  function xuatBaoCaoHD_(dinhDang) { xuatBaoCaoMayChu_('msgLocBC', 'baoCaoHD', layBoLocBaoCaoHD(), dinhDang); }
+
 
   function taiBaoCaoHD(trang, forceLamMoi) {
     var boLoc = layBoLocBaoCaoHD();
@@ -876,8 +873,7 @@
     document.getElementById('kpiSoHD').textContent = formatSo(kq.soHopDong);
     document.getElementById('kpiKhoiLuong').textContent = formatKL(kq.tongKhoiLuong);
     document.getElementById('kpiGiaTri').textContent = formatTien(kq.tongGiaTri);
-    dsChiTietGoc = kq.chiTiet;
-    locBangChiTiet();
+    veBangChiTiet_(kq);
     showMsg('msg', '✅ Đã tổng hợp ' + kq.soHopDong + ' hợp đồng.' + (forceLamMoi ? ' 🔄 (vừa tính lại toàn bộ)' : ''), true);
   }
 
@@ -898,10 +894,7 @@
 
   function chayTongHop(forceLamMoi) {
     showMsg('msg', '⌛ Đang tổng hợp...', true);
-    hakRun_()
-      .withSuccessHandler(function (kq) { renderTongHopWebapp(kq, forceLamMoi); })
-      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
-      .layTongHopChoWebapp(!!forceLamMoi);
+    taiTongHop_(1, forceLamMoi);
 
     hakRun_()
       .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi tải Tình hình thực hiện: ' + err.message, false); })
@@ -956,7 +949,7 @@
         if (kq.thanhCong) { showMsg('msgTL', '✅ Đã thanh lý hợp đồng ' + idHD, true); taiDanhSachThanhLy(trangTLHienTai); return; }
         if (kq.canXacNhan) {
           var tatCaThieu = (kq.thieuBatBuoc || []).concat(kq.thieuPhu || []);
-          if (confirm('Hồ sơ thiếu:\n- ' + tatCaThieu.join('\n- ') + '\n\nBạn có tiếp tục thanh lý không?')) thanhLyHopDong(idHD, true);
+          hakXacNhan_('Hồ sơ thiếu:\n- ' + tatCaThieu.join('\n- ') + '\n\nBạn có tiếp tục thanh lý không?', { tieuDe: 'Thanh lý hợp đồng', nutDongY: 'Tiếp tục thanh lý' }).then(function (ok) { if (ok) thanhLyHopDong(idHD, true); }); // A3
           return;
         }
         showMsg('msgTL', '❌ ' + kq.loi + (kq.thieuBatBuoc && kq.thieuBatBuoc.length ? '\n- ' + kq.thieuBatBuoc.join('\n- ') : ''), false);
@@ -995,10 +988,13 @@
         showMsg('msg', '❌ Lỗi: ' + err.message, false);
         showMsg('msgTL', '❌ Lỗi tải danh sách thanh lý: ' + err.message, false);
       })
-      .TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, 1, 1, false);
+      .TAI_TRANG_BAO_CAO_TONG_HOP(boLocBC, boLocTL, 1, 1, false, layBoLocTongHop_(), 1);
   }
 
   window.addEventListener('DOMContentLoaded', function () {
+    // A4: nhớ bộ lọc của các bảng (khôi phục TRƯỚC lần tải đầu để số liệu khớp ô lọc đang hiện)
+    hakNhoBoLoc_('baocao', ['bcTuNgay', 'bcDenNgay', 'bcSoHD', 'bcTenChuRung', 'bcTenUyQuyen', 'bcDiaChiRung', 'bcTinhTrang',
+      'ttLocSoHD', 'ttLocTenChuRung', 'tlLocSoHD', 'tlLocTenChuRung', 'tlLocTenUyQuyen', 'hsrLocSoHD', 'hsrLocTenChuRung', 'hsrLocTinhTrang']);
     taiTrangBaoCaoLanDau();
     // Mặc định bộ lọc MISA: Từ ngày = đầu tháng hiện hành, Đến ngày = hôm nay
     var homNay = new Date();
@@ -1009,15 +1005,14 @@
   });  // ============ 4. HỒ SƠ RỪNG ============
   var dsHoSoRungGoc = [];
   var trangHoSoRungHienTai_ = 1;
-  var dsHoSoRungLocGanNhat_ = [];
 
   function xuatHoSoRung_(dinhDang) {
-    var header = ['Mã rừng', 'Số HĐ', 'Chủ rừng', 'Tình trạng', 'Diện tích (m²)', 'KL dự kiến (Tấn)', 'Đơn giá (đ)', 'Giá trị (đ)', 'Hồ sơ nguồn gốc', 'Số giấy tờ'];
-    var rows = dsHoSoRungLocGanNhat_.map(function (r) {
-      return [r.idRung || '', r.soHD || '', r.tenChuRung || '', r.tinhTrang || '', Math.round(r.dienTich) || 0, Math.round(r.khoiLuongDuKien) || 0, Math.round(r.donGia) || 0, Math.round(r.giaTri) || 0, r.hoSoNguonGoc || '', r.soGiayTo || ''];
-    });
-    xuatBangRaFile_('msgHoSoRung', 'HoSoRung_' + ngayHomNay_(), header, rows, dinhDang);
+    xuatBaoCaoMayChu_('msgHoSoRung', 'hoSoRung', {
+      soHD: document.getElementById('hsrLocSoHD').value, tenChuRung: document.getElementById('hsrLocTenChuRung').value,
+      tinhTrang: document.getElementById('hsrLocTinhTrang').value
+    }, dinhDang);
   }
+
   function taiBaoCaoHoSoRung() {
     showMsg('msgHoSoRung', '⌛ Đang tải...', true);
     hakRun_()
@@ -1049,7 +1044,6 @@
       if (locTT && (r.tinhTrang || '') !== locTT) return false;
       return true;
     });
-    dsHoSoRungLocGanNhat_ = loc; // ⚠️ MỚI: lưu lại để nút "Xuất Excel/PDF" dùng đúng danh sách đã lọc, không phải viết lại logic lọc lần 2
     var tbody = document.querySelector('#tblHoSoRung tbody');
     tbody.innerHTML = '';
     if (!loc.length) { tbody.innerHTML = '<tr><td colspan="12" class="hint" style="text-align:center">Chưa có dữ liệu — bấm "Tải báo cáo".</td></tr>'; document.getElementById('phanTrangHoSoRung').innerHTML = ''; return; }

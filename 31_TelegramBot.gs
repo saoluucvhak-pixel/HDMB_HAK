@@ -67,10 +67,10 @@ function TU_DONG_LAY_CHAT_ID_TELEGRAM_() {
  *
  * Polling giải quyết đúng gốc: đổi chiều lại — Apps Script (không phải
  * Telegram) là bên CHỦ ĐỘNG GỌI RA (qua UrlFetchApp, tự đi theo redirect bình
- * thường), hỏi Telegram "có tin mới không" mỗi phút — không còn vướng gì cả.
+ * thường), hỏi Telegram "có tin mới không" mỗi 5 phút — không còn vướng gì cả.
  */
 
-/** Kiểm tra tin nhắn mới — gọi bởi trigger mỗi phút. Dùng offset (lưu trong
+/** Kiểm tra tin nhắn mới — gọi bởi trigger mỗi 5 phút. Dùng offset (lưu trong
  *  Script Properties) để chỉ lấy tin CHƯA xử lý, không hỏi lại tin cũ. */
 function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
   const p = PropertiesService.getScriptProperties();
@@ -123,7 +123,7 @@ function kiemTraTinNhanTelegramMoi_(p, token) {
   p.setProperty('TELEGRAM_UPDATE_OFFSET', offsetMoiNhat.toString());
 }
 
-/** Bật polling — XÓA webhook trước (2 chế độ không dùng chung được), rồi bật trigger chạy mỗi phút */
+/** Bật polling — XÓA webhook trước (2 chế độ không dùng chung được), rồi bật trigger chạy mỗi 5 phút */
 function BAT_POLLING_TELEGRAM_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
@@ -136,8 +136,10 @@ function BAT_POLLING_TELEGRAM_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_').timeBased().everyMinutes(1).create();
-  return { thanhCong: true, thongBao: 'Đã bật chế độ Polling — bot sẽ kiểm tra tin nhắn mới mỗi phút (có thể chờ tới 1 phút mới thấy trả lời, không phải tức thì như webhook).' };
+  // P-11 (rà soát 28/09): 5 phút/lần thay cho 1 phút — trigger 1 phút chạy ~1.440 lượt/ngày, ăn phần lớn quota
+  // "90 phút/ngày thời gian chạy trigger" của tài khoản Gmail thường (các trigger đồng bộ khác có thể bị Google dừng).
+  ScriptApp.newTrigger('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_').timeBased().everyMinutes(5).create();
+  return { thanhCong: true, thongBao: 'Đã bật chế độ Polling — bot kiểm tra tin nhắn mới mỗi 5 phút (có thể chờ tới 5 phút mới thấy trả lời).' };
 }
 function TAT_POLLING_TELEGRAM_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);

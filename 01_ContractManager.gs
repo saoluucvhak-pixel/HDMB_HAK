@@ -23,23 +23,38 @@ function XOA_SHEET_TONGHOP_CU() {
  * Bản tóm tắt KPI cho webapp (trang Báo cáo tổng hợp): số hợp đồng, tổng khối
  * lượng, tổng giá trị, kèm danh sách chi tiết để hiển thị bảng.
  */
-function layTongHopChoWebapp_(boBuoc) {
+function layTongHopChoWebapp_(boBuoc, boLoc, trang, kichThuoc) {
   _yeuCauQuyen_(QUYEN.XEM);
-  // Đọc THẲNG từ Draft_BaoCaoHopDong (đã tổng hợp sẵn, cập nhật ngay mỗi khi có
-  // thay đổi — xem CAP_NHAT_DRAFT_MOT_HOP_DONG_) — không tính lại từ đầu nữa.
-  const boBuocThat = !!boBuoc;
-  if (boBuocThat) LAM_MOI_DRAFT_THEO_THAY_DOI_(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ từ đầu
-  const list = docToanBoDraftBaoCao_()
-    // Chỉ hiện hợp đồng ĐANG THỰC HIỆN / CHỜ THỰC HIỆN — hợp đồng đã thanh lý/hủy
-    // không cần theo dõi tiến độ thực hiện nữa.
-    .filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
+  // Đọc THẲNG từ Draft_BaoCaoHopDong (đã tổng hợp sẵn, cập nhật ngay mỗi khi có thay đổi).
+  if (boBuoc) LAM_MOI_DRAFT_THEO_THAY_DOI_(); // chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại toàn bộ từ đầu
+  return _tongHopWebappTuDraft_(docToanBoDraftBaoCao_(), boLoc, trang, kichThuoc);
+}
+
+/**
+ * P-07b (rà soát 28/09): KPI (trên TOÀN BỘ hợp đồng đang/chờ thực hiện) + 1 TRANG chi tiết đã lọc theo Số HĐ / tên chủ rừng.
+ * Trước đây trả chi tiết của MỌI hợp đồng để trình duyệt tự lọc — phản hồi tăng theo số hợp đồng (10.000 HĐ ≈ vài MB).
+ */
+function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
+  boLoc = boLoc || {};
+  kichThuoc = Math.min(Math.max(Number(kichThuoc) || 20, 1), 200);
+  // Chỉ hiện hợp đồng ĐANG THỰC HIỆN / CHỜ THỰC HIỆN — đã thanh lý/hủy không cần theo dõi tiến độ.
+  const list = tatCa.filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
   const tongKhoiLuong = list.reduce(function (s, m) { return s + (Number(m.khoiLuongDuKien) || 0); }, 0);
   const tongGiaTri = list.reduce(function (s, m) { return s + (Number(m.giaTriHopDong) || 0); }, 0);
+  const tkSoHD = (boLoc.soHD || '').toString().trim().toLowerCase();
+  const tkTen = (boLoc.tenChuRung || '').toString().trim().toLowerCase();
+  const loc = list.filter(function (m) {
+    if (tkSoHD && (m.soHD || '').toString().toLowerCase().indexOf(tkSoHD) === -1) return false;
+    if (tkTen && (m.tenChuRung || '').toString().toLowerCase().indexOf(tkTen) === -1) return false;
+    return true;
+  }).sort(function (a, b) { return String(b.soHD || '').localeCompare(String(a.soHD || ''), 'vi', { numeric: true }); });
+  const tongTrang = Math.max(1, Math.ceil(loc.length / kichThuoc));
+  const trangThat = Math.min(Math.max(1, Number(trang) || 1), tongTrang);
+  const batDau = (trangThat - 1) * kichThuoc;
   return {
-    soHopDong: list.length,
-    tongKhoiLuong: tongKhoiLuong,
-    tongGiaTri: tongGiaTri,
-    chiTiet: list.sort(function (a, b) { return String(b.soHD || '').localeCompare(String(a.soHD || ''), 'vi', { numeric: true }); }) /* L-02: Số HĐ có chữ từng ra NaN */.map(function (m) {
+    soHopDong: list.length, tongKhoiLuong: tongKhoiLuong, tongGiaTri: tongGiaTri,
+    trang: trangThat, tongTrang: tongTrang, tongSo: loc.length,
+    chiTiet: loc.slice(batDau, batDau + kichThuoc).map(function (m) {
       return {
         idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
         tongKhoiLuongDuKien: m.khoiLuongDuKien, tongGiaTri: m.giaTriHopDong,

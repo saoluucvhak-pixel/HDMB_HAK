@@ -676,4 +676,24 @@ So với mã gốc trước mọi đợt sửa (`4d3d673`), Lưu chính thức H
 
 **Kiểm chứng:** 37/37 test máy chủ; 7/7 test trình duyệt (Chromium) cho A1: bấm 3 lần → 1 lệnh; nút khóa khi chờ, mở lại khi xong; thẻ `<a>` cũng chặn; lời gọi đọc không bị khóa; không lỗi JS.
 
-**Còn lại của H-12 (cần quyết định):** P-07b (chia trang bảng Tổng hợp ở máy chủ + máy chủ tự dựng file xuất), P-08 (thu gọn dữ liệu gửi chatbot), P-11 (giãn polling Telegram 5 phút).
+**Còn lại của H-12:** đã làm ở Đợt 2 bên dưới.
+
+---
+
+## ✅ Cập nhật: Đợt 2 nâng cấp — A2, A3, A4 + P-07b, P-08, P-11 (chủ dự án đồng ý)
+
+| ID | Thay đổi | File |
+|---|---|---|
+| A2 | Duyệt / Hủy hàng loạt ở trang 27: **1 lệnh** `DOI_TINH_TRANG_HANG_LOAT` (tối đa 200 HĐ), xử lý tuần tự, cập nhật Draft 1 lần, trả kết quả + lý do lỗi từng HĐ (trước đây N lệnh bắn cùng lúc) | 06, 34, 27 |
+| A3 | Hộp thoại dùng chung `hakXacNhan_` / `hakNhapChu_` thay **toàn bộ 22** `confirm()` / `prompt()`: không bị chặn trong khung nhúng trên điện thoại, xuống dòng được, nút nguy hiểm màu đỏ, Esc/Enter/Tab, trả focus; mật khẩu quản trị nhập vào ô **che ký tự** | PhanQuyen_JS, 10, 12, 24, 27, NhapLieu_Chung_JS |
+| A4 | Nhớ bộ lọc trang Tổng quan (Số HĐ, tên chủ rừng) và trang Báo cáo (15 ô lọc) trên máy người dùng; **đăng xuất thì xóa**. Trang Tra cứu **không** nhớ (từ khóa có thể là CCCD/SĐT) | PhanQuyen_JS, 30, 10 |
+| P-07b | Bảng "Tổng hợp" lọc + chia trang **ở máy chủ** (`layTongHopChoWebapp(boBuoc, boLoc, trang, 20)`); KPI vẫn tính trên toàn bộ. Xuất Excel/PDF (Báo cáo hợp đồng, Hồ sơ rừng) do **máy chủ tự dựng** qua `XUAT_BAO_CAO_FILE(loai, boLoc, dinhDang)` — trình duyệt chỉ gửi bộ lọc; `XUAT_BANG_RA_FILE` (nhận bảng từ trình duyệt) đã **bỏ khỏi bảng quyền** → hoàn tất H-13 | 01, 18, 23, 34, 10 |
+| P-08 | Chatbot: máy chủ tính sẵn `thongKeTongHop` (theo tình trạng: số HĐ, khối lượng, giá trị, chưa có ảnh, chưa đủ GPS, thiếu hồ sơ, ký quá 3 tháng, vượt/sắp vượt khối lượng); danh sách gửi Gemini **lọc sẵn** theo điều kiện nhận ra trong câu hỏi (tình trạng, chưa có ảnh, chưa đủ GPS, thiếu hồ sơ, năm ký), **tối đa 300 HĐ, không kèm CCCD**; thêm quy tắc 8 cho AI ưu tiên số liệu tính sẵn | 29 |
+| P-11 | Polling Telegram 5 phút/lần (trước 1 phút) | 31, 24 |
+
+**Kiểm chứng:** 45/45 test máy chủ (thêm: duyệt hàng loạt 2 đúng + 1 lỗi có lý do; Tổng hợp trang 1 = 20 / trang 2 = 5 / lọc đúng, KPI trên toàn bộ; file xuất đúng cột, lọc, định dạng ngày; chatbot thống kê đúng, lọc đúng, không có CCCD, "chưa thanh lý" không bị lọc nhầm). 15/15 test trình duyệt (A1 + hộp thoại: Đồng ý / Esc / Enter / mật khẩu / Hủy; bộ lọc khôi phục sau tải lại, xóa khi đăng xuất).
+
+**Lưu ý triển khai:**
+- **P-11:** trigger polling đang chạy vẫn là 1 phút cho tới khi vào *Thiết lập › Telegram* bấm **Tắt polling** rồi **Bật polling** lại.
+- **A3** dùng `async/await` — cần trình duyệt hiện đại (Chrome/Edge/Firefox/Safari từ 2017 trở lên); mọi trang đã dùng `Proxy` nên yêu cầu không đổi.
+- **P-08:** câu hỏi đếm/lọc rất đặc thù (theo địa chỉ, theo tên) trên hệ thống > 300 HĐ khớp — AI chỉ thấy 300 HĐ ký gần nhất + số liệu tổng hợp; đã ghi rõ trong dữ liệu gửi đi để AI không đếm nhầm.

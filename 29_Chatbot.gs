@@ -109,7 +109,8 @@ function TRA_LOI_CHATBOT_(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
     '4. Nếu JSON có nhiều khách hàng/hợp đồng khớp, liệt kê rõ ràng từng cái, đừng gộp chung.\n' +
     '5. Nếu câu hỏi hiện tại là câu hỏi NỐI TIẾP (không nhắc lại tên khách hàng/hợp đồng), dùng LỊCH SỬ HỎI-ĐÁP để hiểu đang hỏi về ai/hợp đồng nào, nhưng vẫn CHỈ lấy số liệu từ JSON dữ liệu THẬT — không lấy số liệu từ lịch sử.\n' +
     '6. RIÊNG khi trả lời câu hỏi có "diaDiemTheoToaDo" (tra theo tọa độ): sau khi trả lời đủ dữ liệu THẬT ở trên (lô rừng/chủ rừng/rừng bên cạnh...), CÓ THỂ bổ sung thêm 1 đoạn NGẮN mô tả kiến thức ĐỊA LÝ CHUNG bạn biết về khu vực đó (địa hình, khí hậu, đặc điểm vùng...) — nhưng BẮT BUỘC phải mở đầu đoạn đó bằng "ℹ️ Thông tin tham khảo chung (không phải dữ liệu đã kiểm chứng của hệ thống):" để người đọc phân biệt rõ ràng, không nhầm là dữ liệu thật đã đo đạc. Nếu không chắc/không biết gì về khu vực đó thì bỏ qua, không suy đoán liều.\n' +
-    '7. Nếu JSON có trường "toanBoHopDong" (mảng TOÀN BỘ hợp đồng thật trong hệ thống): đây là dữ liệu để bạn TỰ ĐẾM/LỌC/TÍNH TỔNG trực tiếp theo ĐÚNG và ĐỦ mọi điều kiện trong câu hỏi, kể cả khi câu hỏi có NHIỀU điều kiện kết hợp cùng lúc (vd trạng thái, tên chủ rừng, khoảng ngày ký, "chưa X"/"khác X", coAnh=false (chưa có ảnh), daDoGPSDu=false (chưa đủ GPS), hoSoDu=false (thiếu hồ sơ), diaChiRung (theo khu vực/địa chỉ)...) — đọc kỹ TỪNG phần tử trong mảng, đối chiếu ĐỦ TẤT CẢ điều kiện đã nêu (không chỉ điều kiện đầu tiên), không bỏ sót, không đếm nhầm phạm vi (vd hỏi về 1 người cụ thể thì CHỈ đếm đúng hợp đồng của người đó, không đếm cả mảng). Trả lời kèm SỐ ĐÃ ĐẾM ĐƯỢC rõ ràng.\n';
+    '7. Nếu JSON có trường "toanBoHopDong" (mảng TOÀN BỘ hợp đồng thật trong hệ thống): đây là dữ liệu để bạn TỰ ĐẾM/LỌC/TÍNH TỔNG trực tiếp theo ĐÚNG và ĐỦ mọi điều kiện trong câu hỏi, kể cả khi câu hỏi có NHIỀU điều kiện kết hợp cùng lúc (vd trạng thái, tên chủ rừng, khoảng ngày ký, "chưa X"/"khác X", coAnh=false (chưa có ảnh), daDoGPSDu=false (chưa đủ GPS), hoSoDu=false (thiếu hồ sơ), diaChiRung (theo khu vực/địa chỉ)...) — đọc kỹ TỪNG phần tử trong mảng, đối chiếu ĐỦ TẤT CẢ điều kiện đã nêu (không chỉ điều kiện đầu tiên), không bỏ sót, không đếm nhầm phạm vi (vd hỏi về 1 người cụ thể thì CHỈ đếm đúng hợp đồng của người đó, không đếm cả mảng). Trả lời kèm SỐ ĐÃ ĐẾM ĐƯỢC rõ ràng.\n' +
+    '8. Nếu JSON có "thongKeTongHop": đây là số liệu ĐÃ TÍNH CHÍNH XÁC trên TOÀN BỘ hợp đồng (theo từng tình trạng) — ưu tiên dùng cho câu hỏi đếm/tổng/khối lượng/giá trị. Đọc "ghiChuDanhSach" để biết danh sách "toanBoHopDong" đã được lọc/cắt bớt thế nào; KHÔNG tự đếm trên danh sách đã bị cắt bớt rồi coi đó là tổng.\n';
 
   const payload = { contents: [{ parts: [{ text: promptHeThong + '\n\nCÂU HỎI CỦA NGƯỜI DÙNG: ' + cauHoi }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
@@ -410,6 +411,48 @@ function timDiemGpsGanNhat_(lat, lng) {
  *   gửi lại) — dùng khi câu hỏi hiện tại không tự nhắc tên/CCCD nào (câu hỏi nối
  *   tiếp), để không bắt người dùng lặp lại tên mỗi câu.
  */
+/** P-08: số liệu tổng hợp tính sẵn trên TOÀN BỘ hợp đồng (Draft báo cáo) — chính xác, không phụ thuộc AI tự đếm. */
+function _thongKeHopDongChoChatbot_(tatCa) {
+  const baThangTruoc = new Date(); baThangTruoc.setMonth(baThangTruoc.getMonth() - 3);
+  const moc = Utilities.formatDate(baThangTruoc, layMuiGioBangTinh_(), 'yyyy-MM-dd');
+  const theoTT = {};
+  tatCa.forEach(function (m) {
+    const tt = m.tinhTrang || 'Đang thực hiện';
+    const t = theoTT[tt] = theoTT[tt] || { soHopDong: 0, khoiLuongDuKien: 0, khoiLuongThucHien: 0, giaTriHopDong: 0, giaTriThucHien: 0,
+      chuaCoAnh: 0, chuaDuGPS: 0, thieuHoSo: 0, kyQua3Thang: 0, daVuotKhoiLuong: 0, conDuoi10Tan: 0 };
+    const kl = Number(m.khoiLuongDuKien) || 0, th = Number(m.khoiLuongThucHien) || 0;
+    t.soHopDong++; t.khoiLuongDuKien += kl; t.khoiLuongThucHien += th;
+    t.giaTriHopDong += Number(m.giaTriHopDong) || 0; t.giaTriThucHien += Number(m.giaTriThucHien) || 0;
+    if (!m.coAnh) t.chuaCoAnh++;
+    if (!m.daDoGPSDu) t.chuaDuGPS++;
+    if (!m.hoSoDu) t.thieuHoSo++;
+    if (m.ngayKy && m.ngayKy < moc) t.kyQua3Thang++;
+    if (kl > 0 && th > kl) t.daVuotKhoiLuong++;
+    else if (kl > 0 && kl - th <= 10) t.conDuoi10Tan++;
+  });
+  const lamTron = function (x) { return Math.round(x * 1000) / 1000; };
+  Object.keys(theoTT).forEach(function (k) { ['khoiLuongDuKien', 'khoiLuongThucHien'].forEach(function (f) { theoTT[k][f] = lamTron(theoTT[k][f]); }); });
+  return { tongSoHopDong: tatCa.length, theoTinhTrang: theoTT, donVi: 'khối lượng: Tấn, giá trị: đồng; kyQua3Thang = ký trước ' + moc };
+}
+
+/** P-08: lọc sẵn danh sách theo điều kiện NHẬN RA ĐƯỢC trong câu hỏi (không nhận ra thì giữ nguyên). */
+function _locHopDongTheoCauHoi_(tatCa, cauHoi) {
+  const q = boDauTiengViet_(cauHoi).toLowerCase();
+  const dieuKien = [];
+  let ds = tatCa;
+  const cacTT = [['cho thuc hien', 'Chờ thực hiện'], ['dang thuc hien', 'Đang thực hiện'], ['da hoan thanh', 'Đã hoàn thành'], ['hoan thanh', 'Đã hoàn thành'], ['da thanh ly', 'Đã thanh lý'], ['thanh ly', 'Đã thanh lý'], ['da huy', 'Đã hủy']];
+  const ttKhop = [];
+  cacTT.forEach(function (c) { if (q.indexOf(c[0]) !== -1 && ttKhop.indexOf(c[1]) === -1) ttKhop.push(c[1]); });
+  const phuDinhTT = /(chua|khong|khac|ngoai)\s+(duoc\s+)?(thanh ly|huy|hoan thanh)/.test(q);
+  if (ttKhop.length && !phuDinhTT) { ds = ds.filter(function (m) { return ttKhop.indexOf(m.tinhTrang || 'Đang thực hiện') !== -1; }); dieuKien.push('tình trạng ' + ttKhop.join('/')); }
+  if (/(chua|khong)\s+(co\s+)?anh/.test(q)) { ds = ds.filter(function (m) { return !m.coAnh; }); dieuKien.push('chưa có ảnh'); }
+  if (/(chua|khong)\s+(du\s+|do\s+|co\s+)*(gps|toa do)/.test(q)) { ds = ds.filter(function (m) { return !m.daDoGPSDu; }); dieuKien.push('chưa đủ GPS'); }
+  if (/(thieu|chua du|khong du)\s+ho so/.test(q)) { ds = ds.filter(function (m) { return !m.hoSoDu; }); dieuKien.push('thiếu hồ sơ'); }
+  const nam = q.match(/\bnam\s+(20\d{2})\b/);
+  if (nam) { ds = ds.filter(function (m) { return String(m.ngayKy || '').indexOf(nam[1]) === 0; }); dieuKien.push('ký năm ' + nam[1]); }
+  return { ds: ds, dieuKien: dieuKien };
+}
+
 function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   const cauHoiThuong = cauHoi.toString().trim().toLowerCase();
   const nguCanh = { thongKeChung: {}, khachHangKhop: [], hopDongKhopTheoSoHD: [], _tomTat: [] };
@@ -430,19 +473,27 @@ function timNguCanhChatbot_(cauHoi, cccdGoiYTuLuotTruoc) {
   const CAN_TOAN_BO_HOP_DONG_ = /(bao nhiêu|tổng|liệt kê|danh sách|thống kê|có mấy|đếm|hợp đồng nào|những hợp đồng|các hợp đồng|toàn bộ|tất cả|còn (bao nhiêu|mấy)|quá hạn|sắp (hết hạn|vượt)|đã vượt|chưa|khác)/i;
   if (CAN_TOAN_BO_HOP_DONG_.test(cauHoi)) {
     try {
-      nguCanh.toanBoHopDong = docToanBoDraftBaoCao_().map(function (m) {
+      // P-08 (rà soát 28/09): trước đây gửi TOÀN BỘ hợp đồng (kèm CCCD) cho MỌI câu hỏi thống kê -> số token tăng theo số hợp
+      // đồng, vài nghìn HĐ là vượt giới hạn / chậm / tốn phí, và gửi CCCD ra ngoài không cần thiết. Giờ:
+      //  (1) máy chủ TỰ TÍNH sẵn số liệu tổng hợp chính xác (thongKeTongHop) — AI dùng trực tiếp cho câu hỏi đếm/tổng;
+      //  (2) lọc sẵn danh sách theo các điều kiện nhận ra được trong câu hỏi (tình trạng, chưa có ảnh, chưa đủ GPS, thiếu hồ sơ,
+      //      năm ký) rồi chỉ gửi tối đa CHATBOT_TOI_DA_HD_ hợp đồng, không kèm CCCD.
+      const tatCa = docToanBoDraftBaoCao_();
+      nguCanh.thongKeTongHop = _thongKeHopDongChoChatbot_(tatCa);
+      const loc = _locHopDongTheoCauHoi_(tatCa, cauHoi);
+      const CHATBOT_TOI_DA_HD_ = 300;
+      const ds = loc.ds.slice().sort(function (x, y) { return String(y.ngayKy || '').localeCompare(String(x.ngayKy || '')); });
+      nguCanh.toanBoHopDong = ds.slice(0, CHATBOT_TOI_DA_HD_).map(function (m) {
         return {
-          soHD: m.soHD, tenChuRung: m.tenChuRung, cccdChuRung: m.cccdChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
+          soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
           khoiLuongDuKien: m.khoiLuongDuKien, khoiLuongThucHien: m.khoiLuongThucHien,
           giaTriHopDong: m.giaTriHopDong, giaTriThucHien: m.giaTriThucHien, soLoRung: m.soLoRung,
-          // ⚠️ MỚI: bổ sung 5 trường này để Gemini lọc/đếm được thêm các điều kiện
-          // về hồ sơ/ảnh/GPS/địa chỉ mà TRƯỚC ĐÂY hoàn toàn không có trong dữ liệu
-          // gửi đi — dữ liệu đã có sẵn trong cache Draft_BaoCaoHopDong, không cần
-          // đọc thêm sheet nào, chỉ là trước chưa được đưa vào JSON gửi cho AI.
           coAnh: m.coAnh, daDoGPSDu: m.daDoGPSDu, hoSoDu: m.hoSoDu, diaChiRung: m.diaChiRung
         };
       });
-      nguCanh._tomTat.push('Đã đính kèm toàn bộ ' + nguCanh.toanBoHopDong.length + ' hợp đồng để phân tích/thống kê trực tiếp');
+      nguCanh.ghiChuDanhSach = 'Danh sách "toanBoHopDong" ' + (loc.dieuKien.length ? 'ĐÃ LỌC SẴN theo: ' + loc.dieuKien.join(', ') + ' — ' : '') +
+        'gồm ' + ds.length + ' hợp đồng khớp' + (ds.length > CHATBOT_TOI_DA_HD_ ? ', chỉ gửi ' + CHATBOT_TOI_DA_HD_ + ' hợp đồng ký gần nhất: với câu hỏi đếm/tổng hãy dùng "thongKeTongHop" (đã tính chính xác trên toàn bộ dữ liệu) và số ' + ds.length + ' ở đây' : '') + '.';
+      nguCanh._tomTat.push('Thống kê tổng hợp + ' + nguCanh.toanBoHopDong.length + '/' + ds.length + ' hợp đồng khớp (trên ' + tatCa.length + ')');
     } catch (e) { /* không lấy được thì thôi, vẫn còn thongKeChung ở trên làm dự phòng tối thiểu */ }
   }
 

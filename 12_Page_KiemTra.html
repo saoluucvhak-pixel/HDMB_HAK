@@ -695,8 +695,8 @@
   function duyetDraftChung(soDong, idDraft) {
     hakRun_().withSuccessHandler(function (kq) { if (kq.thanhCong) taiTatCaDraft(); else thongBao_(kq.loi); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).DUYET_ANH_RUNG(soDong, idDraft);
   }
-  function tuChoiDraftChung(soDong, idDraft) {
-    if (!confirm('Từ chối ảnh này?')) return;
+  async function tuChoiDraftChung(soDong, idDraft) {
+    if (!(await hakXacNhan_('Từ chối ảnh này?', { nguyHiem: true }))) return; // A3
     hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_(kq.loi); taiTatCaDraft(); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft);
   }
 
@@ -871,8 +871,8 @@
       .THIET_LAP_TRIGGER_TUY_CHINH(tanSuat, gio, viec);
   }
 
-  function huyLichTrigger() {
-    if (!confirm('Hủy toàn bộ lịch tự động?')) return;
+  async function huyLichTrigger() {
+    if (!(await hakXacNhan_('Hủy toàn bộ lịch tự động?', { nguyHiem: true }))) return; // A3
     hakRun_()
       .withSuccessHandler(function (kq) { showMsg('msgTrigger', '✅ Đã hủy ' + kq.soDaXoa + ' lịch.', true); taiDsTrigger(); })
       .withFailureHandler(function (err) { showMsg('msgTrigger', '❌ Lỗi: ' + err.message, false); })

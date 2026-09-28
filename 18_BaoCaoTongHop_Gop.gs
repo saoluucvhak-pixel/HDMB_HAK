@@ -43,7 +43,7 @@
  *                          (chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại từ đầu)
  * @return {Object} { baoCaoHopDong, tongHopWebapp, tinhHinhThucHien, danhSachThanhLy }
  */
-function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc) {
+function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc, boLocTT, trangTT) {
   _yeuCauQuyen_(QUYEN.XEM);
   try {
     boLocBC = boLocBC || {};
@@ -113,30 +113,8 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
     // ================================================================
     // 2. TỔNG HỢP KPI + CHI TIẾT "Tình hình thực hiện" — GIỐNG HỆT layTongHopChoWebapp_
     // ================================================================
-    const listDangTH = tatCa.filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
-    const tongKhoiLuong = listDangTH.reduce(function (s, m) { return s + (Number(m.khoiLuongDuKien) || 0); }, 0);
-    const tongGiaTriKPI = listDangTH.reduce(function (s, m) { return s + (Number(m.giaTriHopDong) || 0); }, 0);
-    const tongHopWebapp = {
-      soHopDong: listDangTH.length,
-      tongKhoiLuong: tongKhoiLuong,
-      tongGiaTri: tongGiaTriKPI,
-      chiTiet: listDangTH.slice().sort(function (a, b) { return String(b.soHD || '').localeCompare(String(a.soHD || ''), 'vi', { numeric: true }); }) /* L-02: Số HĐ có chữ từng ra NaN */.map(function (m) {
-        return {
-          idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
-          tongKhoiLuongDuKien: m.khoiLuongDuKien, tongGiaTri: m.giaTriHopDong,
-          tongKhoiLuongThucHien: m.khoiLuongThucHien, tongGiaTriThucHien: m.giaTriThucHien,
-          khoiLuongConLai: m.khoiLuongConLai, giaTriConLai: m.giaTriConLai,
-          donGiaDuKien: m.donGiaDuKien, donGiaThucHien: m.donGiaThucHien,
-          thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay,
-          danhSachSoPhieuCan: m.danhSachSoPhieuCan
-        };
-      })
-    };
+    const tongHopWebapp = _tongHopWebappTuDraft_(tatCa, boLocTT || {}, trangTT || 1); // P-07b: KPI + 1 trang chi tiết
 
-    // ================================================================
-    // 3. TÌNH HÌNH THỰC HIỆN (KPI GPS/hồ sơ/ảnh + đếm theo trạng thái)
-    //    — GIỐNG HỆT layTinhHinhThucHien_
-    // ================================================================
     const chiTietTH = tatCa.map(function (m) {
       return {
         idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung, tinhTrang: m.tinhTrang || 'Đang thực hiện',

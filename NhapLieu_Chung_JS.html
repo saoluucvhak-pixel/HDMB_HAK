@@ -259,8 +259,8 @@
       .LUU_CHINH_THUC(idDraftHienTai);
   }
 
-  function huyNhapVaThoat() {
-    if (!confirm('Hủy toàn bộ thay đổi trong bản nháp này? (dữ liệu chính thức hiện có, nếu là hợp đồng cũ, sẽ KHÔNG bị ảnh hưởng)')) return;
+  async function huyNhapVaThoat() {
+    if (!(await hakXacNhan_('Hủy toàn bộ thay đổi trong bản nháp này? (dữ liệu chính thức hiện có, nếu là hợp đồng cũ, sẽ KHÔNG bị ảnh hưởng)', { nguyHiem: true }))) return; // A3
     hakRun_().withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).withSuccessHandler(function () { veTrangDanhSach(); }).HUY_DRAFT(idDraftHienTai);
   }
 
@@ -328,10 +328,10 @@
   function quayVeTrangHopDong() { hienTrang('trangHopDong'); capNhatBreadcrumbHopDong(); renderTomTatRung(); }
 
   /** Lưu lô rừng VÀO NHÁP (không ghi HD_RUNG) */
-  function luuLoRungVaoNhap() {
+  async function luuLoRungVaoNhap() {
     var hoSoChon = val('rHoSoNguonGoc');
     if (hoSoChon === '__KHAC__') {
-      var loaiMoi = prompt('Nhập tên loại hồ sơ mới:');
+      var loaiMoi = await hakNhapChu_('Nhập tên loại hồ sơ mới:', { tieuDe: 'Thêm loại hồ sơ' }); // A3
       if (!loaiMoi) { document.getElementById('rHoSoNguonGoc').value = ''; return; }
       hakRun_().withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi thêm loại hồ sơ: ' + err.message); }).themLoaiHoSoMoi(loaiMoi);
       return;
@@ -362,11 +362,11 @@
     showMsg('msgFormRung', '✅ Đã lưu vào nháp.', true);
   }
 
-  function xoaLoRungKhoiNhap() {
+  async function xoaLoRungKhoiNhap() {
     if (!rungDangSuaKey) { quayVeTrangHopDong(); return; }
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r) { quayVeTrangHopDong(); return; }
-    if (!confirm('Xóa lô rừng này khỏi nháp?' + (r.idRung ? ' (sẽ xóa thật khỏi hệ thống khi bấm Lưu chính thức)' : ''))) return;
+    if (!(await hakXacNhan_('Xóa lô rừng này khỏi nháp?' + (r.idRung ? ' (sẽ xóa thật khỏi hệ thống khi bấm Lưu chính thức)' : ''), { nguyHiem: true }))) return; // A3
     if (r.idRung) { r.xoa = true; } // đánh dấu xóa, xử lý thật khi Lưu chính thức
     else { duNhap.rung = duNhap.rung.filter(function (x) { return x.tempId !== r.tempId; }); } // nháp thuần -> bỏ luôn
     luuNhapNgay();
@@ -565,7 +565,7 @@
 
   function duyetAnh(soDong, idDraft) { var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong, idDraft); }
 
-  function tuChoiAnh(soDong, idDraft) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft); }
+  async function tuChoiAnh(soDong, idDraft) { if (!(await hakXacNhan_('Từ chối (xóa) ảnh này?', { nguyHiem: true, nutDongY: 'Từ chối' }))) return; /* A3 */ var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft); }
 
   function chonTabRung(tab) {
     tabRungHienTai = tab;
@@ -592,9 +592,9 @@
 
   function timTKTrongNhap_(key) { return (duNhap.taiKhoan || []).find(function (t) { return t.soDong === key || t.soDong === Number(key) || t.tempId === key; }); }
 
-  function xoaTaiKhoanKhoiNhap(key) {
+  async function xoaTaiKhoanKhoiNhap(key) {
     var t = timTKTrongNhap_(key); if (!t) return;
-    if (!confirm('Xóa tài khoản này khỏi nháp?')) return;
+    if (!(await hakXacNhan_('Xóa tài khoản này khỏi nháp?', { nguyHiem: true }))) return; // A3
     if (t.soDong) t.xoa = true; else duNhap.taiKhoan = duNhap.taiKhoan.filter(function (x) { return x.tempId !== t.tempId; });
     luuNhapNgay(); renderTomTatTK(); capNhatDemHD();
   }
@@ -642,9 +642,9 @@
 
   function timPLTrongNhap_(key) { return (duNhap.phuLuc || []).find(function (p) { return p.soDong === key || p.soDong === Number(key) || p.tempId === key; }); }
 
-  function xoaPhuLucKhoiNhap(key) {
+  async function xoaPhuLucKhoiNhap(key) {
     var p = timPLTrongNhap_(key); if (!p) return;
-    if (!confirm('Xóa phụ lục này khỏi nháp?')) return;
+    if (!(await hakXacNhan_('Xóa phụ lục này khỏi nháp?', { nguyHiem: true }))) return; // A3
     if (p.soDong) p.xoa = true; else duNhap.phuLuc = duNhap.phuLuc.filter(function (x) { return x.tempId !== p.tempId; });
     luuNhapNgay(); renderTomTatPhuLuc(); capNhatDemHD();
   }
@@ -696,19 +696,19 @@
   function dongModalPhieuCan() { document.getElementById('modalPhieuCan').style.display = 'none'; }
 
   // ============ VÙNG NGUY HIỂM — áp dụng ngay lên bảng gốc, không qua nháp ============
-  function huyHopDongForm() {
+  async function huyHopDongForm() {
     if (!duNhap.idHD) { thongBao_('Hợp đồng chưa được Lưu chính thức lần nào, chưa thể hủy.'); return; }
-    if (!confirm('Hủy hợp đồng này? (dữ liệu vẫn giữ nguyên, chỉ đổi trạng thái)')) return;
+    if (!(await hakXacNhan_('Hủy hợp đồng này? (dữ liệu vẫn giữ nguyên, chỉ đổi trạng thái)', { nguyHiem: true }))) return; // A3
     hakRun_()
       .withSuccessHandler(function (kq) { if (kq.thanhCong) { document.getElementById('tinhTrang').value = 'Đã hủy'; debounceLuuNhap(); showMsg('msgNguyHiem', '✅ Đã hủy hợp đồng.', true); } else showMsg('msgNguyHiem', '❌ ' + kq.loi, false); })
       .withFailureHandler(function (err) { showMsg('msgNguyHiem', '❌ Lỗi: ' + err.message, false); })
       .HUY_HOP_DONG(duNhap.idHD);
   }
 
-  function xoaVinhVienForm() {
+  async function xoaVinhVienForm() {
     if (!duNhap.idHD) { thongBao_('Hợp đồng chưa được Lưu chính thức lần nào, chưa thể xóa.'); return; }
     if (!document.getElementById('xacNhanXoaForm').checked) { showMsg('msgNguyHiem', '❌ Vui lòng tích xác nhận trước khi xóa vĩnh viễn.', false); return; }
-    if (!confirm('XÓA VĨNH VIỄN hợp đồng ' + soHDHienTai + '? Không thể hoàn tác!')) return;
+    if (!(await hakXacNhan_('XÓA VĨNH VIỄN hợp đồng ' + soHDHienTai + '? Không thể hoàn tác!', { nguyHiem: true }))) return; // A3
     hakRun_()
       .withSuccessHandler(function (kq) { if (kq.thanhCong) { thongBao_('✅ Đã xóa vĩnh viễn.'); veTrangDanhSach(); } else showMsg('msgNguyHiem', '❌ ' + kq.loi, false); })
       .withFailureHandler(function (err) { showMsg('msgNguyHiem', '❌ Lỗi: ' + err.message, false); })

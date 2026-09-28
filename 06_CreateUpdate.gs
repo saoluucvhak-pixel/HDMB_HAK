@@ -1293,6 +1293,28 @@ const BUOC_KE_TIEP_TRANG_THAI_ = {
   'Đã hủy': [],
   'Đã thanh lý': []
 };
+/**
+ * A2 (rà soát 28/09): đổi tình trạng NHIỀU hợp đồng trong 1 lệnh (trang 27 "Duyệt/Hủy các dòng đã chọn"). Trước đây trình
+ * duyệt bắn N lệnh cùng lúc (N lượt chạy song song, mỗi lượt tự cập nhật Draft báo cáo). Giờ xử lý tuần tự, cập nhật Draft
+ * 1 lần ở cuối, trả kết quả từng hợp đồng. ds: [{ soDong, idHD }], tối đa 200.
+ */
+function DOI_TINH_TRANG_HANG_LOAT_(ds, tinhTrangMoi) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  ds = Array.isArray(ds) ? ds.slice(0, 200) : [];
+  if (!ds.length) return { thanhCong: false, loi: 'Chưa chọn hợp đồng nào.' };
+  const gom = batDauGomDraft_();
+  const loi = [];
+  let soXong = 0;
+  try {
+    ds.forEach(function (x) {
+      let kq;
+      try { kq = CAP_NHAT_HOP_DONG_WEB_(x && x.soDong, { tinhTrang: tinhTrangMoi }, x && x.idHD); } catch (e) { kq = { thanhCong: false, loi: e.message }; }
+      if (kq.thanhCong) soXong++; else loi.push({ idHD: x && x.idHD, loi: kq.loi });
+    });
+  } finally { ketThucGomDraft_(gom); }
+  return { thanhCong: soXong > 0, soXong: soXong, tongSo: ds.length, loi: loi };
+}
+
 function CAP_NHAT_HOP_DONG_WEB_(soDong, patch, idHD) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   patch = Object.assign({}, patch || {});

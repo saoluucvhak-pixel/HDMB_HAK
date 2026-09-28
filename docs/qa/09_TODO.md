@@ -71,6 +71,7 @@
 
 ## F. Nâng cấp (đề xuất 28/09)
 - [x] ✅ Đợt 1: P-02, P-07a, P-05, P-06, P-09, P-10, A1 chống bấm lặp
-- [ ] Đợt 2: A2 duyệt hàng loạt 1 lệnh, A3 hộp thoại thay `confirm()`, A4 nhớ bộ lọc
+- [x] ✅ Đợt 2: A2, A3, A4 + P-07b, P-08, P-11
+- [ ] Sau triển khai: Thiết lập › Telegram → Tắt rồi Bật lại polling (để trigger chuyển sang 5 phút)
 - [ ] Đợt 3: đưa bộ giả lập + test lên CI; nhật ký chi tiết cũ → mới + lưu trữ khi xóa
-- [ ] Chờ quyết định: P-07b, P-08, P-11, A5, B1, B4, B5
+- [ ] Chờ quyết định: A5, B1, B4, B5

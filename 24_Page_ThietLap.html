@@ -355,7 +355,7 @@
       <div id="dsChatIdTimDuoc" style="margin-top:8px"></div>
 
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light)">
-        <p class="hint" style="margin:0 0 6px"><b>✅ Khuyến nghị: Chế độ Polling</b> — Apps Script tự hỏi Telegram mỗi phút xem có tin mới không, không bị vướng lỗi kỹ thuật "302" cố hữu của webapp Apps Script (xem giải thích ở nút Webhook bên dưới nếu tò mò). Trả lời có thể chậm tới ~1 phút thay vì tức thì, nhưng CHẮC CHẮN chạy được.</p>
+        <p class="hint" style="margin:0 0 6px"><b>✅ Khuyến nghị: Chế độ Polling</b> — Apps Script tự hỏi Telegram mỗi 5 phút xem có tin mới không, không bị vướng lỗi kỹ thuật "302" cố hữu của webapp Apps Script (xem giải thích ở nút Webhook bên dưới nếu tò mò). Trả lời có thể chậm tới ~1 phút thay vì tức thì, nhưng CHẮC CHẮN chạy được.</p>
         <p id="trangThaiPollingTelegram" class="hint">Đang kiểm tra...</p>
         <button class="btn btn-green" id="btnBatPollingTelegram" onclick="batPollingTelegram()">⚡ Bật Polling (khuyến nghị)</button>
         <button class="btn btn-outline" id="btnTatPollingTelegram" onclick="tatPollingTelegram()">✕ Tắt Polling</button>
@@ -570,18 +570,19 @@
   // Chỉ hỏi mật khẩu quản trị 1 lần/lần tải trang (không lưu vào localStorage/sessionStorage
   // để tránh lộ mật khẩu nếu máy dùng chung) — xem SEC-001 trong báo cáo QA Audit.
   var _adminTokenCache_ = null;
-  function layAdminToken_() {
+  async function layAdminToken_() {
     if (_adminTokenCache_ === null) {
-      _adminTokenCache_ = prompt('Nhập mật khẩu quản trị để chia sẻ/thu hồi quyền truy cập dữ liệu:') || '';
+      // A3: ô nhập có che ký tự (prompt() hiện mật khẩu dạng chữ thường)
+      _adminTokenCache_ = (await hakNhapChu_('Nhập mật khẩu quản trị để chia sẻ/thu hồi quyền truy cập dữ liệu:', { tieuDe: '🔑 Mật khẩu quản trị', matKhau: true })) || '';
     }
     return _adminTokenCache_;
   }
 
-  function chiaSeDuLieu() {
+  async function chiaSeDuLieu() {
     var email = document.getElementById('csEmail').value.trim();
     var quyen = document.getElementById('csQuyen').value;
     if (!email) { showMsg('msgChiaSe', '❌ Vui lòng nhập email.', false); return; }
-    var adminToken = layAdminToken_();
+    var adminToken = await layAdminToken_();
     if (!adminToken) { showMsg('msgChiaSe', '❌ Cần nhập mật khẩu quản trị.', false); return; }
     showMsg('msgChiaSe', '⌛ Đang chia sẻ...', true);
     document.getElementById('ketQuaChiaSe').innerHTML = '';
@@ -606,8 +607,8 @@
       .CHIA_SE_DU_LIEU_CHO_EMAIL(adminToken, email, quyen);
   }
 
-  function taiDanhSachQuyen() {
-    var adminToken = layAdminToken_();
+  async function taiDanhSachQuyen() {
+    var adminToken = await layAdminToken_();
     if (!adminToken) { document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">❌ Cần nhập mật khẩu quản trị.</p>'; return; }
     document.getElementById('bangQuyenTruyCap').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     hakRun_()
@@ -636,9 +637,9 @@
       .LAY_DANH_SACH_QUYEN_TRUY_CAP(adminToken);
   }
 
-  function thuHoiQuyen(id, permissionId, email, ten) {
-    if (!confirm('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.')) return;
-    var adminToken = layAdminToken_();
+  async function thuHoiQuyen(id, permissionId, email, ten) {
+    if (!(await hakXacNhan_('Thu hồi quyền của "' + email + '" trên "' + ten + '"? Không thể hoàn tác.', { nguyHiem: true }))) return; // A3
+    var adminToken = await layAdminToken_();
     if (!adminToken) { thongBao_('❌ Cần nhập mật khẩu quản trị.'); return; }
     hakRun_()
       .withSuccessHandler(function (kq) {
@@ -709,8 +710,8 @@
       .CHAN_DOAN_MO_COI_TOAN_HE_THONG();
   }
   // ---- Xây dựng lại cache Draft báo cáo ----
-  function xayDungLaiDraft() {
-    if (!confirm('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache báo cáo (KHÔNG đụng vào dữ liệu gốc HD_NCC/HD_RUNG). Tiếp tục?')) return;
+  async function xayDungLaiDraft() {
+    if (!(await hakXacNhan_('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache báo cáo (KHÔNG đụng vào dữ liệu gốc HD_NCC/HD_RUNG). Tiếp tục?'))) return; // A3
     document.getElementById('msgXayDungDraft').style.display = 'block';
     document.getElementById('msgXayDungDraft').textContent = '⌛ Đang xây dựng lại (có thể mất vài phút)...';
     guiLenhXayDungDraft_();
@@ -725,8 +726,8 @@
       .XAY_DUNG_LAI_TOAN_BO_DRAFT();
   }
 
-  function xayDungLaiDraftHoSoRung() {
-    if (!confirm('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache "Hồ sơ rừng" (KHÔNG đụng vào dữ liệu gốc HD_RUNG). Tiếp tục?')) return;
+  async function xayDungLaiDraftHoSoRung() {
+    if (!(await hakXacNhan_('Chạy lại có thể mất vài phút, xóa và ghi lại toàn bộ cache "Hồ sơ rừng" (KHÔNG đụng vào dữ liệu gốc HD_RUNG). Tiếp tục?'))) return; // A3
     document.getElementById('msgXayDungHoSoRung').style.display = 'block';
     document.getElementById('msgXayDungHoSoRung').textContent = '⌛ Đang xây dựng lại (có thể mất vài phút)...';
     guiLenhXayDungHoSoRung_();
@@ -825,7 +826,7 @@
   }
 
   hakRun_().withSuccessHandler(function (kq) {
-    document.getElementById('trangThaiPollingTelegram').textContent = kq.daBat ? '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).' : '🔓 Đang TẮT.';
+    document.getElementById('trangThaiPollingTelegram').textContent = kq.daBat ? '✅ Đang BẬT (kiểm tra tin nhắn mỗi 5 phút).' : '🔓 Đang TẮT.';
     document.getElementById('btnBatPollingTelegram').style.display = kq.daBat ? 'none' : 'inline-block';
     document.getElementById('btnTatPollingTelegram').style.display = kq.daBat ? 'inline-block' : 'none';
   }).withFailureHandler(function (err) { document.getElementById('trangThaiPollingTelegram').textContent = 'Không kiểm tra được: ' + err.message; }).KIEM_TRA_TRANG_THAI_POLLING_TELEGRAM();
@@ -837,7 +838,7 @@
       .withSuccessHandler(function (kq) {
         document.getElementById('msgTelegram').textContent = kq.thanhCong ? '✅ ' + kq.thongBao : '❌ ' + kq.loi;
         if (kq.thanhCong) {
-          document.getElementById('trangThaiPollingTelegram').textContent = '✅ Đang BẬT (kiểm tra tin nhắn mỗi phút).';
+          document.getElementById('trangThaiPollingTelegram').textContent = '✅ Đang BẬT (kiểm tra tin nhắn mỗi 5 phút).';
           document.getElementById('btnBatPollingTelegram').style.display = 'none';
           document.getElementById('btnTatPollingTelegram').style.display = 'inline-block';
         }
@@ -893,8 +894,8 @@
       .withFailureHandler(function (err) { document.getElementById('msgTelegram').textContent = '❌ Lỗi: ' + err.message; })
       .BAT_WEBHOOK_TELEGRAM();
   }
-  function tatWebhookTelegram() {
-    if (!confirm('Tắt webhook — bot sẽ ngừng trả lời tin nhắn (thông báo tự động vẫn hoạt động bình thường nếu đang bật riêng). Tiếp tục?')) return;
+  async function tatWebhookTelegram() {
+    if (!(await hakXacNhan_('Tắt webhook — bot sẽ ngừng trả lời tin nhắn (thông báo tự động vẫn hoạt động bình thường nếu đang bật riêng). Tiếp tục?', { nguyHiem: true }))) return; // A3
     document.getElementById('msgTelegram').style.display = 'block';
     document.getElementById('msgTelegram').textContent = '⌛ Đang tắt...';
     hakRun_()
@@ -953,8 +954,8 @@
   }
   capNhatTrangThaiTriggerOnEdit_();
 
-  function chayToanBoBaoTri() {
-    if (!confirm('Chạy toàn bộ bảo trì: chẩn đoán + đồng bộ thông tin lặp lại + điền địa chỉ GPS trống + trích tọa độ còn sót + chuyển ảnh/hồ sơ pháp lý sang URL thật. Không xóa dữ liệu nào. Tiếp tục?')) return;
+  async function chayToanBoBaoTri() {
+    if (!(await hakXacNhan_('Chạy toàn bộ bảo trì: chẩn đoán + đồng bộ thông tin lặp lại + điền địa chỉ GPS trống + trích tọa độ còn sót + chuyển ảnh/hồ sơ pháp lý sang URL thật. Không xóa dữ liệu nào. Tiếp tục?'))) return; // A3
     document.getElementById('msgBaoTri').style.display = 'block';
     document.getElementById('msgBaoTri').textContent = '⌛ Đang chạy toàn bộ bảo trì (có thể mất một lúc)...';
     document.getElementById('ketQuaBaoTri').innerHTML = '';
@@ -995,9 +996,9 @@
       .withFailureHandler(function (err) { showMsg('msgDienSl', '❌ Lỗi: ' + err.message, false); })
       .XEM_TRUOC_DIEN_SL_TU_LO_RUNG();
   }
-  function ghiDienSlTuLoRung() {
+  async function ghiDienSlTuLoRung() {
     if (!dsDienSlDaXem_.length) return;
-    if (!confirm('Ghi SL dự kiến / Diện tích / Đơn giá cho ' + dsDienSlDaXem_.length + ' hợp đồng như bảng xem trước? (chỉ điền ô trống/0, không ghi đè số đã có)')) return;
+    if (!(await hakXacNhan_('Ghi SL dự kiến / Diện tích / Đơn giá cho ' + dsDienSlDaXem_.length + ' hợp đồng như bảng xem trước? (chỉ điền ô trống/0, không ghi đè số đã có)'))) return; // A3
     document.getElementById('btnGhiDienSl').disabled = true;
     showMsg('msgDienSl', '⌛ Đang ghi...', true);
     hakRun_()
