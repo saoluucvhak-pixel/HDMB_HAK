@@ -366,8 +366,8 @@
       <div class="inline-panel" id="panelFormPL" style="display:none;border:2px solid var(--active-green);border-radius:10px;padding:16px;margin-top:12px;background:#dcfce7">
         <div style="font-weight:800;color:var(--active-green);margin-bottom:10px" id="tieuDeFormPL">➕ Thêm phụ lục mới</div>
         <div class="field-row">
-          <div class="field"><label>Đơn giá (đ/tấn)</label><input id="plDonGia" type="number" oninput="tuTinhThanhTienPL()"></div>
-          <div class="field"><label>Khối lượng (tấn)</label><input id="plKhoiLuong" type="number" oninput="tuTinhThanhTienPL()"></div>
+          <div class="field"><label>Đơn giá (đ/tấn)</label><input id="plDonGia" type="text" inputmode="decimal" oninput="tuTinhThanhTienPL()"></div>
+          <div class="field"><label>Khối lượng (tấn)</label><input id="plKhoiLuong" type="text" inputmode="decimal" oninput="tuTinhThanhTienPL()"></div>
           <div class="field"><label>Thành tiền <span class="hint">(tự tính)</span></label><input id="plThanhTien" readonly style="background:#f5f5f5"></div>
         </div>
         <div class="field-row"><div class="field" style="flex:2"><label>Ghi chú</label><input id="plGhiChu"></div></div>
@@ -395,11 +395,11 @@
     <h3 id="tieuDeTrangRung">➕ Thêm lô rừng mới (nháp)</h3>
     <div class="field-row">
       <div class="field"><label>Địa chỉ rừng</label><input id="rDiaChi" list="dlDiaChi"></div>
-      <div class="field"><label>Diện tích (m²)</label><input id="rDienTich" type="number" oninput="tuTinhKLRung()"></div>
-      <div class="field"><label>Đơn giá (đ/tấn)</label><input id="rDonGia" type="number" oninput="tuTinhKLRung()"></div>
+      <div class="field"><label>Diện tích (m²)</label><input id="rDienTich" type="text" inputmode="decimal" oninput="tuTinhKLRung()"></div>
+      <div class="field"><label>Đơn giá (đ/tấn)</label><input id="rDonGia" type="text" inputmode="decimal" oninput="tuTinhKLRung()"></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Khối lượng dự kiến (tấn) <span class="hint">(=120 tấn/ha × DT)</span></label><input id="rKhoiLuong" type="number"></div>
+      <div class="field"><label>Khối lượng dự kiến (tấn) <span class="hint">(=120 tấn/ha × DT)</span></label><input id="rKhoiLuong" type="text" inputmode="decimal"></div>
       <div class="field"><label>Loại hồ sơ nguồn gốc</label><select id="rHoSoNguonGoc"><option value="">-- Chọn --</option></select></div>
       <div class="field"><label>Số giấy tờ</label><input id="rSoGiayTo"></div>
     </div>
@@ -488,6 +488,7 @@
   </div>
 </div>
 
+<?!= include('DinhDangSo_JS') ?>
 <?!= include('NhapLieu_Chung_JS') ?>
 <script>
   // ============ TRẠNG THÁI TOÀN CỤC ============

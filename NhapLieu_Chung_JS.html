@@ -2,7 +2,16 @@
      Sửa ở đây là áp dụng cho cả hai trang — trước đây mỗi trang giữ 1 bản sao và từng bị lệch nhau
      (bản vá chỉ vào 1 bên), gây lỗi thật. Chỉ đặt hàm ở đây; biến trạng thái vẫn khai báo trong từng trang. -->
 <script>
-  function val(id) { return document.getElementById(id).value; }
+  // Ô nhập số hiển thị kiểu Việt Nam "1.234.567,5" (DinhDangSo_JS.html, nạp trước file này).
+  // val() của các ô này trả SỐ THÔ kiểu JS ("1234567.5") và setVal() tự định dạng — nên mọi
+  // chỗ đang dùng Number(val(...)) / gửi val(...) lên máy chủ vẫn đúng, không phải sửa từng nơi.
+  var O_NHAP_SO_ = ['rDienTich', 'rDonGia', 'rKhoiLuong', 'plDonGia', 'plKhoiLuong'];
+  function val(id) {
+    var v = document.getElementById(id).value;
+    if (O_NHAP_SO_.indexOf(id) === -1) return v;
+    var n = docSoVN_(v);
+    return isNaN(n) ? '' : String(n);
+  }
 
   // Thông báo nổi KHÔNG chặn thao tác (thay cho alert()): tự tắt sau vài giây, bấm để đóng,
   // màu theo tiền tố ❌ / ⚠️ / ✅ sẵn có của nội dung, trình đọc màn hình đọc được (aria-live).
@@ -31,7 +40,8 @@
 
   function urlAT_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escAT_(u) : '#'; }
 
-  function setVal(id, v) { document.getElementById(id).value = v || ''; }
+  function setVal(id, v) { document.getElementById(id).value = O_NHAP_SO_.indexOf(id) === -1 ? (v || '') : dinhDangSoVN_(v || ''); }
+  O_NHAP_SO_.forEach(function (id) { ganDinhDangSo_(id); });
 
   function formatSoNhap_(v) { var n = Number(v); if (!v || isNaN(n)) return '0'; return n.toLocaleString('vi-VN'); }
 

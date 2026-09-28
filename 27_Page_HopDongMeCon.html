@@ -177,6 +177,7 @@
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
 <?!= include('PhanQuyen_JS') ?>
+<?!= include('DinhDangSo_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -264,29 +265,13 @@
   function dongModal() { document.getElementById('modalChung').classList.remove('mo'); document.getElementById('modalChungNoiDung').innerHTML = ''; }
   function showMsgModal_(text) { var el = document.getElementById('msgModal'); if (el) { el.style.display = 'block'; el.textContent = text; } }
   var DINH_MUC_TAN_TREN_HA = 120;
-  /** Đọc số thật từ chuỗi có thể đã có dấu phân cách hàng nghìn kiểu VN (dấu chấm) */
+  /** Đọc số từ ô đang hiển thị kiểu VN "1.234.567,5" (DinhDangSo_JS.html). Trống/sai -> 0. */
   function layGiaTriSoTuChuoi_(str) {
-    if (!str) return 0;
-    var s = str.toString().trim().replace(/\./g, '').replace(',', '.');
-    return Number(s) || 0;
+    var n = docSoVN_(str);
+    return isNaN(n) ? 0 : n;
   }
-  /** Gắn định dạng số có phân cách hàng nghìn cho 1 ô nhập — hiện số thô lúc đang gõ
-   *  (dễ sửa), tự thêm dấu phân cách khi rời ô (dễ đọc). ⚠️ MỚI: làm tròn SỐ NGUYÊN
-   *  (bỏ số lẻ) — áp dụng cho diện tích/đơn giá/khối lượng/giá trị theo yêu cầu thống nhất định dạng. */
-  function ganDinhDangSoKhiGo_(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('blur', function () {
-      var so = layGiaTriSoTuChuoi_(el.value);
-      el.value = so ? Math.round(so).toLocaleString('vi-VN') : '';
-    });
-    el.addEventListener('focus', function () {
-      var so = layGiaTriSoTuChuoi_(el.value);
-      el.value = so ? Math.round(so) : '';
-    });
-    // Nếu ô đã có sẵn giá trị lúc vừa dựng form (vd đang Sửa) -> định dạng luôn từ đầu
-    if (el.value) { var so0 = layGiaTriSoTuChuoi_(el.value); el.value = so0 ? Math.round(so0).toLocaleString('vi-VN') : ''; }
-  }
+  /** Ô số: phân cách hàng nghìn + giữ phần thập phân, định dạng ngay khi gõ (DinhDangSo_JS.html). */
+  function ganDinhDangSoKhiGo_(id) { ganDinhDangSo_(id); }
   var khachHangCoSan_ = [];
   var timerTim_ = null;
 
@@ -1184,11 +1169,11 @@
     themNutDocScan_('btnScanHoSoRung', 'oScanHoSoRung', 'ho_so_rung', function (truong, ketQuaDayDu) {
       dienNeuTrongScan_('mfHoSoNguonGoc', truong.hoSoNguonGoc);
       dienNeuTrongScan_('mfSoGiayTo', truong.soGiayTo);
-      if (truong.dienTichM2) dienNeuTrongScan_('mfDienTich', truong.dienTichM2);
+      if (truong.dienTichM2) dienNeuTrongScan_('mfDienTich', dinhDangSoVN_(truong.dienTichM2));
       if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc;
       thongBao_('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
     });
-    ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong');
+    ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong'); ganDinhDangSoKhiGo_('mfDinhMuc');
     document.getElementById('btnLuuRung').addEventListener('click', function () {
       var d = {
         idHD: h.idHD, diaChiRung: document.getElementById('mfDiaChiRung').value.trim(),
@@ -1211,7 +1196,7 @@
     var elDinhMuc = document.getElementById('mfDinhMuc');
     var dinhMuc = elDinhMuc ? (layGiaTriSoTuChuoi_(elDinhMuc.value) || DINH_MUC_TAN_TREN_HA) : DINH_MUC_TAN_TREN_HA;
     var kl = Math.round(dinhMuc * dt / 10000); // ⚠️ MỚI: làm tròn số nguyên, không còn lẻ
-    document.getElementById('mfKhoiLuong').value = kl ? kl.toLocaleString('vi-VN') : '';
+    document.getElementById('mfKhoiLuong').value = kl ? dinhDangSoVN_(kl) : '';
   }
   function goiYDonGiaMC(ngayKy) {
     if (!ngayKy) { thongBao_('Hợp đồng chưa có Ngày ký.'); return; }
