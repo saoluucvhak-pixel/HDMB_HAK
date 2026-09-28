@@ -280,7 +280,14 @@ const ANH_CK_TOI_DA_BYTE_GOC = 15 * 1024 * 1024; // ảnh gốc lớn hơn -> t�
 function _khoaAnhCongKhai_() {
   const p = PropertiesService.getScriptProperties();
   let s = p.getProperty(PROP_ANH_CONG_KHAI_SECRET_);
-  if (!s) { s = _taoMaNgauNhien_(); p.setProperty(PROP_ANH_CONG_KHAI_SECRET_, s); }
+  if (s) return s;
+  // L-10: tạo khóa lần đầu dưới lock + đọc lại — 2 lượt song song không tạo 2 khóa khác nhau (link QR in từ lượt thua sẽ hỏng)
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    s = p.getProperty(PROP_ANH_CONG_KHAI_SECRET_);
+    if (!s) { s = _taoMaNgauNhien_(); p.setProperty(PROP_ANH_CONG_KHAI_SECRET_, s); }
+  } finally { lock.releaseLock(); }
   return s;
 }
 function _maAnhCongKhai_(idHD) {

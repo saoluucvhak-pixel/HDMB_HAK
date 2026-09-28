@@ -1,5 +1,5 @@
 <!-- Widget chatbot nổi DÙNG CHUNG (CSS + HTML + JS) cho các trang 10, 27, 30 — nạp bằng
-     include('ChatbotWidget') trong scriptlet ngay trước </body>. Trước đây mỗi trang giữ 1 bản sao. -->
+     include_('ChatbotWidget') trong scriptlet ngay trước </body>. Trước đây mỗi trang giữ 1 bản sao. -->
 <style>
   #chatbotNut { position: fixed; bottom: 20px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: var(--active-green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 999; }
   #chatbotHop { display: none; position: fixed; bottom: 84px; right: 20px; width: 340px; max-width: calc(100vw - 40px); height: 440px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 999; flex-direction: column; overflow: hidden; }

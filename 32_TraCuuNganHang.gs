@@ -69,9 +69,16 @@ function TRA_CUU_TEN_CHU_TK_(soTK, tenNganHangGoTuDo, tenChuRungMongDoi) {
   if (!tenLoc) return { thanhCong: false, loi: 'Thiếu tên ngân hàng — nhập/chọn ngân hàng trước khi kiểm tra.' };
   const boDau_ = function (s) { return s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); };
   const tenLocKhongDau = boDau_(tenLoc);
+  // L-09 (rà soát 28/09): ưu tiên khớp CHÍNH XÁC (mã / BIN / tên ngắn / tên đầy đủ) rồi mới khớp 1 phần — trước đây
+  // lấy ngân hàng ĐẦU TIÊN khớp chuỗi con theo 2 chiều, dễ chọn nhầm ngân hàng -> báo "tên chủ TK không khớp" sai.
+  const gon = function (s) { return boDau_(s || '').replace(/[^a-z0-9]/g, ''); };
+  const tenGon = gon(tenLoc);
   const ngan = dsNganHang.find(function (b) {
-    return b.code.toLowerCase() === tenLoc || boDau_(b.ten).indexOf(tenLocKhongDau) !== -1 || tenLocKhongDau.indexOf(boDau_(b.ten)) !== -1 ||
-      boDau_(b.tenDayDu).indexOf(tenLocKhongDau) !== -1;
+    return gon(b.code) === tenGon || String(b.bin) === tenLoc || gon(b.ten) === tenGon || gon(b.tenDayDu) === tenGon;
+  }) || dsNganHang.find(function (b) {
+    return boDau_(b.tenDayDu).indexOf(tenLocKhongDau) !== -1 || (gon(b.ten).length >= 3 && tenGon.indexOf(gon(b.ten)) !== -1);
+  }) || dsNganHang.find(function (b) {
+    return tenGon.length >= 3 && gon(b.ten).indexOf(tenGon) !== -1;
   });
   if (!ngan) return { thanhCong: false, loi: 'Không nhận diện được ngân hàng "' + tenNganHangGoTuDo + '" — kiểm tra lại tên ngân hàng đã nhập (thử chọn đúng tên trong danh sách gợi ý).' };
 

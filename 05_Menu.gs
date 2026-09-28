@@ -82,8 +82,10 @@ function moFormNhapLieu() {
 
 /**
  * Dùng trong các file HTML templated (createTemplateFromFile) để ghép các phần
- * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('TenFileHtml') ?>
+ * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include_('TenFileHtml') ?>
  */
-function include(filename) {
+// L-01 (rà soát 28/09): tên có "_" = hàm nội bộ — google.script.run không gọi được. Trước đây include() công khai:
+// ai có link webapp cũng đọc được nguyên văn mọi file HTML. Scriptlet <?!= include_('...') ?> chạy ở máy chủ nên vẫn gọi được.
+function include_(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }

@@ -266,7 +266,7 @@ function LUU_PHU_LUC_(d) {
     try {
       const dong = _timDongBangCon_(sh, d.soDong, d.idHD, c.ID_HD, c.ID_PHU_LUC, d.idPhuLuc);
       if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
-      sh.getRange(dong, c.DON_GIA + 1, 1, 4).setValues([[donGia, khoiLuong, thanhTien, d.ghiChu || '']]); // ĐƠN GIÁ..GHI CHÚ liền nhau
+      sh.getRange(dong, c.DON_GIA + 1, 1, 4).setValues([[donGia, khoiLuong, thanhTien, giaTriAnToan_(d.ghiChu || '')]]); // M-18 // ĐƠN GIÁ..GHI CHÚ liền nhau
       return { thanhCong: true, soDong: dong, thanhTien: thanhTien };
     } finally {
       lockSua.releaseLock();
@@ -295,7 +295,7 @@ function LUU_PHU_LUC_(d) {
     const row = [];
     row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
     row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
-    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
+    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = giaTriAnToan_(d.ghiChu || ''); row[c.TIMESTAMP] = new Date();
     sh.appendRow(row);
     return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
   } finally {

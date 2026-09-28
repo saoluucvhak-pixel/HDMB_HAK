@@ -702,6 +702,17 @@ function xoaCacheBanDo_() {
   try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
 }
 
+/**
+ * M-18 (rà soát 28/09): chuỗi người dùng nhập bắt đầu bằng = + @ (hoặc - mà không phải số âm) bị Google Sheets hiểu là
+ * CÔNG THỨC (vd địa chỉ "=IMPORTXML(...)", ghi chú "+ thêm 2 lô") -> thêm dấu ' phía trước để Sheets lưu nguyên văn
+ * (dấu ' không hiện, không nằm trong giá trị đọc ra). Số, ngày, true/false giữ nguyên.
+ */
+function giaTriAnToan_(v) {
+  if (typeof v !== 'string') return v;
+  return /^[=+@]/.test(v) || /^-(?![\d.,\s]+$)/.test(v) ? "'" + v : v;
+}
+function dongAnToan_(row) { for (let i = 0; i < row.length; i++) row[i] = row[i] === undefined ? '' : giaTriAnToan_(row[i]); return row; }
+
 /** Ghi 1 dòng vào nhật ký sửa đổi — gọi mỗi khi tạo/sửa/hủy/xóa/thanh lý hợp đồng */
 function ghiNhatKy_(hanhDong, idHD, chiTiet) {
   try {
@@ -709,7 +720,7 @@ function ghiNhatKy_(hanhDong, idHD, chiTiet) {
     // Người đăng nhập qua webapp (phiên) hoặc người bấm menu trong Sheet (34_PhanQuyen.gs).
     let email = '';
     try { email = _emailNguoiThucHien_(); } catch (e) { /* có thể không lấy được nếu chạy ẩn danh */ }
-    sh.appendRow([new Date(), email, hanhDong, idHD || '', chiTiet || '']);
+    sh.appendRow(dongAnToan_([new Date(), email, hanhDong, idHD || '', chiTiet || ''])); // M-18
   } catch (e) { log_('ERROR', 'ghiNhatKy_', 'Không ghi được nhật ký: ' + hanhDong + ' ' + (idHD || ''), e); /* không để lỗi ghi log làm hỏng thao tác chính */ }
 }
 

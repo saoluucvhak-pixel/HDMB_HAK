@@ -628,4 +628,23 @@ mã **đã sửa 22/22 đạt**; mã **gốc (`4d3d673`) trượt 14/16 ca** ch�
 
 **Không xử lý theo yêu cầu chủ dự án:** H-06, H-09, H-10 (bảo mật đăng nhập / che số / đọc file Drive) và H-08 (chế độ truy cập).
 
-**Còn mở:** M-03 (cần quyết định: phụ lục có cộng vào khối lượng/giá trị HĐ không), M-10, M-13, M-15, M-18, L-01, L-05, L-07 … L-12, phần còn lại của H-12/H-13/M-07/M-12.
+**Còn mở:** xem đợt 6d bên dưới.
+
+---
+
+## ✅ Cập nhật: đợt 6d — các mục nhỏ còn lại
+
+| ID | Trạng thái | Thay đổi chính | File |
+|---|---|---|---|
+| M-10 | ✅ | Xây lại Draft vào sheet tạm `Draft_BaoCaoHopDong_TAM`, xong hết mới thay Draft thật bằng 1 lệnh; tiếp tục theo ID_HD → báo cáo không bị trống giữa các lượt chạy, không sót/trùng khi dữ liệu đổi giữa 2 lượt | 01 |
+| M-15 | ✅ | DM_DIACHI: sửa trong bộ nhớ, ghi cả dòng 1 lệnh; gộp dòng trùng cũ | 06 |
+| M-18 | ✅ | `giaTriAnToan_` / `dongAnToan_`: chuỗi bắt đầu `= + @` (hoặc `-` không phải số) được lưu nguyên văn ở mọi chỗ ghi chính: tạo/sửa HĐ, lô rừng, tài khoản, GPS, ảnh nháp, phụ lục, DM_DIACHI, nhật ký | 00, 06, 14 |
+| L-01 | ✅ | `include` → `include_` (nội bộ): trình duyệt không gọi được để đọc nguyên văn file HTML; 20 scriptlet đã đổi theo | 05 + 13 file HTML |
+| L-05 | ✅ | Khóa Gemini gửi qua header `x-goog-api-key` (5 chỗ) | 04, 06, 29 |
+| L-09 | ✅ | Nhận diện ngân hàng: khớp chính xác (mã / BIN / tên) trước, khớp một phần sau | 32 |
+| L-10 | ✅ | Khóa ký link ảnh QR tạo lần đầu dưới lock | 35 |
+| L-12 | ✅ | Sinh Số HĐ tự động chỉ đọc cột Số HĐ | 06 |
+
+**Kiểm chứng:** bộ giả lập — **33/33 đạt**; bản trước đợt này (`9e92e9d`) trượt 3 ca mới (M-18: tên/địa chỉ thành công thức; M-15: DM_DIACHI còn dòng trùng; L-01).
+
+**Giữ nguyên theo yêu cầu chủ dự án:** M-03; H-08; H-06, H-09, H-10; các mục liên quan đăng nhập L-07, L-08; L-11 (mã bí mật webhook). M-13 (link ảnh công khai không hết hạn) thuộc nhóm bảo mật — chưa xử lý.

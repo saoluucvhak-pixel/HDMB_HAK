@@ -56,8 +56,8 @@ function OCR_TU_BAN_SCAN_(loaiTaiLieu, base64Data, mimeType, tenFileGoc) {
     const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64Data } }] }] };
     const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
     function goiGemini_(tenModel) {
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-      return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent'; // L-05: khóa API gửi qua header x-goog-api-key, không nằm trên URL (dễ lọt vào log)
+      return JSON.parse(UrlFetchApp.fetch(url, Object.assign({ headers: { 'x-goog-api-key': apiKey } }, options)).getContentText());
     }
     let json = goiGemini_(model);
     for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_SCAN_.length; i++) {
@@ -194,8 +194,8 @@ function trichXuatDoiChieuBangGemini_(fileId) {
   const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: blob.getContentType(), data: base64 } }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
   function goiGemini_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent'; // L-05: khóa API gửi qua header x-goog-api-key, không nằm trên URL (dễ lọt vào log)
+    return JSON.parse(UrlFetchApp.fetch(url, Object.assign({ headers: { 'x-goog-api-key': apiKey } }, options)).getContentText());
   }
   let json = goiGemini_(model);
   for (let i = 0; json.error && /high demand|overloaded|503|try again later/i.test(json.error.message || '') && i < MODEL_DU_PHONG_DC_.length; i++) {

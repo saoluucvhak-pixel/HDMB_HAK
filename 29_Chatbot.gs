@@ -115,8 +115,8 @@ function TRA_LOI_CHATBOT_(cauHoi, cccdGoiYTuLuotTruoc, lichSuHoiThoai, anh) {
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
 
   function goiGemini_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    const resp = UrlFetchApp.fetch(url, options);
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent'; // L-05: khóa API gửi qua header x-goog-api-key, không nằm trên URL (dễ lọt vào log)
+    const resp = UrlFetchApp.fetch(url, Object.assign({ headers: { 'x-goog-api-key': apiKey } }, options));
     return JSON.parse(resp.getContentText());
   }
 
@@ -190,8 +190,8 @@ function traLoiCoAnh_(cauHoi, anh, apiKey, p) {
   const payload = { contents: [{ parts: [{ text: promptAnh }, { inline_data: { mime_type: anh.mimeType || 'image/jpeg', data: anh.base64 } }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
   function goiGemini_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent'; // L-05: khóa API gửi qua header x-goog-api-key, không nằm trên URL (dễ lọt vào log)
+    return JSON.parse(UrlFetchApp.fetch(url, Object.assign({ headers: { 'x-goog-api-key': apiKey } }, options)).getContentText());
   }
 
   let json;

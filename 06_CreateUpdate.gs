@@ -27,10 +27,12 @@ function formatNgay_(date) {
 function soHopDongTuDong_(ngayKy) {
   const ngay = new Date(ngayKy || new Date());
   const tienTo = Utilities.formatDate(ngay, layMuiGioBangTinh_(), 'yyyyMMdd');
-  const rows = readData_(SHEET_NAME.HD_NCC);
+  // L-12: chỉ đọc cột Số HĐ (trước đây đọc cả 33 cột HD_NCC mỗi lần tạo hợp đồng)
+  const shNCCSo = getSheet_(SHEET_NAME.HD_NCC);
+  const rows = shNCCSo.getLastRow() >= 2 ? shNCCSo.getRange(2, NCC_COL.SO_HD + 1, shNCCSo.getLastRow() - 1, 1).getValues() : [];
   let maxStt = 0;
   rows.forEach(function (r) {
-    const soHD = (r[NCC_COL.SO_HD] || '').toString();
+    const soHD = (r[0] || '').toString();
     if (soHD.indexOf(tienTo) === 0) {
       const stt = parseInt(soHD.substring(tienTo.length), 10);
       if (!isNaN(stt) && stt > maxStt) maxStt = stt;
@@ -328,28 +330,30 @@ function traCuuDiaChiThamChieu_(tenChuRung) {
 function dongBoDiaChiTuRung_(idHD, thongTin) {
   if (!idHD) return;
   const sh = getSheet_(SHEET_NAME.DM_DIACHI);
-  const lastRow = sh.getLastRow();
-  let soDongDaCo = -1;
-  if (lastRow >= 2) {
-    const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
-    for (let i = 0; i < data.length; i++) {
-      if ((data[i][DIACHI_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) { soDongDaCo = i + 2; break; }
-    }
-  }
+  const can = idHD.toString().trim();
   const gia = {
     tenChuRung: thongTin.tenChuRung, diaChiThuongTru: thongTin.diaChiThuongTru,
     diaChiUyQuyen: thongTin.diaChiUyQuyen, diaChiRung: thongTin.diaChiRung, nganHang: thongTin.nganHang
   };
-  if (soDongDaCo > 0) {
-    if (gia.tenChuRung !== undefined) sh.getRange(soDongDaCo, DIACHI_COL.TEN_CHU_RUNG + 1).setValue(gia.tenChuRung || '');
-    if (gia.diaChiThuongTru !== undefined) sh.getRange(soDongDaCo, DIACHI_COL.DIA_CHI_TT + 1).setValue(gia.diaChiThuongTru || '');
-    if (gia.diaChiUyQuyen !== undefined) sh.getRange(soDongDaCo, DIACHI_COL.DIA_CHI_UQ + 1).setValue(gia.diaChiUyQuyen || '');
-    if (gia.diaChiRung !== undefined) sh.getRange(soDongDaCo, DIACHI_COL.DIA_CHI_RUNG + 1).setValue(gia.diaChiRung || '');
-    if (gia.nganHang !== undefined) sh.getRange(soDongDaCo, DIACHI_COL.NGAN_HANG + 1).setValue(gia.nganHang || '');
+  const lastRow = sh.getLastRow();
+  const soCot = DIACHI_COL.NGAN_HANG + 1;
+  const data = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, soCot).getValues() : [];
+  const cacDong = [];
+  data.forEach(function (r, i) { if ((r[DIACHI_COL.ID_HD] || '').toString().trim() === can) cacDong.push(i); });
+  if (cacDong.length) {
+    // M-15 (rà soát 28/09): sửa trong bộ nhớ rồi ghi CẢ DÒNG 1 lệnh (trước đây tới 5 lệnh setValue riêng lẻ);
+    // dòng trùng do 2 lượt tạo chạy song song trước đây -> gộp về dòng đầu, xóa các dòng thừa.
+    const i0 = cacDong[0];
+    const dong = data[i0].slice();
+    const dat = function (cot, v) { if (v !== undefined) dong[cot] = giaTriAnToan_(v || ''); };
+    dat(DIACHI_COL.TEN_CHU_RUNG, gia.tenChuRung); dat(DIACHI_COL.DIA_CHI_TT, gia.diaChiThuongTru);
+    dat(DIACHI_COL.DIA_CHI_UQ, gia.diaChiUyQuyen); dat(DIACHI_COL.DIA_CHI_RUNG, gia.diaChiRung); dat(DIACHI_COL.NGAN_HANG, gia.nganHang);
+    sh.getRange(i0 + 2, 1, 1, soCot).setValues([dong]);
+    cacDong.slice(1).reverse().forEach(function (i) { sh.deleteRow(i + 2); });
   } else {
     sh.appendRow([
-      idHD, idHD, new Date(), gia.tenChuRung || '', gia.diaChiThuongTru || '',
-      gia.diaChiUyQuyen || '', gia.diaChiRung || '', gia.nganHang || ''
+      idHD, idHD, new Date(), giaTriAnToan_(gia.tenChuRung || ''), giaTriAnToan_(gia.diaChiThuongTru || ''),
+      giaTriAnToan_(gia.diaChiUyQuyen || ''), giaTriAnToan_(gia.diaChiRung || ''), giaTriAnToan_(gia.nganHang || '')
     ]);
   }
 }
@@ -537,7 +541,7 @@ function taoHopDongMoiThucThi_(d) {
     const soDongMoiNCC = shNCC.getLastRow() + 1;
     [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
       .forEach(function (c) { shNCC.getRange(soDongMoiNCC, c + 1).setNumberFormat('@'); });
-    shNCC.getRange(soDongMoiNCC, 1, 1, row.length).setValues([row]);
+    shNCC.getRange(soDongMoiNCC, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
     _ghiNhoMaThaoTac_(d.maThaoTac, idHD, soHD);
   } finally {
     lock.releaseLock();
@@ -698,7 +702,7 @@ function THEM_LO_RUNG_MOI_(d) {
     for (let k = 0; k < row.length; k++) if (row[k] === undefined) row[k] = '';
     [RUNG_COL.CCCD, RUNG_COL.SO_HD, RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG, RUNG_COL.MA_RUNG]
       .forEach(function (c) { shRungGhi.getRange(soDongMoiRung, c + 1).setNumberFormat('@'); });
-    shRungGhi.getRange(soDongMoiRung, 1, 1, row.length).setValues([row]);
+    shRungGhi.getRange(soDongMoiRung, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
 
     // Tạo sẵn 1 dòng khung trong HD_GPS để người dùng điền tọa độ cho lô rừng này
     getSheet_(SHEET_NAME.HD_GPS).appendRow([
@@ -751,7 +755,7 @@ function THEM_TAI_KHOAN_MOI_(d) {
     // ⚠️ MỚI: định dạng TEXT TRƯỚC khi ghi (xem giải thích ở TAO_HOP_DONG_MOI_) — tránh mất số 0 đầu ở Số TK/CCCD
     soDongMoiSTK = shTK.getLastRow() + 1;
     [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shTK.getRange(soDongMoiSTK, c + 1).setNumberFormat('@'); });
-    shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([row]);
+    shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
   } finally {
     lock.releaseLock();
   }
@@ -776,7 +780,7 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
     namTrong: RUNG_COL.NAM_TRONG
   };
   Object.keys(patch).forEach(function (key) {
-    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : patch[key]);
+    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : giaTriAnToan_(patch[key])); // M-18
   });
 
   // Nếu có sửa địa chỉ rừng, đồng bộ luôn vào DM_DIACHI
@@ -872,7 +876,7 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
 
     sh.appendRow([
       idRung, idGPS, latChuan.gia_tri, lngChuan.gia_tri, latChuan.gia_tri + ', ' + lngChuan.gia_tri,
-      diemGPS.diaChi || '', rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', diemGPS.anhUrl || '', false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
+      giaTriAnToan_(diemGPS.diaChi || ''), rung ? rung[RUNG_COL.TEN_CHU_RUNG] : '', giaTriAnToan_(diemGPS.anhUrl || ''), false, 'DD' // luôn lưu 'DD' vì đã chuẩn hóa xong ở trên
     ]);
     var rungChoDraft_ = rung;
   } finally {
@@ -914,7 +918,7 @@ function CAP_NHAT_TAI_KHOAN_(soDong, patch, idHD, soTKGoc) {
       if (!map.hasOwnProperty(key)) return;
       const oCell = sh.getRange(dong, map[key] + 1);
       if (map[key] === STK_COL.SO_TK) oCell.setNumberFormat('@'); // tránh mất số 0 đầu (xem TAO_HOP_DONG_MOI_)
-      oCell.setValue(patch[key]);
+      oCell.setValue(giaTriAnToan_(patch[key])); // M-18
     });
   } finally {
     lock.releaseLock();
@@ -1210,7 +1214,7 @@ function CAP_NHAT_HOP_DONG_(soDong, patch, idHDMongDoi) {
       if (hienThi_(value) === hienThi_(rowCu[cot]) && typeof value === typeof rowCu[cot]) return; // không đổi -> không ghi
       const oCell = sh.getRange(soDong, cot + 1);
       if (cotCanDinhDangText_.indexOf(cot) !== -1) oCell.setNumberFormat('@');
-      oCell.setValue(value);
+      oCell.setValue(giaTriAnToan_(value)); // M-18
       if (hienThi_(value) !== hienThi_(rowCu[cot])) thayDoi.push({ truong: key, cu: hienThi_(rowCu[cot]), moi: hienThi_(value) });
     });
 
@@ -1636,8 +1640,8 @@ function docToaDoTuTemAnhBangGemini_(blob) {
   const payload = { contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: blob.getContentType(), data: base64 } }] }] };
   const options = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
   function goiGeminiToaDo_(tenModel) {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent?key=' + apiKey;
-    return JSON.parse(UrlFetchApp.fetch(url, options).getContentText());
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + tenModel + ':generateContent'; // L-05: khóa API gửi qua header x-goog-api-key, không nằm trên URL (dễ lọt vào log)
+    return JSON.parse(UrlFetchApp.fetch(url, Object.assign({ headers: { 'x-goog-api-key': apiKey } }, options)).getContentText());
   }
   // ⚠️ ĐỒNG BỘ với OCR_TU_BAN_SCAN_: thử ngay model dự phòng nếu model chính báo
   // quá tải, tránh âm thầm bỏ qua chỉ vì đúng lúc 1 model bị quá tải.
@@ -1709,7 +1713,7 @@ function THEM_ANH_RUNG_(params) {
     shDraft.appendRow([
       idDraft, params.idHD || '', params.idRung || '', tenFileLuu, file.getId(), urlFile,
       gpsDaThem ? gpsDaThem.lat : '', gpsDaThem ? gpsDaThem.lng : '',
-      params.diaChiRung || '', params.ghiChu || '', 'Chờ duyệt', new Date()
+      giaTriAnToan_(params.diaChiRung || ''), giaTriAnToan_(params.ghiChu || ''), 'Chờ duyệt', new Date()
     ]);
 
     return { thanhCong: true, tenFile: tenFileLuu, gpsDaThem: gpsDaThem, nguonGps: nguonGps, soDongDraft: shDraft.getLastRow(), idDraft: idDraft };
@@ -2439,7 +2443,7 @@ function luuHopDongDayDuThucThi_(payload) {
           .forEach(function (c) { shTaoMoi.getRange(soDongVuaTao, c + 1).setNumberFormat('@'); });
         const soCotNCC = Math.max(row.length, shTaoMoi.getLastColumn());
         for (let k = 0; k < soCotNCC; k++) if (row[k] === undefined) row[k] = '';
-        shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([row]);
+        shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
         _ghiNhoMaThaoTac_(payload.maThaoTac, idHD, soHD);
         ghiNhatKy_('Tạo hợp đồng mới', idHD, 'Chủ rừng: ' + d.tenChuRung + ' — Số HĐ: ' + soHD);
       }

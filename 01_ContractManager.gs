@@ -640,49 +640,49 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
   const dntt = docCacheBaoCao_ChiDoc_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_);
   const ngayCan = docCacheBaoCao_ChiDoc_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_);
 
-  // ---- Tiếp tục từ vị trí lần trước nếu đang dang dở ----
-  let batDauTu = Number(props.getProperty('XAY_DUNG_DRAFT_TIEP_TUC_TU') || 0);
-  if (batDauTu === 0) {
-    // Bắt đầu mới hoàn toàn -> xóa sạch Draft cũ trước khi ghi lại từ đầu
-    const sh = getOrCreateDraftBaoCaoSheet_();
-    const lastRow = sh.getLastRow();
-    if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).clearContent();
-  }
+  // M-10 (rà soát 28/09): xây vào sheet TẠM, xong hết mới chép sang Draft thật bằng 1 lệnh. Trước đây xóa sạch Draft
+  // ngay đầu lượt -> nếu phải chạy nhiều lượt (quá 4,5 phút), GIỮA các lượt mọi báo cáo trống; và tiếp tục theo SỐ THỨ TỰ
+  // dòng HD_NCC -> thêm/xóa hợp đồng giữa 2 lượt làm sót/trùng. Giờ tiếp tục theo ID_HD đã có trong sheet tạm.
+  props.deleteProperty('XAY_DUNG_DRAFT_TIEP_TUC_TU'); // mốc kiểu cũ (số thứ tự) — không dùng nữa
+  const soCot = Object.keys(DRAFT_BAOCAO_COL).length;
+  const ssBC = getReportSS_();
+  const TEN_TAM = SHEET_NAME.DRAFT_BAOCAO + '_TAM';
+  const shTam = ssBC.getSheetByName(TEN_TAM) || ssBC.insertSheet(TEN_TAM);
+  const lastTam = shTam.getLastRow();
+  const daXong = {};
+  if (lastTam >= 1) shTam.getRange(1, DRAFT_BAOCAO_COL.ID_HD + 1, lastTam, 1).getValues().forEach(function (r) { const id = (r[0] || '').toString().trim(); if (id) daXong[id] = true; });
 
   const tatCaDong = [];
-  let i = batDauTu;
-  let dungGiuaChung = false;
-  for (; i < nccRows.length; i++) {
-    if (new Date().getTime() - thoiDiemBatDau > GIOI_HAN_THOI_GIAN_MS) { dungGiuaChung = true; break; }
+  let dungGiuaChung = false, soDaXong = Object.keys(daXong).length;
+  for (let i = 0; i < nccRows.length; i++) {
     const row = nccRows[i];
     const idHD = (row[NCC_COL.ID_HD] || '').toString().trim();
-    if (!idHD) continue;
+    if (!idHD || daXong[idHD]) continue;
+    if (new Date().getTime() - thoiDiemBatDau > GIOI_HAN_THOI_GIAN_MS) { dungGiuaChung = true; break; }
     const dong = tinhDongDraftChoHopDong_(
       idHD, row, rungByHD[idHD] || [], stkByHD[idHD] || [], gpsByIdRung, !!coAnhByHD[idHD], dntt, ngayCan
     );
-    tatCaDong.push(dong);
+    const arr = [];
+    for (let k = 0; k < soCot; k++) arr[k] = (dong[k] === undefined ? '' : dong[k]);
+    tatCaDong.push(arr);
+    daXong[idHD] = true;
   }
-
-  // ---- Ghi TẤT CẢ kết quả của đợt này bằng 1 lệnh duy nhất (nhanh hơn ghi từng dòng) ----
-  if (tatCaDong.length) {
-    const sh = getOrCreateDraftBaoCaoSheet_();
-    const soCot = Object.keys(DRAFT_BAOCAO_COL).length;
-    // Chuẩn hóa mỗi dòng đủ số cột (tránh undefined ở cột không được gán)
-    const dongChuanHoa = tatCaDong.map(function (d) {
-      const arr = [];
-      for (let k = 0; k < soCot; k++) arr[k] = (d[k] === undefined ? '' : d[k]);
-      return arr;
-    });
-    sh.getRange(sh.getLastRow() + 1, 1, dongChuanHoa.length, soCot).setValues(dongChuanHoa);
-  }
+  if (tatCaDong.length) shTam.getRange(shTam.getLastRow() + 1, 1, tatCaDong.length, soCot).setValues(tatCaDong);
+  soDaXong += tatCaDong.length;
 
   if (dungGiuaChung) {
-    props.setProperty('XAY_DUNG_DRAFT_TIEP_TUC_TU', i.toString());
-    return '⏸️ Đã xử lý ' + i + '/' + nccRows.length + ' hợp đồng (dừng tạm vì gần hết thời gian chạy). ' +
-      'BẤM LẠI đúng mục menu này để TIẾP TỤC từ hợp đồng thứ ' + (i + 1) + ' (không tính lại từ đầu).';
+    return '⏸️ Đã xử lý ' + soDaXong + '/' + nccRows.length + ' hợp đồng (dừng tạm vì gần hết thời gian chạy — báo cáo hiện tại vẫn giữ nguyên). ' +
+      'BẤM LẠI đúng mục menu này để TIẾP TỤC (không tính lại phần đã xong).';
   }
 
-  props.deleteProperty('XAY_DUNG_DRAFT_TIEP_TUC_TU'); // xong toàn bộ -> xóa mốc tiếp tục
+  // Xong toàn bộ: thay Draft thật bằng dữ liệu mới trong 1 lệnh ghi (đệm dòng trống nếu Draft cũ dài hơn)
+  const duLieuMoi = shTam.getLastRow() >= 1 ? shTam.getRange(1, 1, shTam.getLastRow(), soCot).getValues() : [];
+  const sh = getOrCreateDraftBaoCaoSheet_();
+  const soDongGhi = Math.max(sh.getLastRow() - 1, duLieuMoi.length);
+  while (duLieuMoi.length < soDongGhi) duLieuMoi.push(new Array(soCot).fill(''));
+  if (soDongGhi) sh.getRange(2, 1, soDongGhi, soCot).setValues(duLieuMoi);
+  ssBC.deleteSheet(shTam);
+  _draftDataCache = null;
   return '✅ OK — đã xây dựng xong Draft cho toàn bộ ' + nccRows.length + ' hợp đồng.';
 }
 

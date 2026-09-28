@@ -1,6 +1,6 @@
 <!--
   PhanQuyen_JS — đăng nhập & gọi server qua cửa api() (xem 34_PhanQuyen.gs).
-  Mỗi trang nạp bằng include('PhanQuyen_JS') trong scriptlet, ngay sau phần tử #hakPhanQuyen
+  Mỗi trang nạp bằng include_('PhanQuyen_JS') trong scriptlet, ngay sau phần tử #hakPhanQuyen
   (phần tử đó mang mã phiên / lỗi đăng nhập do doGet truyền vào) và TRƯỚC mọi <script> của trang.
   Trang gọi server bằng hakRun_() thay cho google.script.run (cùng cách dùng: .withSuccessHandler(...)
   .withFailureHandler(...).TEN_HAM(thamSo...)) — hakRun_ tự chuyển thành api(phien, 'TEN_HAM', [thamSo...]).

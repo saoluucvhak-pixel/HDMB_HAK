@@ -189,7 +189,7 @@
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
-<?!= include('PhanQuyen_JS') ?>
+<?!= include_('PhanQuyen_JS') ?>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -629,7 +629,7 @@ function thongBaoHA_(noiDung) {
   } catch (e) { /* ngoài Apps Script */ }
 })();
 </script>
-<?!= include('ChatbotWidget') ?>
+<?!= include_('ChatbotWidget') ?>
 
 </body>
 </html>
