@@ -61,4 +61,5 @@
 - [x] ✅ (đợt 6b) 🔴 C-03 Số HĐ không kiểm tra trùng; ID_RUNG sinh từ Số HĐ; đổi Số HĐ/Ngày ký không lan xuống bảng con
 - [x] ✅ (đợt 6b) H-01, H-03, H-04, H-05, M-01, M-06
 - [ ] Sau triển khai: chạy *Xây dựng lại Draft báo cáo*; kiểm tra HD_STK thật có TK bị xóa/ghi đè nhầm trước đây
-- [ ] 🟠 H-02, H-06 … H-13 và 🟡/⚪ còn lại: xem mục 15 của báo cáo
+- [ ] 🟠 H-02, H-06, H-07, H-09 … H-13 và 🟡/⚪ còn lại: xem mục 15 của báo cáo
+- [—] H-08 (chế độ truy cập webapp): không xử lý theo yêu cầu chủ dự án

@@ -597,4 +597,6 @@ mã **đã sửa 22/22 đạt**; mã **gốc (`4d3d673`) trượt 14/16 ca** ch�
 - Sau triển khai chạy 1 lần *Xây dựng lại Draft báo cáo* để sửa các trạng thái đã lệch do H-01 trước đây.
 - **Vẫn nên kiểm tra dữ liệu thật** HD_STK: TK nào từng bị xóa/ghi đè nhầm (đối chiếu nhật ký "Cập nhật rừng/tài khoản" với ĐNTT).
 
-**Còn mở:** H-02, H-06 … H-13, M-02 … M-05, M-07 … M-18, L-01 … L-12 (H-08 và M-03 cần chủ dự án quyết định).
+**Còn mở:** H-02, H-06, H-07, H-09 … H-13, M-02 … M-05, M-07 … M-18, L-01 … L-12 (M-03 cần chủ dự án quyết định).
+
+**Không xử lý (theo yêu cầu chủ dự án):** H-08 — chế độ truy cập webapp (`access` trong `appsscript.json`) giữ nguyên như hiện tại.
