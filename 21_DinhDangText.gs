@@ -201,3 +201,55 @@ function DAT_VUNG_HE_THONG_(locale) {
   thongBao += locDraftGoc !== null ? ' và file Draft/Báo cáo (trước đó: ' + locDraftGoc + ').' : ' — CHƯA đặt được cho file Draft (thử lại sau).';
   return { thongBao: thongBao };
 }
+
+/**
+ * ============================================================
+ *  VÙNG ĐỊNH DẠNG BÁO CÁO XUẤT EXCEL — ĐỘC LẬP với "Vùng Lãnh Thổ" ở trên.
+ *
+ *  Nguyên tắc: webapp (giao diện, nhập liệu trên trình duyệt) LUÔN hiển thị và
+ *  nhận ngày tháng theo kiểu Việt Nam (dd/mm/yyyy), bất kể vùng này chọn gì.
+ *  Vùng này CHỈ quyết định cách ngày/số được GHI RA khi XUẤT FILE EXCEL (báo
+ *  cáo MISA, báo cáo hợp đồng, hồ sơ rừng...) — để phù hợp phần mềm/đối tác
+ *  nhận file (vd MISA ở 1 số nơi cần mm/dd/yyyy kiểu Mỹ).
+ *
+ *  Kế thừa giá trị cũ từ property MISA_VUNG_DINH_DANG (vốn chỉ dùng riêng cho
+ *  MISA và chưa từng thực sự áp dụng vào file xuất) để không mất lựa chọn đã
+ *  lưu trước đó, nhưng property MỚI (VUNG_XUAT_EXCEL) dùng chung cho MỌI loại
+ *  báo cáo xuất Excel, không chỉ riêng MISA.
+ * ============================================================
+ */
+const PROP_VUNG_XUAT_EXCEL_ = 'VUNG_XUAT_EXCEL';
+
+/** Đọc property KHÔNG kiểm tra quyền — dùng NỘI BỘ bởi các luồng xuất báo cáo (vd MISA)
+ *  vốn chỉ yêu cầu quyền Nhập liệu, cùng cách LAY_THIET_LAP_MISA_() ở 22_XuatBaoCaoMisa.gs
+ *  không tự kiểm tra quyền để tránh chặn nhầm vai trò Nhập liệu. */
+function layVungXuatExcelNoiBo_() {
+  const p = PropertiesService.getScriptProperties();
+  const vung = (p.getProperty(PROP_VUNG_XUAT_EXCEL_) || p.getProperty('MISA_VUNG_DINH_DANG') || 'vi_VN').toString().trim();
+  return MAU_NGAY_THEO_VUNG_[vung] ? vung : 'vi_VN';
+}
+
+/** Đọc vùng định dạng đang áp dụng cho file xuất Excel. Mặc định vi_VN. (Dùng cho trang Thiết lập) */
+function LAY_VUNG_XUAT_EXCEL_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  return { vung: layVungXuatExcelNoiBo_() };
+}
+
+/** Đọc vùng định dạng cho file xuất Excel — quyền THẤP NHẤT (Xem), vì MỌI vai
+ *  trò (kể cả Chỉ xem) đều có thể bấm "Xuất Excel/PDF" ở trang Báo cáo, nên
+ *  không thể chặn ở mức Quản trị như LAY_VUNG_XUAT_EXCEL_() ở trên (hàm đó chỉ
+ *  dành riêng cho trang Thiết lập). Dùng bởi 10_Page_BaoCao.html trước khi
+ *  ghép dữ liệu ngày tháng vào file xuất. */
+function LAY_MA_VUNG_XUAT_BAO_CAO_() {
+  _yeuCauQuyen_(QUYEN.XEM);
+  return { vung: layVungXuatExcelNoiBo_() };
+}
+
+/** Đặt vùng định dạng cho file xuất Excel (không đụng đến "Vùng Lãnh Thổ" của file dữ liệu chính/Draft). */
+function DAT_VUNG_XUAT_EXCEL_(locale) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  locale = (locale || '').toString().trim();
+  if (!MAU_NGAY_THEO_VUNG_[locale]) return { thanhCong: false, thongBao: '❌ Mã vùng không hợp lệ: "' + locale + '".' };
+  PropertiesService.getScriptProperties().setProperty(PROP_VUNG_XUAT_EXCEL_, locale);
+  return { thanhCong: true, thongBao: '✅ Đã đặt vùng định dạng báo cáo xuất Excel: ' + locale + ' (ngày ' + MAU_NGAY_THEO_VUNG_[locale] + '). Không ảnh hưởng giao diện webapp (vẫn luôn hiển thị kiểu Việt Nam).' };
+}

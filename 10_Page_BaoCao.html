@@ -746,6 +746,13 @@
       .XUAT_BANG_RA_FILE(tenFile, header, rows, dinhDang);
   }
 
+  // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — CHỈ ảnh hưởng
+  // ngày tháng ghi vào FILE XUẤT (Excel/PDF), KHÔNG ảnh hưởng giao diện webapp:
+  // mọi bảng/hiển thị trên màn hình vẫn LUÔN dùng 'vi-VN' cố định như trước.
+  var maVungXuatBaoCao_ = 'vi-VN'; // mặc định, cập nhật lại ngay khi tải trang xong (xem DOMContentLoaded bên dưới)
+  hakRun_().withSuccessHandler(function (kq) { maVungXuatBaoCao_ = (kq.vung || 'vi_VN').replace('_', '-'); })
+    .withFailureHandler(function (err) { console.error('LAY_MA_VUNG_XUAT_BAO_CAO:', err); }).LAY_MA_VUNG_XUAT_BAO_CAO();
+
   function formatKL(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); } // ⚠️ SỬA: trước ép hiện 3 số lẻ, giờ số nguyên đồng bộ với các trường khác
   function formatTien(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }); }
   function showMsg(id, text, ok) {
@@ -826,9 +833,9 @@
       .withSuccessHandler(function (kq) {
         var header = ['Số HĐ', 'Ngày ký', 'Chủ rừng', 'CCCD', 'Người ủy quyền', 'Số TK', 'Số lô rừng', 'KL dự kiến (Tấn)', 'KL thực hiện (Tấn)', 'Giá trị HĐ (đ)', 'Giá trị TH (đ)', 'Từ ngày TH', 'Đến ngày TH', 'Có ảnh', 'Đủ GPS', 'Đủ hồ sơ', 'Tình trạng', 'Ghi chú'];
         var rows = kq.items.map(function (r) {
-          return [r.soHD || '', r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '', r.tenChuRung || '', r.cccdChuRung || '', r.tenUyQuyen || '',
+          return [r.soHD || '', r.ngayKy ? new Date(r.ngayKy).toLocaleDateString(maVungXuatBaoCao_) : '', r.tenChuRung || '', r.cccdChuRung || '', r.tenUyQuyen || '',
             r.soTaiKhoan || 0, r.soLoRung || 0, Math.round(r.khoiLuongDuKien) || 0, Math.round(r.khoiLuongThucHien) || 0, Math.round(r.giaTriHopDong) || 0, Math.round(r.giaTriThucHien) || 0,
-            r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString('vi-VN') : '', r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString('vi-VN') : '',
+            r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString(maVungXuatBaoCao_) : '', r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString(maVungXuatBaoCao_) : '',
             r.coAnh ? 'Có' : 'Chưa', r.daDoGPSDu ? 'Đủ' : 'Chưa đủ', r.hoSoDu ? 'Đủ' : 'Chưa đủ', r.tinhTrang || '', r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '')];
         });
         xuatBangRaFile_('msgLocBC', 'BaoCaoHopDong_' + new Date().toISOString().slice(0, 10), header, rows, dinhDang);

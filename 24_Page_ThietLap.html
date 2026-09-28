@@ -417,6 +417,30 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">📊 Vùng Định Dạng Báo Cáo Xuất Excel</h3>
+      <p class="hint" style="margin-top:-4px">Quyết định cách <b>ngày tháng được GHI RA</b> khi xuất file Excel (báo cáo MISA, báo cáo hợp đồng, hồ sơ rừng...). <b>Độc lập</b> với "⚙️ Cài đặt Vùng (Locale)" ở trên.</p>
+      <p class="hint" style="margin-top:-4px">⚠️ Nguyên tắc: giao diện webapp (màn hình, ô nhập liệu) <b>luôn luôn</b> hiển thị và nhận ngày tháng theo kiểu Việt Nam (dd/mm/yyyy) — vùng này KHÔNG ảnh hưởng đến webapp, chỉ ảnh hưởng file Excel xuất ra.</p>
+      <div class="field-row" style="align-items:flex-end">
+        <div class="field" style="max-width:340px">
+          <label>Vùng định dạng file xuất</label>
+          <select id="vungXuatExcel">
+            <option value="vi_VN">🇻🇳 Việt Nam (vi_VN) — dd/mm/yyyy</option>
+            <option value="en_US">🇺🇸 United States (en_US) — mm/dd/yyyy</option>
+            <option value="en_GB">🇬🇧 United Kingdom (en_GB) — dd/mm/yyyy</option>
+            <option value="fr_FR">🇫🇷 France (fr_FR) — dd/mm/yyyy</option>
+            <option value="ja_JP">🇯🇵 Japan (ja_JP) — yyyy/mm/dd</option>
+            <option value="ko_KR">🇰🇷 Korea (ko_KR) — yyyy.mm.dd</option>
+            <option value="zh_CN">🇨🇳 China (zh_CN) — yyyy/mm/dd</option>
+          </select>
+        </div>
+        <div class="field" style="flex:none">
+          <button class="btn btn-green" onclick="apDungVungXuatExcel()">✅ Áp dụng</button>
+        </div>
+      </div>
+      <div id="msgVungXuatExcel" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🔧 Thiết lập dữ liệu xuất báo cáo MISA</h3>
       <p class="hint" style="margin-top:-4px">Các giá trị mặc định điền vào cột "Mã hàng/Tên hàng/Đơn vị tính/Loại tiền" của sheet <code>Update_HDMB</code> khi xuất báo cáo MISA (áp dụng cho MỌI dòng, vì dữ liệu hiện có không phân loại chi tiết theo từng lô rừng).</p>
       <div class="field-row">
@@ -434,20 +458,7 @@
         <div class="field"><label>Đơn vị tính mặc định</label><input id="tlDonViTinh" value="Tấn"></div>
         <div class="field"><label>Loại tiền mặc định</label><input id="tlLoaiTien" value="VNĐ"></div>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Vùng định dạng cho file xuất MISA <span class="hint">(độc lập với "Cài đặt Vùng" chung ở dưới)</span></label>
-          <select id="tlVungMisa">
-            <option value="vi_VN">🇻🇳 Việt Nam (vi_VN) — dd/mm/yyyy</option>
-            <option value="en_US">🇺🇸 United States (en_US) — mm/dd/yyyy</option>
-            <option value="en_GB">🇬🇧 United Kingdom (en_GB) — dd/mm/yyyy</option>
-            <option value="fr_FR">🇫🇷 France (fr_FR) — dd/mm/yyyy</option>
-            <option value="ja_JP">🇯🇵 Japan (ja_JP) — yyyy/mm/dd</option>
-            <option value="ko_KR">🇰🇷 Korea (ko_KR) — yyyy.mm.dd</option>
-            <option value="zh_CN">🇨🇳 China (zh_CN) — yyyy/mm/dd</option>
-          </select>
-        </div>
-      </div>
+      <p class="hint" style="margin-top:-4px">👉 Vùng định dạng ngày tháng cho file xuất đã chuyển sang thẻ "📊 Vùng Định Dạng Báo Cáo Xuất Excel" ở trên (dùng chung cho mọi báo cáo xuất Excel, không riêng MISA).</p>
       <button class="btn btn-green" onclick="luuThietLapMisa()">💾 Lưu thiết lập</button>
       <button class="btn btn-outline" onclick="donFileTamMisa()">🧹 Dọn file tạm còn sót lại (từ bản cũ trước đây)</button>
       <div id="msgThietLapMisa" class="msg" style="display:none;margin-top:10px"></div>
@@ -1037,6 +1048,21 @@
       .DAT_VUNG_HE_THONG(vung);
   }
 
+  // ---- Vùng Định Dạng Báo Cáo Xuất Excel ----
+  hakRun_().withSuccessHandler(function (kq) {
+    var sel = document.getElementById('vungXuatExcel');
+    for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === kq.vung) { sel.selectedIndex = i; break; } }
+  }).withFailureHandler(function (err) { console.error('LAY_VUNG_XUAT_EXCEL:', err); }).LAY_VUNG_XUAT_EXCEL();
+
+  function apDungVungXuatExcel() {
+    var vung = document.getElementById('vungXuatExcel').value;
+    showMsg('msgVungXuatExcel', '⌛ Đang áp dụng...', true);
+    hakRun_()
+      .withSuccessHandler(function (kq) { showMsg('msgVungXuatExcel', (kq.thanhCong ? '✅ ' : '❌ ') + kq.thongBao, kq.thanhCong); })
+      .withFailureHandler(function (err) { showMsg('msgVungXuatExcel', '❌ Lỗi: ' + err.message, false); })
+      .DAT_VUNG_XUAT_EXCEL(vung);
+  }
+
   // ---- Thiết lập dữ liệu xuất MISA ----
   hakRun_().withSuccessHandler(function (kq) {
     document.getElementById('tlMaHang').value = kq.maHangMacDinh;
@@ -1044,8 +1070,6 @@
     document.getElementById('tlDonViTinh').value = kq.donViTinhMacDinh;
     document.getElementById('tlLoaiTien').value = kq.loaiTienMacDinh;
     document.getElementById('tlMasterSheetUrl').value = kq.masterSheetUrl || '';
-    var sel = document.getElementById('tlVungMisa');
-    for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === kq.vungDinhDangMisa) { sel.selectedIndex = i; break; } }
   }).withFailureHandler(function (err) { console.error('LAY_THIET_LAP_MISA:', err); }).LAY_THIET_LAP_MISA();
 
   function luuThietLapMisa() {
@@ -1054,7 +1078,6 @@
       tenHangMacDinh: document.getElementById('tlTenHang').value,
       donViTinhMacDinh: document.getElementById('tlDonViTinh').value,
       loaiTienMacDinh: document.getElementById('tlLoaiTien').value,
-      vungDinhDangMisa: document.getElementById('tlVungMisa').value,
       masterSheetUrl: document.getElementById('tlMasterSheetUrl').value.trim()
     };
     showMsg('msgThietLapMisa', '⌛ Đang lưu...', true);

@@ -34,7 +34,6 @@ function LAY_THIET_LAP_MISA_() {
     tenHangMacDinh: p.getProperty('MISA_TEN_HANG_MAC_DINH') || 'Gỗ tròn keo',
     donViTinhMacDinh: p.getProperty('MISA_DON_VI_TINH_MAC_DINH') || 'Tấn',
     loaiTienMacDinh: p.getProperty('MISA_LOAI_TIEN_MAC_DINH') || 'VNĐ',
-    vungDinhDangMisa: p.getProperty('MISA_VUNG_DINH_DANG') || 'vi_VN',
     masterSheetUrl: p.getProperty('MISA_MASTER_SHEET_ID') ? ('https://docs.google.com/spreadsheets/d/' + p.getProperty('MISA_MASTER_SHEET_ID') + '/edit') : ''
   };
 }
@@ -47,7 +46,6 @@ function LUU_THIET_LAP_MISA_(thietLap) {
   p.setProperty('MISA_TEN_HANG_MAC_DINH', (thietLap.tenHangMacDinh || 'Gỗ tròn keo').toString().trim());
   p.setProperty('MISA_DON_VI_TINH_MAC_DINH', (thietLap.donViTinhMacDinh || 'Tấn').toString().trim());
   p.setProperty('MISA_LOAI_TIEN_MAC_DINH', (thietLap.loaiTienMacDinh || 'VNĐ').toString().trim());
-  p.setProperty('MISA_VUNG_DINH_DANG', (thietLap.vungDinhDangMisa || 'vi_VN').toString().trim());
   // ⚠️ MỚI: URL/ID của Sheet CỐ ĐỊNH "Update_Hopdong_NCC_DN" — chấp nhận dán
   // nguyên URL, tự tách ra đúng ID để lưu.
   if (thietLap.masterSheetUrl !== undefined) {
@@ -89,6 +87,10 @@ const MISA_COT_TEXT_HDMB_ = [1, 8, 10];
 // Cột dùng làm KHÓA khi upsert (0-indexed, khớp header ở trên)
 const MISA_COT_KHOA_NCC_ = 26; // "ID_HD"
 const MISA_COT_KHOA_HDMB_ = 23; // "KEY_HD" (= idRung)
+// Cột NGÀY (1-indexed) — định dạng theo "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs),
+// KHÔNG liên quan tới "Vùng Lãnh Thổ" của file dữ liệu chính/Draft.
+const MISA_COT_NGAY_NCC_ = [13]; // "Ngày cấp"
+const MISA_COT_NGAY_HDMB_ = [2]; // "Ngày ký (*)"
 
 /** Tính dữ liệu MISA MỚI NHẤT từ HD_NCC/HD_RUNG/HD_GPS — KHÔNG ghi gì cả, chỉ trả về mảng dòng để nơi khác dùng (đồng bộ hoặc xem trước) */
 function layDuLieuMisaHienTai_(tuNgay, denNgay) {
@@ -183,8 +185,11 @@ function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
   try { ssMaster = SpreadsheetApp.openById(masterId); } catch (e) { return { thanhCong: false, loi: 'Không mở được Sheet đã cấu hình: ' + e.message }; }
 
   const duLieu = layDuLieuMisaHienTai_(tuNgay, denNgay);
-  const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_);
-  const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_);
+  // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — chỉ ảnh hưởng cách ngày
+  // được GHI RA file MISA, KHÔNG ảnh hưởng giao diện webapp (luôn hiển thị kiểu Việt Nam).
+  const mauNgayXuat = MAU_NGAY_THEO_VUNG_[layVungXuatExcelNoiBo_()] || 'dd/mm/yyyy';
+  const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_, MISA_COT_NGAY_NCC_, mauNgayXuat);
+  const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_, MISA_COT_NGAY_HDMB_, mauNgayXuat);
 
   ghiNhatKy_('Đồng bộ MISA Master', '', 'NCC: +' + kqNCC.soThem + ' /~' + kqNCC.soCapNhat + ' (dọn ' + kqNCC.soDongTrongDaDon + ' dòng trống, gộp ' + kqNCC.soTrungDaGop + ' trùng) — HDMB: +' + kqHDMB.soThem + ' /~' + kqHDMB.soCapNhat + ' (dọn ' + kqHDMB.soDongTrongDaDon + ' dòng trống, gộp ' + kqHDMB.soTrungDaGop + ' trùng)');
   return { thanhCong: true, ncc: kqNCC, hdmb: kqHDMB, masterUrl: ssMaster.getUrl() };
@@ -198,7 +203,7 @@ function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
  * trước (thực tế phát hiện: file gốc có hàng trăm dòng trống xen giữa do
  * template/thao tác cũ để lại — không thể xử lý bằng cách sửa từng dòng riêng lẻ).
  */
-function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotText) {
+function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotText, cotNgay, mauNgay) {
   let sh = ssMaster.getSheetByName(tenSheet);
   if (!sh) sh = ssMaster.insertSheet(tenSheet);
   if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, header.length).setValues([header]);
@@ -230,6 +235,9 @@ function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotTe
   if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, header.length).clearContent(); // dọn sạch toàn bộ vùng cũ trước khi ghi lại gọn gàng
   if (tatCa.length) {
     cotText.forEach(function (c) { sh.getRange(2, c, tatCa.length, 1).setNumberFormat('@'); }); // định dạng TEXT TRƯỚC khi ghi, tránh mất số 0
+    if (cotNgay && cotNgay.length && mauNgay) {
+      cotNgay.forEach(function (c) { sh.getRange(2, c, tatCa.length, 1).setNumberFormat(mauNgay); });
+    }
     sh.getRange(2, 1, tatCa.length, header.length).setValues(tatCa);
   }
 
