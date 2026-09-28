@@ -128,7 +128,7 @@ function _thuThapAnh_(idHD, theoKhachHang) {
     if (chung.length) nhom.push({ tieuDe: 'Ảnh chung của hợp đồng', idRung: '', anh: chung });
     (loTheoHD[idH] || []).forEach(function (lo) {
       const a = anhTheoNhom[idH + '|' + lo.idRung] || [];
-      if (a.length) nhom.push({ tieuDe: 'Lô ' + (lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + lo.diaChiRung : ''), idRung: lo.idRung, anh: a });
+      if (a.length) nhom.push({ tieuDe: 'Lô ' + (lo.maRung || lo.idRung) + (lo.diaChiRung ? ' — ' + lo.diaChiRung : ''), idRung: lo.idRung, diaChiRung: lo.diaChiRung, anh: a });
     });
     nhom.forEach(function (n) { tongAnh += n.anh.length; });
     // Hồ sơ pháp lý của từng lô (1 file/lô) — chỉ Nhập liệu / Quản trị
@@ -258,6 +258,110 @@ function LAY_DU_LIEU_ANH_(idHD, theoKhachHang, ids, lon) {
     if (MAU_ID_DRIVE.test(id) && choPhep[id] && hopLe.indexOf(id) === -1 && hopLe.length < gioiHan) hopLe.push(id);
   });
   return { anh: _taiAnhDrive_(hopLe, lon ? ANH_TC_CO_LON : ANH_TC_CO_NHO) };
+}
+
+/**
+ * ============================================================
+ *  LINK ẢNH CÔNG KHAI — in trong mã QR của báo cáo PDF.
+ *  Ai có link đều xem/tải được ẢNH HIỆN TRƯỜNG + ẢNH GPS của đúng 1 hợp đồng, không
+ *  cần đăng nhập. KHÔNG bao giờ gồm hồ sơ pháp lý, không hiện CCCD/Mã rừng (chứa CCCD).
+ *  Link = ?action=anh&hd=<ID_HD>&k=<chữ ký HMAC> — không đoán được link của hợp đồng khác.
+ *  Thu hồi TẤT CẢ link đã in: xóa Script Property ANH_CONG_KHAI_SECRET (tự tạo khóa mới).
+ *  Không đổi quyền chia sẻ file trên Drive — ảnh được tải qua quyền chủ script.
+ * ============================================================
+ */
+const PROP_ANH_CONG_KHAI_SECRET_ = 'ANH_CONG_KHAI_SECRET';
+const ANH_CK_TOI_DA_BYTE_GOC = 15 * 1024 * 1024; // ảnh gốc lớn hơn -> tải bản 2000px
+
+function _khoaAnhCongKhai_() {
+  const p = PropertiesService.getScriptProperties();
+  let s = p.getProperty(PROP_ANH_CONG_KHAI_SECRET_);
+  if (!s) { s = _taoMaNgauNhien_(); p.setProperty(PROP_ANH_CONG_KHAI_SECRET_, s); }
+  return s;
+}
+function _maAnhCongKhai_(idHD) {
+  return _kyHmac_('anh|' + String(idHD).trim(), _khoaAnhCongKhai_()).slice(0, 22); // ~130 bit, link ngắn cho QR
+}
+function _hopLeAnhCongKhai_(idHD, k) {
+  idHD = (idHD || '').toString().trim(); k = (k || '').toString();
+  return !!idHD && !!k && _soSanhAnToan_(k, _maAnhCongKhai_(idHD));
+}
+/** Link công khai tới trang ảnh của 1 hợp đồng. */
+function linkAnhCongKhai_(idHD) {
+  idHD = String(idHD).trim();
+  return ScriptApp.getService().getUrl() + '?action=anh&hd=' + encodeURIComponent(idHD) + '&k=' + _maAnhCongKhai_(idHD);
+}
+
+/** Ảnh công khai của 1 hợp đồng: chỉ ảnh hiện trường + ảnh GPS. Nhớ 10 phút. */
+function _danhSachAnhCongKhai_(idHD) {
+  idHD = String(idHD).trim();
+  const cache = CacheService.getScriptCache();
+  const khoa = 'anhck_' + Utilities.base64EncodeWebSafe(Utilities.newBlob(idHD).getBytes()).slice(0, 200);
+  const daNho = cache.get(khoa);
+  if (daNho) return JSON.parse(daNho);
+  const d = _thuThapAnh_(idHD, false);
+  if (!d || !d.hopDong.length) return null;
+  const h = d.hopDong[0];
+  const kq = {
+    soHD: h.soHD, ngayKy: h.ngayKy,
+    nhom: h.nhom.map(function (n) {
+      return {
+        tieuDe: n.idRung ? 'Lô ' + n.idRung + (n.diaChiRung ? ' — ' + n.diaChiRung : '') : 'Ảnh chung của hợp đồng',
+        anh: n.anh.map(function (a) { return { id: a.id, loai: a.loai }; })
+      };
+    })
+  };
+  try { cache.put(khoa, JSON.stringify(kq), 600); } catch (e) { /* quá lớn -> không nhớ */ }
+  return kq;
+}
+
+/** Trang ảnh công khai (doGet ?action=anh). */
+function trangAnhCongKhai_(idHD, k) {
+  idHD = (idHD || '').toString().trim();
+  const tmpl = HtmlService.createTemplateFromFile('38_Page_AnhCongKhai');
+  tmpl.loi = ''; tmpl.duLieuJson = 'null'; // chỉ đưa tham số URL vào trang khi chữ ký đúng
+  if (!_hopLeAnhCongKhai_(idHD, k)) tmpl.loi = 'Link ảnh không hợp lệ hoặc đã bị thu hồi.';
+  else {
+    const ds = _danhSachAnhCongKhai_(idHD);
+    if (!ds) tmpl.loi = 'Không tìm thấy hợp đồng.';
+    else tmpl.duLieuJson = JSON.stringify({ hd: idHD, k: String(k), ds: ds }).replace(/</g, '\\u003c');
+  }
+  return tmpl.evaluate()
+    .setTitle('Ảnh hợp đồng HAK')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Gọi từ trang ảnh công khai (người xem KHÔNG đăng nhập) — cố ý không qua api() và tự
+ * kiểm tra chữ ký link. Chỉ trả ảnh thuộc danh sách công khai của đúng hợp đồng đó.
+ * goc=false: ảnh thu nhỏ { anh: {id: dataUrl} } (tối đa 30/lần);
+ * goc=true : 1 ảnh gốc để tải { base64, mime, duoi }.
+ */
+function ANH_CONG_KHAI(idHD, k, ids, goc) {
+  if (!_hopLeAnhCongKhai_(idHD, k)) throw new Error('Link ảnh không hợp lệ hoặc đã bị thu hồi.');
+  const ds = _danhSachAnhCongKhai_(idHD);
+  if (!ds) throw new Error('Không tìm thấy hợp đồng.');
+  const choPhep = {};
+  ds.nhom.forEach(function (n) { n.anh.forEach(function (a) { choPhep[a.id] = true; }); });
+  const hopLe = [];
+  (Array.isArray(ids) ? ids : []).forEach(function (id) {
+    id = String(id || '');
+    if (MAU_ID_DRIVE.test(id) && choPhep[id] && hopLe.indexOf(id) === -1 && hopLe.length < (goc ? 1 : ANH_TC_TOI_DA_MOI_LUOT)) hopLe.push(id);
+  });
+  if (!goc) return { anh: _taiAnhDrive_(hopLe, ANH_TC_CO_NHO) };
+  if (!hopLe.length) throw new Error('Ảnh không thuộc hợp đồng này.');
+  const f = DriveApp.getFileById(hopLe[0]);
+  const mime = f.getMimeType() || '';
+  if (mime.indexOf('image/') === 0 && f.getSize() <= ANH_CK_TOI_DA_BYTE_GOC) {
+    const ten = f.getName() || '';
+    const duoi = (ten.match(/\.([A-Za-z0-9]{2,5})$/) || [])[1] || (mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    return { base64: Utilities.base64Encode(f.getBlob().getBytes()), mime: mime, duoi: duoi.toLowerCase() };
+  }
+  const lon = _taiAnhDrive_(hopLe, 2000)[hopLe[0]] || '';
+  const m = lon.match(/^data:([^;]+);base64,(.*)$/);
+  if (!m) throw new Error('Không tải được ảnh.');
+  return { base64: m[2], mime: m[1], duoi: (m[1].split('/')[1] || 'jpg').replace('jpeg', 'jpg') };
 }
 
 function _escPdf_(s) {

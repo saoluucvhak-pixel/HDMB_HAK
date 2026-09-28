@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #f3f5f7; color: #1f2937; }
+    .dau { background: #1e5631; color: #fff; padding: 16px; }
+    .dau h1 { margin: 0 0 4px; font-size: 18px; }
+    .dau p { margin: 0; font-size: 13px; opacity: .9; }
+    .than { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    .thanh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .nut { border: 0; border-radius: 6px; background: #1e5631; color: #fff; padding: 9px 14px; font-size: 14px; cursor: pointer; }
+    .nut:disabled { opacity: .5; cursor: default; }
+    .nut.phu { background: #fff; color: #1e5631; border: 1px solid #1e5631; padding: 5px 10px; font-size: 13px; }
+    .tb { font-size: 13px; color: #4b5563; }
+    .loi { background: #fee2e2; color: #991b1b; padding: 14px; border-radius: 6px; }
+    h2 { font-size: 15px; margin: 18px 0 8px; }
+    .luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .o { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08); display: flex; flex-direction: column; }
+    .o .anh { aspect-ratio: 4 / 3; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #6b7280; }
+    .o img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .o .duoi { padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="dau">
+    <h1 id="tieuDe">Ảnh hiện trường hợp đồng</h1>
+    <p>Hệ thống HAK — trang chỉ gồm ảnh hiện trường và ảnh GPS, không gồm hồ sơ pháp lý.</p>
+  </div>
+  <div class="than">
+    <? if (loi) { ?>
+      <div class="loi"><?= loi ?></div>
+    <? } else { ?>
+      <div class="thanh">
+        <button class="nut" id="btnTatCa" type="button">⬇ Tải tất cả ảnh</button>
+        <span class="tb" id="thongBao"></span>
+      </div>
+      <div id="noiDung"></div>
+    <? } ?>
+  </div>
+<script>
+  var DL = <?!= duLieuJson ?>;
+  (function () {
+    if (!DL) return;
+    var ds = DL.ds, danhSach = [];
+    document.getElementById('tieuDe').textContent = 'Ảnh hiện trường — Hợp đồng số ' + ds.soHD + (ds.ngayKy ? ' (ký ngày ' + ds.ngayKy + ')' : '');
+    var tbEl = document.getElementById('thongBao');
+    function thongBao(s) { tbEl.textContent = s; }
+    var tenGoc = String(ds.soHD || 'HD').replace(/[^A-Za-z0-9_-]+/g, '_');
+
+    var noiDung = document.getElementById('noiDung');
+    ds.nhom.forEach(function (n, iN) {
+      var h = document.createElement('h2');
+      h.textContent = n.tieuDe + ' (' + n.anh.length + ' ảnh)';
+      noiDung.appendChild(h);
+      var luoi = document.createElement('div');
+      luoi.className = 'luoi';
+      n.anh.forEach(function (a, iA) {
+        var x = { id: a.id, ten: tenGoc + '_' + (iN + 1) + '_' + (iA + 1) };
+        var o = document.createElement('div'); o.className = 'o';
+        var khung = document.createElement('div'); khung.className = 'anh'; khung.textContent = 'Đang tải...';
+        var duoi = document.createElement('div'); duoi.className = 'duoi';
+        var nhan = document.createElement('span'); nhan.textContent = a.loai;
+        var nut = document.createElement('button'); nut.type = 'button'; nut.className = 'nut phu'; nut.textContent = '⬇ Tải';
+        nut.addEventListener('click', function () { taiMot(x, nut); });
+        duoi.appendChild(nhan); duoi.appendChild(nut);
+        o.appendChild(khung); o.appendChild(duoi); luoi.appendChild(o);
+        x.khung = khung;
+        danhSach.push(x);
+      });
+      noiDung.appendChild(luoi);
+    });
+    if (!danhSach.length) { thongBao('Hợp đồng này chưa có ảnh hiện trường.'); document.getElementById('btnTatCa').disabled = true; return; }
+    thongBao(danhSach.length + ' ảnh');
+
+    // Ảnh thu nhỏ: 30 ảnh/lượt
+    (function taiThuNho(tu) {
+      var lo = danhSach.slice(tu, tu + 30);
+      if (!lo.length) return;
+      google.script.run
+        .withSuccessHandler(function (kq) {
+          lo.forEach(function (x) {
+            var src = kq && kq.anh ? kq.anh[x.id] : '';
+            x.khung.textContent = '';
+            if (src) { var img = document.createElement('img'); img.src = src; img.alt = x.ten; x.khung.appendChild(img); }
+            else x.khung.textContent = 'Không xem trước được';
+          });
+          taiThuNho(tu + 30);
+        })
+        .withFailureHandler(function (err) {
+          lo.forEach(function (x) { x.khung.textContent = 'Lỗi tải ảnh'; });
+          thongBao('❌ ' + err.message);
+        })
+        .ANH_CONG_KHAI(DL.hd, DL.k, lo.map(function (x) { return x.id; }), false);
+    })(0);
+
+    function luuFile(kq, ten) {
+      var a = document.createElement('a');
+      a.href = 'data:' + kq.mime + ';base64,' + kq.base64;
+      a.download = ten + '.' + kq.duoi;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    function taiMot(x, nut, xong) {
+      if (nut) nut.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (kq) { luuFile(kq, x.ten); if (nut) nut.disabled = false; if (xong) xong(true); })
+        .withFailureHandler(function (err) { if (nut) nut.disabled = false; thongBao('❌ ' + err.message); if (xong) xong(false); })
+        .ANH_CONG_KHAI(DL.hd, DL.k, [x.id], true);
+    }
+    document.getElementById('btnTatCa').addEventListener('click', function () {
+      var btn = this, i = 0, loi = 0;
+      btn.disabled = true;
+      (function tiep() {
+        if (i >= danhSach.length) {
+          btn.disabled = false;
+          thongBao('✅ Đã tải ' + (danhSach.length - loi) + '/' + danhSach.length + ' ảnh' + (loi ? ' (' + loi + ' ảnh lỗi)' : '') + '. Nếu trình duyệt hỏi "tải nhiều tệp", hãy chọn Cho phép.');
+          return;
+        }
+        thongBao('⌛ Đang tải ảnh ' + (i + 1) + '/' + danhSach.length + '...');
+        taiMot(danhSach[i], null, function (ok) { if (!ok) loi++; i++; setTimeout(tiep, 300); });
+      })();
+    });
+  })();
+</script>
+</body>
+</html>

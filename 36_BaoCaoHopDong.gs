@@ -156,8 +156,8 @@ function _phieuCanTheoSoCT_(soCTs) {
   }
 }
 
-/** Nội dung mã QR "đóng dấu" trên báo cáo của 1 hợp đồng. */
-function _noiDungQrHopDong_(r, dsLo) {
+/** Nội dung mã QR "đóng dấu" trên báo cáo của 1 hợp đồng. linkAnh: trang ảnh công khai (35_TraCuuHinhAnh.gs). */
+function _noiDungQrHopDong_(r, dsLo, linkAnh) {
   const tongLo = dsLo.reduce(function (t, lo) { return t + (Number(lo.dienTichM2) || 0); }, 0);
   const dt = Number(r[NCC_COL.DIEN_TICH_KY]) || tongLo;
   const diaChiRung = (r[NCC_COL.DIA_CHI_RUNG] || '').toString().trim() ||
@@ -167,7 +167,8 @@ function _noiDungQrHopDong_(r, dsLo) {
     '\nChủ rừng: ' + (r[NCC_COL.TEN_CHU_RUNG] || '').toString().trim() +
     '\nĐịa chỉ: ' + (r[NCC_COL.DIA_CHI_TT] || '').toString().trim() +
     '\nĐịa chỉ rừng: ' + diaChiRung +
-    '\nDiện tích: ' + (dt ? _soVN_(dt) + ' m² (' + _soVN_(dt / 10000, 2) + ' ha)' : 'chưa có');
+    '\nDiện tích: ' + (dt ? _soVN_(dt) + ' m² (' + _soVN_(dt / 10000, 2) + ' ha)' : 'chưa có') +
+    (linkAnh ? '\nTải ảnh hiện trường:\n' + linkAnh : '');
 }
 
 /** Như _soVN_ nhưng GIỮ đủ `le` chữ số thập phân (vd 31,800) — dùng cho cột số canh phải để dấu phẩy thẳng hàng. */
@@ -287,8 +288,9 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
 
     // 1. Các bên
     // Mã QR "đóng dấu" (số HĐ, chủ rừng, địa chỉ, địa chỉ rừng, diện tích) — tạo ngay trong script (37_MaQR.gs)
-    let qr = null;
-    try { qr = maQrAnh_(_noiDungQrHopDong_(r, dsLo), 4); } catch (eQr) { canhBao.push('Không tạo được mã QR cho HĐ ' + h.soHD + ': ' + eQr.message); }
+    let qr = null, linkAnh = '';
+    try { linkAnh = linkAnhCongKhai_(h.idHD); } catch (eLk) { canhBao.push('Không tạo được link ảnh cho HĐ ' + h.soHD + ': ' + eLk.message); }
+    try { qr = maQrAnh_(_noiDungQrHopDong_(r, dsLo, linkAnh), 4); } catch (eQr) { canhBao.push('Không tạo được mã QR cho HĐ ' + h.soHD + ': ' + eQr.message); }
     html += '<table style="width:100%;border-collapse:collapse"><tr><td style="vertical-align:top;padding:0">';
     html += '<h3>1. Bên bán (chủ rừng) và tài khoản nhận tiền</h3><table class="tt">' +
       '<tr><th>Chủ rừng</th><td>' + e(r[NCC_COL.TEN_CHU_RUNG]) + '</td><th>CCCD</th><td>' + e(cccd(r[NCC_COL.CCCD_CHU_RUNG])) + '</td></tr>' +
@@ -298,7 +300,8 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
     (stkTheoHD[h.idHD] || []).forEach(function (t) { html += '<tr><th>Tài khoản khác</th><td colspan="3">' + e(t.soTK) + (t.nganHang ? ' — ' + e(t.nganHang) : '') + (t.ten ? ' — ' + e(t.ten) : '') + '</td></tr>'; });
     html += '<tr><th>Địa chỉ rừng</th><td colspan="3">' + e(r[NCC_COL.DIA_CHI_RUNG]) + ' · ' + dsLo.length + ' lô rừng' + (Number(r[NCC_COL.DIEN_TICH_KY]) ? ' · diện tích ký ' + e(_soVN_(r[NCC_COL.DIEN_TICH_KY])) + ' m²' : '') + '</td></tr></table>';
     html += '</td>' + (qr ? '<td style="width:' + (qr.canh * 2 + 16) + 'px;vertical-align:top;padding:8px 0 0 10px"><div class="dau"><div class="dau-td">HAK · MÃ QR HỢP ĐỒNG</div>' +
-      '<img src="' + qr.src + '" style="width:' + qr.canh * 2 + 'px;height:' + qr.canh * 2 + 'px"><div class="dau-so">Số HĐ ' + e(h.soHD) + '</div><div class="dau-phu">Quét để xem số HĐ, ngày ký, chủ rừng, địa chỉ, địa chỉ rừng, diện tích</div></div></td>' : '') +
+      '<img src="' + qr.src + '" style="width:' + qr.canh * 2 + 'px;height:' + qr.canh * 2 + 'px"><div class="dau-so">Số HĐ ' + e(h.soHD) + '</div><div class="dau-phu">Quét để xem số HĐ, ngày ký, chủ rừng, địa chỉ, địa chỉ rừng, diện tích' +
+      (linkAnh ? ' và tải ảnh hiện trường · <a href="' + e(linkAnh) + '">Mở trang ảnh</a>' : '') + '</div></div></td>' : '') +
       '</tr></table>';
 
     // 2. Tiến độ

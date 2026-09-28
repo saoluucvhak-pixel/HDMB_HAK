@@ -38,6 +38,9 @@ function doGet(e) {
     }
   }
 
+  // Link ảnh công khai trong mã QR của báo cáo PDF — không cần đăng nhập, tự kiểm tra chữ ký (35_TraCuuHinhAnh.gs)
+  if (action === 'anh') return trangAnhCongKhai_(e.parameter.hd, e.parameter.k);
+
   // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
   // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
   var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
