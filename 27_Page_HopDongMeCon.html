@@ -943,30 +943,36 @@
   // ============ TAB CHI TIẾT HỢP ĐỒNG (chỉ xem — tổng hợp từ các lô rừng, không sửa được) ============
   function renderTabChiTiet_(h) {
     var el = document.getElementById('vungTabHD');
-    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>📊 Chi tiết hợp đồng</h4><p>Tự tính từ toàn bộ lô rừng đã thêm — chỉ xem, sửa số liệu ở tab "🌲 Lô rừng".</p></div></div><div id="vungTongHopHD"><p class="hint">⌛ Đang tính...</p></div></div>';
-    taiTongHopHD_(h.idHD);
+    el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>📊 Chi tiết hợp đồng</h4><p>Tổng hợp từ toàn bộ lô rừng — chỉ xem, sửa số liệu ở tab "🌲 Lô rừng" (lưu lô rừng là chi tiết tự cập nhật).</p></div></div><div id="vungTongHopHD"><p class="hint">⌛ Đang tính...</p></div></div>';
+    taiChiTietHopDong_(h.idHD, 'vungTongHopHD');
   }
-  function taiTongHopHD_(idHD) {
+  /** Chi tiết hợp đồng lấy từ máy chủ (layChiTietHopDong — cùng phép tính với ct_hopdong và
+   *  cột Z/T/AA của HD_NCC), vẽ vào khung idVung. Gọi lại sau mỗi lần thêm/sửa/xóa lô rừng. */
+  function taiChiTietHopDong_(idHD, idVung) {
+    var el0 = document.getElementById(idVung);
+    if (el0 && !el0.innerHTML) el0.innerHTML = '<p class="hint">⌛ Đang tính chi tiết hợp đồng...</p>';
     hakRun_()
-      .withSuccessHandler(function (list) {
-        var el = document.getElementById('vungTongHopHD'); if (!el) return;
-        if (!list || !list.length) { el.innerHTML = '<div class="empty-hint">Chưa có lô rừng nào — vào tab "🌲 Lô rừng" để thêm.</div>'; return; }
-        var tongDT = 0, tongKL = 0, tongGT = 0, soLo = list.length;
-        list.forEach(function (r) {
-          var dt = Number(r.dienTichM2) || 0, kl = Number(r.khoiLuongDuKien) || 0, dg = Number(r.donGia) || 0;
-          tongDT += dt; tongKL += kl; tongGT += kl * dg;
-        });
-        var donGiaBinhQuan = tongKL > 0 ? tongGT / tongKL : 0;
+      .withSuccessHandler(function (kq) {
+        var el = document.getElementById(idVung); if (!el) return;
+        if (!kq) { el.innerHTML = '<div class="empty-hint">❌ Không tìm thấy hợp đồng.</div>'; return; }
+        var th = kq.tongHop, hd = kq.hdNcc;
+        if (!th.soLo) { el.innerHTML = '<div class="empty-hint">Chưa có lô rừng nào — vào tab "🌲 Lô rừng" để thêm.</div>'; return; }
+        var soHD = function (v, dv) { return v === '' ? '<span class="hint">(trống)</span>' : dinhDangSoVN_(v) + dv; };
+        var daChot = kq.tinhTrang === 'Đang thực hiện' && Number(hd.slDuKien) > 0 && Number(hd.slDuKien) !== th.tongKhoiLuong;
         el.innerHTML = '<table class="mecon-table"><tbody>' +
-          '<tr><th style="width:180px">Số lô rừng</th><td>' + soLo + ' lô</td></tr>' +
-          '<tr><th>Tổng diện tích</th><td>' + formatSo_(tongDT) + ' m²</td></tr>' +
-          '<tr><th>Tổng khối lượng dự kiến</th><td>' + formatSo_(tongKL) + ' Tấn</td></tr>' +
-          '<tr><th>Đơn giá bình quân</th><td>' + formatTien_(donGiaBinhQuan) + ' đ/Tấn</td></tr>' +
-          '<tr><th>TỔNG GIÁ TRỊ HỢP ĐỒNG</th><td><b style="font-size:15px;color:var(--active-green)">' + formatTien_(tongGT) + ' đ</b></td></tr>' +
+          '<tr><th style="width:200px">Số lô rừng</th><td>' + th.soLo + ' lô</td></tr>' +
+          '<tr><th>Tổng diện tích</th><td>' + dinhDangSoVN_(th.tongDienTich) + ' m²</td></tr>' +
+          '<tr><th>Tổng khối lượng dự kiến</th><td>' + dinhDangSoVN_(th.tongKhoiLuong) + ' Tấn</td></tr>' +
+          '<tr><th>Đơn giá bình quân</th><td>' + formatTien_(th.donGiaBQ) + ' đ/Tấn</td></tr>' +
+          '<tr><th>TỔNG GIÁ TRỊ HỢP ĐỒNG</th><td><b style="font-size:15px;color:var(--active-green)">' + formatTien_(th.tongGiaTri) + ' đ</b></td></tr>' +
+          (th.hoSoNguonGoc ? '<tr><th>Loại hồ sơ nguồn gốc</th><td>' + escHtml_(th.hoSoNguonGoc) + '</td></tr>' : '') +
+          (th.soGiayTo ? '<tr><th>Số giấy tờ</th><td>' + escHtml_(th.soGiayTo) + '</td></tr>' : '') +
+          '<tr><th>Trên hợp đồng (app Thanh toán đọc)</th><td>SL dự kiến ' + soHD(hd.slDuKien, ' Tấn') + ' · Diện tích ' + soHD(hd.dienTichKy, ' m²') + ' · Đơn giá ' + soHD(hd.donGia, ' đ/Tấn') +
+          (daChot ? '<br><span class="hint">🔒 Hợp đồng "Đang thực hiện": SL dự kiến đã chốt lúc ký, không tự đổi theo lô rừng.</span>' : '') + '</td></tr>' +
           '</tbody></table>';
       })
-      .withFailureHandler(function (err) { var el = document.getElementById('vungTongHopHD'); if (el) el.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtml_(err.message) + '</div>'; })
-      .layDanhSachRung(idHD);
+      .withFailureHandler(function (err) { var el = document.getElementById(idVung); if (el) el.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtml_(err.message) + '</div>'; })
+      .layChiTietHopDong(idHD);
   }
 
   // ============ TAB SỐ TÀI KHOẢN ============
@@ -1106,12 +1112,16 @@
     var el = document.getElementById('vungTabHD');
     var coTheSua = coTheSuaHopDong_(h.tinhTrang);
     el.innerHTML = '<div class="card-con"><div class="card-con-head"><div><h4>Lô rừng</h4><p>Diện tích tự tính khối lượng dự kiến (120 tấn/ha).' + (coTheSua ? '' : ' 🔒 Hợp đồng đã "' + escHtml_(h.tinhTrang) + '" — chỉ xem, không sửa được.') + '</p></div>' +
-      (coTheSua ? '<button class="btn btn-green" id="btnThemRung">➕ Thêm lô rừng</button>' : '') + '</div><div id="vungBangRung"><p class="hint">⌛ Đang tải...</p></div></div>';
+      (coTheSua ? '<button class="btn btn-green" id="btnThemRung">➕ Thêm lô rừng</button>' : '') + '</div>' +
+      '<details open style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">📊 Chi tiết hợp đồng (tự cập nhật sau mỗi lần lưu lô rừng)</summary><div id="vungChiTietTrongTabRung" style="margin-top:6px"></div></details>' +
+      '<div id="vungBangRung"><p class="hint">⌛ Đang tải...</p></div></div>';
     if (coTheSua) document.getElementById('btnThemRung').addEventListener('click', function () { moModalThemSuaRung_(h, null); });
     taiBangRung_(h);
   }
   function taiBangRung_(h) {
     var coTheSua = coTheSuaHopDong_(h.tinhTrang);
+    // Mọi lần lưu/xóa lô rừng đều gọi lại hàm này -> chi tiết hợp đồng cập nhật cùng lúc với bảng lô
+    if (document.getElementById('vungChiTietTrongTabRung')) taiChiTietHopDong_(h.idHD, 'vungChiTietTrongTabRung');
     hakRun_()
       .withSuccessHandler(function (list) {
         var elBang = document.getElementById('vungBangRung');
@@ -1133,7 +1143,7 @@
             var lnkSua = document.createElement('a'); lnkSua.className = 'lnk-sua'; lnkSua.style.marginLeft = '8px'; lnkSua.textContent = 'Sửa';
             lnkSua.addEventListener('click', function () { moModalThemSuaRung_(h, r); });
             var lnkHuy = document.createElement('a'); lnkHuy.className = 'lnk-huy'; lnkHuy.textContent = 'Xóa';
-            lnkHuy.addEventListener('click', function () { if (confirm('Xóa lô rừng này?')) hakRun_().withSuccessHandler(function () { taiBangRung_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi xóa lô rừng: ' + err.message); }).XOA_LO_RUNG(r.idRung); });
+            lnkHuy.addEventListener('click', function () { if (confirm('Xóa lô rừng này?')) hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiBangRung_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi xóa lô rừng: ' + err.message); }).XOA_LO_RUNG(r.idRung); });
             tdNut.appendChild(lnkSua); tdNut.appendChild(lnkHuy);
           }
           tbody.appendChild(tr);

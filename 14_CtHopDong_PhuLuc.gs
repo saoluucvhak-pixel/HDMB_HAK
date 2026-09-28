@@ -166,6 +166,27 @@ function ghiThayDoiHdNcc_(sh, soDong, idHD, thayDoi, lyDo) {
 }
 
 /**
+ * CHỈ ĐỌC — "Chi tiết hợp đồng" để hiển thị: tổng hợp lô rừng HIỆN TẠI (cùng phép tính
+ * tinhTongHopLoRung_ với ct_hopdong, không tính riêng ở trình duyệt) + số đang ghi trên
+ * HD_NCC (Z/T/AA — số app Thanh toán đọc). Trả null nếu không có hợp đồng.
+ */
+function layChiTietHopDong_(idHD) {
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return null;
+  const r = readData_(SHEET_NAME.HD_NCC).find(function (x) { return (x[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
+  if (!r) return null;
+  const th = tinhTongHopLoRung_(readData_(SHEET_NAME.HD_RUNG).filter(function (x) {
+    return (x[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD;
+  }));
+  const so = function (v) { return typeof v === 'number' ? v : (v === '' || v === null || v === undefined ? '' : String(v)); };
+  return {
+    tongHop: th,
+    hdNcc: { slDuKien: so(r[NCC_COL.SL_DU_KIEN]), dienTichKy: so(r[NCC_COL.DIEN_TICH_KY]), donGia: so(r[NCC_COL.DON_GIA]) },
+    tinhTrang: (r[NCC_COL.TINH_TRANG] || '').toString()
+  };
+}
+
+/**
  * ĐỒNG BỘ SỐ LIỆU LÔ RỪNG CỦA 1 HỢP ĐỒNG: tính 1 lần (tinhTongHopLoRung_) rồi ghi vào
  * ct_hopdong VÀ cột Z/T/AA của HD_NCC (theo quy tắc ở tinhThayDoiHdNccTuLoRung_).
  * Gọi ở MỌI chỗ thêm/sửa/xóa lô rừng. Không ném lỗi — lưu lô rừng vẫn phải thành công dù
