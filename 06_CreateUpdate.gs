@@ -506,10 +506,41 @@ function damBaoTieuDeCotMoRongRung_() {
   if (!oT1.getValue()) oT1.setValue('Năm trồng').setFontWeight('bold');
 }
 
+/** Thông tin hợp đồng gốc (HD_NCC) cần cho 1 lô rừng mới — chỉ đọc cột ID_HD + đúng 1 dòng. */
+function _hopDongGocChoLoRung_(idHD) {
+  const sh = getSheet_(SHEET_NAME.HD_NCC);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return null;
+  const can = idHD.toString().trim();
+  const ids = sh.getRange(2, NCC_COL.ID_HD + 1, lastRow - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if ((ids[i][0] || '').toString().trim() !== can) continue;
+    const r = sh.getRange(i + 2, 1, 1, sh.getLastColumn()).getValues()[0];
+    return { ngayKy: r[NCC_COL.NGAY_KY], soHD: r[NCC_COL.SO_HD], cccd: r[NCC_COL.CCCD_CHU_RUNG],
+      tenChuRung: r[NCC_COL.TEN_CHU_RUNG], thuongTru: r[NCC_COL.DIA_CHI_TT] };
+  }
+  return null;
+}
+
 function THEM_LO_RUNG_MOI_(d) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   damBaoTieuDeCotMoRongRung_();
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
+
+  // Lưu chính thức từ bản nháp / nút "Thêm lô rừng" ở trang mẹ-con không truyền đủ thông tin
+  // hợp đồng -> trước đây lô mới mang NGÀY HÔM NAY thay vì ngày ký hợp đồng (ID_GPS lệch
+  // ID_HD) và Mã rừng thiếu CCCD ("HAK_2"). Lấy phần còn thiếu từ chính hợp đồng.
+  if (!d.ngayKy || !d.soHD || !d.cccd || !d.tenChuRung || !d.thuongTru) {
+    const hd = _hopDongGocChoLoRung_(d.idHD);
+    if (hd) {
+      d = Object.assign({}, d);
+      if (!d.ngayKy && ngayToISO_(hd.ngayKy)) d.ngayKy = hd.ngayKy; // ô ngày đọc không được -> vẫn rơi về hôm nay như cũ
+      if (!d.soHD) d.soHD = hd.soHD;
+      if (!d.cccd) d.cccd = hd.cccd;
+      if (!d.tenChuRung) d.tenChuRung = hd.tenChuRung;
+      if (!d.thuongTru) d.thuongTru = hd.thuongTru;
+    }
+  }
 
   const lock = LockService.getScriptLock();
   try {
