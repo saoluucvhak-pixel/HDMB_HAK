@@ -38,6 +38,18 @@
   // được chèn vào innerHTML; thiếu escape thì tên file chứa <img onerror=...> hay link javascript: sẽ chạy mã.
   function escAT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
+  /** L-03: ngày server gửi -> giá trị ô <input type=date>. Server trả sẵn "yyyy-MM-dd" (ngày thuần) — giữ nguyên,
+   *  không qua new Date().toISOString() (giờ UTC: dữ liệu dạng khác sẽ lùi 1 ngày như lỗi BUG-01 trước đây). */
+  function ngayThuanISO_(v) {
+    var s = (v === null || v === undefined) ? '' : String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    var d = s ? new Date(s) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); // theo giờ máy người dùng
+  }
+
   function urlAT_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escAT_(u) : '#'; }
 
   function setVal(id, v) { document.getElementById(id).value = O_NHAP_SO_.indexOf(id) === -1 ? (v || '') : dinhDangSoVN_(v || ''); }

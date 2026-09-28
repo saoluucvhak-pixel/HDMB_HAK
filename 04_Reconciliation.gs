@@ -137,8 +137,8 @@ function doiChieuMotLoRung_(row) {
     if (khop && khop[1]) fileId = khop[1];
   } else {
     const tenFile = duongDan.split('/').pop();
-    const it = DriveApp.getFilesByName(tenFile);
-    if (it.hasNext()) fileId = it.next().getId();
+    const f = timFileTheoTenTrongThuMucHeThong_(tenFile); // M-12
+    if (f) fileId = f.getId();
   }
   if (!fileId) { ketQua.loi = 'Không tìm thấy file trên Drive: ' + duongDan; return ketQua; }
 

@@ -494,6 +494,9 @@
   </div>
 
 <script>
+  /** L-04: ngày hôm nay theo giờ máy người dùng (tên file xuất) — toISOString() là giờ UTC, 0–7h sáng ra ngày hôm trước. */
+  function ngayHomNay_() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
   // ============ TAB "THEO DÕI HỢP ĐỒNG THEO KHÁCH HÀNG" (mẹ-con, chỉ xem) ============
   // Ghi chú: dùng data-* + addEventListener (không nhúng chuỗi vào onclick) — an toàn
   // với tên/địa chỉ có ký tự đặc biệt (bài học từ lần sửa lỗi ở trang mẹ-con Thêm/Sửa).
@@ -851,7 +854,7 @@
             r.thucHienTuNgay ? ngayXuatFile_(r.thucHienTuNgay) : '', r.thucHienDenNgay ? ngayXuatFile_(r.thucHienDenNgay) : '',
             r.coAnh ? 'Có' : 'Chưa', r.daDoGPSDu ? 'Đủ' : 'Chưa đủ', r.hoSoDu ? 'Đủ' : 'Chưa đủ', r.tinhTrang || '', r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '')];
         });
-        xuatBangRaFile_('msgLocBC', 'BaoCaoHopDong_' + new Date().toISOString().slice(0, 10), header, rows, dinhDang);
+        xuatBangRaFile_('msgLocBC', 'BaoCaoHopDong_' + ngayHomNay_(), header, rows, dinhDang);
       }).layBaoCaoHopDongPhanTrang(boLoc, 1, 100000, false);
   }
 
@@ -1013,7 +1016,7 @@
     var rows = dsHoSoRungLocGanNhat_.map(function (r) {
       return [r.idRung || '', r.soHD || '', r.tenChuRung || '', r.tinhTrang || '', Math.round(r.dienTich) || 0, Math.round(r.khoiLuongDuKien) || 0, Math.round(r.donGia) || 0, Math.round(r.giaTri) || 0, r.hoSoNguonGoc || '', r.soGiayTo || ''];
     });
-    xuatBangRaFile_('msgHoSoRung', 'HoSoRung_' + new Date().toISOString().slice(0, 10), header, rows, dinhDang);
+    xuatBangRaFile_('msgHoSoRung', 'HoSoRung_' + ngayHomNay_(), header, rows, dinhDang);
   }
   function taiBaoCaoHoSoRung() {
     showMsg('msgHoSoRung', '⌛ Đang tải...', true);

@@ -502,6 +502,7 @@
         .withSuccessHandler(function (kq) {
           if (!kq.thanhCong) { dangTaoHopDong_ = false; showMsgModal_('❌ ' + kq.loi); return; }
           if (kq.nhacDuyet) thongBao_('⚠️ ' + kq.nhacDuyet);
+          if (kq.canhBao) thongBao_('⚠️ ' + kq.canhBao); // M-17: trùng CCCD / chưa tạo được lô rừng, số TK
           // ĐÃ TẠO XONG: giữ khóa nút Lưu (hộp thoại còn mở để lưu STK / báo lỗi STK) — trước đây
           // mở khóa ngay tại đây, bấm Lưu lần nữa là ra hợp đồng thứ 2 (…001, …002).
           if (!d.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
@@ -839,6 +840,7 @@
       .withSuccessHandler(function (kq) {
         if (!kq.thanhCong) { dangTaoHopDong_ = false; showMsgModal_('❌ ' + kq.loi); return; }
         if (kq.nhacDuyet) thongBao_('⚠️ ' + kq.nhacDuyet);
+          if (kq.canhBao) thongBao_('⚠️ ' + kq.canhBao); // M-17: trùng CCCD / chưa tạo được lô rừng, số TK
         // ĐÃ TẠO XONG: giữ khóa nút Lưu (hộp thoại còn mở để lưu STK / báo lỗi STK) — trước đây
         // mở khóa ngay tại đây, bấm Lưu lần nữa là ra hợp đồng thứ 2 (…001, …002).
         if (!wz.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }

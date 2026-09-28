@@ -54,8 +54,12 @@ function onOpen() {
 /** Hiện hướng dẫn sử dụng đầy đủ trong 1 cửa sổ dialog ngay trong Google Sheet */
 function HIEN_HUONG_DAN_SU_DUNG() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const html = HtmlService.createHtmlOutputFromFile('13_HuongDan')
-    .setWidth(900).setHeight(650);
+  // M-16 (rà soát 28/09): 13_HuongDan là TEMPLATE (có <?= baseUrl ?>, <?= currentPage ?>) — createHtmlOutputFromFile
+  // hiện nguyên văn các thẻ đó, link trong hộp thoại hỏng. Dựng template như doGet.
+  const tmpl = HtmlService.createTemplateFromFile('13_HuongDan');
+  tmpl.baseUrl = ScriptApp.getService().getUrl() || '';
+  tmpl.currentPage = 'huongdan';
+  const html = tmpl.evaluate().setWidth(900).setHeight(650);
   SpreadsheetApp.getUi().showModalDialog(html, '📖 Hướng dẫn sử dụng — Hệ thống HAK');
 }
 

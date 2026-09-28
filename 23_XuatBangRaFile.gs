@@ -19,12 +19,27 @@
 function XUAT_BANG_RA_FILE_(tenFile, header, rows, dinhDang) {
   _yeuCauQuyen_(QUYEN.XEM);
   if (!rows || !rows.length) return { thanhCong: false, loi: 'Không có dữ liệu để xuất (bảng đang trống).' };
+  // H-13 (rà soát 28/09): dữ liệu do trình duyệt gửi lên được ghi vào 1 Google Sheet của chủ script rồi xuất xlsx/pdf.
+  // Chuỗi bắt đầu bằng = + @ (hoặc - không phải số âm) bị Sheets/Excel hiểu là CÔNG THỨC (vd =IMPORTXML gọi ra ngoài)
+  // -> thêm ' để giữ nguyên là chữ. Giới hạn kích thước để 1 lần xuất không làm cạn quota Drive/UrlFetch.
+  if (!Array.isArray(rows) || rows.length > 50000) return { thanhCong: false, loi: 'Bảng quá lớn để xuất (tối đa 50.000 dòng) — lọc bớt rồi xuất lại.' };
+  const soCot = Math.max(header && header.length ? header.length : 0, rows[0].length || 0);
+  if (!soCot || soCot > 80) return { thanhCong: false, loi: 'Số cột không hợp lệ (tối đa 80).' };
+  const anToan = function (v) {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number' || typeof v === 'boolean') return v;
+    const t = String(v);
+    return /^[=+@\t\r]/.test(t) || /^-(?![\d.,]+$)/.test(t) ? "'" + t : t;
+  };
+  const chuanDong = function (r) { const a = []; for (let j = 0; j < soCot; j++) a.push(anToan(Array.isArray(r) ? r[j] : '')); return a; };
+  header = header && header.length ? chuanDong(header) : header;
+  rows = rows.map(chuanDong);
   let ssTam;
   try {
     ssTam = SpreadsheetApp.create('TAM_XUAT_BANG_' + new Date().getTime());
     const sh = ssTam.getSheets()[0];
     if (header && header.length) {
-      sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+      sh.getRange(1, 1, 1, soCot).setValues([header]).setFontWeight('bold');
       sh.setFrozenRows(1);
     }
     const dongBatDau = header && header.length ? 2 : 1;

@@ -469,8 +469,9 @@ function getReportSS_() {
 
   const props = PropertiesService.getScriptProperties();
   let id = props.getProperty('REPORT_SPREADSHEET_ID');
+  let loiMoId = null;
   if (id) {
-    try { _reportSSCache = SpreadsheetApp.openById(id); return _reportSSCache; } catch (e) { /* ID cũ không mở được -> thử lại từ URL chỉ định bên dưới */ }
+    try { _reportSSCache = SpreadsheetApp.openById(id); return _reportSSCache; } catch (e) { loiMoId = e; /* thử lại từ URL chỉ định bên dưới */ }
   }
   try {
     const ss = SpreadsheetApp.openByUrl(REPORT_SPREADSHEET_URL);
@@ -478,7 +479,13 @@ function getReportSS_() {
     _reportSSCache = ss;
     return ss;
   } catch (e) {
-    // Không mở được file chỉ định (hiếm khi xảy ra) -> tự tạo 1 file mới để hệ thống vẫn hoạt động được
+    // H-11 (rà soát 28/09): ĐÃ CÓ file báo cáo được cấu hình mà không mở được (thường là lỗi tạm thời của Google /
+    // hết quota) -> báo lỗi, KHÔNG âm thầm tạo file mới trống rồi ghi đè cấu hình (mọi báo cáo sẽ trống, Draft cũ
+    // bị bỏ rơi). Chỉ tự tạo file mới khi CHƯA TỪNG có cấu hình (lần cài đặt đầu tiên).
+    if (id) {
+      log_('ERROR', 'getReportSS_', 'Không mở được file Báo cáo/Cache đã cấu hình ' + id, loiMoId || e);
+      throw new Error('Không mở được file Báo cáo/Cache (' + id + '): ' + ((loiMoId || e).message || e) + ' — thử lại sau ít phút; nếu vẫn lỗi, kiểm tra quyền truy cập file hoặc đổi file ở Thiết lập › Kết nối.');
+    }
     const ssMoi = SpreadsheetApp.create('HAK_BaoCao_Cache (tự động - không xóa)');
     props.setProperty('REPORT_SPREADSHEET_ID', ssMoi.getId());
     _reportSSCache = ssMoi;
@@ -803,11 +810,8 @@ function getOrCreateCacheSheet_() {
 function luuCacheBaoCao_(tenCache, duLieuObj) {
   try {
     const sh = getOrCreateCacheSheet_();
-    const data = sh.getDataRange().getValues();
-    // Xóa các dòng cache cũ của tenCache này (nếu có)
-    for (let i = data.length - 1; i >= 1; i--) {
-      if (data[i][0] === tenCache) sh.deleteRow(i + 1);
-    }
+    // Xóa các dòng cache cũ của tenCache này (nếu có) — M-11: theo khối, không deleteRow từng dòng
+    _xoaCacDongKhop_(sh, 0, [tenCache]);
     const json = JSON.stringify(duLieuObj);
     const soDong = Math.ceil(json.length / CACHE_CHUNK_SIZE) || 1;
     const rows = [];

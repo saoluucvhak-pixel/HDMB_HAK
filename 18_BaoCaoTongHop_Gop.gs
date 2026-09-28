@@ -120,7 +120,7 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
       soHopDong: listDangTH.length,
       tongKhoiLuong: tongKhoiLuong,
       tongGiaTri: tongGiaTriKPI,
-      chiTiet: listDangTH.slice().sort(function (a, b) { return (b.soHD || 0) - (a.soHD || 0); }).map(function (m) {
+      chiTiet: listDangTH.slice().sort(function (a, b) { return String(b.soHD || '').localeCompare(String(a.soHD || ''), 'vi', { numeric: true }); }) /* L-02: Số HĐ có chữ từng ra NaN */.map(function (m) {
         return {
           idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
           tongKhoiLuongDuKien: m.khoiLuongDuKien, tongGiaTri: m.giaTriHopDong,

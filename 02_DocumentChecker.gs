@@ -118,8 +118,7 @@ function fileTonTaiTrenDrive_(duongDan) {
       try { DriveApp.getFileById(khop[1]); return true; } catch (e) { return false; } // ID không tồn tại/không có quyền xem
     }
     const tenFile = v.split('/').pop();
-    const it = DriveApp.getFilesByName(tenFile);
-    return it.hasNext();
+    return !!timFileTheoTenTrongThuMucHeThong_(tenFile); // M-12
   } catch (e) {
     return false;
   }
@@ -182,41 +181,45 @@ function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay, _eTrigger) {
     sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
   }
 
-  // Đọc danh sách Mã Rừng đã có sẵn trong sheet (cột C) để biết dòng nào cập nhật, dòng nào thêm mới
+  // M-05 + M-14 (rà soát 28/09):
+  //  - Khóa dòng = ID_HD + Mã Rừng. Mã Rừng = "HAK" + CCCD + "_" + STT nên 2 hợp đồng của CÙNG chủ rừng trùng Mã Rừng
+  //    -> trước đây 2 lô ghi chung 1 dòng, 1 lô biến mất khỏi báo cáo kiểm tra.
+  //  - Đọc cả bảng 1 lần, sửa trong bộ nhớ, ghi lại bằng 2 lệnh (giá trị + màu). Trước đây 1–3 lệnh/lô
+  //    (setValues + setBackground hoặc appendRow) và deleteRow từng dòng -> quá 6 phút khi có vài nghìn lô.
+  const khoa = function (idHD, maRung) { return String(idHD || '').trim() + '|' + String(maRung || '').trim(); };
   const lastRow = sh.getLastRow();
-  const maRungTheoDong = {}; // { maRung: soDong }
-  if (lastRow >= 2) {
-    const cotMaRung = sh.getRange(2, 3, lastRow - 1, 1).getValues();
-    cotMaRung.forEach(function (r, i) {
-      const mr = (r[0] || '').toString().trim();
-      if (mr) maRungTheoDong[mr] = i + 2;
-    });
-  }
+  const cu = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, header.length).getValues() : [];
+  const bang = cu.map(function (r) { return { khoa: khoa(r[0], r[2]), dong: r, mau: String(r[4]).indexOf('❌') === 0 ? '#fdecea' : '#ffffff', daXuLy: false }; });
+  const viTri = {};
+  bang.forEach(function (x, i) { if (!viTri.hasOwnProperty(x.khoa)) viTri[x.khoa] = i; });
 
-  const maRungDaXuLy = {};
   ketQua.forEach(function (k) {
     const dong = [k.idHD, k.soHD, k.maRung, k.chuRung, k.dat ? '✅ Đầy đủ' : '❌ Thiếu hồ sơ', k.thieu, k.canhBao];
     const mauNen = k.dat ? '#ffffff' : '#fdecea';
-    const soDongDaCo = maRungTheoDong[k.maRung];
-    if (soDongDaCo) {
-      sh.getRange(soDongDaCo, 1, 1, header.length).setValues([dong]).setBackground(mauNen);
-    } else {
-      sh.appendRow(dong);
-      sh.getRange(sh.getLastRow(), 1, 1, header.length).setBackground(mauNen);
-    }
-    maRungDaXuLy[k.maRung] = true;
+    const kh = khoa(k.idHD, k.maRung);
+    if (viTri.hasOwnProperty(kh)) Object.assign(bang[viTri[kh]], { dong: dong, mau: mauNen, daXuLy: true });
+    else { viTri[kh] = bang.length; bang.push({ khoa: kh, dong: dong, mau: mauNen, daXuLy: true }); }
   });
 
-  // Dọn dòng của lô rừng ĐÃ BỊ XÓA khỏi HD_RUNG — CHỈ làm việc này khi chạy KHÔNG lọc
-  // theo ngày (chạy đầy đủ), vì nếu có lọc thì không biết chắc lô rừng nào thật sự
-  // đã bị xóa hay chỉ đang nằm ngoài khoảng lọc.
+  // Dọn dòng của lô rừng ĐÃ BỊ XÓA khỏi HD_RUNG — CHỈ khi chạy KHÔNG lọc theo ngày (chạy đầy đủ), vì nếu có
+  // lọc thì không biết chắc lô rừng nào thật sự đã bị xóa hay chỉ đang nằm ngoài khoảng lọc. Dòng trùng khóa cũ cũng dọn.
   let soDaXoa = 0;
-  if (!coLoc) {
-    const dongCanXoa = Object.keys(maRungTheoDong)
-      .filter(function (mr) { return !maRungDaXuLy[mr]; })
-      .map(function (mr) { return maRungTheoDong[mr]; })
-      .sort(function (a, b) { return b - a; }); // xóa từ dưới lên để không lệch số dòng
-    dongCanXoa.forEach(function (soDong) { sh.deleteRow(soDong); soDaXoa++; });
+  const giuLai = bang.filter(function (x, i) {
+    const bo = (!coLoc && !x.daXuLy) || viTri[x.khoa] !== i;
+    if (bo) soDaXoa++;
+    return !bo;
+  });
+  const soDongGhi = Math.max(cu.length, giuLai.length);
+  if (soDongGhi) {
+    const giaTri = [], mau = [];
+    for (let i = 0; i < soDongGhi; i++) {
+      const x = giuLai[i];
+      giaTri.push(x ? x.dong : new Array(header.length).fill(''));
+      mau.push(new Array(header.length).fill(x ? x.mau : '#ffffff'));
+    }
+    const vung = sh.getRange(2, 1, soDongGhi, header.length);
+    vung.setValues(giaTri);
+    vung.setBackgrounds(mau);
   }
 
   sh.autoResizeColumns(1, header.length);

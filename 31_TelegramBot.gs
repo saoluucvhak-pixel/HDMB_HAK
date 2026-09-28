@@ -76,6 +76,19 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return; // chưa cấu hình thì bỏ qua, không báo lỗi (trigger chạy nền, không có ai xem lỗi)
+  // M-08 (rà soát 28/09): trigger 1 phút/lần — lượt trước chưa xong (Gemini chậm) thì lượt sau đọc CÙNG offset và trả lời
+  // lần 2. "Nhận lượt" bằng cờ trong cache, dưới ScriptLock rất ngắn (không giữ lock trong lúc gọi Gemini).
+  const cacheTG = CacheService.getScriptCache();
+  const lockTG = LockService.getScriptLock();
+  if (!lockTG.tryLock(2000)) return;
+  try {
+    if (cacheTG.get('TG_POLL_DANG_CHAY')) return;
+    cacheTG.put('TG_POLL_DANG_CHAY', '1', 300);
+  } finally { lockTG.releaseLock(); }
+  try { kiemTraTinNhanTelegramMoi_(p, token); } finally { cacheTG.remove('TG_POLL_DANG_CHAY'); }
+}
+
+function kiemTraTinNhanTelegramMoi_(p, token) {
   const offsetDaLuu = Number(p.getProperty('TELEGRAM_UPDATE_OFFSET') || 0);
 
   const url = 'https://api.telegram.org/bot' + token + '/getUpdates?offset=' + (offsetDaLuu + 1) + '&timeout=0';
@@ -88,6 +101,7 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
 
   json.result.forEach(function (update) {
     offsetMoiNhat = Math.max(offsetMoiNhat, update.update_id);
+    p.setProperty('TELEGRAM_UPDATE_OFFSET', offsetMoiNhat.toString()); // lưu TRƯỚC khi trả lời: lượt bị ngắt giữa chừng không trả lời lại tin cũ
     const msg = update.message;
     if (!msg || !msg.text) return;
     const chatIdTinNhan = msg.chat.id.toString().trim();

@@ -597,6 +597,35 @@ mã **đã sửa 22/22 đạt**; mã **gốc (`4d3d673`) trượt 14/16 ca** ch�
 - Sau triển khai chạy 1 lần *Xây dựng lại Draft báo cáo* để sửa các trạng thái đã lệch do H-01 trước đây.
 - **Vẫn nên kiểm tra dữ liệu thật** HD_STK: TK nào từng bị xóa/ghi đè nhầm (đối chiếu nhật ký "Cập nhật rừng/tài khoản" với ĐNTT).
 
-**Còn mở:** H-02, H-06, H-07, H-09 … H-13, M-02 … M-05, M-07 … M-18, L-01 … L-12 (M-03 cần chủ dự án quyết định).
+**Còn mở:** xem bảng đợt 6c bên dưới.
 
 **Không xử lý (theo yêu cầu chủ dự án):** H-08 — chế độ truy cập webapp (`access` trong `appsscript.json`) giữ nguyên như hiện tại.
+
+---
+
+## ✅ Cập nhật: đợt 6c — sửa tiếp các lỗi không thuộc nhóm bảo mật/truy cập
+
+| ID | Trạng thái | Thay đổi chính | File |
+|---|---|---|---|
+| H-02 | ✅ | Nháp lưu ảnh chụp thông tin HĐ lúc mở (`hopDongGoc`); Lưu chính thức chỉ ghi **trường người dùng đã đổi** → không ghi đè thay đổi người khác làm trong lúc nháp còn mở. Hai người cùng sửa 1 trường: giữ giá trị người lưu + cảnh báo. Nháp cũ (không có ảnh chụp) ghi toàn bộ như trước | 15, 06 |
+| H-07 | ✅ | Ảnh thu nhỏ chuyển sang `DocumentCache` (không còn chung ScriptCache với phiên đăng nhập, khóa chống lưu trùng) | 35 |
+| H-11 | ✅ | `getReportSS_` báo lỗi rõ khi file báo cáo đã cấu hình không mở được; chỉ tự tạo file ở lần cài đặt đầu | 00 |
+| H-12 | ✅ một phần | Gom cập nhật Draft báo cáo / Hồ sơ rừng trong `LUU_CHINH_THUC_`, `LUU_HOP_DONG_DAY_DU_`, `TAO_HOP_DONG_MOI_` thành 1 lần cuối thao tác, ngoài ScriptLock. Đo trên bộ giả lập (3 lô, 6 điểm GPS, 2 TK): **168 → 78 lệnh đọc (−54%)**. Còn lại: P-02, P-05 … P-10 | 01, 06, 15, 16 |
+| H-13 | ✅ một phần | Xuất Excel/PDF: chuỗi bắt đầu `= + @` (và `-` không phải số) được giữ là chữ; tối đa 50.000 dòng × 80 cột. Chưa làm: server tự dựng dữ liệu xuất | 23 |
+| M-02 | ✅ | Đơn giá bình quân so theo ngày thuần — lấy được mức giá hiệu lực tới đúng ngày ký | 06 |
+| M-04 | ✅ | Phiếu cân khớp nguyên cụm tên theo ranh giới từ, bỏ khớp chiều ngược | 14 |
+| M-05 + M-14 | ✅ | Báo cáo kiểm tra hồ sơ khóa theo ID_HD + Mã rừng (không mất dòng khi cùng chủ rừng có 2 HĐ); ghi cả bảng bằng 2 lệnh | 02 |
+| M-07 | ✅ | Xóa vĩnh viễn dọn thêm: phụ lục, ct_hopdong, nháp đang dở, ảnh lưu theo ID lô, cache Hồ sơ rừng. Xóa theo **khối dòng liền nhau** (cũng áp dụng cho xóa lô rừng, ghi đè GPS). Chưa làm: lưu bản sao để khôi phục; file Drive vẫn giữ | 06 |
+| M-08 | ✅ | Polling Telegram không chạy chồng; lưu offset trước khi trả lời từng tin | 31 |
+| M-09 | ✅ | Sửa tay trên Sheet: đọc cả vùng 1 lần, cập nhật Draft 1 lần cho mọi HĐ, ghi log lỗi (trước đây nuốt im lặng) | 01 |
+| M-11 | ✅ | Ghi cache báo cáo xóa dòng cũ theo khối | 00 |
+| M-12 | ✅ một phần | Tìm file theo tên trong 3 thư mục hệ thống trước; toàn Drive chỉ còn là dự phòng cho dữ liệu cũ | 02, 03, 04, 06 |
+| M-16 | ✅ | Hộp thoại Hướng dẫn trong Sheet dựng đúng template | 05 |
+| M-17 | ✅ | Tạo HĐ: báo rõ nếu chưa tạo được lô rừng / số TK; trang 27 hiện cảnh báo | 06, 27 |
+| L-02, L-03, L-04, L-06 | ✅ | Sắp xếp Số HĐ có chữ; ngày trên form không qua `toISOString`; tên file xuất theo ngày địa phương; ngày giấy tờ cùng múi giờ bảng tính | 01, 18, 07, 11, NhapLieu_Chung_JS, 10, 06 |
+
+**Kiểm chứng:** bộ giả lập — mã mới **29/29 đạt**; bản ngay trước đợt này (`03dc678`) trượt 5 ca mới (H-02a/b, H-11, M-05, M-07), tái hiện: nháp cũ **xóa mất địa chỉ** người khác vừa sửa; báo cáo kiểm tra **mất dòng** của HĐ thứ nhất khi cùng chủ rừng có HĐ thứ hai; xóa vĩnh viễn để lại phụ lục / ct_hopdong / nháp.
+
+**Không xử lý theo yêu cầu chủ dự án:** H-06, H-09, H-10 (bảo mật đăng nhập / che số / đọc file Drive) và H-08 (chế độ truy cập).
+
+**Còn mở:** M-03 (cần quyết định: phụ lục có cộng vào khối lượng/giá trị HĐ không), M-10, M-13, M-15, M-18, L-01, L-05, L-07 … L-12, phần còn lại của H-12/H-13/M-07/M-12.

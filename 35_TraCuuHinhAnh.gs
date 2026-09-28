@@ -179,9 +179,13 @@ function LAY_ANH_TRA_CUU_(idHD, theoKhachHang) {
 function _taiAnhDrive_(ids, co) {
   const kq = {};
   if (!ids.length) return kq;
-  const cache = CacheService.getScriptCache();
+  // H-07 (rà soát 28/09): ảnh thu nhỏ (tới ~95 KB/ảnh) lưu ở DocumentCache của file dữ liệu, KHÔNG dùng ScriptCache —
+  // ScriptCache còn giữ phiên đăng nhập và các khóa chống lưu trùng; nhồi ảnh vào đó làm Google đẩy các khóa này ra
+  // sớm (người dùng bị đăng xuất ngẫu nhiên, chống bấm "Lưu" 2 lần mất tác dụng).
+  let cache = null;
+  try { cache = CacheService.getDocumentCache(); } catch (e) { /* không có -> không cache ảnh */ }
   const khoa = function (id) { return 'anhtc_' + co + '_' + id; };
-  const dungCache = co <= ANH_TC_CO_NHO;
+  const dungCache = !!cache && co <= ANH_TC_CO_NHO;
   if (dungCache) {
     const daCo = cache.getAll(ids.map(khoa));
     ids.forEach(function (id) { if (daCo[khoa(id)]) kq[id] = daCo[khoa(id)]; });

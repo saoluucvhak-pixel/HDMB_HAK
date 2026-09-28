@@ -148,6 +148,9 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
       return { soDong: p.soDong, idPhuLuc: p.idPhuLuc, tempId: null, donGia: p.donGia, khoiLuong: p.khoiLuong, ghiChu: p.ghiChu, xoa: false };
     })
   };
+  // H-02: ảnh chụp thông tin hợp đồng LÚC MỞ NHÁP — khi Lưu chính thức chỉ ghi các trường người dùng đã đổi so
+  // với ảnh chụp này, không ghi đè thay đổi người khác làm trong lúc nháp còn mở (nháp có thể để nhiều ngày).
+  du.hopDongGoc = JSON.parse(JSON.stringify(du.hopDong));
   const row = [];
   row[DRAFT_HD_COL.ID_DRAFT] = idDraft; row[DRAFT_HD_COL.ID_HD_GOC] = idHD;
   row[DRAFT_HD_COL.JSON_DATA] = JSON.stringify(du);
@@ -198,6 +201,7 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
 function _giuTienDoLuuChinhThuc_(cu, moi) {
   if (!cu || !moi || typeof moi !== 'object') return moi;
   if (!moi.idHD && cu.idHD) moi.idHD = cu.idHD;
+  if (!moi.hopDongGoc && cu.hopDongGoc) moi.hopDongGoc = cu.hopDongGoc; // H-02: trình duyệt cũ không gửi lại ảnh chụp gốc
   const theoKhoa = function (ds, khoa) { const m = {}; (ds || []).forEach(function (x) { const k = x && khoa(x); if (k) m[k] = x; }); return m; };
   const khoaGps = function (p) { return p.lat + '|' + p.lng + '|' + (p.anhUrl || ''); };
   const rungCu = theoKhoa(cu.rung, function (x) { return x.tempId || x.idRung; });
@@ -275,7 +279,9 @@ function LUU_CHINH_THUC_(idDraft) {
     } catch (e) { log_('WARNING', 'LUU_CHINH_THUC_', 'Không ghi được tiến độ vào bản nháp ' + idDraft, e); }
   };
   try {
-    const kq = luuChinhThucThucThi_(du, 'NHAP_' + idDraft, ghiTienDo);
+    const gom = batDauGomDraft_(); // H-12
+    let kq;
+    try { kq = luuChinhThucThucThi_(du, 'NHAP_' + idDraft, ghiTienDo); } finally { ketThucGomDraft_(gom); }
     if (kq.thanhCong) {
       // Tìm LẠI dòng nháp theo idDraft ngay trước khi xóa: lượt lưu mất vài giây, trong lúc đó nháp
       // khác phía trên có thể đã bị xóa -> số dòng lấy từ đầu hàm đã lệch và xóa NHẦM nháp của người khác.
@@ -292,17 +298,41 @@ function LUU_CHINH_THUC_(idDraft) {
   }
 }
 
+/**
+ * H-02 (rà soát 28/09): các trường thông tin hợp đồng cần GHI khi lưu nháp của hợp đồng ĐÃ CÓ = chỉ những trường
+ * người dùng đã đổi so với lúc mở nháp (du.hopDongGoc). Trước đây ghi TOÀN BỘ -> nháp mở từ hôm trước ghi đè Số TK /
+ * địa chỉ... mà người khác vừa sửa ở trang 27. Trường cả 2 người cùng sửa: giữ giá trị của người đang lưu + cảnh báo.
+ * Nháp cũ không có ảnh chụp gốc / hợp đồng mới: ghi toàn bộ như trước.
+ */
+function _truongHopDongCanGhi_(du, canhBao) {
+  const h = du.hopDong || {};
+  if (!du.idHD || !du.hopDongGoc) return h;
+  const ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
+  const chuan = function (k, v) { return ngay.indexOf(k) !== -1 ? ngayToISO_(v) : (v === null || v === undefined ? '' : String(v).trim()); };
+  let hienTai = null;
+  try { hienTai = layHopDongTheoIdHD_ChoDraft_(du.idHD); } catch (e) { /* không đọc được -> không cảnh báo xung đột */ }
+  const ghi = {};
+  Object.keys(h).forEach(function (k) {
+    if (chuan(k, h[k]) === chuan(k, du.hopDongGoc[k])) return; // người dùng không đổi trường này -> KHÔNG ghi
+    ghi[k] = h[k];
+    if (hienTai && hienTai.hasOwnProperty(k) && chuan(k, hienTai[k]) !== chuan(k, du.hopDongGoc[k]) && chuan(k, hienTai[k]) !== chuan(k, h[k])) {
+      canhBao.push('Trường "' + k + '" đã được người khác sửa thành "' + chuan(k, hienTai[k]) + '" trong lúc nháp còn mở — đã ghi đè bằng giá trị của bạn "' + chuan(k, h[k]) + '".');
+    }
+  });
+  return ghi;
+}
+
 /** Ghi dữ liệu của 1 bản nháp vào các bảng chính (không xóa nháp — LUU_CHINH_THUC_ lo việc đó). */
 function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
   ghiTienDo = ghiTienDo || function () {};
   // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật. maThaoTac: lượt lưu lại của CÙNG bản nháp
   // dùng lại hợp đồng đã tạo thay vì tạo hợp đồng thứ 2 (xem _hdDaTaoTheoMaThaoTac_).
-  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: du.hopDong, rung: [], taiKhoan: [], maThaoTac: maThaoTac });
+  const loiChiTiet = [];
+  const hd = _truongHopDongCanGhi_(du, loiChiTiet);
+  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
   const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
   if (!du.idHD) { du.idHD = idHD; ghiTienDo(); }
-
-  const loiChiTiet = [];
 
   // 2) LÔ RỪNG — thêm mới / cập nhật / xóa, rồi ghi các điểm GPS mới thêm ở bản nháp
   (du.rung || []).forEach(function (rg) {

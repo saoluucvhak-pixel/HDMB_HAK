@@ -39,7 +39,7 @@ function layTongHopChoWebapp_(boBuoc) {
     soHopDong: list.length,
     tongKhoiLuong: tongKhoiLuong,
     tongGiaTri: tongGiaTri,
-    chiTiet: list.sort(function (a, b) { return (b.soHD || 0) - (a.soHD || 0); }).map(function (m) {
+    chiTiet: list.sort(function (a, b) { return String(b.soHD || '').localeCompare(String(a.soHD || ''), 'vi', { numeric: true }); }) /* L-02: Số HĐ có chữ từng ra NaN */.map(function (m) {
       return {
         idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
         tongKhoiLuongDuKien: m.khoiLuongDuKien, tongGiaTri: m.giaTriHopDong,
@@ -369,9 +369,29 @@ function tinhDongDraftChoHopDong_(idHD, row, rungRows, stkRows, gpsRows, coAnh, 
   return dong;
 }
 
+/**
+ * H-12 (rà soát 28/09): GOM cập nhật Draft trong 1 thao tác lớn (Lưu chính thức, tạo/lưu hợp đồng đầy đủ). Trước đây
+ * MỖI lần thêm lô / TK / điểm GPS đều gọi CAP_NHAT_DRAFT_MOT_HOP_DONG_ (đọc lại cả 5 sheet + cache) — 1 lần Lưu
+ * ≈ 100+ lượt đọc cả sheet, lại nằm trong ScriptLock. Khi đang gom: chỉ ghi nhận ID, cập nhật 1 lần ở ketThucGomDraft_().
+ */
+let _draftDangGom_ = null; // { hd: Set<idHD>, rung: Set<idRung> } — chỉ trong 1 lượt chạy
+function batDauGomDraft_() {
+  if (_draftDangGom_) return false; // đã có nơi gom ở ngoài -> nơi đó sẽ xả
+  _draftDangGom_ = { hd: new Set(), rung: new Set() };
+  return true;
+}
+function ketThucGomDraft_(laNguoiGom) {
+  if (!laNguoiGom || !_draftDangGom_) return;
+  const g = _draftDangGom_;
+  _draftDangGom_ = null;
+  if (g.hd.size) capNhatDraftHangLoat_(Array.from(g.hd));
+  g.rung.forEach(function (idRung) { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); });
+}
+
 function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
   idHD = (idHD || '').toString().trim();
   if (!idHD) return;
+  if (_draftDangGom_) { _draftDangGom_.hd.add(idHD); return; } // H-12: cập nhật 1 lần cuối thao tác
   try {
     const nccRows = readData_(SHEET_NAME.HD_NCC);
     const row = nccRows.find(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
@@ -720,45 +740,51 @@ function xuLyOnEditDraft_(e) {
     // dùng dán/sửa NHIỀU dòng cùng lúc (vd dán 1 khối ô từ Excel), các dòng còn
     // lại trong vùng sửa bị bỏ qua hoàn toàn, khiến Draft không cập nhật cho
     // những hợp đồng/lô rừng đó. Giờ duyệt HẾT các dòng nằm trong e.range.
-    const hangBatDau = e.range.getRow();
-    const soHang = e.range.getNumRows();
-    let rungRowsCache = null; // chỉ đọc HD_RUNG 1 lần cho cả vùng sửa (nếu đang sửa HD_GPS), không đọc lại từng dòng
+    const hangBatDau = Math.max(2, e.range.getRow()); // bỏ dòng tiêu đề
+    const hangKetThuc = e.range.getRow() + e.range.getNumRows() - 1;
+    if (hangKetThuc < hangBatDau) return;
+    // M-09 (rà soát 28/09): đọc CẢ VÙNG vừa sửa bằng 1 lệnh (trước đây 1–2 lệnh getValue cho MỖI dòng — dán 500
+    // dòng là 500–1.000 lệnh) và cập nhật Draft báo cáo 1 lần cho mọi hợp đồng liên quan (capNhatDraftHangLoat_).
+    const vung = sh.getRange(hangBatDau, 1, hangKetThuc - hangBatDau + 1, Math.max(sh.getLastColumn(), 1)).getValues();
+    let rungRowsCache = null; // chỉ đọc HD_RUNG 1 lần cho cả vùng sửa (nếu đang sửa HD_GPS)
     const idsHD = new Set();
     const idsHDSuaRung = new Set(); // hợp đồng có lô rừng bị sửa tay -> tổng hợp lại ct_hopdong + Z/T/AA
+    const idsRung = new Set();      // cache "Hồ sơ rừng" cần cập nhật
+    const idsHDHoSoRung = new Set();
 
-    for (let hang = hangBatDau; hang < hangBatDau + soHang; hang++) {
-      if (hang < 2) continue; // dòng tiêu đề, bỏ qua
-
+    vung.forEach(function (r) {
       let idHD = null;
       if (ten === SHEET_NAME.HD_NCC) {
-        idHD = sh.getRange(hang, NCC_COL.ID_HD + 1).getValue();
-        if (idHD) CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD.toString().trim()); // Tình trạng HĐ đổi -> ảnh hưởng mọi lô rừng con
+        idHD = r[NCC_COL.ID_HD];
+        if (idHD) idsHDHoSoRung.add(idHD.toString().trim()); // Tình trạng HĐ đổi -> ảnh hưởng mọi lô rừng con
       } else if (ten === SHEET_NAME.HD_RUNG) {
-        idHD = sh.getRange(hang, RUNG_COL.ID_KEY_HD + 1).getValue();
-        const idRungSua = (sh.getRange(hang, RUNG_COL.ID_RUNG + 1).getValue() || '').toString().trim();
-        if (idRungSua) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRungSua);
+        idHD = r[RUNG_COL.ID_KEY_HD];
+        const idRungSua = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
+        if (idRungSua) idsRung.add(idRungSua);
         if (idHD) idsHDSuaRung.add(idHD.toString().trim());
       } else if (ten === SHEET_NAME.HD_STK) {
-        idHD = sh.getRange(hang, STK_COL.ID_HD + 1).getValue();
+        idHD = r[STK_COL.ID_HD];
       } else if (ten === SHEET_NAME.HD_GPS) {
-        const idRung = (sh.getRange(hang, GPS_COL.ID_KEY_GPS + 1).getValue() || '').toString().trim();
+        const idRung = (r[GPS_COL.ID_KEY_GPS] || '').toString().trim();
         if (idRung) {
           if (!rungRowsCache) rungRowsCache = readData_(SHEET_NAME.HD_RUNG);
-          const rung = rungRowsCache.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
+          const rung = rungRowsCache.find(function (x) { return (x[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung; });
           idHD = rung ? rung[RUNG_COL.ID_KEY_HD] : null;
-          CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // tọa độ đổi -> cập nhật lại tọa độ TB trong cache
+          idsRung.add(idRung); // tọa độ đổi -> cập nhật lại tọa độ TB trong cache
         }
       } else if (ten === SHEET_NAME.HD_PICTURE) {
-        idHD = sh.getRange(hang, PICTURE_COL.ID_HD + 1).getValue();
+        idHD = r[PICTURE_COL.ID_HD];
       }
-
       if (idHD) idsHD.add(idHD.toString().trim());
-    }
+    });
 
     idsHDSuaRung.forEach(function (idHD) { dongBoTongHopRungVaoHdNcc_(idHD); });
-    idsHD.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); });
+    if (idsHD.size) capNhatDraftHangLoat_(Array.from(idsHD));
+    idsHDHoSoRung.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); });
+    idsRung.forEach(function (idRung) { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); });
   } catch (err) {
-    // Không để lỗi trigger làm gián đoạn việc sửa sheet của người dùng — bỏ qua âm thầm
+    // Không để lỗi trigger làm gián đoạn việc sửa sheet của người dùng — nhưng ghi log để còn biết Draft chưa cập nhật
+    log_('ERROR', 'xuLyOnEditDraft_', 'Không cập nhật được Draft sau khi sửa tay trên Sheet', err);
   }
 }
 

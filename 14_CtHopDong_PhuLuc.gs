@@ -388,7 +388,9 @@ function layPhieuCanTheoChuRung_(tenChuRung) {
       const row = data[i];
       const kh = boDauTV(row[IDX.khachHang]);
       if (!kh) continue;
-      if (kh.indexOf(ten) === -1 && ten.indexOf(kh) === -1) continue;
+      // M-04 (rà soát 28/09): khớp NGUYÊN CỤM TÊN theo ranh giới từ ("Lê Văn A" không còn khớp "Lê Văn Anh"), bỏ chiều
+      // ngược (tên khách ngắn như "An" từng khớp mọi chủ rừng có chữ "an") -> không lấy nhầm phiếu cân của người khác.
+      if ((' ' + kh.replace(/\s+/g, ' ') + ' ').indexOf(' ' + ten.replace(/\s+/g, ' ') + ' ') === -1) continue;
       if (IDX.trangThai !== -1) {
         const tt = boDauTV(row[IDX.trangThai]);
         if (tt && tt !== 'ok') continue; // bỏ qua phiếu bị hủy/lỗi

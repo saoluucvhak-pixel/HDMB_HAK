@@ -48,6 +48,7 @@ function timDongDraftHoSoRung_(sh, idRung) {
 function CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
   try {
     if (!idRung) return;
+    if (_draftDangGom_) { _draftDangGom_.rung.add(idRung.toString().trim()); return; } // H-12: gom, cập nhật 1 lần cuối thao tác
     const rungRows = readData_(SHEET_NAME.HD_RUNG);
     const r = rungRows.find(function (x) { return (x[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
     if (!r) { XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); return; } // lô rừng đã bị xóa hẳn -> xóa luôn khỏi cache

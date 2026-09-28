@@ -466,13 +466,13 @@
   function napFormTuDuNhap_() {
     var h = duNhap.hopDong || {};
     setVal('tenChuRung', h.tenChuRung); setVal('cccdChuRung', h.cccdChuRung); setVal('soHD', h.soHD);
-    document.getElementById('ngayKy').value = h.ngayKy ? new Date(h.ngayKy).toISOString().split('T')[0] : '';
-    document.getElementById('ngayCap').value = h.ngayCap ? new Date(h.ngayCap).toISOString().split('T')[0] : '';
+    document.getElementById('ngayKy').value = ngayThuanISO_(h.ngayKy);
+    document.getElementById('ngayCap').value = ngayThuanISO_(h.ngayCap);
     setVal('noiCap', h.noiCap); setVal('sdtChuRung', h.sdtChuRung); setVal('diaChiThuongTru', h.diaChiThuongTru);
     document.getElementById('tinhTrang').value = h.tinhTrang || 'Đang thực hiện';
     document.getElementById('uyQuyenTT').value = h.uyQuyenTT || 'Không'; toggleUyQuyen();
     setVal('tenUyQuyen', h.tenUyQuyen); setVal('cccdUyQuyen', h.cccdUyQuyen);
-    setVal('ngayCapUyQuyen', h.ngayCapUyQuyen ? new Date(h.ngayCapUyQuyen).toISOString().split('T')[0] : '');
+    setVal('ngayCapUyQuyen', ngayThuanISO_(h.ngayCapUyQuyen));
     setVal('noiCapUyQuyen', h.noiCapUyQuyen); setVal('sdtUyQuyen', h.sdtUyQuyen); setVal('diaChiUyQuyen', h.diaChiUyQuyen);
     tabHDHienTai = 'rung'; rungDangSuaKey = null; tkDangSuaKey = null; plDangSuaKey = null;
     dongFormTK(); dongFormPhuLuc();
