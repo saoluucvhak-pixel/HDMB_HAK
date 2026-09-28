@@ -371,6 +371,37 @@ function layDanhSachNhomKH_() {
 }
 
 /**
+ * CHỐNG TẠO TRÙNG HỢP ĐỒNG khi CÙNG 1 lần nhập bị gửi lên nhiều lần: bấm Lưu lại sau khi
+ * đã tạo xong (hộp thoại còn mở vì lỗi lưu STK), mạng lỗi dù máy chủ đã tạo xong rồi bấm
+ * lại, lưu chính thức lại bản nháp sau khi lỗi giữa chừng... -> trước đây ra 2 hợp đồng số
+ * liền nhau (…001, …002) cùng chủ rừng, cùng ngày ký.
+ * maThaoTac: mã trình duyệt sinh 1 lần cho mỗi form (bản nháp dùng idDraft). Chỉ gọi hai hàm
+ * này BÊN TRONG lock tạo hợp đồng, để lượt gửi thứ 2 chạy song song cũng thấy lượt 1. Nhớ 6 giờ.
+ */
+function _hdDaTaoTheoMaThaoTac_(maThaoTac) {
+  maThaoTac = (maThaoTac || '').toString();
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return null;
+  let v = null;
+  try { v = CacheService.getScriptCache().get('HD_TAO_' + maThaoTac); } catch (e) { return null; }
+  if (!v) return null;
+  const kq = JSON.parse(v);
+  // Hợp đồng đã bị xóa sau đó -> coi như chưa tạo
+  const sh = getSheet_(SHEET_NAME.HD_NCC);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return null;
+  const ids = sh.getRange(2, NCC_COL.ID_HD + 1, lastRow - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if ((ids[i][0] || '').toString().trim() === kq.idHD) return { idHD: kq.idHD, soHD: kq.soHD, soDong: i + 2 };
+  }
+  return null;
+}
+function _ghiNhoMaThaoTac_(maThaoTac, idHD, soHD) {
+  maThaoTac = (maThaoTac || '').toString();
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return;
+  try { CacheService.getScriptCache().put('HD_TAO_' + maThaoTac, JSON.stringify({ idHD: String(idHD), soHD: String(soHD) }), 21600); } catch (e) { /* bỏ qua */ }
+}
+
+/**
  * TẠO HỢP ĐỒNG MỚI (ghi 1 dòng vào HD_NCC).
  * `d` là object chứa các trường người dùng nhập, ví dụ:
  * {
@@ -408,6 +439,11 @@ function TAO_HOP_DONG_MOI_(d) {
 
   let idHD, soHD, ngayKyDate;
   try {
+    const daTao = _hdDaTaoTheoMaThaoTac_(d.maThaoTac);
+    if (daTao) {
+      return { thanhCong: true, idHD: daTao.idHD, soHD: daTao.soHD, daTaoTruocDo: true,
+        canhBao: 'Hợp đồng ' + daTao.soHD + ' đã được tạo ở lần bấm trước — không tạo thêm hợp đồng trùng.' };
+    }
     ngayKyDate = ngayGhiSheet_(isoNgayKy);
     soHD = d.soHD || soHopDongTuDong_(ngayKyDate);
     idHD = soHD + '-' + formatNgay_(ngayKyDate);
@@ -457,6 +493,7 @@ function TAO_HOP_DONG_MOI_(d) {
     [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
       .forEach(function (c) { shNCC.getRange(soDongMoiNCC, c + 1).setNumberFormat('@'); });
     shNCC.getRange(soDongMoiNCC, 1, 1, row.length).setValues([row]);
+    _ghiNhoMaThaoTac_(d.maThaoTac, idHD, soHD);
   } finally {
     lock.releaseLock();
   }
@@ -2023,58 +2060,64 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
       return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' };
     }
     try {
-      const ngayKyDate = ngayGhiSheet_(isoNgayKy); // BUG-12: 00:00 giờ bảng tính, không phải 07:00
-      soHD = d.soHD || soHopDongTuDong_(ngayKyDate);
-      idHD = soHD + '-' + formatNgay_(ngayKyDate);
+      const daTao = _hdDaTaoTheoMaThaoTac_(payload.maThaoTac);
+      if (daTao) { // cùng lần nhập đã tạo hợp đồng ở lượt gửi trước -> dùng lại, không tạo trùng
+        idHD = daTao.idHD; soHD = daTao.soHD; soDongVuaTao = daTao.soDong;
+      } else {
+        const ngayKyDate = ngayGhiSheet_(isoNgayKy); // BUG-12: 00:00 giờ bảng tính, không phải 07:00
+        soHD = d.soHD || soHopDongTuDong_(ngayKyDate);
+        idHD = soHD + '-' + formatNgay_(ngayKyDate);
 
-      const row = [];
-      row[NCC_COL.TIMESTAMP] = new Date();
-      row[NCC_COL.EMAIL] = _emailNguoiThucHien_();
-      row[NCC_COL.SO_HD] = soHD;
-      row[NCC_COL.NGAY_KY] = ngayKyDate;
-      row[NCC_COL.TEN_CHU_RUNG] = d.tenChuRung;
-      row[NCC_COL.DIA_CHI_TT] = d.diaChiThuongTru || '';
-      row[NCC_COL.CCCD_CHU_RUNG] = d.cccdChuRung;
-      row[NCC_COL.NGAY_CAP] = ngayGhiSheet_(d.ngayCap);
-      row[NCC_COL.NOI_CAP] = d.noiCap || '';
-      row[NCC_COL.SDT_CHU_RUNG] = d.sdtChuRung || '';
-      row[NCC_COL.TEN_UY_QUYEN] = d.tenUyQuyen || '';
-      row[NCC_COL.CCCD_UY_QUYEN] = d.cccdUyQuyen || '';
-      row[NCC_COL.NOI_CAP_UQ] = d.noiCapUyQuyen || '';
-      row[NCC_COL.DIA_CHI_UQ] = d.diaChiUyQuyen || '';
-      row[NCC_COL.SDT_UQ] = d.sdtUyQuyen || '';
-      row[NCC_COL.NGAY_CAP_UQ] = ngayGhiSheet_(d.ngayCapUyQuyen);
-      row[NCC_COL.SO_TK] = d.soTK || '';
-      row[NCC_COL.NGAN_HANG] = d.nganHang || '';
-      row[NCC_COL.EMAIL_UQ] = d.emailUQ || '';
-      row[NCC_COL.DIA_CHI_RUNG] = d.diaChiRung || '';
-      row[NCC_COL.DIEN_TICH_KY] = Number(d.dienTichKy) || 0;
-      row[NCC_COL.LOCATION] = '';
-      row[NCC_COL.HO_SO_NGUON_GOC] = d.hoSoNguonGoc || '';
-      row[NCC_COL.SO_GIAY_TO] = d.soGiayTo || '';
-      row[NCC_COL.DIEN_TICH_GPS] = '';
-      row[NCC_COL.UY_QUYEN_TT] = d.uyQuyenTT || 'Không';
-      row[NCC_COL.SL_DU_KIEN] = Number(d.slDuKien) || 0;
-      row[NCC_COL.DON_GIA] = Number(d.donGia) || 0;
-      row[NCC_COL.NHOM_KH] = d.nhomKH || '';
-      row[NCC_COL.MA_SO_THUE] = d.maSoThue || '';
-      row[NCC_COL.CHI_NHANH_NH] = d.chiNhanhNH || '';
-      row[NCC_COL.ID_HD] = idHD;
-      // ⚠️ ĐÃ SỬA: trước đây tự suy ra "Đang thực hiện" nếu ngày ký đã tới/qua — lệch
-      // với quy trình chính thức (xem 13_HuongDan.html): mọi hợp đồng LUÔN bắt đầu ở
-      // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
-      // TAO_HOP_DONG_MOI_() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
-      row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
-      // ⚠️ ĐÃ SỬA: trước đây appendRow() -> CCCD/SĐT/Số TK/MST mất số 0 đầu (049... thành 49...)
-      // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI_: định dạng TEXT trước rồi mới ghi.
-      const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
-      soDongVuaTao = shTaoMoi.getLastRow() + 1;
-      [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
-        .forEach(function (c) { shTaoMoi.getRange(soDongVuaTao, c + 1).setNumberFormat('@'); });
-      const soCotNCC = Math.max(row.length, shTaoMoi.getLastColumn());
-      for (let k = 0; k < soCotNCC; k++) if (row[k] === undefined) row[k] = '';
-      shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([row]);
-      ghiNhatKy_('Tạo hợp đồng mới', idHD, 'Chủ rừng: ' + d.tenChuRung + ' — Số HĐ: ' + soHD);
+        const row = [];
+        row[NCC_COL.TIMESTAMP] = new Date();
+        row[NCC_COL.EMAIL] = _emailNguoiThucHien_();
+        row[NCC_COL.SO_HD] = soHD;
+        row[NCC_COL.NGAY_KY] = ngayKyDate;
+        row[NCC_COL.TEN_CHU_RUNG] = d.tenChuRung;
+        row[NCC_COL.DIA_CHI_TT] = d.diaChiThuongTru || '';
+        row[NCC_COL.CCCD_CHU_RUNG] = d.cccdChuRung;
+        row[NCC_COL.NGAY_CAP] = ngayGhiSheet_(d.ngayCap);
+        row[NCC_COL.NOI_CAP] = d.noiCap || '';
+        row[NCC_COL.SDT_CHU_RUNG] = d.sdtChuRung || '';
+        row[NCC_COL.TEN_UY_QUYEN] = d.tenUyQuyen || '';
+        row[NCC_COL.CCCD_UY_QUYEN] = d.cccdUyQuyen || '';
+        row[NCC_COL.NOI_CAP_UQ] = d.noiCapUyQuyen || '';
+        row[NCC_COL.DIA_CHI_UQ] = d.diaChiUyQuyen || '';
+        row[NCC_COL.SDT_UQ] = d.sdtUyQuyen || '';
+        row[NCC_COL.NGAY_CAP_UQ] = ngayGhiSheet_(d.ngayCapUyQuyen);
+        row[NCC_COL.SO_TK] = d.soTK || '';
+        row[NCC_COL.NGAN_HANG] = d.nganHang || '';
+        row[NCC_COL.EMAIL_UQ] = d.emailUQ || '';
+        row[NCC_COL.DIA_CHI_RUNG] = d.diaChiRung || '';
+        row[NCC_COL.DIEN_TICH_KY] = Number(d.dienTichKy) || 0;
+        row[NCC_COL.LOCATION] = '';
+        row[NCC_COL.HO_SO_NGUON_GOC] = d.hoSoNguonGoc || '';
+        row[NCC_COL.SO_GIAY_TO] = d.soGiayTo || '';
+        row[NCC_COL.DIEN_TICH_GPS] = '';
+        row[NCC_COL.UY_QUYEN_TT] = d.uyQuyenTT || 'Không';
+        row[NCC_COL.SL_DU_KIEN] = Number(d.slDuKien) || 0;
+        row[NCC_COL.DON_GIA] = Number(d.donGia) || 0;
+        row[NCC_COL.NHOM_KH] = d.nhomKH || '';
+        row[NCC_COL.MA_SO_THUE] = d.maSoThue || '';
+        row[NCC_COL.CHI_NHANH_NH] = d.chiNhanhNH || '';
+        row[NCC_COL.ID_HD] = idHD;
+        // ⚠️ ĐÃ SỬA: trước đây tự suy ra "Đang thực hiện" nếu ngày ký đã tới/qua — lệch
+        // với quy trình chính thức (xem 13_HuongDan.html): mọi hợp đồng LUÔN bắt đầu ở
+        // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
+        // TAO_HOP_DONG_MOI_() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
+        row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
+        // ⚠️ ĐÃ SỬA: trước đây appendRow() -> CCCD/SĐT/Số TK/MST mất số 0 đầu (049... thành 49...)
+        // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI_: định dạng TEXT trước rồi mới ghi.
+        const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
+        soDongVuaTao = shTaoMoi.getLastRow() + 1;
+        [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
+          .forEach(function (c) { shTaoMoi.getRange(soDongVuaTao, c + 1).setNumberFormat('@'); });
+        const soCotNCC = Math.max(row.length, shTaoMoi.getLastColumn());
+        for (let k = 0; k < soCotNCC; k++) if (row[k] === undefined) row[k] = '';
+        shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([row]);
+        _ghiNhoMaThaoTac_(payload.maThaoTac, idHD, soHD);
+        ghiNhatKy_('Tạo hợp đồng mới', idHD, 'Chủ rừng: ' + d.tenChuRung + ' — Số HĐ: ' + soHD);
+      }
     } finally {
       lock.releaseLock();
     }

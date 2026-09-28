@@ -230,7 +230,11 @@
     dangLuuChinhThuc_ = true;
     showMsg('msgLuuChinhThuc', '⌛ Đang lưu chính thức vào hệ thống...', true);
     hakRun_()
-      .withFailureHandler(function (err) { dangLuuChinhThuc_ = false; showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message, false); })
+      .withFailureHandler(function (err) {
+        dangLuuChinhThuc_ = false;
+        // Máy chủ đã ghi tiến độ vào bản nháp (15_DraftHopDong.gs) -> lưu lại chỉ làm nốt phần còn thiếu, không tạo trùng
+        showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message + ' — Phần đã lưu được giữ lại; bấm "Lưu chính thức" lần nữa để hoàn tất (không tạo hợp đồng trùng).', false);
+      })
       .withSuccessHandler(function (kq) {
         dangLuuChinhThuc_ = false;
         if (!kq.thanhCong) { showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }

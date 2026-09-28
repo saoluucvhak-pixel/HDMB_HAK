@@ -466,6 +466,7 @@
     damBaoDaTaiKhachHangDayDu_(function () { moFormThemHopDongChoKhachHangCoSan_ThucHien_(); });
   }
   function moFormThemHopDongChoKhachHangCoSan_ThucHien_() {
+    batDauLanTaoHopDong_();
     var kh = khachHangCoSan_.find(function (x) { return x.cccd === ctxKH.cccd; }) || {};
     var html = '<h3 style="margin-top:0">➕ Thêm hợp đồng cho ' + escHtml_(ctxKH.tenChuRung) + '</h3>' +
       '<p class="hint" style="margin-top:-6px">Thông tin cá nhân dùng lại từ khách hàng đã chọn — chỉ cần điền phần hợp đồng mới.</p>' +
@@ -491,15 +492,17 @@
         uyQuyenTT: document.getElementById('nfUyQuyenTT').value, tenUyQuyen: document.getElementById('nfTenUyQuyen').value.trim(),
         cccdUyQuyen: document.getElementById('nfCccdUyQuyen').value.trim(), sdtUyQuyen: document.getElementById('nfSdtUyQuyen').value.trim(),
         diaChiUyQuyen: document.getElementById('nfDiaChiUyQuyen').value.trim(),
-        soTK: document.getElementById('nfSoTK').value.trim(), nganHang: document.getElementById('nfNganHang').value.trim()
+        soTK: document.getElementById('nfSoTK').value.trim(), nganHang: document.getElementById('nfNganHang').value.trim(),
+        maThaoTac: maThaoTacTaoHD_
       };
       if (dangTaoHopDong_) return; // chặn bấm 2 lần -> tạo 2 hợp đồng trùng
       dangTaoHopDong_ = true;
       showMsgModal_('⌛ Đang lưu...');
       hakRun_()
         .withSuccessHandler(function (kq) {
-          dangTaoHopDong_ = false;
-          if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
+          if (!kq.thanhCong) { dangTaoHopDong_ = false; showMsgModal_('❌ ' + kq.loi); return; }
+          // ĐÃ TẠO XONG: giữ khóa nút Lưu (hộp thoại còn mở để lưu STK / báo lỗi STK) — trước đây
+          // mở khóa ngay tại đây, bấm Lưu lần nữa là ra hợp đồng thứ 2 (…001, …002).
           if (!d.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
           var patchTK = { idHD: kq.idHD, tenChuRung: d.tenChuRung, cccd: d.cccdChuRung, soHD: d.soHD, soTK: d.soTK, nganHang: d.nganHang, uyQuyenTT: d.uyQuyenTT, tenUyQuyen: d.uyQuyenTT === 'Có' ? d.tenUyQuyen : d.tenChuRung };
           // ⚠️ ĐÃ SỬA: TAO_HOP_DONG_MOI ở server đã tự tạo sẵn 1 dòng STK mặc định khi có soTK —
@@ -526,6 +529,7 @@
   var wz = {}; // dữ liệu tích lũy qua từng bước
 
   function moWizardThemHopDong() {
+    batDauLanTaoHopDong_();
     wz = { buoc: 1, khachHangCoSan: null };
     damBaoDaTaiKhachHangDayDu_(renderWizardBuoc1_);
   }
@@ -811,7 +815,14 @@
     moModal(html);
     document.getElementById('btnLuuWizard').addEventListener('click', luuHopDongWizard_);
   }
-  var dangTaoHopDong_ = false; // true trong lúc đang chờ TAO_HOP_DONG_MOI trả về — chặn bấm Lưu 2 lần tạo 2 hợp đồng trùng
+  var dangTaoHopDong_ = false; // true từ lúc bấm Lưu tới khi mở form tạo hợp đồng lần sau (xem batDauLanTaoHopDong_)
+  // Mã của LẦN tạo hợp đồng này, gửi kèm TAO_HOP_DONG_MOI: máy chủ nhận cùng mã lần 2 (bấm lại, mạng lỗi
+  // dù đã tạo xong...) sẽ trả lại hợp đồng đã tạo thay vì tạo hợp đồng trùng (_hdDaTaoTheoMaThaoTac_).
+  var maThaoTacTaoHD_ = '';
+  function batDauLanTaoHopDong_() {
+    dangTaoHopDong_ = false;
+    maThaoTacTaoHD_ = 'HD' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  }
   function luuHopDongWizard_() {
     if (dangTaoHopDong_) return;
     dangTaoHopDong_ = true;
@@ -821,12 +832,13 @@
       ngayCap: wz.ngayCap, noiCap: wz.noiCap, maSoThue: wz.maSoThue, nhomKH: wz.nhomKH,
       ngayKy: wz.ngayKy, soHD: wz.soHD, uyQuyenTT: wz.uyQuyenTT, tenUyQuyen: wz.tenUyQuyen,
       cccdUyQuyen: wz.cccdUyQuyen, sdtUyQuyen: wz.sdtUyQuyen, diaChiUyQuyen: wz.diaChiUyQuyen,
-      soTK: wz.soTK, nganHang: wz.nganHang
+      soTK: wz.soTK, nganHang: wz.nganHang, maThaoTac: maThaoTacTaoHD_
     };
     hakRun_()
       .withSuccessHandler(function (kq) {
-        dangTaoHopDong_ = false;
-        if (!kq.thanhCong) { showMsgModal_('❌ ' + kq.loi); return; }
+        if (!kq.thanhCong) { dangTaoHopDong_ = false; showMsgModal_('❌ ' + kq.loi); return; }
+        // ĐÃ TẠO XONG: giữ khóa nút Lưu (hộp thoại còn mở để lưu STK / báo lỗi STK) — trước đây
+        // mở khóa ngay tại đây, bấm Lưu lần nữa là ra hợp đồng thứ 2 (…001, …002).
         if (!wz.soTK) { dongModal(); moChiTietHopDong(kq.idHD); return; }
         var patchTK = { idHD: kq.idHD, tenChuRung: wz.tenChuRung, cccd: wz.cccdChuRung, soHD: wz.soHD, soTK: wz.soTK, nganHang: wz.nganHang, uyQuyenTT: wz.uyQuyenTT, tenUyQuyen: wz.uyQuyenTT === 'Có' ? wz.tenUyQuyen : wz.tenChuRung };
         // ⚠️ ĐÃ SỬA: TAO_HOP_DONG_MOI ở server đã tự tạo sẵn 1 dòng STK mặc định khi có soTK —

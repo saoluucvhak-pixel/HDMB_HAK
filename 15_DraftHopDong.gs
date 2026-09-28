@@ -175,13 +175,51 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
     const sh = getOrCreateDraftHopDongSheet_();
     const soDong = timDongDraft_(sh, idDraft);
     if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp ' + idDraft + ' (có thể đã bị Lưu chính thức hoặc hủy ở tab khác).' };
-    sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1).setValue(jsonDuLieu);
+    const oJson = sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1);
+    try {
+      jsonDuLieu = JSON.stringify(_giuTienDoLuuChinhThuc_(JSON.parse(oJson.getValue() || 'null'), JSON.parse(jsonDuLieu)));
+    } catch (e) { /* JSON lạ -> ghi nguyên như trước */ }
+    oJson.setValue(jsonDuLieu);
     sh.getRange(soDong, DRAFT_HD_COL.NGUOI_SUA + 1).setValue(_emailNguoiThucHien_() || '');
     sh.getRange(soDong, DRAFT_HD_COL.THOI_GIAN_SUA + 1).setValue(new Date());
     return { thanhCong: true };
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi lưu nháp: ' + e.message };
   }
+}
+
+/**
+ * Lượt "Lưu chính thức" lỗi giữa chừng để lại dấu tiến độ trong bản nháp (idHD đã tạo, idRung
+ * của lô vừa thêm, daTao / daXoaXong / điểm GPS daGhi). Trình duyệt vẫn giữ bản CŨ trong bộ
+ * nhớ và tự lưu nháp đè lên -> giữ lại các dấu đó, để lần lưu sau không tạo trùng / xóa nhầm dòng.
+ * Khớp mục theo tempId (mục mới) hoặc idRung / số dòng (mục đã có).
+ */
+function _giuTienDoLuuChinhThuc_(cu, moi) {
+  if (!cu || !moi || typeof moi !== 'object') return moi;
+  if (!moi.idHD && cu.idHD) moi.idHD = cu.idHD;
+  const theoKhoa = function (ds, khoa) { const m = {}; (ds || []).forEach(function (x) { const k = x && khoa(x); if (k) m[k] = x; }); return m; };
+  const khoaGps = function (p) { return p.lat + '|' + p.lng + '|' + (p.anhUrl || ''); };
+  const rungCu = theoKhoa(cu.rung, function (x) { return x.tempId || x.idRung; });
+  (moi.rung || []).forEach(function (x) {
+    const c = x && rungCu[x.tempId || x.idRung];
+    if (!c) return;
+    if (!x.idRung && c.idRung) x.idRung = c.idRung;
+    if (c.daXoaXong) x.daXoaXong = true;
+    const daGhi = {};
+    (c.gpsMoi || []).forEach(function (p) { if (p && p.daGhi) daGhi[khoaGps(p)] = true; });
+    (x.gpsMoi || []).forEach(function (p) { if (p && daGhi[khoaGps(p)]) p.daGhi = true; });
+  });
+  ['taiKhoan', 'phuLuc'].forEach(function (ten) {
+    const khoa = function (x) { return x.tempId || (x.soDong ? 'dong' + x.soDong : ''); };
+    const m = theoKhoa(cu[ten], khoa);
+    (moi[ten] || []).forEach(function (x) {
+      const c = x && m[khoa(x)];
+      if (!c) return;
+      if (c.daTao) x.daTao = true;
+      if (c.daXoaXong) x.daXoaXong = true;
+    });
+  });
+  return moi;
 }
 
 /** Hủy bản nháp (bấm "Hủy" hoặc rời trang mà không lưu) — không đụng gì tới bảng gốc */
@@ -226,8 +264,17 @@ function LUU_CHINH_THUC_(idDraft) {
     lock.releaseLock();
   }
 
+  // Ghi tiến độ vào bản nháp sau mỗi bước tạo/xóa: lượt này có lỗi hay bị ngắt (quá 6 phút)
+  // giữa chừng thì lần bấm lưu sau chỉ làm NỐT phần còn lại — không tạo trùng hợp đồng/lô
+  // rừng/tài khoản, không xóa nhầm dòng khác (xóa theo số dòng, dòng đã dịch sau lần xóa trước).
+  const ghiTienDo = function () {
+    try {
+      const d = timDongDraft_(sh, idDraft);
+      if (d !== -1) sh.getRange(d, DRAFT_HD_COL.JSON_DATA + 1).setValue(JSON.stringify(du));
+    } catch (e) { log_('WARNING', 'LUU_CHINH_THUC_', 'Không ghi được tiến độ vào bản nháp ' + idDraft, e); }
+  };
   try {
-    const kq = luuChinhThucThucThi_(du);
+    const kq = luuChinhThucThucThi_(du, 'NHAP_' + idDraft, ghiTienDo);
     if (kq.thanhCong) {
       // Tìm LẠI dòng nháp theo idDraft ngay trước khi xóa: lượt lưu mất vài giây, trong lúc đó nháp
       // khác phía trên có thể đã bị xóa -> số dòng lấy từ đầu hàm đã lệch và xóa NHẦM nháp của người khác.
@@ -245,18 +292,24 @@ function LUU_CHINH_THUC_(idDraft) {
 }
 
 /** Ghi dữ liệu của 1 bản nháp vào các bảng chính (không xóa nháp — LUU_CHINH_THUC_ lo việc đó). */
-function luuChinhThucThucThi_(du) {
-  // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật
-  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: du.hopDong, rung: [], taiKhoan: [] });
+function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
+  ghiTienDo = ghiTienDo || function () {};
+  // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật. maThaoTac: lượt lưu lại của CÙNG bản nháp
+  // dùng lại hợp đồng đã tạo thay vì tạo hợp đồng thứ 2 (xem _hdDaTaoTheoMaThaoTac_).
+  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: du.hopDong, rung: [], taiKhoan: [], maThaoTac: maThaoTac });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
   const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
+  if (!du.idHD) { du.idHD = idHD; ghiTienDo(); }
 
   const loiChiTiet = [];
 
   // 2) LÔ RỪNG — thêm mới / cập nhật / xóa, rồi ghi các điểm GPS mới thêm ở bản nháp
   (du.rung || []).forEach(function (rg) {
     if (rg.xoa) {
-      if (rg.idRung) { const kq = XOA_LO_RUNG_(rg.idRung); if (!kq.thanhCong) loiChiTiet.push('Xóa lô rừng ' + rg.idRung + ': ' + kq.loi); }
+      if (rg.idRung && !rg.daXoaXong) {
+        const kq = XOA_LO_RUNG_(rg.idRung);
+        if (kq.thanhCong) { rg.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa lô rừng ' + rg.idRung + ': ' + kq.loi);
+      }
       return;
     }
     const dRung = {
@@ -272,32 +325,46 @@ function luuChinhThucThucThi_(du) {
       const kq = THEM_LO_RUNG_MOI_(dRung);
       if (!kq.thanhCong) { loiChiTiet.push('Thêm lô rừng "' + rg.diaChiRung + '": ' + kq.loi); return; }
       idRungThat = kq.idRung;
+      rg.idRung = idRungThat; ghiTienDo(); // lần lưu lại sẽ CẬP NHẬT lô này, không thêm lô thứ 2
     }
+    let coGpsMoi = false;
     (rg.gpsMoi || []).forEach(function (p) {
+      if (p.daGhi) return;
       const kqGps = CAP_NHAT_GPS_RUNG_(idRungThat, { lat: p.lat, lng: p.lng, anhUrl: p.anhUrl || '' }, false);
-      if (!kqGps.thanhCong) loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
+      if (kqGps.thanhCong) { p.daGhi = true; coGpsMoi = true; } else loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
     });
+    if (coGpsMoi) ghiTienDo();
   });
 
   // 3) TÀI KHOẢN — thêm mới / cập nhật / xóa
   (du.taiKhoan || []).forEach(function (tk) {
     if (tk.xoa) {
-      if (tk.soDong) { const kq = XOA_TAI_KHOAN_(tk.soDong); if (!kq.thanhCong) loiChiTiet.push('Xóa tài khoản dòng ' + tk.soDong + ': ' + kq.loi); }
+      if (tk.soDong && !tk.daXoaXong) {
+        const kq = XOA_TAI_KHOAN_(tk.soDong);
+        if (kq.thanhCong) { tk.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa tài khoản dòng ' + tk.soDong + ': ' + kq.loi);
+      }
       return;
     }
+    if (tk.daTao) return;
     const dTK = { idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung, soTK: tk.soTK, nganHang: tk.nganHang, uyQuyenTT: tk.uyQuyenTT, tenUyQuyen: tk.tenUyQuyen };
     const kq = tk.soDong ? CAP_NHAT_TAI_KHOAN_(tk.soDong, dTK) : THEM_TAI_KHOAN_MOI_(dTK);
     if (!kq.thanhCong) loiChiTiet.push('Tài khoản ' + (tk.soTK || '') + ': ' + kq.loi);
+    else if (!tk.soDong) { tk.daTao = true; ghiTienDo(); }
   });
 
   // 4) PHỤ LỤC HỢP ĐỒNG — thêm mới / cập nhật / xóa
   (du.phuLuc || []).forEach(function (pl) {
     if (pl.xoa) {
-      if (pl.soDong) { const kq = XOA_PHU_LUC_(pl.soDong); if (!kq.thanhCong) loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi); }
+      if (pl.soDong && !pl.daXoaXong) {
+        const kq = XOA_PHU_LUC_(pl.soDong);
+        if (kq.thanhCong) { pl.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi);
+      }
       return;
     }
+    if (pl.daTao) return;
     const kq = LUU_PHU_LUC_({ idHD: idHD, soHD: soHD, soDong: pl.soDong, donGia: pl.donGia, khoiLuong: pl.khoiLuong, ghiChu: pl.ghiChu });
     if (!kq.thanhCong) loiChiTiet.push('Phụ lục: ' + kq.loi);
+    else if (!pl.soDong) { pl.daTao = true; ghiTienDo(); }
   });
 
   CAP_NHAT_CT_HOPDONG_(idHD);
