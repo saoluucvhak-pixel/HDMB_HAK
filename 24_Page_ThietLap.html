@@ -299,6 +299,15 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
+      <h3 style="margin-bottom:6px">📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng</h3>
+      <p class="hint" style="margin-top:-4px">Hợp đồng tạo trên app trước bản sửa 28/09/2026 có cột <b>SL dự kiến (Z)</b> — có thể cả Diện tích (T), Đơn giá (AA) — của HD_NCC bằng 0, nên app Thanh toán và các báo cáo đọc cột Z thấy "không có khối lượng dự kiến". Chức năng này <b>chỉ điền ô đang trống/0</b> bằng tổng các lô rừng (giống bảng ct_hopdong), <b>không ghi đè</b> số đã có. Bấm Xem trước, kiểm tra danh sách rồi mới Ghi.</p>
+      <button class="btn btn-outline" onclick="xemTruocDienSlTuLoRung()">👁️ Xem trước</button>
+      <button class="btn btn-green" id="btnGhiDienSl" onclick="ghiDienSlTuLoRung()" disabled>✅ Ghi vào HD_NCC</button>
+      <div id="ketQuaDienSl" style="margin-top:10px"></div>
+      <div id="msgDienSl" class="msg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <h3 style="margin-bottom:6px">🔄 Xây dựng lại cache Báo cáo (Draft_BaoCaoHopDong)</h3>
       <p class="hint" style="margin-top:-4px">Dùng khi có hợp đồng/lô rừng bị THÊM TRỰC TIẾP vào Sheet (không qua webapp) — cache báo cáo sẽ KHÔNG tự biết, khiến hợp đồng đó "biến mất" khỏi các tab Báo cáo dù dữ liệu gốc vẫn còn nguyên. Chạy lại lệnh này để quét lại toàn bộ từ đầu. Dữ liệu nhiều có thể cần bấm lại vài lần (tự tiếp tục từ chỗ dừng, không tính lại từ đầu).</p>
       <button class="btn btn-gold" onclick="xayDungLaiDraft()">🔄 Xây dựng lại (có thể mất vài phút)</button>
@@ -956,6 +965,50 @@
       })
       .withFailureHandler(function (err) { document.getElementById('msgBaoTri').textContent = '❌ Lỗi: ' + err.message; })
       .CHAY_TOAN_BO_BAO_TRI();
+  }
+
+  // ---- Điền SL dự kiến / Diện tích / Đơn giá (HD_NCC Z/T/AA) từ lô rừng — xem trước rồi mới ghi ----
+  var dsDienSlDaXem_ = [];
+  function veBangDienSl_(ds) {
+    if (!ds.length) return '';
+    var so = function (v) { var n = Number(v); return v === '' || v === null || isNaN(n) ? escHtmlBT_(v === '' ? '(trống)' : v) : n.toLocaleString('vi-VN'); };
+    var h = '<table class="data-table"><thead><tr><th>Số HĐ</th><th>Chủ rừng</th><th>Tình trạng</th><th>Thay đổi (cũ → mới)</th></tr></thead><tbody>';
+    ds.forEach(function (x) {
+      h += '<tr><td>' + escHtmlBT_(x.soHD) + '</td><td>' + escHtmlBT_(x.tenChuRung) + '</td><td>' + escHtmlBT_(x.tinhTrang) + '</td><td>' +
+        x.thayDoi.map(function (t) { return escHtmlBT_(t.ten) + ': ' + so(t.cu) + ' → <b>' + so(t.moi) + '</b>'; }).join('<br>') + '</td></tr>';
+    });
+    return h + '</tbody></table>';
+  }
+  function xemTruocDienSlTuLoRung() {
+    document.getElementById('btnGhiDienSl').disabled = true;
+    dsDienSlDaXem_ = [];
+    showMsg('msgDienSl', '⌛ Đang tính từ các lô rừng...', true);
+    document.getElementById('ketQuaDienSl').innerHTML = '';
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        dsDienSlDaXem_ = kq.ds;
+        if (!kq.soHopDong) { showMsg('msgDienSl', '✅ Không có hợp đồng nào cần điền — dữ liệu đã đủ.', true); return; }
+        showMsg('msgDienSl', '👁️ ' + kq.soHopDong + ' hợp đồng sẽ được điền (chưa ghi gì). Kiểm tra rồi bấm "✅ Ghi vào HD_NCC".', true);
+        document.getElementById('ketQuaDienSl').innerHTML = veBangDienSl_(kq.ds);
+        document.getElementById('btnGhiDienSl').disabled = false;
+      })
+      .withFailureHandler(function (err) { showMsg('msgDienSl', '❌ Lỗi: ' + err.message, false); })
+      .XEM_TRUOC_DIEN_SL_TU_LO_RUNG();
+  }
+  function ghiDienSlTuLoRung() {
+    if (!dsDienSlDaXem_.length) return;
+    if (!confirm('Ghi SL dự kiến / Diện tích / Đơn giá cho ' + dsDienSlDaXem_.length + ' hợp đồng như bảng xem trước? (chỉ điền ô trống/0, không ghi đè số đã có)')) return;
+    document.getElementById('btnGhiDienSl').disabled = true;
+    showMsg('msgDienSl', '⌛ Đang ghi...', true);
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { showMsg('msgDienSl', '❌ ' + kq.loi, false); return; }
+        dsDienSlDaXem_ = [];
+        showMsg('msgDienSl', '✅ ' + kq.thongBao, true);
+        document.getElementById('ketQuaDienSl').innerHTML = veBangDienSl_(kq.ds);
+      })
+      .withFailureHandler(function (err) { showMsg('msgDienSl', '❌ Lỗi: ' + err.message, false); document.getElementById('btnGhiDienSl').disabled = false; })
+      .AP_DUNG_DIEN_SL_TU_LO_RUNG(dsDienSlDaXem_.map(function (x) { return x.idHD; }));
   }
 
   // ---- Nhật ký hệ thống (lọc theo khoảng ngày) ----

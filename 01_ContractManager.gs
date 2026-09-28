@@ -717,6 +717,7 @@ function xuLyOnEditDraft_(e) {
     const soHang = e.range.getNumRows();
     let rungRowsCache = null; // chỉ đọc HD_RUNG 1 lần cho cả vùng sửa (nếu đang sửa HD_GPS), không đọc lại từng dòng
     const idsHD = new Set();
+    const idsHDSuaRung = new Set(); // hợp đồng có lô rừng bị sửa tay -> tổng hợp lại ct_hopdong + Z/T/AA
 
     for (let hang = hangBatDau; hang < hangBatDau + soHang; hang++) {
       if (hang < 2) continue; // dòng tiêu đề, bỏ qua
@@ -729,6 +730,7 @@ function xuLyOnEditDraft_(e) {
         idHD = sh.getRange(hang, RUNG_COL.ID_KEY_HD + 1).getValue();
         const idRungSua = (sh.getRange(hang, RUNG_COL.ID_RUNG + 1).getValue() || '').toString().trim();
         if (idRungSua) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRungSua);
+        if (idHD) idsHDSuaRung.add(idHD.toString().trim());
       } else if (ten === SHEET_NAME.HD_STK) {
         idHD = sh.getRange(hang, STK_COL.ID_HD + 1).getValue();
       } else if (ten === SHEET_NAME.HD_GPS) {
@@ -746,6 +748,7 @@ function xuLyOnEditDraft_(e) {
       if (idHD) idsHD.add(idHD.toString().trim());
     }
 
+    idsHDSuaRung.forEach(function (idHD) { dongBoTongHopRungVaoHdNcc_(idHD); });
     idsHD.forEach(function (idHD) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); });
   } catch (err) {
     // Không để lỗi trigger làm gián đoạn việc sửa sheet của người dùng — bỏ qua âm thầm

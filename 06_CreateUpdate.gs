@@ -370,6 +370,13 @@ function layDanhSachNhomKH_() {
   return Object.keys(set);
 }
 
+/** Hợp đồng mới luôn ở "Chờ thực hiện", còn app Thanh toán (ĐNTT) chỉ lấy hợp đồng "Đang thực hiện"
+ *  -> nhắc người tạo (quy trình duyệt giữ nguyên). Trả '' nếu hợp đồng đã ở "Đang thực hiện". */
+function nhacDuyetHopDongMoi_(tinhTrang) {
+  return (tinhTrang || '').toString().trim().toLowerCase() === 'đang thực hiện' ? ''
+    : 'Hợp đồng cần được ✅ Duyệt (chuyển Đang thực hiện) thì mới dùng được bên Thanh toán.';
+}
+
 /**
  * CHỐNG TẠO TRÙNG HỢP ĐỒNG khi CÙNG 1 lần nhập bị gửi lên nhiều lần: bấm Lưu lại sau khi
  * đã tạo xong (hộp thoại còn mở vì lỗi lưu STK), mạng lỗi dù máy chủ đã tạo xong rồi bấm
@@ -441,7 +448,7 @@ function TAO_HOP_DONG_MOI_(d) {
   try {
     const daTao = _hdDaTaoTheoMaThaoTac_(d.maThaoTac);
     if (daTao) {
-      return { thanhCong: true, idHD: daTao.idHD, soHD: daTao.soHD, daTaoTruocDo: true,
+      return { thanhCong: true, idHD: daTao.idHD, soHD: daTao.soHD, daTaoTruocDo: true, nhacDuyet: nhacDuyetHopDongMoi_(d.tinhTrang),
         canhBao: 'Hợp đồng ' + daTao.soHD + ' đã được tạo ở lần bấm trước — không tạo thêm hợp đồng trùng.' };
     }
     ngayKyDate = ngayGhiSheet_(isoNgayKy);
@@ -519,6 +526,7 @@ function TAO_HOP_DONG_MOI_(d) {
     thanhCong: true,
     idHD: idHD,
     soHD: soHD,
+    nhacDuyet: nhacDuyetHopDongMoi_(d.tinhTrang),
     canhBao: trungCCCD ? 'CCCD này đã có hợp đồng khác đang hoạt động — vui lòng kiểm tra trùng lặp chủ rừng.' : null
   };
 }
@@ -641,7 +649,7 @@ function THEM_LO_RUNG_MOI_(d) {
     if (d.diaChiRung) dongBoDiaChiTuRung_(d.idHD, { diaChiRung: d.diaChiRung });
 
     CAP_NHAT_DRAFT_MOT_HOP_DONG_(d.idHD);
-    CAP_NHAT_CT_HOPDONG_(d.idHD); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+    dongBoTongHopRungVaoHdNcc_(d.idHD); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
     CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
     xoaCacheBanDo_(); // lô rừng mới -> thêm dòng khung vào HD_GPS -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
     return { thanhCong: true, idRung: idRung, maRung: maRung, stt: stt };
@@ -717,7 +725,7 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
     dongBoDiaChiTuRung_(idHDCuaRung, { diaChiRung: patch.diaChiRung });
   }
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHDCuaRung);
-  CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+  dongBoTongHopRungVaoHdNcc_(idHDCuaRung); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
   xoaCacheBanDo_(); // thông tin lô rừng đổi (địa chỉ/diện tích...) có thể hiện trên popup bản đồ (CACHE-001)
 
@@ -1904,7 +1912,7 @@ function XOA_LO_RUNG_(idRung) {
     }
   }
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHDCuaRung);
-  CAP_NHAT_CT_HOPDONG_(idHDCuaRung); // tổng hợp lại "ct_hopdong" (xem 14_CtHopDong_PhuLuc.gs)
+  dongBoTongHopRungVaoHdNcc_(idHDCuaRung); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
   XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); // xóa khỏi cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
   xoaCacheBanDo_(); // đã xóa các điểm GPS của lô rừng này -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
   return { thanhCong: true };
@@ -2045,9 +2053,11 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
   let idHD = payload.idHD;
   let soHD;
   let soDongVuaTao; // số dòng thật của hợp đồng (mới tạo hoặc đang cập nhật) — trả về cho client để tránh phải tìm kiếm lại
+  let nhacDuyet = ''; // chỉ có khi vừa TẠO hợp đồng mới
 
   if (!idHD) {
     // ---- Tạo hợp đồng mới ----
+    nhacDuyet = nhacDuyetHopDongMoi_(d.tinhTrang);
     if (!d.tenChuRung || !laCCCDHopLe_(d.cccdChuRung) || !d.ngayKy) {
       return { thanhCong: false, loi: 'Thiếu Họ tên chủ rừng / CCCD hợp lệ / Ngày ký hợp đồng.' };
     }
@@ -2198,6 +2208,9 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
       ' — Tài khoản: +' + soTKThem + ' / sửa ' + soTKSua + ' / -' + soTKXoa);
   }
 
+  // Z/T/AA của HD_NCC theo tổng lô rừng — màn hình nhập KHÔNG gửi slDuKien/dienTichKy/donGia
+  // cấp hợp đồng (trước đây tạo xong Z = 0, app Thanh toán thấy "không có khối lượng dự kiến").
+  dongBoTongHopRungVaoHdNcc_(idHD);
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); // cập nhật Draft NGAY sau khi mọi thứ (hợp đồng + rừng + tài khoản) đã ghi xong
-  return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK };
+  return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK, nhacDuyet: nhacDuyet };
 }

@@ -367,7 +367,7 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
     else if (!pl.soDong) { pl.daTao = true; ghiTienDo(); }
   });
 
-  CAP_NHAT_CT_HOPDONG_(idHD);
+  dongBoTongHopRungVaoHdNcc_(idHD); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA
 
-  return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null };
+  return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null, nhacDuyet: ketQuaHD.nhacDuyet || '' };
 }

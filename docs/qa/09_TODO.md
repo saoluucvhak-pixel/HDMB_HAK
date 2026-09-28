@@ -8,6 +8,7 @@
   - **Tạo 2 file HTML mới** `NhapLieu_Chung_JS` và `ChatbotWidget` (thiếu 1 trong 2 → trang 07/11 hoặc 10/27/30 báo lỗi khi mở).
   - **Đợt 4 — tạo thêm 4 file mới:** `33_TraCuuHopDong` (.gs), `34_PhanQuyen` (.gs), `33_Page_TraCuuHopDong` (.html), `PhanQuyen_JS` (.html). Thiếu `34_PhanQuyen` hoặc `PhanQuyen_JS` → **mọi trang** báo lỗi.
   - **Xóa 3 file** `26_Page_QuanLyMeCon`, `08_Sidebar`, `09_Style` (công cụ đồng bộ có thể không tự xóa).
+  - **Đợt 5 (28/09/2026) — tạo thêm 2 file HTML mới:** `38_Page_AnhCongKhai`, `DinhDangSo_JS` (thiếu → trang Nhập liệu / Thêm-Sửa hợp đồng / link ảnh trong QR báo lỗi).
   - Chép đè toàn bộ file `.gs`/`.html` đã đổi (xem `08_CHANGELOG.md`).
 - [ ] **T-AUTH (BẮT BUỘC — làm ngay sau khi triển khai đợt 4, nếu không người dùng khác không vào được)**
   1. Mở webapp bằng **tài khoản chủ script** (hoặc `saoluucvhak@gmail.com` / `phuthuy.apple@gmail.com` — Quản trị cố định trong `34_PhanQuyen.gs`) → vào được ngay, không cần Cổng.
@@ -17,6 +18,7 @@
   5. **Menu trong Google Sheet** và sidebar Nhập liệu cũng yêu cầu email của người bấm có trong danh sách (hoặc là Quản trị cố định).
   6. Nếu nghi lộ mã nguồn Cổng: *Tạo lại mã bí mật* rồi dán lại mã nguồn mới vào dự án Cổng và Deploy lại (New version).
   7. Trigger đã cài từ trước vẫn chạy (được nhận ra qua mã trigger); không cần cài lại.
+- [ ] **T-SLDK (đợt 5 — làm ngay sau khi triển khai)** Menu *🚀 HỆ THỐNG HAK › 📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng* (hoặc ⚙️ Thiết lập, Quản trị) → **Xem trước**: kiểm tra có hợp đồng ông Bình và các hợp đồng Z = 0 → **Ghi**. Chạy lại lần 2 phải báo không còn gì để điền. Sau đó bên app Thanh toán (ĐNTT) làm mới dữ liệu và mở tóm lược hợp đồng ông Bình: khối lượng dự kiến phải đúng. Hợp đồng còn "Chờ thực hiện" cần ✅ Duyệt mới hiện bên ĐNTT.
 - [ ] **T-COL** Sau khi triển khai, lần đọc/ghi đầu tiên sẽ tự chụp tiêu đề cột hiện tại của 6 sheet dữ liệu làm chuẩn. Từ đó nếu ai chèn/xóa cột giữa bảng, hệ thống **dừng ghi** và báo cột nào lệch. Nếu **cố ý** đổi cấu trúc (và đã sửa hằng số `*_COL` trong mã) → chạy menu *🧱 Xác nhận cấu trúc cột hiện tại*.
 - [ ] **T-23** Kiểm tra project thật có file `23_CaiDatVung.html` không (không có trong GitHub). Nếu có → đồng bộ lên GitHub; nếu không → menu "Cài đặt Vùng" đã tự dùng hộp nhập thay thế.
 - [ ] **T-CHECK** Sau triển khai: mở 1 hợp đồng có Ngày ký, Nhóm KH, MST và CCCD bắt đầu bằng 0 → kiểm tra hiển thị đúng → sửa 1 trường khác → Lưu → mở lại, kiểm tra không đổi.

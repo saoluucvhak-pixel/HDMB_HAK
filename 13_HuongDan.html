@@ -247,10 +247,12 @@
       │
       └──❌ Hủy──▶ Đã hủy</pre>
 <div class="warn">🔒 <b>Chỉ "Chờ thực hiện" và "Đang thực hiện" mới được Sửa thông tin / Thêm-Sửa-Xóa Lô rừng / Số tài khoản / Tọa độ GPS / Ảnh.</b> Từ "Đã hoàn thành" trở đi, hợp đồng chuyển sang CHỈ XEM — muốn sửa phải duyệt lùi lại bằng tay trên Sheet (không có nút lùi trên webapp, tránh sửa nhầm dữ liệu đã chốt).</div>
+<div class="warn">💳 <b>App Thanh toán (DNTT) chỉ lấy hợp đồng "Đang thực hiện".</b> Hợp đồng vừa tạo (đang "Chờ thực hiện") cần được <b>✅ Duyệt</b> sang "Đang thực hiện" thì mới làm hồ sơ thanh toán được — sau khi tạo, hệ thống hiện nhắc việc này.</div>
 <p>Nút duyệt nằm ngay đầu trang chi tiết hợp đồng (chỉ hiện đúng bước hợp lệ tiếp theo). Muốn duyệt NHIỀU hợp đồng cùng lúc: vào danh sách hợp đồng của 1 khách hàng → lọc đúng 1 tab trạng thái (vd "Chờ thực hiện") → tick chọn nhiều dòng → bấm nút duyệt hàng loạt hiện ra.</p>
 
 <h3>Bước 3 — Thêm lô rừng</h3>
 <p>Trong 1 hợp đồng → tab "🌲 Lô rừng" → "➕ Thêm lô rừng": Địa chỉ/Diện tích/Đơn giá — gõ Diện tích tự tính luôn Khối lượng dự kiến (=<b>Định mức</b> × DT, mặc định 120 tấn/ha nhưng <b>sửa được ngay trên form</b> — chỉ dùng để tính, không lưu vào Sheet), có nút "💰 Xem gợi ý đơn giá bình quân theo Báo giá" để lấy nhanh giá tham khảo theo đúng tháng ký hợp đồng.</p>
+<p><b>Số liệu cấp hợp đồng tự tính từ lô rừng:</b> mỗi lần thêm/sửa/xóa lô rừng (trên webapp hoặc sửa tay trong sheet HD_RUNG khi đã bật "⚡ Bẫy nhật ký tự động"), hệ thống cộng lại và ghi vào HD_NCC: <b>SL dự kiến (cột Z)</b> = tổng khối lượng dự kiến, <b>Diện tích ký (cột T)</b> = tổng diện tích, <b>Đơn giá (cột AA)</b> = đơn giá bình quân các lô có đơn giá — cùng số với bảng <code>ct_hopdong</code>. Hợp đồng "Đang thực hiện" đã chốt số lúc ký: chỉ điền khi ô đang trống/0, không ghi đè. Hợp đồng chưa có lô rừng nào thì giữ nguyên số đã nhập. Mỗi lần đổi đều ghi Nhật ký (số cũ → mới).</p>
 <p>Bấm "Xem chi tiết →" trên 1 lô rừng để vào 2 tab con: <b>📍 Tọa độ GPS</b> và <b>🖼️ Ảnh</b> (xem định dạng tọa độ hỗ trợ ở mục 2b bên dưới). Ảnh tải lên ở đây <b>tự động duyệt luôn</b>, không cần bước duyệt riêng.</p>
 
 <h4>2a. Phân biệt RÕ 3 loại đính kèm — rất hay bị nhầm, đọc kỹ mục này</h4>
@@ -353,6 +355,7 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 <tr><td>🖼️ Chẩn đoán ảnh / 🔎 Chẩn đoán ảnh theo 1 lô rừng</td><td>Khi ảnh không hiện link mở được</td></tr>
 <tr><td>⚡ Chuyển tên file ảnh / hồ sơ pháp lý sang URL thật</td><td>Chạy 1 lần nếu "Xem chi tiết" bị chậm/treo lúc hiện ảnh</td></tr>
 <tr><td>🔎 Chẩn đoán Số HĐ trong Hồ sơ rừng</td><td>Khi lọc theo Số HĐ ở tab Hồ sơ rừng ra trống bất thường</td></tr>
+<tr><td>📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng (xem trước) — cũng có ở ⚙️ Thiết lập (Quản trị)</td><td>Chạy 1 lần sau khi cập nhật bản 28/09/2026: hợp đồng tạo trên app trước đó có cột Z (SL dự kiến) — có thể cả T, AA — bằng 0 nên app Thanh toán thấy "không có khối lượng dự kiến". Chỉ điền ô trống/0 bằng tổng lô rừng, không ghi đè số đã có; xem trước danh sách rồi mới ghi, chạy lại không ghi gì thêm</td></tr>
 <tr><td>📝 Định dạng TEXT cho cột quan trọng</td><td>Chạy 1 lần — giữ Số CCCD/SĐT/Số TK/Số HĐ... không bị Sheets tự chuyển thành số (mất số 0 đầu)</td></tr>
 <tr><td>📅 Đồng bộ định dạng ngày/tháng/năm</td><td>Chạy 1 lần — đặt hiển thị ngày kiểu dd/mm/yyyy cho các cột ngày</td></tr>
 </table>

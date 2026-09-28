@@ -2,6 +2,20 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (commit này) | 🐛 Dữ liệu | **Hợp đồng tạo trên app không có KHỐI LƯỢNG DỰ KIẾN bên app Thanh toán (ĐNTT)**: màn hình nhập không gửi SL dự kiến / diện tích / đơn giá cấp hợp đồng nên HD_NCC cột **Z** (có thể cả **T**, **AA**) = 0; số thật chỉ nằm ở từng lô rừng. Nay `dongBoTongHopRungVaoHdNcc_` tính 1 lần (`tinhTongHopLoRung_`, đúng phép tính cũ của ct_hopdong) rồi ghi **ct_hopdong và HD_NCC Z/T/AA** (ghi SỐ, định dạng số chuẩn, nhật ký cũ → mới) ở mọi chỗ đổi lô rừng: thêm / sửa / xóa lô, lưu từ bản nháp, `LUU_HOP_DONG_DAY_DU_`, sửa tay HD_RUNG (bẫy onEdit). "Đang thực hiện" đã chốt: chỉ điền ô trống/0; hợp đồng không có lô rừng giữ nguyên; không xóa số đã có bằng 0. **Bảo trì 📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng** (Quản trị, xem trước → xác nhận → ghi; chạy lại không ghi thêm) cho dữ liệu cũ. Tạo hợp đồng xong **nhắc ✅ Duyệt** sang "Đang thực hiện" để dùng được bên Thanh toán. Không đổi vị trí cột / tên sheet / tiêu đề HD_RUNG mà ĐNTT đọc | 14_CtHopDong_PhuLuc, 06_CreateUpdate, 15_DraftHopDong, 01_ContractManager, 28_BaoTri_DongBo, 34_PhanQuyen, 05_Menu, 24_Page_ThietLap, 27_Page_HopDongMeCon, NhapLieu_Chung_JS, 13_HuongDan |
+| `ace4bfa` | 🐛 | **Chống tạo trùng hợp đồng** (vd 20260916001/002 cùng chủ rừng, cùng ngày): mã thao tác cho mỗi lần nhập (máy chủ trả lại hợp đồng đã tạo), giữ khóa nút Lưu sau khi tạo; lưu chính thức từ bản nháp ghi tiến độ từng bước để lưu lại không tạo trùng / không xóa nhầm dòng | 06, 15, 27, NhapLieu_Chung_JS |
+| `bb88df3` | ✨ | Ô nhập số (diện tích, đơn giá, khối lượng, định mức) có phân cách hàng nghìn + thập phân kiểu Việt Nam ngay khi gõ, giữ phần lẻ | DinhDangSo_JS (mới), NhapLieu_Chung_JS, 07, 11, 27 |
+| `d7cba69` | ✨🔒 | Mã QR báo cáo PDF có **link tải ảnh hiện trường công khai** (chữ ký HMAC, chỉ ảnh hiện trường + ảnh GPS, không hồ sơ pháp lý / CCCD; thu hồi bằng cách xóa `ANH_CONG_KHAI_SECRET`) | 35_TraCuuHinhAnh, 36_BaoCaoHopDong, Code, 38_Page_AnhCongKhai (mới) |
+| `daf3bf9` | 🐛 | Lô rừng mới lấy đúng ngày ký + CCCD / tên chủ rừng của hợp đồng (trước: ngày hôm nay, Mã rừng "HAK_2") | 06 |
+| `381c037` | 🐛 | **BUG-12**: ngày ký lưu 00:00 (không phải 07:00); lọc Từ/Đến ngày không loại nhầm hợp đồng ký đúng ngày "Từ ngày"; PDF theo vùng xuất | 00_Config, 02, 06, 10, 18, 21, 22, 35, 36 |
+| `480cc09` | ✨ | Thẻ **📊 Vùng Định Dạng Báo Cáo Xuất Excel** (độc lập Vùng Lãnh Thổ): webapp luôn kiểu VN, ghi Sheet theo Vùng Lãnh Thổ, file xuất theo vùng xuất | 21, 22, 24, 34, 10 |
+| `078c350` | ⚡ | Chuyển tên file ảnh / hồ sơ sang URL: đọc-ghi theo khối 300 dòng (PERF-004) | 20_ChuyenDoiAnhURL |
+| `746bbb1` | 🔒 | Vá 5 hàm tra cứu ảnh / hồ sơ thiếu kiểm tra quyền | 35_TraCuuHinhAnh |
+
 ## 27/09/2026 — Đợt 4: đăng nhập Gmail + phân quyền (theo DNTT) và Tra cứu hợp đồng
 
 | Commit | Loại | Thay đổi | File |

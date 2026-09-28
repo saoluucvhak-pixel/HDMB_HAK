@@ -17,6 +17,9 @@
  *  3. Gợi ý luôn chạy lại GHI_TOA_DO_TU_DIA_CHI_RUNG_VAO_GPS_() (đã có sẵn ở
  *     25_TrichXuatToaDoTuDiaChi.gs) — bắt các lô rừng vẫn còn ghi tọa độ dạng
  *     chữ trong "Địa chỉ rừng" mà chưa từng chuyển vào HD_GPS.
+ *  4. XEM_TRUOC_DIEN_SL_TU_LO_RUNG_() / AP_DUNG_DIEN_SL_TU_LO_RUNG_() — điền cột
+ *     Z/T/AA của HD_NCC (SL dự kiến / Diện tích / Đơn giá) đang trống/0 từ tổng lô
+ *     rừng, có xem trước và xác nhận.
  * ============================================================
  */
 
@@ -238,4 +241,87 @@ function CHAY_TOAN_BO_BAO_TRI_TU_MENU() {
     'Ảnh chuyển sang URL: ' + kq.anhDaChuyen.soDaChuyen + (kq.anhDaChuyen.xongHet ? ' (xong hết)' : ' (còn dở dang, chạy lại bảo trì để tiếp tục)') + '.\n' +
     'Hồ sơ pháp lý chuyển sang URL: ' + kq.hoSoDaChuyen.soDaChuyen + (kq.hoSoDaChuyen.xongHet ? ' (xong hết)' : ' (còn dở dang, chạy lại bảo trì để tiếp tục)') + '.'
   );
+}
+
+/**
+ * ============ 4. ĐIỀN SL DỰ KIẾN / DIỆN TÍCH / ĐƠN GIÁ (HD_NCC cột Z/T/AA) TỪ LÔ RỪNG ============
+ * Hợp đồng tạo trên app trước bản sửa 28/09/2026 có cột Z (SL dự kiến) — có thể cả T, AA — bằng 0:
+ * màn hình nhập không gửi số cấp hợp đồng, số thật chỉ nằm ở từng lô rừng. App Thanh toán (ĐNTT)
+ * và các báo cáo đọc cột Z thấy "không có khối lượng dự kiến".
+ * Chỉ ĐIỀN ô đang TRỐNG/0 khi tổng lô rừng > 0 (cùng phép tính với ct_hopdong —
+ * tinhTongHopLoRung_), KHÔNG ghi đè số đã có. Xem trước -> người dùng xác nhận -> mới ghi.
+ * Chạy lại lần 2 không còn gì để điền.
+ */
+function _deXuatDienHdNccTuLoRung_() {
+  const rungTheoHD = {};
+  readData_(SHEET_NAME.HD_RUNG).forEach(function (r) {
+    const id = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
+    if (id) (rungTheoHD[id] = rungTheoHD[id] || []).push(r);
+  });
+  const ds = [];
+  readData_(SHEET_NAME.HD_NCC).forEach(function (r, i) {
+    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
+    if (!idHD || !rungTheoHD[idHD]) return;
+    const thayDoi = tinhThayDoiHdNccTuLoRung_(r, tinhTongHopLoRung_(rungTheoHD[idHD]), true);
+    if (!thayDoi.length) return;
+    ds.push({ soDong: i + 2, idHD: idHD, soHD: (r[NCC_COL.SO_HD] || '').toString(), tenChuRung: (r[NCC_COL.TEN_CHU_RUNG] || '').toString(),
+      tinhTrang: (r[NCC_COL.TINH_TRANG] || '').toString(), thayDoi: thayDoi });
+  });
+  return ds;
+}
+function _hienThiDeXuatDien_(x) {
+  return { idHD: x.idHD, soHD: x.soHD, tenChuRung: x.tenChuRung, tinhTrang: x.tinhTrang,
+    thayDoi: x.thayDoi.map(function (t) { return { ten: t.ten, cu: t.cu === '' ? '' : String(t.cu), moi: t.moi }; }) };
+}
+
+/** XEM TRƯỚC (không ghi gì): danh sách hợp đồng sẽ được điền + số cũ -> mới. */
+function XEM_TRUOC_DIEN_SL_TU_LO_RUNG_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const ds = _deXuatDienHdNccTuLoRung_();
+  return { thanhCong: true, soHopDong: ds.length, ds: ds.map(_hienThiDeXuatDien_) };
+}
+
+/**
+ * GHI sau khi người dùng xác nhận bản xem trước. idHDs: danh sách ID_HD đã xem trước — tính
+ * lại ngay lúc ghi (dữ liệu có thể vừa đổi), chỉ ghi hợp đồng vẫn còn cần điền và nằm trong
+ * danh sách. Kiểm tra lại ID_HD đúng dòng trước khi ghi. Gần hết giờ chạy (4,5 phút) thì
+ * dừng, báo số còn lại — chạy lại để làm tiếp.
+ */
+function AP_DUNG_DIEN_SL_TU_LO_RUNG_(idHDs) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  if (!Array.isArray(idHDs) || !idHDs.length) return { thanhCong: false, loi: 'Chưa có hợp đồng nào được xác nhận — bấm "Xem trước" trước.' };
+  const chon = {};
+  idHDs.forEach(function (id) { chon[String(id).trim()] = true; });
+  const sh = getSheet_(SHEET_NAME.HD_NCC);
+  const batDau = Date.now();
+  const daSua = [];
+  let conLai = 0, boQua = 0;
+  _deXuatDienHdNccTuLoRung_().forEach(function (x) {
+    if (!chon[x.idHD]) return;
+    if (Date.now() - batDau > 4.5 * 60 * 1000) { conLai++; return; }
+    if ((sh.getRange(x.soDong, NCC_COL.ID_HD + 1).getValue() || '').toString().trim() !== x.idHD) { boQua++; return; } // dòng vừa bị dịch -> chạy lại
+    ghiThayDoiHdNcc_(sh, x.soDong, x.idHD, x.thayDoi, 'Bảo trì: điền SL dự kiến/Diện tích/Đơn giá từ lô rừng');
+    daSua.push(_hienThiDeXuatDien_(x));
+  });
+  return {
+    thanhCong: true, soDaSua: daSua.length, conLai: conLai + boQua, ds: daSua,
+    thongBao: 'Đã điền số liệu từ lô rừng cho ' + daSua.length + ' hợp đồng.' +
+      (conLai + boQua ? ' Còn ' + (conLai + boQua) + ' hợp đồng chưa ghi — bấm Xem trước rồi ghi lại để làm tiếp.' : '')
+  };
+}
+
+function DIEN_SL_TU_LO_RUNG_TU_MENU() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const ui = SpreadsheetApp.getUi();
+  const xem = XEM_TRUOC_DIEN_SL_TU_LO_RUNG_();
+  if (!xem.soHopDong) { ui.alert('✅ Không có hợp đồng nào cần điền SL dự kiến / Diện tích / Đơn giá từ lô rừng.'); return; }
+  const dong = xem.ds.slice(0, 30).map(function (x) {
+    return '• HĐ ' + x.soHD + ' — ' + x.tenChuRung + ' (' + x.tinhTrang + '): ' +
+      x.thayDoi.map(function (t) { return t.ten + ' ' + (t.cu === '' ? '(trống)' : t.cu) + ' → ' + t.moi; }).join(', ');
+  });
+  const xacNhan = ui.alert('🔧 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng — XEM TRƯỚC',
+    xem.soHopDong + ' hợp đồng sẽ được điền (chỉ ô đang trống/0, không ghi đè số đã có):\n\n' + dong.join('\n') +
+    (xem.soHopDong > 30 ? '\n… và ' + (xem.soHopDong - 30) + ' hợp đồng khác.' : '') + '\n\nGhi vào HD_NCC?', ui.ButtonSet.OK_CANCEL);
+  if (xacNhan !== ui.Button.OK) return;
+  ui.alert('✅ ' + AP_DUNG_DIEN_SL_TU_LO_RUNG_(xem.ds.map(function (x) { return x.idHD; })).thongBao);
 }
