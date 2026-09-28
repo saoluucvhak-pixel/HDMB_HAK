@@ -749,9 +749,22 @@
   // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — CHỈ ảnh hưởng
   // ngày tháng ghi vào FILE XUẤT (Excel/PDF), KHÔNG ảnh hưởng giao diện webapp:
   // mọi bảng/hiển thị trên màn hình vẫn LUÔN dùng 'vi-VN' cố định như trước.
-  var maVungXuatBaoCao_ = 'vi-VN'; // mặc định, cập nhật lại ngay khi tải trang xong (xem DOMContentLoaded bên dưới)
-  hakRun_().withSuccessHandler(function (kq) { maVungXuatBaoCao_ = (kq.vung || 'vi_VN').replace('_', '-'); })
+  // Dùng ĐÚNG mẫu của thiết lập (vd 'mm/dd/yyyy', 'yyyy.mm.dd') — giống file MISA/PDF phía máy chủ,
+  // không dùng toLocaleDateString() vì mỗi trình duyệt ra kiểu khác (9/28/2026, 2026. 9. 28.).
+  var mauNgayXuatBaoCao_ = 'dd/mm/yyyy'; // mặc định, cập nhật ngay khi tải trang xong
+  hakRun_().withSuccessHandler(function (kq) { if (kq && kq.mau) mauNgayXuatBaoCao_ = kq.mau; })
     .withFailureHandler(function (err) { console.error('LAY_MA_VUNG_XUAT_BAO_CAO:', err); }).LAY_MA_VUNG_XUAT_BAO_CAO();
+  function ngayXuatFile_(v) {
+    if (!v) return '';
+    var s = String(v), m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/), y, mo, d;
+    if (m) { y = m[1]; mo = m[2]; d = m[3]; } // ngày thuần từ máy chủ — lấy thẳng, không qua múi giờ
+    else {
+      var dt = new Date(v);
+      if (isNaN(dt.getTime())) return s;
+      y = String(dt.getFullYear()); mo = ('0' + (dt.getMonth() + 1)).slice(-2); d = ('0' + dt.getDate()).slice(-2);
+    }
+    return mauNgayXuatBaoCao_.replace('yyyy', y).replace('mm', mo).replace('dd', d);
+  }
 
   function formatKL(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); } // ⚠️ SỬA: trước ép hiện 3 số lẻ, giờ số nguyên đồng bộ với các trường khác
   function formatTien(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }); }
@@ -833,9 +846,9 @@
       .withSuccessHandler(function (kq) {
         var header = ['Số HĐ', 'Ngày ký', 'Chủ rừng', 'CCCD', 'Người ủy quyền', 'Số TK', 'Số lô rừng', 'KL dự kiến (Tấn)', 'KL thực hiện (Tấn)', 'Giá trị HĐ (đ)', 'Giá trị TH (đ)', 'Từ ngày TH', 'Đến ngày TH', 'Có ảnh', 'Đủ GPS', 'Đủ hồ sơ', 'Tình trạng', 'Ghi chú'];
         var rows = kq.items.map(function (r) {
-          return [r.soHD || '', r.ngayKy ? new Date(r.ngayKy).toLocaleDateString(maVungXuatBaoCao_) : '', r.tenChuRung || '', r.cccdChuRung || '', r.tenUyQuyen || '',
+          return [r.soHD || '', r.ngayKy ? ngayXuatFile_(r.ngayKy) : '', r.tenChuRung || '', r.cccdChuRung || '', r.tenUyQuyen || '',
             r.soTaiKhoan || 0, r.soLoRung || 0, Math.round(r.khoiLuongDuKien) || 0, Math.round(r.khoiLuongThucHien) || 0, Math.round(r.giaTriHopDong) || 0, Math.round(r.giaTriThucHien) || 0,
-            r.thucHienTuNgay ? new Date(r.thucHienTuNgay).toLocaleDateString(maVungXuatBaoCao_) : '', r.thucHienDenNgay ? new Date(r.thucHienDenNgay).toLocaleDateString(maVungXuatBaoCao_) : '',
+            r.thucHienTuNgay ? ngayXuatFile_(r.thucHienTuNgay) : '', r.thucHienDenNgay ? ngayXuatFile_(r.thucHienDenNgay) : '',
             r.coAnh ? 'Có' : 'Chưa', r.daDoGPSDu ? 'Đủ' : 'Chưa đủ', r.hoSoDu ? 'Đủ' : 'Chưa đủ', r.tinhTrang || '', r.mucDo === 'do' ? r.thieuDo.join('; ') : (r.mucDo === 'vang' ? r.thieuVang.join('; ') : '')];
         });
         xuatBangRaFile_('msgLocBC', 'BaoCaoHopDong_' + new Date().toISOString().slice(0, 10), header, rows, dinhDang);

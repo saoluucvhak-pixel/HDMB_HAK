@@ -89,13 +89,10 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
       };
     });
 
-    const tuNgay = boLocBC.tuNgay ? new Date(boLocBC.tuNgay) : null;
-    const denNgay = boLocBC.denNgay ? new Date(boLocBC.denNgay) : null;
+    const tuISO = ngayToISO_(boLocBC.tuNgay), denISO = ngayToISO_(boLocBC.denNgay);
 
     const locBC = dsBaoCaoHD.filter(function (r) {
-      const ngayKy = new Date(r.ngayKy);
-      if (tuNgay && ngayKy < tuNgay) return false;
-      if (denNgay && ngayKy > denNgay) return false;
+      if (!trongKhoangNgay_(r.ngayKy, tuISO, denISO)) return false;
       if (!chuaLoc_(r.soHD, boLocBC.soHD)) return false;
       if (!chuaLoc_(r.tenChuRung, boLocBC.tenChuRung)) return false;
       if (!chuaLoc_(r.tenUyQuyen, boLocBC.tenNguoiUyQuyen)) return false;

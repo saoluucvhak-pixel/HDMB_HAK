@@ -15,7 +15,8 @@
  */
 
 function formatNgay_(date) {
-  return Utilities.formatDate(new Date(date), Session.getScriptTimeZone() || 'GMT+7', 'yyyyMMdd');
+  // Cùng múi giờ với ô ngày trong Sheet (00:00 theo múi giờ bảng tính — xem ngayGhiSheet_)
+  return Utilities.formatDate(new Date(date), layMuiGioBangTinh_(), 'yyyyMMdd');
 }
 
 /**
@@ -25,7 +26,7 @@ function formatNgay_(date) {
  */
 function soHopDongTuDong_(ngayKy) {
   const ngay = new Date(ngayKy || new Date());
-  const tienTo = Utilities.formatDate(ngay, Session.getScriptTimeZone() || 'GMT+7', 'yyyyMMdd');
+  const tienTo = Utilities.formatDate(ngay, layMuiGioBangTinh_(), 'yyyyMMdd');
   const rows = readData_(SHEET_NAME.HD_NCC);
   let maxStt = 0;
   rows.forEach(function (r) {
@@ -388,6 +389,8 @@ function TAO_HOP_DONG_MOI_(d) {
   if (!laCCCDHopLe_(d.cccdChuRung)) thieu.push('Số CCCD chủ rừng (phải đủ 12 số)');
   if (!d.ngayKy) thieu.push('Ngày ký hợp đồng');
   if (thieu.length) return { thanhCong: false, loi: 'Thiếu thông tin bắt buộc: ' + thieu.join(', ') };
+  const isoNgayKy = ngayToISO_(d.ngayKy);
+  if (!isoNgayKy) return { thanhCong: false, loi: 'Ngày ký hợp đồng không hợp lệ: ' + d.ngayKy };
 
   // Cảnh báo trùng CCCD đang còn hiệu lực (không chặn, chỉ cảnh báo trong kết quả trả về)
   const nccRows = readData_(SHEET_NAME.HD_NCC);
@@ -405,7 +408,7 @@ function TAO_HOP_DONG_MOI_(d) {
 
   let idHD, soHD, ngayKyDate;
   try {
-    ngayKyDate = new Date(d.ngayKy);
+    ngayKyDate = ngayGhiSheet_(isoNgayKy);
     soHD = d.soHD || soHopDongTuDong_(ngayKyDate);
     idHD = soHD + '-' + formatNgay_(ngayKyDate);
 
@@ -417,7 +420,7 @@ function TAO_HOP_DONG_MOI_(d) {
     row[NCC_COL.TEN_CHU_RUNG] = d.tenChuRung;
     row[NCC_COL.DIA_CHI_TT] = d.diaChiThuongTru || '';
     row[NCC_COL.CCCD_CHU_RUNG] = d.cccdChuRung;
-    row[NCC_COL.NGAY_CAP] = d.ngayCap || '';
+    row[NCC_COL.NGAY_CAP] = ngayGhiSheet_(d.ngayCap);
     row[NCC_COL.NOI_CAP] = d.noiCap || '';
     row[NCC_COL.SDT_CHU_RUNG] = d.sdtChuRung || '';
     row[NCC_COL.TEN_UY_QUYEN] = d.tenUyQuyen || '';
@@ -425,7 +428,7 @@ function TAO_HOP_DONG_MOI_(d) {
     row[NCC_COL.NOI_CAP_UQ] = d.noiCapUyQuyen || '';
     row[NCC_COL.DIA_CHI_UQ] = d.diaChiUyQuyen || '';
     row[NCC_COL.SDT_UQ] = d.sdtUyQuyen || '';
-    row[NCC_COL.NGAY_CAP_UQ] = d.ngayCapUyQuyen || '';
+    row[NCC_COL.NGAY_CAP_UQ] = ngayGhiSheet_(d.ngayCapUyQuyen);
     row[NCC_COL.SO_TK] = d.soTK || '';
     row[NCC_COL.NGAN_HANG] = d.nganHang || '';
     row[NCC_COL.EMAIL_UQ] = d.emailUQ || '';
@@ -543,7 +546,7 @@ function THEM_LO_RUNG_MOI_(d) {
     row[RUNG_COL.MA_RUNG] = maRung;
     row[RUNG_COL.ID_RUNG] = idRung;
     row[RUNG_COL.SO_HD] = soHD;
-    row[RUNG_COL.NGAY_KY] = d.ngayKy || new Date();
+    row[RUNG_COL.NGAY_KY] = ngayGhiSheet_(d.ngayKy || new Date());
     row[RUNG_COL.TEN_CHU_RUNG] = d.tenChuRung || '';
     row[RUNG_COL.CCCD] = cccd;
     row[RUNG_COL.THUONG_TRU] = d.thuongTru || '';
@@ -554,7 +557,7 @@ function THEM_LO_RUNG_MOI_(d) {
     row[RUNG_COL.DIEN_TICH_GPS] = '';
     row[RUNG_COL.HO_SO_NGUON_GOC] = d.hoSoNguonGoc || '';
     row[RUNG_COL.SO_GIAY_TO] = d.soGiayTo || '';
-    row[RUNG_COL.NGAY_GIAY_TO] = d.ngayGiayTo || '';
+    row[RUNG_COL.NGAY_GIAY_TO] = ngayGhiSheet_(d.ngayGiayTo);
     row[RUNG_COL.DINH_KEM_GIAY_TO] = d.dinhKemGiayTo || '';
     row[RUNG_COL.TIMESTAMP] = new Date();
     row[RUNG_COL.NAM_TRONG] = d.namTrong ? Number(d.namTrong) : '';
@@ -563,7 +566,7 @@ function THEM_LO_RUNG_MOI_(d) {
 
     // Tạo sẵn 1 dòng khung trong HD_GPS để người dùng điền tọa độ cho lô rừng này
     getSheet_(SHEET_NAME.HD_GPS).appendRow([
-      idRung, soHD + '-' + formatNgay_(d.ngayKy || new Date()), '', '', '', '', d.tenChuRung || '', '', false, 'DD'
+      idRung, soHD + '-' + formatNgay_(row[RUNG_COL.NGAY_KY]), '', '', '', '', d.tenChuRung || '', '', false, 'DD'
     ]);
 
     // Đồng bộ DM_DIACHI theo địa chỉ của lô rừng mới thêm
@@ -637,7 +640,7 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
     namTrong: RUNG_COL.NAM_TRONG
   };
   Object.keys(patch).forEach(function (key) {
-    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(patch[key]);
+    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : patch[key]);
   });
 
   // Nếu có sửa địa chỉ rừng, đồng bộ luôn vào DM_DIACHI
@@ -1017,11 +1020,13 @@ function CAP_NHAT_HOP_DONG_(soDong, patch) {
     ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD // ⚠️ BỔ SUNG: trước đây thiếu — sửa Ngày ký/Số HĐ ở trang mẹ-con bị âm thầm bỏ qua, không ghi vào Sheet
   };
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
+  const truong_ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
   // ⚠️ MỚI: các cột định danh cần định dạng TEXT TRƯỚC khi setValue (xem giải thích ở TAO_HOP_DONG_MOI_) — tránh mất số 0 đầu khi SỬA giá trị
   const cotCanDinhDangText_ = [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE];
   Object.keys(patch).forEach(function (key) {
     if (map.hasOwnProperty(key)) {
-      const value = truong_so.indexOf(key) !== -1 ? Number(patch[key]) : patch[key];
+      const value = truong_so.indexOf(key) !== -1 ? Number(patch[key])
+        : truong_ngay.indexOf(key) !== -1 ? ngayGhiSheet_(patch[key]) : patch[key];
       const oCell = sh.getRange(soDong, map[key] + 1);
       if (cotCanDinhDangText_.indexOf(map[key]) !== -1) oCell.setNumberFormat('@');
       oCell.setValue(value);
@@ -1978,6 +1983,8 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
     if (!d.tenChuRung || !laCCCDHopLe_(d.cccdChuRung) || !d.ngayKy) {
       return { thanhCong: false, loi: 'Thiếu Họ tên chủ rừng / CCCD hợp lệ / Ngày ký hợp đồng.' };
     }
+    const isoNgayKy = ngayToISO_(d.ngayKy);
+    if (!isoNgayKy) return { thanhCong: false, loi: 'Ngày ký hợp đồng không hợp lệ: ' + d.ngayKy };
     const lock = LockService.getScriptLock();
     try {
       lock.waitLock(15000);
@@ -1985,7 +1992,7 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
       return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' };
     }
     try {
-      const ngayKyDate = new Date(d.ngayKy);
+      const ngayKyDate = ngayGhiSheet_(isoNgayKy); // BUG-12: 00:00 giờ bảng tính, không phải 07:00
       soHD = d.soHD || soHopDongTuDong_(ngayKyDate);
       idHD = soHD + '-' + formatNgay_(ngayKyDate);
 
@@ -1997,7 +2004,7 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
       row[NCC_COL.TEN_CHU_RUNG] = d.tenChuRung;
       row[NCC_COL.DIA_CHI_TT] = d.diaChiThuongTru || '';
       row[NCC_COL.CCCD_CHU_RUNG] = d.cccdChuRung;
-      row[NCC_COL.NGAY_CAP] = d.ngayCap || '';
+      row[NCC_COL.NGAY_CAP] = ngayGhiSheet_(d.ngayCap);
       row[NCC_COL.NOI_CAP] = d.noiCap || '';
       row[NCC_COL.SDT_CHU_RUNG] = d.sdtChuRung || '';
       row[NCC_COL.TEN_UY_QUYEN] = d.tenUyQuyen || '';
@@ -2005,7 +2012,7 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
       row[NCC_COL.NOI_CAP_UQ] = d.noiCapUyQuyen || '';
       row[NCC_COL.DIA_CHI_UQ] = d.diaChiUyQuyen || '';
       row[NCC_COL.SDT_UQ] = d.sdtUyQuyen || '';
-      row[NCC_COL.NGAY_CAP_UQ] = d.ngayCapUyQuyen || '';
+      row[NCC_COL.NGAY_CAP_UQ] = ngayGhiSheet_(d.ngayCapUyQuyen);
       row[NCC_COL.SO_TK] = d.soTK || '';
       row[NCC_COL.NGAN_HANG] = d.nganHang || '';
       row[NCC_COL.EMAIL_UQ] = d.emailUQ || '';

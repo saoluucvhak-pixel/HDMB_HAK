@@ -145,14 +145,8 @@ function KIEM_TRA_HO_SO_TOAN_BO_(tuNgay, denNgay, _eTrigger) {
   const coLoc = !!(tuNgay || denNgay); // có lọc theo ngày hay không — ảnh hưởng việc dọn dòng cũ
 
   if (coLoc) {
-    const tu = tuNgay ? new Date(tuNgay) : null;
-    const den = denNgay ? new Date(denNgay) : null;
-    rungRows = rungRows.filter(function (r) {
-      const ngay = new Date(r[RUNG_COL.NGAY_KY]);
-      if (tu && ngay < tu) return false;
-      if (den && ngay > den) return false;
-      return true;
-    });
+    const tuISO = ngayToISO_(tuNgay), denISO = ngayToISO_(denNgay);
+    rungRows = rungRows.filter(function (r) { return trongKhoangNgay_(r[RUNG_COL.NGAY_KY], tuISO, denISO); });
   }
 
   const nccById = {};
@@ -286,14 +280,11 @@ function layBaoCaoHopDongPhanTrang_(boLoc, trang, kichThuoc, boBuoc) {
       };
     });
 
-    const tuNgay = boLoc.tuNgay ? new Date(boLoc.tuNgay) : null;
-    const denNgay = boLoc.denNgay ? new Date(boLoc.denNgay) : null;
+    const tuISO = ngayToISO_(boLoc.tuNgay), denISO = ngayToISO_(boLoc.denNgay);
     const chuaLoc = function (s, tk) { return !tk || (s || '').toString().toLowerCase().indexOf(tk.toLowerCase()) !== -1; };
 
     const loc = tatCa.filter(function (r) {
-      const ngayKy = new Date(r.ngayKy);
-      if (tuNgay && ngayKy < tuNgay) return false;
-      if (denNgay && ngayKy > denNgay) return false;
+      if (!trongKhoangNgay_(r.ngayKy, tuISO, denISO)) return false;
       if (!chuaLoc(r.soHD, boLoc.soHD)) return false;
       if (!chuaLoc(r.tenChuRung, boLoc.tenChuRung)) return false;
       if (!chuaLoc(r.tenUyQuyen, boLoc.tenNguoiUyQuyen)) return false;

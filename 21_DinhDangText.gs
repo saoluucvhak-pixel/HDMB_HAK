@@ -229,6 +229,31 @@ function layVungXuatExcelNoiBo_() {
   return MAU_NGAY_THEO_VUNG_[vung] ? vung : 'vi_VN';
 }
 
+/** Mẫu ngày ('dd/mm/yyyy', 'mm/dd/yyyy'...) cho file xuất — không kiểm tra quyền, dùng nội bộ. */
+function mauNgayXuatFile_() {
+  return MAU_NGAY_THEO_VUNG_[layVungXuatExcelNoiBo_()] || 'dd/mm/yyyy';
+}
+
+/**
+ * Ngày cho FILE XUẤT (PDF) theo mẫu của "Vùng Định Dạng Báo Cáo Xuất Excel".
+ * Nhận Date, "yyyy-mm-dd", "dd/mm/yyyy" hoặc "dd/mm/yyyy HH:mm" (giữ nguyên phần giờ).
+ * Giao diện webapp KHÔNG dùng hàm này — vẫn dùng _ngayHienThi_() (luôn dd/mm/yyyy).
+ */
+function _ngayXuatFile_(v, mau) {
+  if (v === null || v === undefined || v === '') return '';
+  let nguon = v, duoi = '';
+  if (!(v instanceof Date)) {
+    const s = v.toString().trim();
+    const m = s.match(/^(\d{1,2}\/\d{1,2}\/\d{4})(\s.*)?$/);
+    nguon = m ? m[1] : s;
+    duoi = m && m[2] ? m[2] : '';
+  }
+  const iso = ngayToISO_(nguon);
+  if (!iso) return v.toString();
+  const p = iso.split('-');
+  return (mau || 'dd/mm/yyyy').replace('yyyy', p[0]).replace('mm', p[1]).replace('dd', p[2]) + duoi;
+}
+
 /** Đọc vùng định dạng đang áp dụng cho file xuất Excel. Mặc định vi_VN. (Dùng cho trang Thiết lập) */
 function LAY_VUNG_XUAT_EXCEL_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);
@@ -242,7 +267,7 @@ function LAY_VUNG_XUAT_EXCEL_() {
  *  ghép dữ liệu ngày tháng vào file xuất. */
 function LAY_MA_VUNG_XUAT_BAO_CAO_() {
   _yeuCauQuyen_(QUYEN.XEM);
-  return { vung: layVungXuatExcelNoiBo_() };
+  return { vung: layVungXuatExcelNoiBo_(), mau: mauNgayXuatFile_() };
 }
 
 /** Đặt vùng định dạng cho file xuất Excel (không đụng đến "Vùng Lãnh Thổ" của file dữ liệu chính/Draft). */

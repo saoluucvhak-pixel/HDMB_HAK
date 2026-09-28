@@ -310,6 +310,9 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
   const kh = duLieu.khachHang;
   const nd = _xacDinhNguoiDung_();
   const tz = layMuiGioBangTinh_();
+  // Ngày trong PDF theo "Vùng Định Dạng Báo Cáo Xuất Excel" (webapp vẫn luôn dd/mm/yyyy)
+  const mauNgay = mauNgayXuatFile_();
+  const ngx = function (v) { return _ngayXuatFile_(v, mauNgay); };
   let loiTai = 0;
   let html = '<html><head><meta charset="UTF-8"><style>' +
     'body{font-family:Arial,sans-serif;font-size:11px;color:#1f2937;margin:0}' +
@@ -321,14 +324,14 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
     'table.luoi img{width:320px;border:1px solid #d1d5db}.cap{font-size:9.5px;color:#374151;margin-top:2px;text-align:left}.phu{color:#6b7280;font-size:10px}' +
     '</style></head><body>';
   html += '<h1>HỒ SƠ HÌNH ẢNH ' + (duLieu.theoKhachHang ? 'KHÁCH HÀNG' : 'HỢP ĐỒNG') + '</h1>' +
-    '<div class="phu">Hệ thống HAK — Quản lý hợp đồng gỗ keo · Xuất lúc ' + _escPdf_(Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm')) +
+    '<div class="phu">Hệ thống HAK — Quản lý hợp đồng gỗ keo · Xuất lúc ' + _escPdf_(ngx(Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm'))) +
     (nd && nd.email ? ' · Người xuất: ' + _escPdf_(nd.email) : '') + '</div>' +
     '<table class="tt"><tr><th>Khách hàng (chủ rừng)</th><td>' + _escPdf_(kh.ten) + '</td><th>CCCD</th><td>' + _escPdf_(kh.cccd) + '</td></tr>' +
     '<tr><th>Địa chỉ thường trú</th><td colspan="3">' + _escPdf_(kh.diaChi) + '</td></tr></table>' +
     '<table class="tt"><tr><th>Số HĐ</th><th>Ngày ký</th><th>Tình trạng</th><th>Địa chỉ rừng</th><th>Số lô</th><th>Số ảnh</th></tr>';
   duLieu.hopDong.forEach(function (h) {
     let n = 0; h.nhom.forEach(function (x) { n += x.anh.length; });
-    html += '<tr><td>' + _escPdf_(h.soHD) + '</td><td>' + _escPdf_(h.ngayKy) + '</td><td>' + _escPdf_(h.tinhTrang) + '</td><td>' + _escPdf_(h.diaChiRung) + '</td><td>' + h.soLo + '</td><td>' + n + '</td></tr>';
+    html += '<tr><td>' + _escPdf_(h.soHD) + '</td><td>' + _escPdf_(ngx(h.ngayKy)) + '</td><td>' + _escPdf_(h.tinhTrang) + '</td><td>' + _escPdf_(h.diaChiRung) + '</td><td>' + h.soLo + '</td><td>' + n + '</td></tr>';
   });
   html += '</table>';
   if (boQua) html += '<div class="phu">Lưu ý: chỉ đưa ' + dem + ' ảnh đầu tiên vào file (bỏ qua ' + boQua + ' ảnh) — xuất theo từng hợp đồng hoặc bỏ chọn bớt ảnh để có đủ.</div>';
@@ -336,7 +339,7 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
   let stt = 0;
   duLieu.hopDong.forEach(function (h) {
     if (!h.nhom.length) return;
-    html += '<h2>Hợp đồng số ' + _escPdf_(h.soHD) + (h.ngayKy ? ' — ký ngày ' + _escPdf_(h.ngayKy) : '') + '</h2>';
+    html += '<h2>Hợp đồng số ' + _escPdf_(h.soHD) + (h.ngayKy ? ' — ký ngày ' + _escPdf_(ngx(h.ngayKy)) : '') + '</h2>';
     h.nhom.forEach(function (n) {
       html += '<h3>' + _escPdf_(n.tieuDe) + ' (' + n.anh.length + ' ảnh)</h3><table class="luoi">';
       for (let i = 0; i < n.anh.length; i += 2) {
@@ -361,7 +364,7 @@ function XUAT_PDF_ANH_(idHD, theoKhachHang, maChon, tuyChon) {
       '<div class="phu">Các file dưới đây được ghép nguyên văn vào cuối tài liệu này, theo đúng thứ tự trong bảng.</div>' +
       '<table class="tt"><tr><th>#</th><th>Số HĐ</th><th>Lô rừng</th><th>Hồ sơ nguồn gốc</th><th>Số giấy tờ</th><th>Ngày</th></tr>';
     hoSoKem.forEach(function (x, i) {
-      html += '<tr><td>' + (i + 1) + '</td><td>' + _escPdf_(x.soHD) + '</td><td>' + _escPdf_(x.lo) + '</td><td>' + _escPdf_(x.hoSoNguonGoc) + '</td><td>' + _escPdf_(x.soGiayTo) + '</td><td>' + _escPdf_(x.ngayGiayTo) + '</td></tr>';
+      html += '<tr><td>' + (i + 1) + '</td><td>' + _escPdf_(x.soHD) + '</td><td>' + _escPdf_(x.lo) + '</td><td>' + _escPdf_(x.hoSoNguonGoc) + '</td><td>' + _escPdf_(x.soGiayTo) + '</td><td>' + _escPdf_(ngx(x.ngayGiayTo)) + '</td></tr>';
     });
     html += '</table>';
   }

@@ -98,15 +98,9 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
   const thietLap = LAY_THIET_LAP_MISA_();
 
-  const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
-  const denNgayDate = denNgay ? new Date(denNgay) : null;
-  if (tuNgayDate || denNgayDate) {
-    nccRows = nccRows.filter(function (r) {
-      const ngayKy = new Date(r[NCC_COL.NGAY_KY]);
-      if (tuNgayDate && ngayKy < tuNgayDate) return false;
-      if (denNgayDate && ngayKy > denNgayDate) return false;
-      return true;
-    });
+  const tuISO = ngayToISO_(tuNgay), denISO = ngayToISO_(denNgay);
+  if (tuISO || denISO) {
+    nccRows = nccRows.filter(function (r) { return trongKhoangNgay_(r[NCC_COL.NGAY_KY], tuISO, denISO); });
     const idHopLe = {};
     nccRows.forEach(function (r) { idHopLe[(r[NCC_COL.ID_HD] || '').toString().trim()] = true; });
     rungRows = rungRows.filter(function (r) { return idHopLe[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()]; });
@@ -187,7 +181,7 @@ function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
   const duLieu = layDuLieuMisaHienTai_(tuNgay, denNgay);
   // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — chỉ ảnh hưởng cách ngày
   // được GHI RA file MISA, KHÔNG ảnh hưởng giao diện webapp (luôn hiển thị kiểu Việt Nam).
-  const mauNgayXuat = MAU_NGAY_THEO_VUNG_[layVungXuatExcelNoiBo_()] || 'dd/mm/yyyy';
+  const mauNgayXuat = mauNgayXuatFile_();
   const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_, MISA_COT_NGAY_NCC_, mauNgayXuat);
   const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_, MISA_COT_NGAY_HDMB_, mauNgayXuat);
 

@@ -618,6 +618,30 @@ function layMuiGioBangTinh_() {
 }
 
 /**
+ * Ngày nhận từ webapp -> giá trị để GHI vào Sheet (BUG-12).
+ * Nguyên tắc: webapp luôn nhập/hiển thị kiểu Việt Nam; Sheet lưu NGÀY THẬT lúc 00:00 theo
+ * múi giờ bảng tính, còn hiện dd/mm hay mm/dd là do "Vùng Lãnh Thổ" (DAT_VUNG_HE_THONG_).
+ * KHÔNG dùng new Date("yyyy-mm-dd"): JS hiểu là 00:00 UTC = 07:00 giờ VN.
+ * Chỉ quy đổi Date / "yyyy-mm-dd" / "dd/mm/yyyy" hợp lệ; giá trị khác giữ nguyên như trước.
+ */
+function ngayGhiSheet_(v) {
+  if (v === null || v === undefined || v === '') return '';
+  const laNgay = v instanceof Date || /^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})$/.test(v.toString().trim());
+  const iso = laNgay ? ngayToISO_(v) : '';
+  return iso ? Utilities.parseDate(iso, layMuiGioBangTinh_(), 'yyyy-MM-dd') : v;
+}
+
+/** Lọc Từ/Đến ngày theo NGÀY THUẦN "yyyy-MM-dd" (không so giờ, không lệch múi giờ).
+ *  tuISO/denISO lấy bằng ngayToISO_(). Ngày trống/không đọc được -> giữ dòng (như trước). */
+function trongKhoangNgay_(giaTri, tuISO, denISO) {
+  const iso = ngayToISO_(giaTri);
+  if (!iso) return true;
+  if (tuISO && iso < tuISO) return false;
+  if (denISO && iso > denISO) return false;
+  return true;
+}
+
+/**
  * Lấy sheet Draft_AnhRung, TỰ TẠO kèm tiêu đề nếu chưa tồn tại (đây là sheet mới,
  * không có sẵn trong cấu trúc Google Sheet gốc của bạn).
  */
