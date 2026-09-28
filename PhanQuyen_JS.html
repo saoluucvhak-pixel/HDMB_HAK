@@ -111,6 +111,45 @@ if (!HAK_CO_LUU_TRU) {
   window.open = function (url) { var ts = Array.prototype.slice.call(arguments); ts[0] = hakGanPhienVaoLink_(String(url || '')); return hakMoGoc_.apply(window, ts); };
 }
 
+// ---------- Chạy bên trong HAK Portal (link nhúng có ?hak_portal=1) ----------
+// Các trang dùng <base target="_top"> và window.open(..., '_blank') để chuyển trang: khi nằm trong
+// khung của Portal, "_top" thay mất cả Portal, "_blank" bật tab mới. Trong Portal, link nội bộ của
+// webapp không tự chuyển nữa mà gửi postMessage lên các khung cha để Portal nạp trang mới vào đúng
+// khung của hệ thống này (Portal chỉ nhận tin từ bên trong khung của chính hệ thống con).
+var HAK_TRONG_PORTAL = false;
+function hakLaLinkNoiBo_(url) {
+  var goc = (document.getElementById('hakPhanQuyen') || { getAttribute: function () { return ''; } }).getAttribute('data-base') || '';
+  return !!goc && String(url || '').indexOf(goc) === 0;
+}
+function hakChuyenTrongPortal_(url) {
+  url = hakGanPhienVaoLink_(String(url));
+  if (!/[?&]hak_portal=1(&|#|$)/.test(url)) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'hak_portal=1';
+  var w = window;
+  for (var buoc = 0; buoc < 10 && w !== w.top; buoc++) {
+    w = w.parent;
+    try { w.postMessage({ loai: 'hak-portal-dieu-huong', url: url }, '*'); } catch (e) { /* bỏ qua */ }
+  }
+}
+(function hakNhanDienPortal_() {
+  try {
+    google.script.url.getLocation(function (loc) {
+      HAK_TRONG_PORTAL = !!(loc && loc.parameter && loc.parameter.hak_portal === '1');
+    });
+  } catch (e) { /* ngoài webapp (sidebar Sheet) -> không có google.script.url */ }
+  document.addEventListener('click', function (e) {
+    if (!HAK_TRONG_PORTAL || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('data-drive-goc') || !hakLaLinkNoiBo_(a.href)) return;
+    e.preventDefault();
+    hakChuyenTrongPortal_(a.href);
+  }, true);
+  var hakMoTruocPortal_ = window.open;
+  window.open = function (url) {
+    if (HAK_TRONG_PORTAL && hakLaLinkNoiBo_(url)) { hakChuyenTrongPortal_(url); return null; }
+    return hakMoTruocPortal_.apply(window, arguments);
+  };
+})();
+
 function hakTrangHienTai_() {
   var el = document.getElementById('hakPhanQuyen');
   return el ? (el.getAttribute('data-trang') || '') : '';

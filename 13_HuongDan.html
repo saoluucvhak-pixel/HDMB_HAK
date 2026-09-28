@@ -360,5 +360,22 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 
 
   </div>
+<script>
+// Chạy trong HAK Portal (?hak_portal=1): link menu nội bộ không thay mất cả Portal (base target=_top)
+// mà nhờ Portal nạp trang vào đúng khung — cùng cơ chế với PhanQuyen_JS (trang này không nạp file đó).
+(function () {
+  var goc = <?!= JSON.stringify(typeof baseUrl === 'undefined' ? '' : String(baseUrl || '')) ?>;
+  var trongPortal = false;
+  try { google.script.url.getLocation(function (loc) { trongPortal = !!(loc && loc.parameter && loc.parameter.hak_portal === '1'); }); } catch (e) {}
+  document.addEventListener('click', function (e) {
+    if (!trongPortal || !goc || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.href.indexOf(goc) !== 0) return;
+    e.preventDefault();
+    var url = a.href + (a.href.indexOf('?') >= 0 ? '&' : '?') + 'hak_portal=1';
+    for (var w = window, b = 0; b < 10 && w !== w.top; b++) { w = w.parent; try { w.postMessage({ loai: 'hak-portal-dieu-huong', url: url }, '*'); } catch (x) {} }
+  }, true);
+})();
+</script>
 </body>
 </html>
