@@ -5,6 +5,8 @@
   - Chế độ: 'tu_dong' (theo máy, mặc định) | 'sang' | 'toi' — lưu localStorage 'hak_giao_dien', đổi bằng nút 🌓 cạnh email.
   - Nhãn chưa gắn ô nhập được gắn tự động (bấm chữ nhãn -> vào ô; trình đọc màn hình đọc đúng tên ô);
     nút chỉ có biểu tượng được đặt tên (aria-label) theo title hoặc theo biểu tượng.
+  - Nhúng trong Portal (webapp Apps Script khác): bấm menu / link nội bộ đổi trang NGAY TRONG KHUNG, không bật ra
+    khỏi Portal (xem khối "Nhúng trong Portal" cuối file + mã dán vào Portal ở Hướng dẫn, mục 9).
 -->
 <style>
   html[data-giao-dien="toi"] {
@@ -121,5 +123,52 @@ function hakGanNhanVaTen_(goc) {
     if (window.MutationObserver) new MutationObserver(function () { if (!hen) hen = setTimeout(chay, 150); }).observe(document.body, { childList: true, subtree: true });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', khoiDong); else khoiDong();
+})();
+
+/* ---------- Nhúng trong Portal: chuyển trang ngay trong khung ---------- */
+// Trang HDMB đặt <base target="_top">: nằm trong iframe của Portal thì bấm menu làm CẢ cửa sổ chuyển sang HDMB (rời
+// Portal). Khung HTML của Apps Script bị sandbox nên không tự đổi được khung cha -> nhờ Portal: lúc tải trang gửi lời
+// chào lên các khung cha; Portal (có đoạn mã ở Hướng dẫn mục 9) trả lời kèm mã triển khai của khung nó nhúng. Từ đó
+// link trỏ về CHÍNH webapp này được gửi cho Portal để Portal đổi src của khung. Không có Portal trả lời -> chạy như cũ.
+var HAK_NGUON_PORTAL_ = /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/; // chỉ tin Portal là webapp Apps Script
+var hakPortal_ = null; // { cuaSo, nguon, ma } sau khi Portal trả lời
+function hakMaTrienKhai_(url) {
+  var m = /^https:\/\/script\.google\.com\/(?:a\/[^\/]+\/)?macros\/s\/([\w-]+)\/(?:exec|dev)(?:[?#]|$)/.exec(String(url || ''));
+  return m ? m[1] : '';
+}
+function hakLaKhungCha_(w) {
+  for (var x = window, lan = 0; lan < 12 && x !== x.parent; lan++) { x = x.parent; if (x === w) return true; }
+  return false;
+}
+(function () {
+  if (window.parent === window) return; // mở trực tiếp, không nằm trong khung nào
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.hak !== 'portal' || d.loai !== 'chao' || !/^[\w-]{10,}$/.test(String(d.ma || ''))) return;
+    if (!HAK_NGUON_PORTAL_.test(e.origin) || !hakLaKhungCha_(e.source)) return;
+    hakPortal_ = { cuaSo: e.source, nguon: e.origin, ma: d.ma };
+  });
+  var chao = function () {
+    if (hakPortal_) return;
+    for (var w = window, lan = 0; lan < 12 && w !== w.parent; lan++) {
+      w = w.parent;
+      try { w.postMessage({ hak: 'hdmb', loai: 'chao' }, '*'); } catch (e) { /* bỏ qua */ }
+    }
+  };
+  chao(); setTimeout(chao, 1500); setTimeout(chao, 4000); // Portal chậm gắn bộ nghe -> chào lại
+  // Pha nổi (sau các xử lý pha bắt của trang, vd gắn ?ph= vào link khi trình duyệt chặn bộ nhớ)
+  document.addEventListener('click', function (e) {
+    if (!hakPortal_ || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('download')) return;
+    var base = document.querySelector('base[target]');
+    var dich = String(a.getAttribute('target') || (base && base.getAttribute('target')) || '_self').toLowerCase();
+    if (dich !== '_top' && dich !== '_parent' && dich !== '_self') return; // _blank / cửa sổ riêng: giữ nguyên
+    var url = a.href;
+    if (hakMaTrienKhai_(url) !== hakPortal_.ma) return; // link sang webapp khác (Cổng đăng nhập...) -> như cũ
+    if (typeof hakGanPhienVaoLink_ === 'function') url = hakGanPhienVaoLink_(url);
+    e.preventDefault();
+    hakPortal_.cuaSo.postMessage({ hak: 'hdmb', loai: 'mo', url: url }, hakPortal_.nguon);
+  });
 })();
 </script>
