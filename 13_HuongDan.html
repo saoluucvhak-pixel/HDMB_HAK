@@ -138,6 +138,7 @@
 <?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
+<div hidden data-base="<?= baseUrl ?>"></div>
 <div class="app-sidebar">
   <div class="brand">
     <div class="logo">HAK</div>
@@ -362,46 +363,13 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 </table>
 <div class="warn">✅ Menu "📅 Đồng bộ định dạng ngày/tháng/năm" đã tự đặt luôn <b>Vùng địa lý (Locale) = Việt Nam</b> cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng bằng code — không cần vào Cài đặt bảng tính làm tay nữa.</div>
 
-<h2>9. Nhúng HDMB vào Portal (webapp Apps Script khác)</h2>
-<p>Các trang HDMB mở link menu ở <b>cả cửa sổ</b> (<code>target="_top"</code>) — mở trực tiếp thì đúng, nhưng khi nằm trong khung (iframe) của Portal thì bấm menu / "Về trang Tổng quan" / "Xem ảnh &amp; xuất PDF" sẽ làm cả trình duyệt rời Portal. Khung của Apps Script bị Google khóa (sandbox) nên HDMB không tự đổi được khung của Portal — cần Portal "nhận lời" đổi giúp:</p>
-<ol>
-  <li>Trong file HTML của Portal có thẻ <code>&lt;iframe src="https://script.google.com/macros/s/…/exec"&gt;</code> nhúng HDMB, dán đoạn mã dưới đây (ở đâu cũng được, thường ngay sau thẻ iframe).</li>
-  <li>Triển khai lại Portal: <b>Manage deployments → Edit → New version</b>. HDMB không cần cấu hình gì thêm.</li>
-</ol>
-<pre>&lt;script&gt;
-// HDMB: bấm menu trong khung HDMB -&gt; đổi trang ngay trong khung, không rời Portal
-(function () {
-  function maTrienKhai(u) {
-    var m = /^https:\/\/script\.google\.com\/(?:a\/[^\/]+\/)?macros\/s\/([\w-]+)\/(?:exec|dev)(?:[?#]|$)/.exec(String(u || &#x27;&#x27;));
-    return m ? m[1] : &#x27;&#x27;;
-  }
-  function khungChua(nguon) { // iframe nào của Portal chứa cửa sổ vừa gửi tin
-    var ds = document.getElementsByTagName(&#x27;iframe&#x27;);
-    for (var i = 0; i &lt; ds.length; i++) {
-      for (var w = nguon, lan = 0; w &amp;&amp; lan &lt; 12; lan++) {
-        if (w === ds[i].contentWindow) return ds[i];
-        if (w === w.parent) break;
-        w = w.parent;
-      }
-    }
-    return null;
-  }
-  window.addEventListener(&#x27;message&#x27;, function (e) {
-    var d = e.data;
-    if (!d || d.hak !== &#x27;hdmb&#x27; || !e.source) return;
-    var khung = khungChua(e.source);
-    var ma = khung ? maTrienKhai(khung.src) : &#x27;&#x27;;
-    if (!ma) return;
-    if (d.loai === &#x27;chao&#x27;) e.source.postMessage({ hak: &#x27;portal&#x27;, loai: &#x27;chao&#x27;, ma: ma }, e.origin);
-    else if (d.loai === &#x27;mo&#x27; &amp;&amp; maTrienKhai(d.url) === ma) khung.src = d.url; // chỉ nhận link của chính webapp đang nhúng
-  });
-})();
-&lt;/script&gt;</pre>
+<h2>9. Nhúng HDMB vào trang khác (Portal...)</h2>
+<p>Mỗi mục menu của HDMB là 1 trang riêng (<code>?page=...</code>) mở ở <b>cả cửa sổ</b>. Mở HDMB trực tiếp thì đúng; khi HDMB nằm trong khung (iframe) của Portal thì trước đây bấm menu / "Về trang Tổng quan" / "Xem ảnh &amp; xuất PDF" làm cả trình duyệt rời Portal. (Các webapp khác không bị vì chỉ có 1 trang, đổi tab bằng mã trong trang.)</p>
 <ul>
-  <li>Cách chạy: lúc tải trang, HDMB gửi lời chào lên khung cha; Portal trả lời kèm mã triển khai của iframe nó nhúng. Từ đó bấm link trỏ về <b>chính</b> webapp HDMB thì HDMB nhờ Portal đổi <code>src</code> của iframe — trang mới hiện ngay trong khung, Portal giữ nguyên.</li>
-  <li>An toàn: HDMB chỉ tin Portal là webapp Apps Script (<code>*-script.googleusercontent.com</code>) và là khung cha thật của nó; Portal chỉ đổi khung sang link cùng mã triển khai với iframe đang nhúng — link lạ bị bỏ qua.</li>
-  <li>Link mở tab mới (xem file Drive, Google Maps, "Sửa hợp đồng" ở Tổng quan) vẫn mở tab mới như cũ. Đăng nhập trong khung vẫn qua cửa sổ nhỏ của Cổng đăng nhập.</li>
-  <li>Portal chưa dán đoạn mã → HDMB chạy như cũ (bấm menu thì rời Portal).</li>
+  <li>Nay HDMB <b>tự biết mình đang bị nhúng</b>: bấm link sang trang khác của HDMB thì tải trang mới <b>ngay trong khung</b> — Portal giữ nguyên. <b>Không cần sửa gì ở Portal</b>, chỉ cần nhúng bằng thẻ <code>&lt;iframe src="https://script.google.com/macros/s/…/exec"&gt;</code> như bình thường.</li>
+  <li>Địa chỉ <code>?page=...</code> vẫn cập nhật nên nút Quay lại / Tiến tới của trình duyệt dùng được.</li>
+  <li>Link mở tab mới (xem file Drive, Google Maps, "Sửa hợp đồng" ở Tổng quan) vẫn mở tab mới. Đăng nhập trong khung vẫn qua cửa sổ nhỏ của Cổng đăng nhập.</li>
+  <li>Mở HDMB trực tiếp (không nhúng): chuyển trang y như cũ.</li>
 </ul>
 
 

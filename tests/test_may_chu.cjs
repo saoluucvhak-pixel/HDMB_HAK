@@ -542,6 +542,21 @@ try {
     let loiGoc = ''; try { t.run('ANH_CONG_KHAI(' + J(A.idHD) + ',' + J(k) + ',' + J([idHoSo]) + ', true)'); } catch (e) { loiGoc = e.message; }
     kiem('QR-03 tải bản gốc hồ sơ pháp lý qua link công khai -> chặn', /không thuộc/.test(loiGoc), loiGoc);
   });
+
+  chay(function () {
+    // NHUNG-01: chuyển trang trong khung dùng CÙNG template/biến như doGet; trang lạ -> Tổng quan; ph sai bị bỏ
+    const t = moi();
+    t.run(`HtmlService.createTemplateFromFile = function (f) { var tm = { evaluate: function () { var o = { getContent: function () { return 'FILE=' + f + '|TRANG=' + tm.currentPage + '|PHIEN=' + tm.phien + '|BASE=' + tm.baseUrl; } };
+      o.setTitle = function () { return o; }; o.addMetaTag = function () { return o; }; o.setXFrameOptionsMode = function () { return o; }; return o; } }; return tm; };
+      HtmlService.XFrameOptionsMode = { ALLOWALL: 1 };`);
+    const a = t.run('trangTrongKhung({ page: "tracuu" })');
+    const b = t.run('trangTrongKhung({ page: "constructor", ph: "sai" })');
+    const c = t.run('trangTrongKhung({ page: "meconn" })');
+    const g = t.run('doGet({ parameter: { page: "tracuu" } }).getContent()');
+    kiem('NHUNG-01 trangTrongKhung trả đúng trang + tiêu đề như doGet',
+      a.html === g && /FILE=33_Page_TraCuuHopDong\|TRANG=tracuu\|PHIEN=\|BASE=https:/.test(a.html) && /Tra cứu/.test(a.tieuDe) &&
+      /FILE=30_Page_TongQuanHopDong\|TRANG=tongquan\|PHIEN=\|/.test(b.html) && /TRANG=hopdongmc/.test(c.html), J([a, b, c, g]));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

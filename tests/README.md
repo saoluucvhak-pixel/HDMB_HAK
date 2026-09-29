@@ -8,7 +8,7 @@ Chạy được trên máy bất kỳ có Node ≥ 18 — **không cần tài kh
 | `test_may_chu.cjs` | Test hồi quy phía máy chủ cho các lỗi đã sửa (C-, H-, M-, P-, B2). |
 | `kiem_tra_cu_phap.cjs` | Kiểm tra cú pháp mọi `.gs` và khối `<script>` trong `.html`. |
 | `ui_khoa_nut.cjs`, `ui_hop_thoai_bo_loc.cjs`, `ui_giao_dien.cjs` | Test giao diện bằng Playwright trên mã `PhanQuyen_JS.html` / `GiaoDien_Chung.html` thật (khóa nút chống bấm đúp, hộp thoại, nhớ bộ lọc, chế độ tối, gắn nhãn / tên nút). |
-| `ui_nhung_portal.cjs` | Dựng lại các lớp khung của Apps Script (Portal → khung Google → sandbox → trang HDMB): bấm menu đổi trang trong khung, Portal giữ nguyên; Portal chưa dán mã / trang lạ giả Portal → như cũ. Đoạn mã Portal lấy từ `13_HuongDan.html` mục 9. |
+| `ui_nhung_portal.cjs` | Dựng lại các lớp khung của Apps Script (Portal → trang Google → sandbox → trang HDMB), Portal chỉ là iframe thường: bấm menu đổi trang trong khung, không lồng thêm tầng, Quay lại dùng được; mở trực tiếp / tab mới / webapp khác → như cũ. |
 | `chay_tat_ca.cjs` | Chạy tất cả theo thứ tự. |
 
 ```bash

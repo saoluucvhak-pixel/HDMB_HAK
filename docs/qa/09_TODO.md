@@ -38,7 +38,7 @@
 - [x] ~~**T-SEC-002** Chọn mô hình xác thực~~ → đã chọn mô hình DNTT, đã làm (`c852a6a`). Việc còn lại: T-AUTH ở mục A.
 - [ ] **T-REPO-PUBLIC** Repo GitHub `HDMB_HAK` đang **công khai** → ai cũng đọc được mã nguồn, gồm `WEBHOOK_SECRET` (webhook làm mới cache DNTT) trong `Webhook_dntt.gs`. Đề xuất đặt repo về *Private*, hoặc đổi mã bí mật đó ở DNTT.
 - [ ] **T-XEM-CHE** Vai trò Chỉ xem hiện chỉ bị che CCCD/SĐT/STK ở trang Tra cứu; các trang Báo cáo/Tổng quan vẫn hiện đầy đủ như trước. Nếu muốn che toàn hệ thống → báo để làm tiếp.
-- [x] **T-FRAME** ~~Webapp có được nhúng vào Google Sites / trang khác không?~~ **Có** — chủ dự án nhúng vào Portal (webapp Apps Script) → giữ `ALLOWALL`. Chuyển trang trong khung: xem Hướng dẫn mục 9 (29/09/2026).
+- [x] **T-FRAME** ~~Webapp có được nhúng vào Google Sites / trang khác không?~~ **Có** — chủ dự án nhúng vào Portal (webapp Apps Script) → giữ `ALLOWALL`. HDMB tự chuyển trang trong khung khi bị nhúng, không cần sửa Portal — Hướng dẫn mục 9 (29/09/2026).
 - [ ] **T-PDPD** Rà soát việc gửi số tài khoản tới `tracuubank.com` và ảnh CCCD tới Gemini theo Nghị định 13/2023/NĐ-CP.
 
 ## D. KỸ THUẬT (theo `06_REFACTOR_PLAN.md`)
