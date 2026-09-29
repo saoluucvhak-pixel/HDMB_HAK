@@ -9,11 +9,13 @@ const HDMB = 'https://script.google.com/macros/s/' + ID_HDMB + '/exec';
 const PORTAL = 'https://script.google.com/macros/s/' + ID_PORTAL + '/exec';
 const SANDBOX_HDMB = 'https://n-hdmb-0lu-script.googleusercontent.com';
 const SANDBOX_PORTAL = 'https://n-portal-0lu-script.googleusercontent.com';
+const CONG = 'https://script.google.com/macros/s/AKfycbCONG_12345678901/exec';
 const vo = (than) => ({ status: 200, contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><head><meta charset="utf-8"></head><body>' + than + '</body></html>' });
 
 function htmlTrang(trang) { // như HtmlService trả về: chỉ mã của trang
   return `<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">${docMa('GiaoDien_Chung.html')}</head><body>
-<div hidden data-base="${HDMB}"></div>
+<div id="hakPhanQuyen" hidden data-phien="" data-loi="" data-trang="${trang}" data-base="${HDMB}"></div>
+${docMa('PhanQuyen_JS.html')}
 <h1 id="ten">TRANG:${trang}</h1><span id="g"></span>
 <a id="lnk" href="${HDMB}?page=tracuu">Tra cứu</a>
 <a id="lnk2" class="btn" href="${HDMB}?page=baocao&amp;idhd=HD5">Báo cáo</a>
@@ -33,17 +35,21 @@ const GIA_LAP = `<script>(function(){
     if (k === 'withFailureHandler') return function(f){ loi = f; return r; };
     if (k === 'withUserObject') return function(){ return r; };
     return function(ts){ window.__goi.push([k, JSON.parse(JSON.stringify(ts || null))]); setTimeout(function(){
-      if (k === 'trangTrongKhung') { var p = TRANG[ts.page] ? ts.page : 'tongquan'; ok && ok({ html: TRANG[p], tieuDe: TIEU_DE[p] }); }
+      if (k === 'thongTinDangNhap') ok && ok(window.__chuaDangNhap ? { daDangNhap: false, congDangNhapUrl: ${JSON.stringify(CONG)} }
+        : { daDangNhap: true, email: 'user@gmail.com', vaiTroNhan: 'Nhập liệu', quyen: ['XEM', 'NHAP_LIEU'], quaPhien: true });
+      else if (k === 'nhanPhienDangNhap') { window.__chuaDangNhap = false; ok && ok({ phien: 'b'.repeat(64) }); }
+      else if (k === 'trangTrongKhung') { var p = TRANG[ts.page] ? ts.page : 'tongquan'; ok && ok({ html: TRANG[p], tieuDe: TIEU_DE[p] }); }
       else ok && ok(null);
     }, 30); };
   } }); return r; }
   window.google = { script: { run: new Proxy({}, { get: function(_, k){ return runner()[k]; } }),
-    url: { getLocation: function(){} },
+    url: { getLocation: function(f){ setTimeout(function(){ f({ parameter: { page: window.__trangDau } }); }, 10); } },
     history: { push: function(s, p){ window.__lichSu.push(p); }, replace: function(){}, setChangeHandler: function(f){ window.__xuLyLichSu = f; } } } };
 })();</script>`;
 
-async function mo(b, vaoThang) {
+async function mo(b, vaoThang, chuaDangNhap) {
   const ctx = await b.newContext();
+  const daTai = {};
   const loi = [];
   await ctx.route('**/*', (route) => {
     const u = new URL(route.request().url());
@@ -53,7 +59,13 @@ async function mo(b, vaoThang) {
     if (u.origin === SANDBOX_PORTAL && u.pathname === '/user') return route.fulfill(vo(`<h1>PORTAL</h1><iframe id="k" style="width:860px;height:600px" src="${HDMB}?page=tongquan"></iframe>`));
     if (u.href.startsWith(HDMB)) return route.fulfill(vo(`<iframe style="width:840px;height:560px" src="${SANDBOX_HDMB}/userCodeAppPanel?page=${trang}"></iframe>`));
     if (u.origin === SANDBOX_HDMB && u.pathname === '/userCodeAppPanel') return route.fulfill(vo(`<iframe id="userHtmlFrame" style="width:820px;height:540px" src="/user?page=${trang}"></iframe>`));
-    if (u.origin === SANDBOX_HDMB && u.pathname === '/user') return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: htmlTrang(trang).replace('<head>', '<head>' + GIA_LAP) });
+    if (u.origin === SANDBOX_HDMB && u.pathname === '/user') {
+      // Như Apps Script thật: khung HTML do Google đổ nội dung vào — tải lại khung (location.reload) chỉ còn trang rỗng
+      if (daTai[u.href]) return route.fulfill(vo(''));
+      daTai[u.href] = 1;
+      return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: htmlTrang(trang).replace('<head>', '<head>' + GIA_LAP.replace('window.__lichSu = [];', 'window.__lichSu = []; window.__trangDau = ' + JSON.stringify(trang) + '; window.__chuaDangNhap = ' + !!chuaDangNhap + ';')) });
+    }
+    if (u.href.startsWith(CONG)) return route.fulfill(vo('<h1>CONG DANG NHAP</h1>'));
     if (u.href.startsWith('https://script.google.com/macros/s/' + ID_KHAC)) return route.fulfill(vo('<h1>WEBAPP KHAC</h1>'));
     return route.fulfill({ status: 404, body: '' });
   });
@@ -116,6 +128,18 @@ async function mo(b, vaoThang) {
   await t.p.waitForTimeout(600);
   kq.push(['Mở trực tiếp: chuyển trang như cũ (cả cửa sổ)', t.p.url() === HDMB + '?page=tracuu']);
   kq.push(['không lỗi JS (mở trực tiếp)', t.loi.length === 0 ? true : t.loi.join('|')]);
+  await t.ctx.close();
+
+  // 7) User KHÁC chủ hệ thống (phải đăng nhập qua Cổng) trong Portal: đăng nhập ở cửa sổ nhỏ xong -> trang hiện lại,
+  //    KHÔNG trắng màn hình (trước đây location.reload() -> khung trống)
+  t = await mo(b, false, true);
+  kq.push(['User thường: hiện hộp Đăng nhập trong khung', await t.goc.evaluate(() => document.getElementById('hakDangNhapNen').className === 'hien')]);
+  const [popup] = await Promise.all([t.ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null), t.goc.click('#hakDangNhapNut button')]);
+  kq.push(['User thường: mở cửa sổ Cổng đăng nhập', !!popup && popup.url().startsWith(CONG)]);
+  const sau = await t.con('TRANG:tongquan');
+  kq.push(['User thường: đăng nhập xong trang hiện lại trong khung (không trắng)', !!sau && t.p.url() === PORTAL]);
+  kq.push(['User thường: sau đăng nhập không còn hộp Đăng nhập, lưu phiên', !!sau && await sau.evaluate(() => document.getElementById('hakDangNhapNen').className !== 'hien' && localStorage.getItem('hak_hdmb_phien') === 'b'.repeat(64))]);
+  kq.push(['không lỗi JS (đăng nhập)', t.loi.length === 0 ? true : t.loi.join('|')]);
   await t.ctx.close();
 
   inKetQua(kq);
