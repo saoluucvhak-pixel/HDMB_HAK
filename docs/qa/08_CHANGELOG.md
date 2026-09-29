@@ -13,7 +13,8 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `04752c0` | ⚡ | Nâng cấp đợt 1: H-12 (P-02, P-05, P-06, P-07a, P-09, P-10) + A1 chống bấm lặp — 37/37 test máy chủ, 7/7 test trình duyệt | 00, 01, 06, 15, 16, 18, 35, PhanQuyen_JS |
 | `bb92f22` | ✨⚡ | Nâng cấp đợt 2: A2, A3, A4, P-07b (+ hoàn tất H-13), P-08, P-11 — 45/45 test máy chủ, 15/15 test trình duyệt | 01, 06, 18, 23, 29, 31, 34, PhanQuyen_JS, 10, 12, 24, 27, 30, NhapLieu_Chung_JS |
 | `14c52fc` | ✨🧪 | Nâng cấp đợt 3: B2 nhật ký chi tiết cũ → mới + lưu trữ khi xóa & khôi phục (Thiết lập); B3 thư mục `tests/` + GitHub Actions — 57/57 test máy chủ, 15/15 test giao diện | 00, 06, 14, 34, 24, PhanQuyen_JS, tests/, .github/ |
-| (commit tiếp) | ✨♿ | A5: chế độ tối (Tự động / Sáng / Tối, nút 🌓) + gom 305 màu về biến CSS (chế độ sáng giống hệt từng điểm ảnh) + tự gắn nhãn vào ô và đặt tên nút biểu tượng — 57/57 test máy chủ, 26/26 test giao diện | GiaoDien_Chung (mới), PhanQuyen_JS, 14 file HTML, tests/ |
+| `8517e17` | ✨♿ | A5: chế độ tối (Tự động / Sáng / Tối, nút 🌓) + gom 305 màu về biến CSS (chế độ sáng giống hệt từng điểm ảnh) + tự gắn nhãn vào ô và đặt tên nút biểu tượng — 57/57 test máy chủ, 26/26 test giao diện | GiaoDien_Chung (mới), PhanQuyen_JS, 14 file HTML, tests/ |
+| (commit tiếp) | 🎨 | Giao diện mới đợt 1: menu trái dùng chung (`Menu_Chung.html`), lớp giao diện chung, Bản đồ GPS làm lại (vẽ mọi lô trên ảnh vệ tinh, thẻ chi tiết, chỉ đường), mục lục Thiết lập/Hướng dẫn — 57/57 test máy chủ, 42/42 test giao diện | Menu_Chung (mới), GiaoDien_Chung, MapContainer, 05_Menu, Code, 10, 11, 12, 13, 24, 27, 30, 33, 35, tests/ |
 
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 

@@ -32,3 +32,4 @@ jobs:
           node ui_khoa_nut.cjs
           node ui_hop_thoai_bo_loc.cjs
           node ui_giao_dien.cjs
+          node ui_trang_that.cjs

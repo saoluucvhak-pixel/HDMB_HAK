@@ -131,53 +131,7 @@
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
 <?!= include_('PhanQuyen_JS') ?>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
-    <span class="icon">📊</span> Tổng quan hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
-    <span class="icon">🔍</span> Tra cứu hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
-    <span class="icon">🖼️</span> Tra cứu hình ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
+<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
 
   <div class="app-main">
     <div class="page-title">Thiết lập</div>
@@ -1307,6 +1261,13 @@
   }
   taiNguoiDung_();
   taiCauHinhDangNhap_();
+</script>
+<script>
+  // Giao diện mới: mục lục "Mục thiết lập" dính bên trái + ô tìm lọc thẻ thiết lập
+  hakTaoMucLuc_(document.querySelector('.app-main'), '.card > h3', {
+    nhan: 'Mục thiết lập', timKiem: 'Tìm mục thiết lập…', anKhoi: true,
+    khoi: function (h) { return h.closest('.card'); }
+  });
 </script>
 </body>
 </html>

@@ -740,3 +740,23 @@ Ghi chú: các sheet cache (Draft báo cáo, Draft Hồ sơ rừng, Draft_HopDon
 
 **Triển khai:** thêm file mới **`GiaoDien_Chung.html`** lên Apps Script (thiếu file này mọi trang báo lỗi `include_`), chép lại 14 file HTML đã đổi.
 **Giới hạn:** màu được đặt bằng mã JavaScript lúc chạy (thông báo nổi, màu trạng thái tính động) giữ màu cũ — đã kiểm tra đều là chữ trắng trên nền đậm, đọc được ở cả hai chế độ. Bản đồ và ảnh / tài liệu giữ nền sáng.
+
+---
+
+## ✅ Cập nhật: Giao diện mới — đợt 1 (menu chung, lớp giao diện chung, Bản đồ GPS, mục lục Thiết lập/Hướng dẫn)
+
+Theo bản mẫu đã duyệt (giữ bộ màu portal cũ). **Không đổi phần xử lý máy chủ** ngoài 2 chỗ nhỏ ghi bên dưới; mọi id/hàm của trang giữ nguyên.
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Menu trái dùng chung | `Menu_Chung.html` (mới) dựng ở máy chủ bằng `menuChung_(currentPage, baseUrl, tabTrang)`; thay 9 bản sao 45 dòng trong 9 trang. Nhóm Hợp đồng / Hiện trường / Kiểm tra & đối chiếu / Hệ thống, biểu tượng nét thay emoji. "Kiểm tra ảnh" / "Đối chiếu OCR" mở thẳng đúng thẻ (`?page=kiemtra&tab=anh|ocr`) và sáng đúng mục | Menu_Chung (mới), 05_Menu.gs, Code.gs, 10, 11, 12, 13, 24, 27, 30, 33, 35 |
+| Lớp giao diện chung | Trong `GiaoDien_Chung.html`: font Be Vietnam Pro, menu, thẻ bo 14px, nút, ô nhập (viền xanh khi gõ), bảng, thẻ thống kê, thông báo; nhãn tình trạng tự tô màu theo chữ (Chờ = vàng, Đang = xanh, Hoàn thành = xanh lá, Thanh lý = xám, Hủy = đỏ); hợp chế độ tối; điện thoại: menu thành thanh ngang | GiaoDien_Chung |
+| Bản đồ GPS | Làm lại theo mẫu: menu chung + thanh đầu (đếm lô, lọc tình trạng, thời điểm cập nhật, Tải lại) + danh sách lô dạng thẻ (tìm, lọc Có/Thiếu GPS) + **vẽ tất cả lô** trên ảnh vệ tinh Esri theo màu tình trạng + chú giải + chọn lớp Ảnh vệ tinh/Bản đồ đường + nút vị trí của tôi + thẻ chi tiết nổi (4 góc, bấm để phóng tới điểm; **Mở hợp đồng**, **Xem ảnh**, **Chỉ đường** Google Maps). Tự tải khi mở trang. Tên/địa chỉ được escape (trước đây chèn thẳng HTML) | MapContainer, Code.gs (`getMapData` trả thêm `idHD`, `diaChi`) |
+| Mục lục dính | Thiết lập: cột "Mục thiết lập" + ô tìm lọc thẻ; Hướng dẫn: mục lục 8 phần, sáng mục đang đọc | GiaoDien_Chung (`hakTaoMucLuc_`), 13, 24 |
+| Tiêu đề trang | Bỏ emoji đầu tiêu đề trang | 27, 30, 33, 35 |
+
+**Kiểm chứng:** 57/57 test máy chủ; test giao diện 42/42 (thêm `tests/ui_trang_that.cjs` 16 ca: dựng **từng trang thật** từ template Apps Script — menu 11 mục, link đúng, đúng 1 mục sáng mỗi trang; mục lục Thiết lập/Hướng dẫn, ô tìm lọc; bản đồ: danh sách + vẽ lô, tên có thẻ HTML không bị chèn, bấm lô ra thẻ chi tiết + link, lọc Thiếu GPS). Soát ảnh chụp sáng/tối các trang.
+
+**Triển khai:** thêm file mới **`Menu_Chung.html`** (thiếu là mọi trang lỗi) + chép `05_Menu.gs`, `Code.gs`, `GiaoDien_Chung.html`, `MapContainer.html` và 9 trang HTML; Deploy phiên bản mới. Dữ liệu bản đồ đang cache: nút "Xem ảnh" hiện sau lần tải dữ liệu mới đầu tiên.
+
+**Chưa làm (đợt sau):** Nhập liệu chia 5 bước + bảng so khớp OCR; Tra cứu dạng 2 cột; Tổng quan thêm hàng 4 chỉ số; bản đồ trên điện thoại dạng thẻ trượt.

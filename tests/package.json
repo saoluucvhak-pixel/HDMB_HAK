@@ -8,6 +8,7 @@
     "test:cu-phap": "node kiem_tra_cu_phap.cjs"
   },
   "devDependencies": {
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "leaflet": "1.9.4"
   }
 }

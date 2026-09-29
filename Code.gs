@@ -48,6 +48,7 @@ function doGet(e) {
   var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
   tmpl.baseUrl = ScriptApp.getService().getUrl();
   tmpl.currentPage = cauHinh.currentPage || tenTrang;
+  tmpl.tabTrang = /^(hoso|anh|ocr)$/.test(String(e.parameter.tab || '')) ? String(e.parameter.tab) : ''; // thẻ con trang Kiểm tra (menu chung)
   // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
   // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
   tmpl.phien = '';
@@ -271,7 +272,9 @@ function getMapData_ThucThi_() {
       ten: rungData[j][RUNG_COL.TEN_CHU_RUNG],
       dtKyHD: rungData[j][RUNG_COL.DIEN_TICH_M2],
       dtGPS: rungData[j][RUNG_COL.DIEN_TICH_GPS],
-      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện"
+      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện",
+      idHD: idKeyHD, // giao diện mới: nút "Xem ảnh" mở thẳng thư viện ảnh của hợp đồng
+      diaChi: rungData[j][RUNG_COL.DIA_CHI_RUNG] || ""
     };
   }
 

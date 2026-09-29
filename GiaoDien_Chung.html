@@ -6,6 +6,101 @@
   - Nhãn chưa gắn ô nhập được gắn tự động (bấm chữ nhãn -> vào ô; trình đọc màn hình đọc đúng tên ô);
     nút chỉ có biểu tượng được đặt tên (aria-label) theo title hoặc theo biểu tượng.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+  /* ================= GIAO DIỆN MỚI (29/09) — lớp dùng chung cho MỌI trang =================
+     Giữ bộ màu portal cũ (menu tối #1f2937, xanh #2563eb, vàng #b45309, nền #f3f4f6). Chỉ đổi hình thức:
+     font Be Vietnam Pro, menu có biểu tượng nét, thẻ/nút/ô nhập/bảng bo góc thống nhất, nhãn tình trạng theo màu.
+     Tiền tố "html body" để thắng CSS riêng từng trang mà không phải sửa từng file. */
+  html body { font-family: "Be Vietnam Pro", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  html body input, html body select, html body textarea, html body button { font-family: inherit; }
+
+  /* Menu trái */
+  html body .app-sidebar { width: 250px; min-width: 250px; background: #1f2937; padding: 20px 14px; gap: 2px; }
+  html body .app-sidebar .brand { padding: 0 8px 18px 8px; }
+  html body .app-sidebar .brand .title { font-size: 15px; font-weight: 700; }
+  html body .app-sidebar .nav-group-label { padding: 14px 10px 6px 10px; font-size: 10px; font-weight: 600; letter-spacing: .06em; color: #8b98ab; text-transform: uppercase; }
+  html body .app-sidebar .nav-item { min-height: 38px; padding: 0 10px; border-radius: 8px; gap: 12px; font-size: 14px; font-weight: 500; color: #cbd5e1; border-left: 3px solid transparent; }
+  html body .app-sidebar .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+  html body .app-sidebar .nav-item.active { background: #2563eb; color: #fff; border-left-color: #b45309; font-weight: 600; }
+  html body .app-sidebar .nav-item .icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Vùng nội dung */
+  html body .app-main { padding: 28px 32px; }
+  html body .page-title { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+  html body .page-subtitle { font-size: 14px; color: var(--chu-phu, #6b7280); margin-bottom: 20px; }
+  html body .card { border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 20px 22px; box-shadow: none; }
+  html body .card h3 { font-size: 16px; font-weight: 700; }
+  html body .card > p:not([class]) { font-size: 14px; line-height: 1.55; }
+  html body .modal-box { border-radius: 16px; }
+
+  /* Thẻ (tab) */
+  html body .tab-bar { gap: 20px; }
+  html body .tab-bar a, html body .tab-bar span { padding: 12px 2px; font-size: 14px; font-weight: 500; }
+  html body .tab-bar a.active { font-weight: 600; }
+
+  /* Nút */
+  html body .btn { padding: 10px 16px; border-radius: 10px; font-weight: 600; line-height: 1.2; transition: background-color .15s, box-shadow .15s; }
+  html body .btn-green:hover:not(:disabled) { background: #1d4ed8; }
+  html body .btn-outline { background: var(--card-bg, #fff); color: var(--chu-chinh, #1f2937); border: 1px solid var(--vien, #d1d5db); }
+  html body .btn-outline:hover:not(:disabled) { background: var(--nen-phu, #f9fafb); }
+  html body .btn-purple { background: #1f2937; }
+
+  /* Ô nhập */
+  html body .field label { font-size: 12.5px; font-weight: 600; color: var(--chu-chinh, #374151); margin-bottom: 6px; }
+  html body .field input:not([type=checkbox]):not([type=radio]):not([type=file]), html body .field select, html body .field textarea {
+    padding: 9px 12px; border: 1px solid var(--vien, #d1d5db); border-radius: 9px; font-size: 14px; min-height: 40px; background-color: var(--card-bg, #fff);
+  }
+  html body .field input:focus, html body .field select:focus, html body .field textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); outline: none; }
+
+  /* Bảng */
+  html body table.data-table, html body table.mecon-table { font-size: 13px; }
+  html body table.data-table th, html body table.mecon-table th { background: #1f2937; color: #fff; padding: 10px 12px; font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+  html body table.data-table td, html body table.mecon-table td { padding: 10px 12px; border-bottom: 1px solid var(--vien, #eef0f3); }
+  html body table.data-table tr:hover td, html body table.mecon-table tr:hover td { background: var(--nen-phu, #f9fafb); }
+
+  /* Ô số liệu / thẻ thống kê */
+  html body .kpi-card, html body .the-thongke { border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 18px 20px; }
+  html body .kpi-card .label { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--chu-phu, #6b7280); }
+  html body .kpi-card .value, html body .the-thongke .so { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  html body .the-thongke.active { border: 1.5px solid #2563eb; background: var(--info-bg, #eff6ff); }
+  html body .the-thongke.active .so { color: var(--info-chu, #1d4ed8); }
+
+  /* Thông báo */
+  html body .msg { border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+
+  /* Nhãn tình trạng (tự tô theo chữ — xem hakToMauTinhTrang_) */
+  html body .hak-tt { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  html body .hak-tt-cho { background: #fef3c7; color: #92400e; }
+  html body .hak-tt-dang { background: #dbeafe; color: #1e40af; }
+  html body .hak-tt-xong { background: #dcfce7; color: #166534; }
+  html body .hak-tt-thanhly { background: #e5e7eb; color: #374151; }
+  html body .hak-tt-huy { background: #fee2e2; color: #991b1b; }
+  html[data-giao-dien="toi"] body .hak-tt-cho { background: #452a07; color: #fbbf24; }
+  html[data-giao-dien="toi"] body .hak-tt-dang { background: #1e3a5f; color: #93c5fd; }
+  html[data-giao-dien="toi"] body .hak-tt-xong { background: #14532d; color: #4ade80; }
+  html[data-giao-dien="toi"] body .hak-tt-thanhly { background: #334155; color: #e5e7eb; }
+  html[data-giao-dien="toi"] body .hak-tt-huy { background: #4c1d1d; color: #f87171; }
+
+  @media (max-width: 800px) {
+    html body .app-sidebar { width: 100%; min-width: 0; flex-direction: row; overflow-x: auto; padding: 8px; gap: 4px; }
+    html body .app-sidebar .brand, html body .app-sidebar .nav-group-label { display: none; }
+    html body .app-sidebar .nav-item { white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; }
+    html body .app-sidebar .nav-item.active { border-left: 0; border-bottom-color: #b45309; }
+    html body .app-main { padding: 18px 16px; }
+  }
+
+  /* Mục lục dính bên trái trong trang dài (Thiết lập, Hướng dẫn) — dựng bằng hakTaoMucLuc_() */
+  html body .hak-co-muc-luc { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+  html body .hak-muc-luc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card-bg, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+  html body .hak-muc-luc .hak-ml-nhan { font-size: 11px; font-weight: 600; color: var(--chu-phu, #6b7280); text-transform: uppercase; letter-spacing: .05em; padding: 2px 10px 8px 10px; }
+  html body .hak-muc-luc input { margin: 0 4px 8px 4px; padding: 8px 10px; border: 1px solid var(--vien, #d1d5db); border-radius: 9px; font-size: 13px; background: var(--nen-phu, #f9fafb); color: inherit; }
+  html body .hak-muc-luc a { display: block; padding: 7px 10px; border-radius: 8px; color: var(--chu-chinh, #374151); text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+  html body .hak-muc-luc a:hover { background: var(--nen-phu, #f3f4f6); }
+  html body .hak-muc-luc a.dang-xem { background: var(--info-bg, #dbeafe); color: var(--info-chu, #1e40af); font-weight: 600; }
+  @media (max-width: 1000px) { html body .hak-co-muc-luc { display: block; } html body .hak-muc-luc { position: static; max-height: none; margin-bottom: 16px; } }
+</style>
 <style>
   html[data-giao-dien="toi"] {
     color-scheme: dark;
@@ -83,6 +178,19 @@ var HAK_TEN_BIEU_TUONG_ = [
 ];
 var hakDemO_ = 0;
 function hakCoChu_(s) { return /[A-Za-z0-9À-ỹ]/.test(s || ''); }
+/** Giao diện mới: nhãn tình trạng hợp đồng tô màu theo chữ (Chờ / Đang thực hiện / Hoàn thành / Thanh lý / Hủy). */
+var HAK_MAU_TT_ = [[/hủy/i, 'hak-tt-huy'], [/thanh lý/i, 'hak-tt-thanhly'], [/hoàn thành/i, 'hak-tt-xong'], [/đang thực hiện/i, 'hak-tt-dang'], [/chờ/i, 'hak-tt-cho']];
+function hakToMauTinhTrang_(goc) {
+  var ds = goc.querySelectorAll ? goc.querySelectorAll('.badge-trang-thai, [data-tinh-trang]') : [];
+  for (var i = 0; i < ds.length; i++) {
+    var el = ds[i], chu = (el.getAttribute('data-tinh-trang') || el.textContent || '').trim(), lop = '';
+    for (var k = 0; k < HAK_MAU_TT_.length; k++) if (HAK_MAU_TT_[k][0].test(chu)) { lop = HAK_MAU_TT_[k][1]; break; }
+    if (el.getAttribute('data-hak-tt') === lop) continue;
+    HAK_MAU_TT_.forEach(function (x) { el.classList.remove(x[1]); });
+    if (lop) { el.classList.add('hak-tt', lop); el.style.background = ''; el.style.color = ''; }
+    el.setAttribute('data-hak-tt', lop);
+  }
+}
 function hakGanNhanVaTen_(goc) {
   goc = goc || document;
   var nhan = goc.querySelectorAll ? goc.querySelectorAll('label:not([for])') : [];
@@ -104,6 +212,7 @@ function hakGanNhanVaTen_(goc) {
     if (!o.id) o.id = 'hak_o_' + (++hakDemO_);
     lb.htmlFor = o.id;
   }
+  hakToMauTinhTrang_(goc);
   var nut = goc.querySelectorAll ? goc.querySelectorAll('button:not([aria-label]), a.btn:not([aria-label]), [role="button"]:not([aria-label])') : [];
   for (var j = 0; j < nut.length; j++) {
     var n = nut[j], chu = (n.textContent || '').trim();
@@ -122,4 +231,52 @@ function hakGanNhanVaTen_(goc) {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', khoiDong); else khoiDong();
 })();
+
+/**
+ * Giao diện mới: mục lục dính bên trái cho trang dài. vung = khung nội dung (vd .app-main);
+ * tieuDe = selector các tiêu đề làm mục; khoi(h) = khối bị ẩn khi lọc (mặc định chính tiêu đề);
+ * ô tìm lọc mục (và khối) theo chữ. Chỉ DI CHUYỂN phần tử có sẵn (giữ id, sự kiện), không đổi nội dung.
+ */
+function hakTaoMucLuc_(vung, tieuDe, tuyChon) {
+  tuyChon = tuyChon || {};
+  if (!vung || vung.querySelector('.hak-muc-luc')) return;
+  var ds = Array.prototype.slice.call(vung.querySelectorAll(tieuDe)).filter(function (h) { return (h.textContent || '').trim(); });
+  if (ds.length < 3) return;
+  var noiDung = document.createElement('div');
+  while (vung.firstChild) noiDung.appendChild(vung.firstChild);
+  var nav = document.createElement('nav');
+  nav.className = 'hak-muc-luc';
+  nav.setAttribute('aria-label', tuyChon.nhan || 'Mục lục');
+  var nhan = document.createElement('div'); nhan.className = 'hak-ml-nhan'; nhan.textContent = tuyChon.nhan || 'Mục lục'; nav.appendChild(nhan);
+  var o = null;
+  if (tuyChon.timKiem) { o = document.createElement('input'); o.type = 'search'; o.placeholder = tuyChon.timKiem; o.setAttribute('aria-label', tuyChon.timKiem); nav.appendChild(o); }
+  var lk = ds.map(function (h, i) {
+    if (!h.id) h.id = 'hak_ml_' + i;
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = (h.textContent || '').replace(/^[^\wÀ-ỹ0-9]+/u, '').trim();
+    a.addEventListener('click', function (e) { e.preventDefault(); h.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    nav.appendChild(a);
+    return a;
+  });
+  var truTop = vung.querySelector('.page-title');
+  vung.classList.add('hak-co-muc-luc');
+  vung.appendChild(nav); vung.appendChild(noiDung);
+  if (truTop && tuyChon.giuTieuDeTren) { vung.parentNode.insertBefore(truTop, vung); }
+  var khoi = tuyChon.khoi || function (h) { return h; };
+  if (o) o.addEventListener('input', function () {
+    var q = o.value.trim().toLowerCase();
+    ds.forEach(function (h, i) {
+      var k = khoi(h), khop = !q || (k.textContent || '').toLowerCase().indexOf(q) !== -1;
+      lk[i].style.display = khop ? '' : 'none';
+      if (tuyChon.anKhoi && k) k.style.display = khop ? '' : 'none';
+    });
+  });
+  if (window.IntersectionObserver) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { var i = ds.indexOf(e.target); lk.forEach(function (a, j) { a.classList.toggle('dang-xem', j === i); }); } });
+    }, { rootMargin: '0px 0px -70% 0px' });
+    ds.forEach(function (h) { io.observe(h); });
+  }
+}
 </script>
