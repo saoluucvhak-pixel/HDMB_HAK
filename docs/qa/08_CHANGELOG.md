@@ -2,6 +2,15 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 29/09/2026 — Kiểm thử lại `main` (sau đợt 6 + nâng cấp A1–A5)
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `a895b2b` | 🐛✅ | **Lưu chính thức hợp đồng MỚI lỗi giữa chừng rồi lưu lại bị kẹt**: bản nháp ghi lại mã HĐ nhưng không ghi Số HĐ tự sinh → lần lưu lại đi đường sửa hợp đồng với Số HĐ trống, bị chặn "Số HĐ không được để trống" (trước kiểm tra đó còn ghi đè Số HĐ thành trống). Nay ghi cả Số HĐ vào tiến độ và giữ khi trình duyệt lưu nháp đè. Thêm 22 kiểm tra vào `tests/test_may_chu.cjs` cho đợt 5: SL dự kiến Z/T/AA từ lô rừng (SL-01…06, bảo trì SL-04), Chi tiết hợp đồng (CT-01), chống tạo trùng (DUP-01/02), ngày ký 00:00 (BUG-12), link ảnh QR (QR-01…03). Mã cũ trượt DUP-02, mã mới 79/79 + giao diện 26/26 đạt | 15_DraftHopDong, tests/test_may_chu.cjs |
+| `4548b11` | 🐛 | (thay bằng dòng dưới) Nhúng trong Portal — bản đầu cần dán mã vào Portal | GiaoDien_Chung, 13_HuongDan, tests/ |
+| `da3f4c3` | 🐛 | **Nhúng HDMB trong trang khác (Portal): bấm menu bật cả cửa sổ ra khỏi Portal** — chỉ HDMB bị vì mỗi mục menu là 1 trang riêng mở bằng `<base target="_top">` (thay cả cửa sổ); khung Apps Script bị sandbox nên không tự tải lại được trang Google chứa nó. Nay HDMB tự nhận biết đang bị nhúng (khung Google khác nguồn đầu tiên ≠ cửa sổ trên cùng): bấm link về chính HDMB → xin máy chủ HTML trang mới (`trangTrongKhung`, dùng chung `_dungTrangWebapp_` với `doGet`) rồi hiện trong 1 khung con thay trang cũ (không lồng thêm tầng), trang con dùng `google.script` của trang gốc, địa chỉ `?page=` cập nhật qua `google.script.history` (Quay lại dùng được). **Không cần sửa Portal**; bỏ đoạn mã Portal của `4548b11`. Mở trực tiếp / link tab mới / link sang webapp khác → như cũ. Test: `ui_nhung_portal.cjs` 14/14 (mã gốc: cả cửa sổ rời Portal), `NHUNG-01` máy chủ | Code.gs, GiaoDien_Chung, 13_HuongDan, tests/ |
+| `f96e13f` | 🐛 | **User khác chủ hệ thống mở HDMB trong Portal bị TRẮNG MÀN HÌNH**: chủ hệ thống được nhận ra ngay qua tài khoản Google (không cần đăng nhập); user khác phải đăng nhập qua Cổng — trong khung thì mở cửa sổ nhỏ, xong gọi `window.location.reload()`: khung HTML của webapp Apps Script do Google đổ nội dung vào, tải lại chỉ còn trang rỗng. Nay `hakTaiLaiTrang_` xin máy chủ HTML của chính trang đang mở (`trangTrongKhung`) rồi hiện lại trong khung. Không đổi chế độ triển khai. Test `ui_nhung_portal.cjs` thêm kịch bản user thường đăng nhập (giả lập đúng hành vi tải lại khung = trang rỗng): mã cũ trượt 2, mã mới 19/19 | PhanQuyen_JS, tests/ |
+
 ## 28/09/2026 — Đợt 6: rà soát tổng thể trước phát hành (chỉ báo cáo, chưa sửa mã)
 
 | Commit | Loại | Thay đổi | File |

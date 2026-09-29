@@ -5,6 +5,8 @@
   - Chế độ: 'tu_dong' (theo máy, mặc định) | 'sang' | 'toi' — lưu localStorage 'hak_giao_dien', đổi bằng nút 🌓 cạnh email.
   - Nhãn chưa gắn ô nhập được gắn tự động (bấm chữ nhãn -> vào ô; trình đọc màn hình đọc đúng tên ô);
     nút chỉ có biểu tượng được đặt tên (aria-label) theo title hoặc theo biểu tượng.
+  - Bị nhúng trong trang khác (Portal...): bấm menu / link nội bộ đổi trang NGAY TRONG KHUNG, không bật cả cửa sổ
+    ra khỏi trang đó (khối "Bị nhúng" cuối file; không cần sửa gì ở trang nhúng).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
@@ -279,4 +281,109 @@ function hakTaoMucLuc_(vung, tieuDe, tuyChon) {
     ds.forEach(function (h) { io.observe(h); });
   }
 }
+/* ---------- Bị nhúng trong trang khác (Portal...): chuyển trang ngay trong khung ---------- */
+// Mỗi mục menu của HDMB là 1 trang riêng (?page=...) mở bằng <base target="_top"> = thay CẢ cửa sổ. Mở trực tiếp thì
+// đúng; nằm trong khung (iframe) của trang khác thì bấm menu làm cả trình duyệt rời trang đó. Khung Apps Script bị
+// sandbox, không tự tải lại được trang Google chứa nó -> khi bị nhúng: xin máy chủ HTML trang mới (trangTrongKhung,
+// Code.gs) rồi hiện trong 1 khung con thay trang cũ. Chuyển tiếp chỉ thay khung con (không lồng thêm tầng); địa chỉ
+// (?page=...) cập nhật qua google.script.history nên Quay lại / Tiến tới vẫn dùng được. Mở trực tiếp: như cũ.
+function hakCuaSoGoogle_() { // trang script.google.com/.../exec chứa webapp = khung cha KHÁC NGUỒN đầu tiên
+  var w = window;
+  while (w !== w.parent) {
+    w = w.parent;
+    try { if (w.location.href) continue; } catch (e) { /* khác nguồn */ }
+    return w;
+  }
+  return w;
+}
+var HAK_BI_NHUNG_ = (function () { try { return window.parent !== window && hakCuaSoGoogle_() !== window.top; } catch (e) { return false; } })();
+function hakMaTrienKhai_(url) {
+  var m = /^https:\/\/script\.google\.com\/(?:a\/[^\/]+\/)?macros\/s\/([\w-]+)\/(?:exec|dev)(?:[?#]|$)/.exec(String(url || ''));
+  return m ? m[1] : '';
+}
+function hakGocWebapp_() { var el = document.querySelector('[data-base]'); return el ? (el.getAttribute('data-base') || '') : ''; }
+/** Trang gốc (Google đặt vào khung) giữ khung con; trang trong khung con nhờ trang gốc chuyển. */
+function hakTrangGoc_() {
+  try { if (window.frameElement && window.frameElement.hasAttribute('data-hak-khung') && window.parent.hakChuyenTrangTrongKhung_) return window.parent; } catch (e) { /* bỏ qua */ }
+  return window;
+}
+function hakManChuyenTrang_(noiDung) {
+  var m = document.getElementById('hakManChuyenTrang');
+  if (!noiDung) { if (m) m.parentNode.removeChild(m); return; }
+  if (!m) {
+    m = document.createElement('div'); m.id = 'hakManChuyenTrang'; m.setAttribute('role', 'status');
+    m.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147483600;background:#1f2937;color:#fff;padding:9px 16px;border-radius:20px;font:13px -apple-system,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:default';
+    m.addEventListener('click', function () { if (!/^⏳/.test(m.textContent)) hakManChuyenTrang_(''); });
+    document.body.appendChild(m);
+  }
+  m.textContent = noiDung;
+}
+var hakLanChuyen_ = 0;
+/** url: link ?page=... của chính webapp, hoặc object tham số. ghiLichSu: thêm vào lịch sử (bấm link) hay không (Quay lại). */
+function hakChuyenTrangTrongKhung_(url, ghiLichSu) {
+  var ts = {};
+  if (typeof url === 'string') {
+    var q = url.split('#')[0], i = q.indexOf('?');
+    if (i >= 0) new URLSearchParams(q.slice(i + 1)).forEach(function (v, k) { if (!(k in ts)) ts[k] = v; });
+  } else Object.keys(url || {}).forEach(function (k) { ts[k] = String(url[k]); });
+  var lan = ++hakLanChuyen_;
+  hakManChuyenTrang_('⏳ Đang mở trang…');
+  google.script.run.withSuccessHandler(function (kq) {
+    if (lan !== hakLanChuyen_) return; // đã bấm sang trang khác
+    var lichSu = {};
+    Object.keys(ts).forEach(function (k) { if (k !== 'ph' && k !== 'sso') lichSu[k] = ts[k]; }); // mã phiên không nằm trong địa chỉ
+    if (ghiLichSu) { try { google.script.history.push({ hakTrang: 1 }, lichSu); } catch (e) { /* không có history */ } }
+    hakHienTrangCon_(kq.html, kq.tieuDe);
+  }).withFailureHandler(function (err) {
+    if (lan !== hakLanChuyen_) return;
+    hakManChuyenTrang_('❌ Không mở được trang: ' + ((err && err.message) || err) + ' (bấm để đóng)');
+  }).trangTrongKhung(ts);
+}
+function hakHienTrangCon_(html, tieuDe) {
+  var cu = document.getElementById('hakKhungTrang');
+  if (cu) cu.id = '';
+  var k = document.createElement('iframe');
+  k.id = 'hakKhungTrang';
+  k.setAttribute('data-hak-khung', '1');
+  k.title = tieuDe || '';
+  k.setAttribute('allow', 'geolocation; camera; clipboard-read; clipboard-write; fullscreen');
+  k.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:0;z-index:2147483000;background:transparent';
+  // google.script.run / url / history của trang con = của trang gốc (cùng nguồn) — nạp TRƯỚC mọi <script> của trang
+  var chen = '<script>window.google = parent.google;<\/script>';
+  k.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + chen; }) : chen + html;
+  k.addEventListener('load', function () {
+    hakManChuyenTrang_('');
+    if (cu && cu.parentNode) cu.parentNode.removeChild(cu);
+    // Lần đầu: bỏ nội dung trang gốc (không để 2 trang cùng chạy / cùng hiện)
+    Array.prototype.slice.call(document.body.children).forEach(function (el) { if (el !== k && el.tagName !== 'SCRIPT') el.parentNode.removeChild(el); });
+    document.documentElement.style.overflow = document.body.style.overflow = 'hidden';
+  });
+  if (tieuDe) document.title = tieuDe;
+  document.body.appendChild(k);
+}
+(function () {
+  if (!HAK_BI_NHUNG_) return; // mở trực tiếp: link chạy như cũ
+  // Pha nổi (sau các xử lý pha bắt của trang, vd gắn ?ph= vào link khi trình duyệt chặn bộ nhớ)
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('download')) return;
+    var base = document.querySelector('base[target]');
+    var dich = String(a.getAttribute('target') || (base && base.getAttribute('target')) || '_self').toLowerCase();
+    if (dich !== '_top' && dich !== '_parent' && dich !== '_self') return; // _blank / cửa sổ riêng: giữ nguyên
+    var ma = hakMaTrienKhai_(a.href);
+    if (!ma || ma !== hakMaTrienKhai_(hakGocWebapp_())) return; // link sang webapp khác (Cổng đăng nhập...) -> như cũ
+    var url = typeof hakGanPhienVaoLink_ === 'function' ? hakGanPhienVaoLink_(a.href) : a.href;
+    e.preventDefault();
+    hakTrangGoc_().hakChuyenTrangTrongKhung_(url, true);
+  });
+  // Quay lại / Tiến tới của trình duyệt (chỉ trang gốc theo dõi)
+  if (hakTrangGoc_() === window) {
+    try {
+      google.script.history.setChangeHandler(function (ev) {
+        if (document.getElementById('hakKhungTrang')) hakChuyenTrangTrongKhung_((ev && ev.location && ev.location.parameter) || {}, false);
+      });
+    } catch (e) { /* không có google.script.history */ }
+  }
+})();
 </script>

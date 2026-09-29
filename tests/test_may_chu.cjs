@@ -415,6 +415,148 @@ try {
     kiem('B2 khóa đã tồn tại lại -> bỏ qua dòng đó', soLo === 1 && kq3.boQua.some(x => x.indexOf(idRung) !== -1), J(kq3));
     kiem('B2 API khôi phục chỉ dành cho Quản trị', t.run('_bangQuyenApi_()').KHOI_PHUC_DU_LIEU_DA_XOA !== undefined);
   });
+
+  // ================= Đợt 5 (28/09/2026): SL dự kiến từ lô rừng, chống tạo trùng, ngày 00:00, link ảnh QR =================
+  const N = { Z: 25, T: 19, AA: 26, ID: 29, TT: 30, NGAY: 3, CCCD: 6 }; // cột HD_NCC (0-based) app Thanh toán đọc
+  const dongNcc = (t, idHD) => t.ss.getSheetByName('HD_NCC').getDataRange().getValues().find(r => r[N.ID] === idHD);
+  const ctHD = (t, idHD) => (t.ss.getSheetByName('ct_hopdong') ? t.ss.getSheetByName('ct_hopdong').getDataRange().getValues() : []).find(r => r[0] === idHD);
+  const loCua = (t, idHD) => t.ss.getSheetByName('HD_RUNG').getDataRange().getValues().slice(1).filter(r => r[0] === idHD).map(r => r[2]);
+  const taoQuaNhap = (t, hd, rung) => {
+    const nhap = t.run('TAO_DRAFT_MOI_()');
+    const du = { idHD: null, hopDong: hd, rung: rung.map((l, i) => Object.assign({ tempId: 'tr' + i, gpsMoi: [] }, l)), taiKhoan: [], phuLuc: [] };
+    t.run('LUU_DRAFT_(' + J(nhap.idDraft) + ',' + J(J(du)) + ')');
+    return t.run('LUU_CHINH_THUC_(' + J(nhap.idDraft) + ')');
+  };
+  const datTinhTrang = (t, idHD, tt, z) => { const sh = t.ss.getSheetByName('HD_NCC'); const i = sh.getDataRange().getValues().findIndex(r => r[N.ID] === idHD) + 1; sh.getRange(i, N.TT + 1).setValue(tt); if (z !== undefined) sh.getRange(i, N.Z + 1).setValue(z); };
+
+  chay(function () {
+    const t = moi();
+    const kq = taoQuaNhap(t, { tenChuRung: 'Ong Binh', cccdChuRung: '049065014631', ngayKy: '2026-09-28', soHD: '' },
+      [{ diaChiRung: 'Lo A', dienTichM2: 25000, donGia: 1600000, khoiLuongDuKien: 300 }, { diaChiRung: 'Lo B', dienTichM2: 16666.5, donGia: 1500000, khoiLuongDuKien: 200 }]);
+    const r = dongNcc(t, kq.idHD), ct = ctHD(t, kq.idHD);
+    kiem('SL-01 tạo HĐ qua nháp, 2 lô 300 + 200 tấn -> HD_NCC Z = 500, T = 41666.5, AA = 1550000 (số)', r[N.Z] === 500 && r[N.T] === 41666.5 && r[N.AA] === 1550000, J([r[N.Z], r[N.T], r[N.AA]]));
+    kiem('SL-01 ct_hopdong cùng số với HD_NCC', ct && ct[4] === 500 && ct[2] === 41666.5 && ct[3] === 1550000, J(ct));
+    kiem('SL-01 CCCD giữ số 0 đầu, HĐ mới "Chờ thực hiện" + nhắc Duyệt', r[N.CCCD] === '049065014631' && r[N.TT] === 'Chờ thực hiện' && /Duyệt/.test(kq.nhacDuyet || ''), J([r[N.CCCD], r[N.TT], kq.nhacDuyet]));
+    const h = t.run('Utilities.formatDate(' + 'new Date(' + J(r[N.NGAY]) + '), "Asia/Ho_Chi_Minh", "yyyy-MM-dd HH:mm")');
+    kiem('BUG-12 ngày ký lưu 00:00 giờ VN (không phải 07:00)', h === '2026-09-28 00:00', h);
+
+    const [lo1, lo2] = loCua(t, kq.idHD);
+    t.run('CAP_NHAT_LO_RUNG_(' + J(lo1) + ', {khoiLuongDuKien: 350})');
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: kq.idHD, diaChiRung: 'Lo C', dienTichM2: 8000, donGia: 1700000, khoiLuongDuKien: 100 }) + ')');
+    t.run('XOA_LO_RUNG_(' + J(lo2) + ')');
+    const r2 = dongNcc(t, kq.idHD);
+    kiem('SL-02 "Chờ thực hiện": sửa 300->350, thêm 100, xóa 200 -> Z = 450', r2[N.Z] === 450 && ctHD(t, kq.idHD)[4] === 450, J([r2[N.Z], ctHD(t, kq.idHD)]));
+    const lo3 = loCua(t, kq.idHD).find(x => x !== lo1);
+    kiem('SL-02 lô mới lấy ngày ký + CCCD của hợp đồng', J(t.ss.getSheetByName('HD_RUNG').getDataRange().getValues().find(x => x[2] === lo3).slice(1, 2)).indexOf('049065014631') !== -1, lo3);
+    const ctx = t.run('layChiTietHopDong_(' + J(kq.idHD) + ')');
+    kiem('CT-01 Chi tiết hợp đồng (trang Thêm/Sửa) = số mới sau khi lưu lô', ctx.tongHop.tongKhoiLuong === 450 && ctx.hdNcc.slDuKien === 450 && ctx.tongHop.soLo === 2, J(ctx));
+
+    datTinhTrang(t, kq.idHD, 'Đang thực hiện', 480);
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: kq.idHD, diaChiRung: 'Lo D', dienTichM2: 5000, donGia: 1600000, khoiLuongDuKien: 60 }) + ')');
+    kiem('SL-03a "Đang thực hiện" Z = 480 -> thêm lô, Z giữ 480 (ct_hopdong vẫn 510)', dongNcc(t, kq.idHD)[N.Z] === 480 && ctHD(t, kq.idHD)[4] === 510, J([dongNcc(t, kq.idHD)[N.Z], ctHD(t, kq.idHD)[4]]));
+  });
+
+  chay(function () {
+    const t = moi();
+    const kq = taoQuaNhap(t, { tenChuRung: 'Tran Hoa', cccdChuRung: '049065014632', ngayKy: '2026-09-28', soHD: '' }, []);
+    datTinhTrang(t, kq.idHD, 'Đang thực hiện', 0);
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: kq.idHD, diaChiRung: 'Lo E', dienTichM2: 20000, donGia: 1600000, khoiLuongDuKien: 240 }) + ')');
+    const r = dongNcc(t, kq.idHD);
+    kiem('SL-03b "Đang thực hiện" Z = 0 -> thêm lô 240, Z/T/AA được điền', r[N.Z] === 240 && r[N.T] === 20000 && r[N.AA] === 1600000, J([r[N.Z], r[N.T], r[N.AA]]));
+    // Sửa tay HD_RUNG trên Sheet (bẫy onEdit)
+    datTinhTrang(t, kq.idHD, 'Chờ thực hiện');
+    const sh = t.ss.getSheetByName('HD_RUNG'); const d = sh.getDataRange().getValues().findIndex(x => x[0] === kq.idHD) + 1;
+    sh.getRange(d, 12).setValue(300);
+    t.run('xuLyOnEditDraft_({ range: getSheet_(SHEET_NAME.HD_RUNG).getRange(' + d + ', 12) })');
+    kiem('SL-06 sửa tay KL lô trên Sheet (onEdit) -> Z cập nhật', dongNcc(t, kq.idHD)[N.Z] === 300, dongNcc(t, kq.idHD)[N.Z]);
+  });
+
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Ong Binh cu', '049000000011', '1111', 'BINH1');   // TAO_HOP_DONG_MOI_ tạo sẵn 1 lô 120 tấn
+    const B = t.tao('Z trong', '049000000012', '2222', 'ZT1');
+    const C = t.tao('Du so', '049000000013', '3333', 'DS1');
+    const sh = t.ss.getSheetByName('HD_NCC');
+    const dong = id => sh.getDataRange().getValues().findIndex(r => r[N.ID] === id) + 1;
+    [N.Z, N.T, N.AA].forEach(c => sh.getRange(dong(A.idHD), c + 1).setValue(0)); // dữ liệu cũ: Z/T/AA = 0
+    sh.getRange(dong(B.idHD), N.Z + 1).setValue('');
+    datTinhTrang(t, A.idHD, 'Đang thực hiện');
+    sh.appendRow(Array.from({ length: 31 }, (_, i) => i === N.ID ? 'KHONGLO-1' : (i === N.Z ? 0 : ''))); // HĐ không có lô
+    const xem = t.run('XEM_TRUOC_DIEN_SL_TU_LO_RUNG_()');
+    const ids = xem.ds.map(x => x.idHD).sort();
+    kiem('SL-04a xem trước liệt kê đúng HĐ Z/T/AA = 0 hoặc trống (không có HĐ đủ số / không lô), chưa ghi gì', J(ids) === J([A.idHD, B.idHD].sort()) && sh.getRange(dong(A.idHD), N.Z + 1).getValue() === 0, J(xem));
+    const ghi = t.run('AP_DUNG_DIEN_SL_TU_LO_RUNG_(' + J(ids) + ')');
+    const rA = dongNcc(t, A.idHD);
+    kiem('SL-04b ghi: HĐ ông Bình (Đang thực hiện) Z = 120, T = 10000, AA = 1000', ghi.soDaSua === 2 && rA[N.Z] === 120 && rA[N.T] === 10000 && rA[N.AA] === 1000, J([ghi, rA[N.Z], rA[N.T], rA[N.AA]]));
+    kiem('SL-04c chạy lại lần 2 không còn gì, HĐ đủ số giữ nguyên', t.run('XEM_TRUOC_DIEN_SL_TU_LO_RUNG_()').soHopDong === 0 && t.run('AP_DUNG_DIEN_SL_TU_LO_RUNG_(' + J(ids) + ')').soDaSua === 0 && dongNcc(t, C.idHD)[N.Z] === 120);
+    kiem('SL-04d API bảo trì chỉ Quản trị', t.run('_bangQuyenApi_().AP_DUNG_DIEN_SL_TU_LO_RUNG.quyen === QUYEN.QUAN_TRI'));
+  });
+
+  chay(function () {
+    const t = moi();
+    const hd = { tenChuRung: 'Truong Qua', cccdChuRung: '049065014631', ngayKy: '2026-09-16', soTK: '0123', nganHang: 'VCB', maThaoTac: 'HDtest12345' };
+    const k1 = t.run('TAO_HOP_DONG_MOI_(' + J(hd) + ')'), k2 = t.run('TAO_HOP_DONG_MOI_(' + J(hd) + ')');
+    const soHD = () => t.ss.getSheetByName('HD_NCC').getDataRange().getValues().slice(1).filter(r => r[N.ID]).length;
+    kiem('DUP-01 bấm Lưu 2 lần cùng 1 form -> 1 hợp đồng, lần 2 trả lại HĐ cũ', soHD() === 1 && k2.daTaoTruocDo === true && k2.idHD === k1.idHD, J([k1.idHD, k2]));
+    t.run('TAO_HOP_DONG_MOI_(' + J(Object.assign({}, hd, { maThaoTac: 'HDkhac67890' })) + ')');
+    kiem('DUP-01 mở form mới -> tạo được HĐ thứ 2 (hợp lệ)', soHD() === 2);
+  });
+
+  chay(function () {
+    const t = moi();
+    const nhap = t.run('TAO_DRAFT_MOI_()');
+    const du = { idHD: null, hopDong: { tenChuRung: 'Le Nam', cccdChuRung: '049065014633', ngayKy: '2026-09-16', soHD: '' }, rung: [{ tempId: 'r1', diaChiRung: 'Lo F', dienTichM2: 10000, donGia: 1500000, khoiLuongDuKien: 120, gpsMoi: [] }], taiKhoan: [{ tempId: 'k1', soTK: '0999', nganHang: 'ACB' }], phuLuc: [] };
+    t.run('LUU_DRAFT_(' + J(nhap.idDraft) + ',' + J(J(du)) + ')');
+    t.run('var __goc = THEM_TAI_KHOAN_MOI_; THEM_TAI_KHOAN_MOI_ = function () { THEM_TAI_KHOAN_MOI_ = __goc; throw new Error("Exceeded maximum execution time"); }');
+    let loi1 = '';
+    try { t.run('LUU_CHINH_THUC_(' + J(nhap.idDraft) + ')'); } catch (e) { loi1 = e.message; }
+    t.run('LUU_DRAFT_(' + J(nhap.idDraft) + ',' + J(J(du)) + ')'); // trình duyệt tự lưu nháp đè bản cũ trong bộ nhớ
+    const kq = t.run('LUU_CHINH_THUC_(' + J(nhap.idDraft) + ')');
+    const soHD = t.ss.getSheetByName('HD_NCC').getDataRange().getValues().slice(1).filter(r => r[N.ID]).length;
+    const soLo = t.ss.getSheetByName('HD_RUNG').getDataRange().getValues().slice(1).filter(r => r[0]).length;
+    const soTK = t.stk().filter(r => r[5] === '0999').length;
+    kiem('DUP-02 lưu chính thức lỗi giữa chừng rồi lưu lại -> 1 HĐ, 1 lô, 1 TK', /Exceeded/.test(loi1) && kq.thanhCong && soHD === 1 && soLo === 1 && soTK === 1, J([loi1, kq, soHD, soLo, soTK]));
+    const soHDGhi = dongNcc(t, kq.idHD)[2];
+    kiem('DUP-02 lưu lại không xóa Số HĐ tự sinh', !!soHDGhi && String(soHDGhi) === String(kq.soHD), J([soHDGhi, kq.soHD]));
+  });
+
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Anh QR', '049000000021', '1111', 'QR1');
+    const B = t.tao('Khac', '049000000022', '2222', 'QR2');
+    const idAnh = 'A'.repeat(25), idHoSo = 'H'.repeat(25), idKhac = 'K'.repeat(25);
+    const url = id => 'https://drive.google.com/file/d/' + id + '/view';
+    t.ss.getSheetByName('HD_Picture').appendRow([A.idHD, 'P1', 'Anh QR', url(idAnh)]);
+    t.ss.getSheetByName('HD_Picture').appendRow([B.idHD, 'P2', 'Khac', url(idKhac)]);
+    const shR = t.ss.getSheetByName('HD_RUNG'); const d = shR.getDataRange().getValues().findIndex(r => r[0] === A.idHD) + 1;
+    shR.getRange(d, t.run('RUNG_COL.DINH_KEM_GIAY_TO') + 1).setValue(url(idHoSo));
+    const link = t.run('linkAnhCongKhai_(' + J(A.idHD) + ')');
+    const k = new URL(link).searchParams.get('k');
+    kiem('QR-01 link ảnh có chữ ký; sai chữ ký / dùng cho HĐ khác -> từ chối',
+      t.run('_hopLeAnhCongKhai_(' + J(A.idHD) + ',' + J(k) + ')') && !t.run('_hopLeAnhCongKhai_(' + J(A.idHD) + ',"sai")') && !t.run('_hopLeAnhCongKhai_(' + J(B.idHD) + ',' + J(k) + ')'), link);
+    const ds = t.run('_danhSachAnhCongKhai_(' + J(A.idHD) + ')');
+    const chuoi = J(ds);
+    kiem('QR-02 trang công khai chỉ có ảnh hiện trường, không hồ sơ pháp lý / CCCD / ảnh HĐ khác', chuoi.indexOf(idAnh) !== -1 && chuoi.indexOf(idHoSo) === -1 && chuoi.indexOf(idKhac) === -1 && chuoi.indexOf('049000000021') === -1, chuoi);
+    const anh = t.run('ANH_CONG_KHAI(' + J(A.idHD) + ',' + J(k) + ',' + J([idAnh, idHoSo, idKhac]) + ', false)');
+    kiem('QR-03 ANH_CONG_KHAI chỉ trả ảnh công khai của đúng HĐ', J(Object.keys(anh.anh)) === J([idAnh]), J(anh));
+    let loiGoc = ''; try { t.run('ANH_CONG_KHAI(' + J(A.idHD) + ',' + J(k) + ',' + J([idHoSo]) + ', true)'); } catch (e) { loiGoc = e.message; }
+    kiem('QR-03 tải bản gốc hồ sơ pháp lý qua link công khai -> chặn', /không thuộc/.test(loiGoc), loiGoc);
+  });
+
+  chay(function () {
+    // NHUNG-01: chuyển trang trong khung dùng CÙNG template/biến như doGet; trang lạ -> Tổng quan; ph sai bị bỏ
+    const t = moi();
+    t.run(`HtmlService.createTemplateFromFile = function (f) { var tm = { evaluate: function () { var o = { getContent: function () { return 'FILE=' + f + '|TRANG=' + tm.currentPage + '|PHIEN=' + tm.phien + '|BASE=' + tm.baseUrl; } };
+      o.setTitle = function () { return o; }; o.addMetaTag = function () { return o; }; o.setXFrameOptionsMode = function () { return o; }; return o; } }; return tm; };
+      HtmlService.XFrameOptionsMode = { ALLOWALL: 1 };`);
+    const a = t.run('trangTrongKhung({ page: "tracuu" })');
+    const b = t.run('trangTrongKhung({ page: "constructor", ph: "sai" })');
+    const c = t.run('trangTrongKhung({ page: "meconn" })');
+    const g = t.run('doGet({ parameter: { page: "tracuu" } }).getContent()');
+    kiem('NHUNG-01 trangTrongKhung trả đúng trang + tiêu đề như doGet',
+      a.html === g && /FILE=33_Page_TraCuuHopDong\|TRANG=tracuu\|PHIEN=\|BASE=https:/.test(a.html) && /Tra cứu/.test(a.tieuDe) &&
+      /FILE=30_Page_TongQuanHopDong\|TRANG=tongquan\|PHIEN=\|/.test(b.html) && /TRANG=hopdongmc/.test(c.html), J([a, b, c, g]));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

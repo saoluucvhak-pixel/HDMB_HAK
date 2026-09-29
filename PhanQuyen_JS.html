@@ -355,9 +355,30 @@ function hakDangNhapCuaSoNho_(cong, trang) {
       clearInterval(hakHoiPhien_);
       if (kq.loi) { hakHienDangNhap_(kq.loi); return; }
       hakLuuPhien_(kq.phien);
-      window.location.reload();
+      hakTaiLaiTrang_();
     }).withFailureHandler(function (err) { console.error('nhanPhienDangNhap:', err); }).nhanPhienDangNhap(yeuCau);
   }, 2500);
+}
+
+/**
+ * Tải lại trang sau khi đăng nhập ở cửa sổ nhỏ. KHÔNG dùng window.location.reload(): khung HTML của webapp Apps Script
+ * do Google dựng rồi đổ nội dung vào, tải lại chỉ còn TRANG TRẮNG (user khác chủ hệ thống phải đăng nhập qua Cổng nên
+ * nhúng trong Portal là gặp). Xin máy chủ HTML của chính trang đang mở rồi hiện lại trong khung (GiaoDien_Chung).
+ */
+function hakTaiLaiTrang_() {
+  var goc = typeof hakTrangGoc_ === 'function' ? hakTrangGoc_() : null;
+  if (!goc || typeof goc.hakChuyenTrangTrongKhung_ !== 'function' || !hakTrangHienTai_()) { window.location.reload(); return; }
+  var chay = function (ts) {
+    delete ts.sso;
+    if (!ts.page) ts.page = hakTrangHienTai_();
+    if (!HAK_CO_LUU_TRU && hakPhien_()) ts.ph = hakPhien_(); // trình duyệt chặn bộ nhớ: trang mới nhận phiên qua tham số
+    else delete ts.ph;
+    goc.hakChuyenTrangTrongKhung_(ts, false);
+  };
+  var daChay = false;
+  var mot = function (ts) { if (!daChay) { daChay = true; chay(ts); } };
+  try { google.script.url.getLocation(function (loc) { mot(Object.assign({}, (loc && loc.parameter) || {})); }); } catch (e) { /* không có google.script.url */ }
+  setTimeout(function () { mot({}); }, 3000); // getLocation không trả lời -> vẫn tải lại đúng trang
 }
 
 function hakDangXuat_() {

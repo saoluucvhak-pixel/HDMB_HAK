@@ -41,6 +41,24 @@ function doGet(e) {
   // Link ảnh công khai trong mã QR của báo cáo PDF — không cần đăng nhập, tự kiểm tra chữ ký (35_TraCuuHinhAnh.gs)
   if (action === 'anh') return trangAnhCongKhai_(e.parameter.hd, e.parameter.k);
 
+  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
+  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
+  var phien = '', loiDangNhap = '';
+  if (e.parameter.sso) {
+    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
+    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
+    phien = dangNhap.phien;
+    loiDangNhap = dangNhap.loi;
+  }
+  var trang = _dungTrangWebapp_(page, phien, loiDangNhap, e.parameter.sso ? '' : e.parameter.ph, e.parameter.tab);
+  return trang.tmpl.evaluate()
+    .setTitle(trang.cauHinh.title)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** Dựng template 1 trang webapp (?page=...) — dùng chung cho doGet và trangTrongKhung (chuyển trang khi nhúng). */
+function _dungTrangWebapp_(page, phien, loiDangNhap, ph, tab) {
   // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
   // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
   var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
@@ -48,25 +66,25 @@ function doGet(e) {
   var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
   tmpl.baseUrl = ScriptApp.getService().getUrl();
   tmpl.currentPage = cauHinh.currentPage || tenTrang;
-  tmpl.tabTrang = /^(hoso|anh|ocr)$/.test(String(e.parameter.tab || '')) ? String(e.parameter.tab) : ''; // thẻ con trang Kiểm tra (menu chung)
-  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
-  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
-  tmpl.phien = '';
-  tmpl.loiDangNhap = '';
-  if (e.parameter.sso) {
-    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
-    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
-    tmpl.phien = dangNhap.phien;
-    tmpl.loiDangNhap = dangNhap.loi;
-  } else if (e.parameter.ph && _docPhien_(e.parameter.ph)) {
+  tmpl.tabTrang = /^(hoso|anh|ocr)$/.test(String(tab || '')) ? String(tab) : ''; // thẻ con trang Kiểm tra (menu chung)
+  tmpl.phien = phien || '';
+  tmpl.loiDangNhap = loiDangNhap || '';
+  if (!tmpl.phien && ph && _docPhien_(ph)) {
     // Trình duyệt chặn bộ nhớ của trang nhúng (chặn cookie bên thứ ba): trang trước chuyển mã phiên
     // qua link (?ph=...) để không phải đăng nhập lại mỗi lần chuyển trang. Chỉ nhận mã phiên còn hiệu lực.
-    tmpl.phien = e.parameter.ph;
+    tmpl.phien = ph;
   }
-  return tmpl.evaluate()
-    .setTitle(cauHinh.title)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return { tmpl: tmpl, cauHinh: cauHinh };
+}
+
+/**
+ * CÔNG KHAI (như doGet — trang không chứa dữ liệu, dữ liệu vẫn đi qua api()): HTML của 1 trang để chuyển trang
+ * NGAY TRONG KHUNG khi webapp bị nhúng trong trang khác (GiaoDien_Chung.html). Không nhận ?sso (đăng nhập chỉ qua doGet).
+ */
+function trangTrongKhung(thamSo) {
+  var p = thamSo || {};
+  var trang = _dungTrangWebapp_(String(p.page || ''), '', '', p.ph ? String(p.ph) : '', p.tab ? String(p.tab) : '');
+  return { html: trang.tmpl.evaluate().getContent(), tieuDe: trang.cauHinh.title };
 }
 
 /**
