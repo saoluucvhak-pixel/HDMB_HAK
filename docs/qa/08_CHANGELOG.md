@@ -6,7 +6,7 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 
 | Commit | Loại | Thay đổi | File |
 |---|---|---|---|
-| (commit này) | 🐛✅ | **Lưu chính thức hợp đồng MỚI lỗi giữa chừng rồi lưu lại bị kẹt**: bản nháp ghi lại mã HĐ nhưng không ghi Số HĐ tự sinh → lần lưu lại đi đường sửa hợp đồng với Số HĐ trống, bị chặn "Số HĐ không được để trống" (trước kiểm tra đó còn ghi đè Số HĐ thành trống). Nay ghi cả Số HĐ vào tiến độ và giữ khi trình duyệt lưu nháp đè. Thêm 22 kiểm tra vào `tests/test_may_chu.cjs` cho đợt 5: SL dự kiến Z/T/AA từ lô rừng (SL-01…06, bảo trì SL-04), Chi tiết hợp đồng (CT-01), chống tạo trùng (DUP-01/02), ngày ký 00:00 (BUG-12), link ảnh QR (QR-01…03). Mã cũ trượt DUP-02, mã mới 79/79 + giao diện 26/26 đạt | 15_DraftHopDong, tests/test_may_chu.cjs |
+| `a895b2b` | 🐛✅ | **Lưu chính thức hợp đồng MỚI lỗi giữa chừng rồi lưu lại bị kẹt**: bản nháp ghi lại mã HĐ nhưng không ghi Số HĐ tự sinh → lần lưu lại đi đường sửa hợp đồng với Số HĐ trống, bị chặn "Số HĐ không được để trống" (trước kiểm tra đó còn ghi đè Số HĐ thành trống). Nay ghi cả Số HĐ vào tiến độ và giữ khi trình duyệt lưu nháp đè. Thêm 22 kiểm tra vào `tests/test_may_chu.cjs` cho đợt 5: SL dự kiến Z/T/AA từ lô rừng (SL-01…06, bảo trì SL-04), Chi tiết hợp đồng (CT-01), chống tạo trùng (DUP-01/02), ngày ký 00:00 (BUG-12), link ảnh QR (QR-01…03). Mã cũ trượt DUP-02, mã mới 79/79 + giao diện 26/26 đạt | 15_DraftHopDong, tests/test_may_chu.cjs |
 
 ## 28/09/2026 — Đợt 6: rà soát tổng thể trước phát hành (chỉ báo cáo, chưa sửa mã)
 
