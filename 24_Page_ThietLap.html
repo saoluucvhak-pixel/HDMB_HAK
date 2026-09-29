@@ -50,11 +50,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -83,7 +83,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -115,7 +115,7 @@
   table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
   table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
-  table.mecon-table tr:hover td { background: #dcfce7; }
+  table.mecon-table tr:hover td { background: var(--ok-bg, #dcfce7); }
 
   @media (max-width: 800px) {
     body { flex-direction: column; }
@@ -126,6 +126,7 @@
     .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
   }
 </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
@@ -1064,7 +1065,7 @@
         var h = '<table class="mecon-table"><thead><tr><th>Thời điểm</th><th>Người</th><th>Hành động</th><th>Dòng</th><th>Trường</th><th>Cũ</th><th>Mới</th></tr></thead><tbody>';
         list.forEach(function (r) {
           h += '<tr><td>' + (r.thoiGian ? new Date(r.thoiGian).toLocaleString('vi-VN') : '') + '</td><td>' + escHtmlBT_(r.email) + '</td><td>' + escHtmlBT_(r.hanhDong) +
-            '</td><td>' + escHtmlBT_(r.khoa) + '</td><td>' + escHtmlBT_(r.truong) + '</td><td style="color:#c0392b">' + escHtmlBT_(r.cu) + '</td><td style="color:#1e8449">' + escHtmlBT_(r.moi) + '</td></tr>';
+            '</td><td>' + escHtmlBT_(r.khoa) + '</td><td>' + escHtmlBT_(r.truong) + '</td><td style="color:var(--err-chu, #c0392b)">' + escHtmlBT_(r.cu) + '</td><td style="color:var(--ok-chu, #1e8449)">' + escHtmlBT_(r.moi) + '</td></tr>';
         });
         el.innerHTML = h + '</tbody></table>' + (list.length >= 500 ? '<p class="hint">⚠️ Chỉ hiện 500 thay đổi gần nhất.</p>' : '');
       })

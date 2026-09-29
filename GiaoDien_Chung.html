@@ -1,0 +1,125 @@
+<!--
+  GiaoDien_Chung — A5 (rà soát 28/09): CHẾ ĐỘ TỐI + HỖ TRỢ TRUY CẬP dùng chung cho mọi trang.
+  Nạp trong <head> bằng include_('GiaoDien_Chung') (07_Form_HopDong: đầu file).
+  - Màu các trang viết dạng var(--ten, #mauSang): biến CHỈ định nghĩa ở chế độ tối -> chế độ sáng giữ nguyên y hệt cũ.
+  - Chế độ: 'tu_dong' (theo máy, mặc định) | 'sang' | 'toi' — lưu localStorage 'hak_giao_dien', đổi bằng nút 🌓 cạnh email.
+  - Nhãn chưa gắn ô nhập được gắn tự động (bấm chữ nhãn -> vào ô; trình đọc màn hình đọc đúng tên ô);
+    nút chỉ có biểu tượng được đặt tên (aria-label) theo title hoặc theo biểu tượng.
+-->
+<style>
+  html[data-giao-dien="toi"] {
+    color-scheme: dark;
+    --page-bg: #0f172a; --card-bg: #1e293b; --border-light: #334155; --heading: #e5e7eb;
+    --active-green: #3b82f6; --accent-gold: #f59e0b;
+    --nen-phu: #273449; --chu-chinh: #e5e7eb; --chu-phu: #94a3b8; --vien: #475569;
+    --ok-bg: #14532d; --ok-chu: #4ade80;
+    --err-bg: #4c1d1d; --err-chu: #f87171;
+    --warn-bg: #452a07; --warn-chu: #fbbf24;
+    --info-bg: #1e3a5f; --info-chu: #93c5fd;
+    --nen-phu-mo: rgba(15,23,42,.97);
+  }
+  /* :where() -> độ ưu tiên 0: quy tắc riêng của từng trang (class) vẫn thắng */
+  :where(html[data-giao-dien="toi"]) body { background-color: var(--page-bg); color: var(--heading); }
+  :where(html[data-giao-dien="toi"]) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea) {
+    background-color: #0f172a; color: #e5e7eb; border-color: #475569;
+  }
+  :where(html[data-giao-dien="toi"]) :where(input, textarea)::placeholder { color: #64748b; }
+  :where(html[data-giao-dien="toi"]) :where(input, select, textarea):disabled { background-color: #1e293b; color: #94a3b8; }
+  :where(html[data-giao-dien="toi"]) :where(th, td) { border-color: #334155; }
+  :where(html[data-giao-dien="toi"]) :where(a:not([class])) { color: #93c5fd; }
+  :where(html[data-giao-dien="toi"]) :where(code, pre) { background-color: #0f172a; color: #e5e7eb; }
+  :where(html[data-giao-dien="toi"]) :where(hr) { border-color: #334155; }
+  /* Ảnh / hồ sơ / bản đồ giữ nền trắng để đọc được tài liệu scan trong suốt */
+  :where(html[data-giao-dien="toi"]) :where(iframe) { background-color: #fff; }
+
+  /* Hỗ trợ bàn phím: viền rõ khi di chuyển bằng Tab (không hiện khi bấm chuột) */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+</style>
+<script>
+var HAK_KHOA_GIAO_DIEN = 'hak_giao_dien';
+var HAK_TEN_GIAO_DIEN = { tu_dong: 'Tự động (theo máy)', sang: 'Sáng', toi: 'Tối' };
+var hakCheDoTam_ = null; // chế độ đã chọn trong phiên (dùng khi trình duyệt chặn localStorage)
+function hakCheDoGiaoDien_() {
+  var c = hakCheDoTam_ || 'tu_dong';
+  if (!hakCheDoTam_) { try { c = localStorage.getItem(HAK_KHOA_GIAO_DIEN) || 'tu_dong'; } catch (e) { /* bị chặn -> mặc định */ } }
+  return HAK_TEN_GIAO_DIEN[c] ? c : 'tu_dong';
+}
+function hakApGiaoDien_() {
+  var c = hakCheDoGiaoDien_();
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  var toi = c === 'toi' || (c === 'tu_dong' && !!(mq && mq.matches));
+  document.documentElement.setAttribute('data-giao-dien', toi ? 'toi' : 'sang');
+  var nut = document.getElementById('hakChipGiaoDien');
+  if (nut) { var ten = 'Giao diện: ' + HAK_TEN_GIAO_DIEN[c] + ' — bấm để đổi'; nut.title = ten; nut.setAttribute('aria-label', ten); }
+}
+/** Tự động -> Sáng -> Tối -> Tự động. Trả chế độ mới. */
+function hakDoiGiaoDien_() {
+  var thuTu = ['tu_dong', 'sang', 'toi'];
+  var moi = thuTu[(thuTu.indexOf(hakCheDoGiaoDien_()) + 1) % thuTu.length];
+  hakCheDoTam_ = moi;
+  try { localStorage.setItem(HAK_KHOA_GIAO_DIEN, moi); } catch (e) { /* bị chặn -> chỉ áp dụng trong phiên này */ }
+  hakApGiaoDien_();
+  return moi;
+}
+hakApGiaoDien_();
+(function () {
+  if (!document.documentElement.getAttribute('lang')) document.documentElement.setAttribute('lang', 'vi');
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (mq) {
+    var doi = function () { if (hakCheDoGiaoDien_() === 'tu_dong') hakApGiaoDien_(); };
+    if (mq.addEventListener) mq.addEventListener('change', doi); else if (mq.addListener) mq.addListener(doi);
+  }
+})();
+
+/* ---------- Hỗ trợ truy cập: gắn nhãn vào ô + đặt tên nút chỉ có biểu tượng ---------- */
+var HAK_TEN_BIEU_TUONG_ = [
+  [/🗑/, 'Xóa'], [/✏|📝/, 'Sửa'], [/^\s*[✕×✖❌]\s*$/, 'Đóng'], [/👁/, 'Xem'], [/🔍|🔎/, 'Tìm'], [/⬇|📥/, 'Tải về'],
+  [/📋/, 'Sao chép'], [/➕|^\s*\+\s*$/, 'Thêm'], [/🔄|↻|⟳/, 'Tải lại'], [/^\s*[◀‹«←]\s*$/, 'Trang trước'], [/^\s*[▶›»→]\s*$/, 'Trang sau'],
+  [/⋮|⋯/, 'Tùy chọn khác'], [/📷|🖼/, 'Ảnh'], [/📍|🗺/, 'Vị trí trên bản đồ'], [/🖨/, 'In'], [/💾/, 'Lưu'], [/♻/, 'Khôi phục'], [/✅|✔/, 'Đồng ý'], [/🌓/, 'Đổi giao diện sáng/tối']
+];
+var hakDemO_ = 0;
+function hakCoChu_(s) { return /[A-Za-z0-9À-ỹ]/.test(s || ''); }
+function hakGanNhanVaTen_(goc) {
+  goc = goc || document;
+  var nhan = goc.querySelectorAll ? goc.querySelectorAll('label:not([for])') : [];
+  for (var i = 0; i < nhan.length; i++) {
+    var lb = nhan[i];
+    if (lb.querySelector('input,select,textarea')) continue; // ô nằm trong nhãn -> đã gắn sẵn
+    var o = null, e = lb.nextElementSibling;
+    while (e && !o) {
+      if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName)) o = e;
+      else if (e.tagName === 'LABEL') break;
+      else if (e.querySelector) { var con = e.querySelectorAll('input,select,textarea'); if (con.length === 1) o = con[0]; else if (con.length > 1) break; }
+      e = e.nextElementSibling;
+    }
+    if (!o && lb.parentElement && lb.parentElement.querySelectorAll('label').length === 1) {
+      var ds = lb.parentElement.querySelectorAll('input,select,textarea');
+      if (ds.length === 1) o = ds[0];
+    }
+    if (!o || o.type === 'hidden') continue;
+    if (!o.id) o.id = 'hak_o_' + (++hakDemO_);
+    lb.htmlFor = o.id;
+  }
+  var nut = goc.querySelectorAll ? goc.querySelectorAll('button:not([aria-label]), a.btn:not([aria-label]), [role="button"]:not([aria-label])') : [];
+  for (var j = 0; j < nut.length; j++) {
+    var n = nut[j], chu = (n.textContent || '').trim();
+    if (hakCoChu_(chu)) continue;
+    var ten = (n.getAttribute('title') || '').trim();
+    if (!ten) for (var k = 0; k < HAK_TEN_BIEU_TUONG_.length; k++) if (HAK_TEN_BIEU_TUONG_[k][0].test(chu)) { ten = HAK_TEN_BIEU_TUONG_[k][1]; break; }
+    if (ten) n.setAttribute('aria-label', ten);
+  }
+}
+(function () {
+  var hen = null;
+  var chay = function () { hen = null; try { hakGanNhanVaTen_(document); } catch (e) { /* không để lỗi phụ làm hỏng trang */ } };
+  var khoiDong = function () {
+    chay();
+    if (window.MutationObserver) new MutationObserver(function () { if (!hen) hen = setTimeout(chay, 150); }).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', khoiDong); else khoiDong();
+})();
+</script>

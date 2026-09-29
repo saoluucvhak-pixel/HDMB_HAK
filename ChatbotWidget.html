@@ -2,20 +2,20 @@
      include_('ChatbotWidget') trong scriptlet ngay trước </body>. Trước đây mỗi trang giữ 1 bản sao. -->
 <style>
   #chatbotNut { position: fixed; bottom: 20px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: var(--active-green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 999; }
-  #chatbotHop { display: none; position: fixed; bottom: 84px; right: 20px; width: 340px; max-width: calc(100vw - 40px); height: 440px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 999; flex-direction: column; overflow: hidden; }
+  #chatbotHop { display: none; position: fixed; bottom: 84px; right: 20px; width: 340px; max-width: calc(100vw - 40px); height: 440px; background: var(--card-bg, #fff); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 999; flex-direction: column; overflow: hidden; }
   #chatbotHop.mo { display: flex; }
   #chatbotDauTrang { background: var(--sidebar-bg); color: #fff; padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
   #chatbotDong { cursor: pointer; opacity: .8; }
   #chatbotNoiDung { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
   .chatbot-tin { padding: 8px 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12.5px; line-height: 1.4; max-width: 85%; white-space: pre-wrap; }
-  .chatbot-tin-bot { background: #dcfce7; align-self: flex-start; }
+  .chatbot-tin-bot { background: var(--ok-bg, #dcfce7); align-self: flex-start; }
   .chatbot-tin-nguoi { background: var(--active-green); color: #fff; margin-left: auto; }
   #chatbotGoNhap { display: flex; border-top: 1px solid var(--border-light); padding: 8px; gap: 6px; }
-  #chatbotGoNhap input { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 12.5px; }
+  #chatbotGoNhap input { flex: 1; border: 1px solid var(--vien, #ccc); border-radius: 6px; padding: 7px 9px; font-size: 12.5px; }
   #chatbotGoNhap button { background: var(--active-green); color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; }
-  #chatbotAnhDinhKem { padding: 6px 10px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-light); background: #dcfce7; }
-  #chatbotAnhDinhKem a { color: #dc2626; cursor: pointer; margin-left: 4px; }
-  #chatbotNutAnh { background: #dcfce7; color: #333; border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
+  #chatbotAnhDinhKem { padding: 6px 10px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-light); background: var(--ok-bg, #dcfce7); }
+  #chatbotAnhDinhKem a { color: var(--err-chu, #dc2626); cursor: pointer; margin-left: 4px; }
+  #chatbotNutAnh { background: var(--ok-bg, #dcfce7); color: var(--chu-chinh, #333); border: 1px solid var(--vien, #ccc); border-radius: 6px; padding: 7px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
 </style>
   <div id="chatbotNut" onclick="toggleChatbot()" title="Hỏi chatbot tra cứu dữ liệu">🤖</div>
   <div id="chatbotHop">
@@ -73,7 +73,7 @@
     var thoatHtml = (text || '').toString()
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     return thoatHtml.replace(/(https?:\/\/[^\s<"'&]+)/g, function (url) {
-      return '<a href="' + url + '" target="_blank" style="color:#2563eb;text-decoration:underline">🔗 mở link</a>';
+      return '<a href="' + url + '" target="_blank" style="color:var(--info-chu, #2563eb);text-decoration:underline">🔗 mở link</a>';
     }).replace(/\n/g, '<br>');
   }
   function chatbotXoaNguCanh_() {

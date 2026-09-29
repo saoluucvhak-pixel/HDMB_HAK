@@ -75,4 +75,6 @@
 - [ ] Sau triển khai: Thiết lập › Telegram → Tắt rồi Bật lại polling (để trigger chuyển sang 5 phút)
 - [x] ✅ Đợt 3: B2 nhật ký chi tiết cũ → mới + lưu trữ khi xóa / khôi phục; B3 `tests/` + GitHub Actions
 - [ ] Sau triển khai: bật GitHub Actions cho repo (tab Actions) nếu đang tắt; thử 1 lần *Thiết lập › Các đợt đã xóa* trên dữ liệu thật
-- [ ] Chờ quyết định: A5, B1, B4, B5
+- [x] ✅ A5: chế độ tối + hỗ trợ truy cập
+- [ ] **Triển khai A5:** thêm file mới `GiaoDien_Chung.html` lên Apps Script (bắt buộc) + chép 14 file HTML
+- [ ] Chờ quyết định: B1, B4, B5

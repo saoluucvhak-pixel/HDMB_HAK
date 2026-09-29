@@ -6,15 +6,15 @@
   .withFailureHandler(...).TEN_HAM(thamSo...)) — hakRun_ tự chuyển thành api(phien, 'TEN_HAM', [thamSo...]).
 -->
 <style>
-  #hakDangNhapNen { position: fixed; inset: 0; background: rgba(243,244,246,.97); z-index: 99998; display: none; align-items: center; justify-content: center; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  #hakDangNhapNen { position: fixed; inset: 0; background: var(--nen-phu-mo, rgba(243,244,246,.97)); z-index: 99998; display: none; align-items: center; justify-content: center; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
   #hakDangNhapNen.hien { display: flex; }
-  #hakDangNhapNen .hop { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px 26px; max-width: 460px; width: calc(100% - 32px); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.08); color: #1f2937; }
+  #hakDangNhapNen .hop { background: var(--card-bg, #fff); border: 1px solid var(--vien, #e5e7eb); border-radius: 12px; padding: 28px 26px; max-width: 460px; width: calc(100% - 32px); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.08); color: var(--chu-chinh, #1f2937); }
   #hakDangNhapNen h3 { margin: 0 0 6px; font-size: 18px; }
-  #hakDangNhapNen .phu { font-size: 13px; color: #6b7280; margin: 0 0 14px; }
-  #hakDangNhapNen .loi { color: #dc2626; font-size: 13px; margin: 0 0 14px; }
+  #hakDangNhapNen .phu { font-size: 13px; color: var(--chu-phu, #6b7280); margin: 0 0 14px; }
+  #hakDangNhapNen .loi { color: var(--err-chu, #dc2626); font-size: 13px; margin: 0 0 14px; }
   #hakDangNhapNen .nut { display: inline-block; padding: 11px 22px; background: #16a34a; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; border: 0; cursor: pointer; }
-  #hakDangNhapNen .nut.phu2 { background: #fff; color: #1f2937; border: 1px solid #d1d5db; margin-top: 10px; }
-  #hakDangNhapNen .trangthai { font-size: 12.5px; color: #6b7280; margin-top: 10px; }
+  #hakDangNhapNen .nut.phu2 { background: var(--card-bg, #fff); color: var(--chu-chinh, #1f2937); border: 1px solid var(--vien, #d1d5db); margin-top: 10px; }
+  #hakDangNhapNen .trangthai { font-size: 12.5px; color: var(--chu-phu, #6b7280); margin-top: 10px; }
   #hakNguoiDungChip { position: fixed; left: 12px; bottom: 12px; z-index: 99990; background: #1f2937; color: #e5e7eb; border-radius: 20px; padding: 6px 12px; font: 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; display: none; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); max-width: calc(100% - 24px); }
   #hakNguoiDungChip.hien { display: flex; }
   #hakNguoiDungChip .vt { background: #2563eb; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; }
@@ -24,7 +24,7 @@
   #hakXemFile.hien { display: flex; }
   #hakXemFile .thanh { width: 100%; max-width: 1000px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f9fafb; }
   #hakXemFile .ten { flex: 1; min-width: 180px; font-weight: 600; overflow-wrap: anywhere; }
-  #hakXemFile .thanh button, #hakXemFile .thanh a { background: #fff; color: #1f2937; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 12.5px; }
+  #hakXemFile .thanh button, #hakXemFile .thanh a { background: var(--card-bg, #fff); color: var(--chu-chinh, #1f2937); border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 12.5px; }
   #hakXemFile .thanh a.phu { background: transparent; color: #cbd5e1; border: 1px solid #4b5563; }
   #hakXemFile .than { flex: 1; width: 100%; max-width: 1000px; display: flex; align-items: center; justify-content: center; overflow: auto; }
   #hakXemFile .than img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; }
@@ -39,7 +39,7 @@
     <div class="trangthai" id="hakDangNhapTrangThai"></div>
   </div>
 </div>
-<div id="hakNguoiDungChip"><span>👤</span><span class="em" id="hakChipEmail"></span><span class="vt" id="hakChipVaiTro"></span><button type="button" id="hakChipDangXuat" style="display:none">Đăng xuất</button></div>
+<div id="hakNguoiDungChip"><span>👤</span><span class="em" id="hakChipEmail"></span><span class="vt" id="hakChipVaiTro"></span><button type="button" id="hakChipGiaoDien" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối" style="color:#e5e7eb;font-size:14px">🌓</button><button type="button" id="hakChipDangXuat" style="display:none">Đăng xuất</button></div>
 <div id="hakXemFile" role="dialog" aria-modal="true" aria-labelledby="hakXemFileTen">
   <div class="thanh"><span class="ten" id="hakXemFileTen"></span>
     <button type="button" id="hakXemFileMo" hidden>Mở trong tab mới</button>
@@ -205,7 +205,7 @@ function hakHopThoai_(noiDung, tuyChon, coONhap) {
     nen.setAttribute('role', 'dialog'); nen.setAttribute('aria-modal', 'true');
     nen.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(17,24,39,.55);display:flex;align-items:center;justify-content:center;padding:16px;font:14px -apple-system,"Segoe UI",Roboto,Arial,sans-serif';
     var hop = document.createElement('div');
-    hop.style.cssText = 'background:#fff;color:#1f2937;border-radius:12px;max-width:460px;width:100%;box-shadow:0 12px 32px rgba(0,0,0,.25);padding:20px 20px 16px';
+    hop.style.cssText = 'background:var(--card-bg, #fff);color:var(--chu-chinh, #1f2937);border-radius:12px;max-width:460px;width:100%;box-shadow:0 12px 32px rgba(0,0,0,.25);padding:20px 20px 16px';
     var td = document.createElement('div');
     td.id = 'hakHopThoaiTieuDe_' + Date.now();
     td.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:8px';
@@ -221,14 +221,14 @@ function hakHopThoai_(noiDung, tuyChon, coONhap) {
       o.type = tuyChon.matKhau ? 'password' : 'text';
       o.value = tuyChon.giaTri || '';
       o.setAttribute('aria-label', td.textContent);
-      o.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:14px';
+      o.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--vien, #d1d5db);border-radius:8px;font-size:14px;margin-bottom:14px';
       hop.appendChild(o);
     }
     var hang = document.createElement('div');
     hang.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap';
     var nutHuy = document.createElement('button');
     nutHuy.type = 'button'; nutHuy.textContent = tuyChon.nutHuy || 'Hủy';
-    nutHuy.style.cssText = 'padding:9px 16px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#1f2937;cursor:pointer;font-weight:600;min-height:40px';
+    nutHuy.style.cssText = 'padding:9px 16px;border-radius:8px;border:1px solid var(--vien, #d1d5db);background:var(--card-bg, #fff);color:var(--chu-chinh, #1f2937);cursor:pointer;font-weight:600;min-height:40px';
     var nutOk = document.createElement('button');
     nutOk.type = 'button'; nutOk.textContent = tuyChon.nutDongY || 'Đồng ý';
     nutOk.style.cssText = 'padding:9px 16px;border-radius:8px;border:0;color:#fff;cursor:pointer;font-weight:600;min-height:40px;background:' + (tuyChon.nguyHiem ? '#dc2626' : '#16a34a');
@@ -387,6 +387,8 @@ function hakVeChip_() {
   var nut = document.getElementById('hakChipDangXuat');
   nut.style.display = nd.quaPhien ? '' : 'none';
   nut.onclick = hakDangXuat_;
+  var nutGd = document.getElementById('hakChipGiaoDien'); // A5: đổi Tự động / Sáng / Tối
+  if (typeof hakDoiGiaoDien_ === 'function') { nutGd.onclick = hakDoiGiaoDien_; hakApGiaoDien_(); } else nutGd.style.display = 'none';
   chip.className = 'hien';
 }
 

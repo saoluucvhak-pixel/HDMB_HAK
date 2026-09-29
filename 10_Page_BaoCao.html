@@ -49,11 +49,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -87,11 +87,11 @@
     display: flex; justify-content: space-between; align-items: center; gap: 10px;
     padding: 7px 0; border-bottom: 1px solid var(--border-light); font-size: 12.5px;
   }
-  .data-row span:first-child { font-weight: 600; color: #445; }
+  .data-row span:first-child { font-weight: 600; color: var(--chu-phu, #445); }
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -101,7 +101,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -109,12 +109,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -135,13 +135,13 @@
   table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
   table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
   table.mecon-table tr.hang-cha { cursor: pointer; }
-  table.mecon-table tr.hang-cha:hover td { background: #dcfce7; }
-  table.mecon-table tr.hang-cha.dang-mo td { background: #dcfce7; font-weight: 600; }
+  table.mecon-table tr.hang-cha:hover td { background: var(--ok-bg, #dcfce7); }
+  table.mecon-table tr.hang-cha.dang-mo td { background: var(--ok-bg, #dcfce7); font-weight: 600; }
   table.mecon-table tr.hang-cha .mui-ten { display: inline-block; width: 14px; transition: transform .15s; }
   table.mecon-table tr.hang-cha.dang-mo .mui-ten { transform: rotate(90deg); }
-  td.o-con { background: #dcfce7; padding: 14px 16px !important; border-left: 3px solid var(--active-green); }
+  td.o-con { background: var(--ok-bg, #dcfce7); padding: 14px 16px !important; border-left: 3px solid var(--active-green); }
   .row-search-mc { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
-  .row-search-mc input { flex: 1; max-width: 340px; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .row-search-mc input { flex: 1; max-width: 340px; padding: 8px 10px; border: 1px solid var(--vien, #ccc); border-radius: 6px; font-size: 13px; }
   .empty-hint { text-align: center; padding: 18px; color: var(--text-muted); font-size: 12.5px; }
   .pagination-mc { display: flex; gap: 10px; align-items: center; margin-top: 10px; font-size: 12px; }
   .badge-kh { display: inline-block; background: var(--accent-gold); color: #fff; border-radius: 20px; padding: 1px 9px; font-size: 11px; margin-left: 6px; }
@@ -149,16 +149,17 @@
 
 <style>
     .tabs2 { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--border-light); margin-bottom: 16px; }
-    .tab2 { padding: 9px 12px; cursor: pointer; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; color: #667; }
+    .tab2 { padding: 9px 12px; cursor: pointer; border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); }
     .tab2.active { border-bottom-color: var(--active-green); color: var(--active-green); }
     .panel2 { display: none; }
     .panel2.active { display: block; }
-    .row-do { background: #fee2e2; }
-    .row-vang { background: #fef3c7; }
+    .row-do { background: var(--err-bg, #fee2e2); }
+    .row-vang { background: var(--warn-bg, #fef3c7); }
     td.so-lieu, th.so-lieu { text-align: right !important; font-variant-numeric: tabular-nums; }
-    .pagination-btn { padding: 4px 10px; border: 1px solid var(--border-light); border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; }
+    .pagination-btn { padding: 4px 10px; border: 1px solid var(--border-light); border-radius: 6px; background: var(--card-bg, #fff); cursor: pointer; font-size: 12px; }
     .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
@@ -282,7 +283,7 @@
 
     <!-- ============ 2. TÌNH HÌNH THỰC HIỆN ============ -->
     <div class="panel2" id="pThucHien">
-      <div class="card" style="background:#dcfce7;border:1px solid var(--active-green)">
+      <div class="card" style="background:var(--ok-bg, #dcfce7);border:1px solid var(--active-green)">
         <p style="margin:0;font-size:13px">📊 Muốn xem <b>danh sách hợp đồng theo từng trạng thái</b> (bấm 1 trạng thái là lọc ngay, phân trang 20 hợp đồng/trang)? Dùng trang mới <a href="<?= baseUrl ?>?page=tongquan" style="color:var(--active-green);font-weight:600">"📊 Tổng quan hợp đồng"</a> ở sidebar — gọn hơn tab này nhiều. Tab này giữ lại phần <b>chi tiết khối lượng/giá trị đã thực hiện — còn lại</b> (không có ở trang kia).</p>
       </div>
       <div class="card">

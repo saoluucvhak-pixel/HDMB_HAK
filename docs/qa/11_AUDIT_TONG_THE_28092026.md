@@ -720,3 +720,23 @@ Ghi chú: các sheet cache (Draft báo cáo, Draft Hồ sơ rừng, Draft_HopDon
 - File đuôi `.cjs/.json/.md/.yml` → không lẫn vào dự án Apps Script khi đồng bộ.
 
 **Kiểm chứng:** 57/57 test máy chủ (thêm 12 test B2: ghi cũ → mới khi sửa HĐ và lô rừng; xóa vĩnh viễn → 1 đợt đủ HD_NCC/HD_RUNG/HD_STK/Phụ lục; khôi phục → dữ liệu **y hệt trước khi xóa** kể cả CCCD số 0 đầu, Số TK dạng chữ, ngày; Draft báo cáo có lại HĐ; khôi phục lần 2 bị từ chối; HĐ khác không ảnh hưởng; xóa TK / xóa lô + GPS thành đợt riêng và khôi phục đúng; khóa đã tồn tại lại → bỏ qua). 15/15 test giao diện. Kiểm tra cú pháp phát hiện đúng lỗi cố ý chèn.
+
+---
+
+## ✅ Cập nhật: A5 — Chế độ tối + hỗ trợ truy cập (chủ dự án đồng ý)
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Gom màu về biến | 305 chỗ màu viết cứng (nền trắng/xám, chữ xám, chữ & nền trạng thái xanh/đỏ/vàng/xanh dương, viền) đổi thành `var(--bien, #mauCu)`. Biến **chỉ khai báo ở chế độ tối** → chế độ sáng dùng đúng màu cũ | 14 file HTML |
+| Chế độ tối | File mới `GiaoDien_Chung.html` (nạp trong `<head>` mọi trang + đầu `07_Form_HopDong`): bảng màu tối, ô nhập / bảng / liên kết tối, lớp phủ đăng nhập tối. Mặc định **Tự động theo máy**; nút **🌓** cạnh email đổi Tự động → Sáng → Tối, nhớ trên máy (không bị xóa khi đăng xuất) | GiaoDien_Chung (mới), PhanQuyen_JS, 11 trang |
+| Gắn nhãn vào ô | Nhãn chưa gắn được gắn tự động vào ô đi kèm (kể cả ô vẽ thêm sau bằng mã): bấm chữ nhãn là vào ô, trình đọc màn hình đọc đúng tên ô. Đo trên 10 trang: **152/160** nhãn được gắn; 8 nhãn còn lại là tiêu đề nhóm (không ứng với 1 ô) — đúng là không gắn | GiaoDien_Chung |
+| Tên nút biểu tượng | Nút chỉ có biểu tượng (🗑️ ✏️ 👁 ✕ ⬇ ♻️ …) được đặt `aria-label` theo `title` hoặc theo biểu tượng: 17/17 nút tìm thấy khi tải trang, cộng các nút vẽ thêm sau | GiaoDien_Chung |
+| Khác | `lang="vi"`; viền nổi rõ khi di chuyển bằng phím Tab; giảm hiệu ứng chuyển động nếu máy bật "giảm chuyển động" | GiaoDien_Chung |
+
+**Kiểm chứng:**
+- Chế độ sáng: chụp 12 trang (07, 10, 11, 12, 13, 24, 27, 30, 33, 35, 38, Bản đồ) bằng mã cũ và mã mới → **giống hệt từng điểm ảnh**.
+- Chế độ tối: soát ảnh chụp các trang + mẫu bảng / thông báo / huy hiệu / ô nhập / nút.
+- Test giao diện mới `tests/ui_giao_dien.cjs` (11 ca): máy tối → tự tối, máy sáng → giữ màu gốc; nút 🌓 đổi vòng và nhớ sau tải lại; nhãn gắn đúng ô, bấm nhãn vào ô; nút biểu tượng có tên, kể cả phần tử thêm sau; không lỗi JS. Tổng: 57/57 test máy chủ, **26/26** test giao diện.
+
+**Triển khai:** thêm file mới **`GiaoDien_Chung.html`** lên Apps Script (thiếu file này mọi trang báo lỗi `include_`), chép lại 14 file HTML đã đổi.
+**Giới hạn:** màu được đặt bằng mã JavaScript lúc chạy (thông báo nổi, màu trạng thái tính động) giữ màu cũ — đã kiểm tra đều là chữ trắng trên nền đậm, đọc được ở cả hai chế độ. Bản đồ và ảnh / tài liệu giữ nền sáng.

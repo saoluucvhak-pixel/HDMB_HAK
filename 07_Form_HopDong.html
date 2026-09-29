@@ -1,3 +1,4 @@
+<?!= include_('GiaoDien_Chung') ?>
 <style>
   /* ⚠️ ĐÃ SỬA: file này hiện qua showSidebar() (không đi qua Code.gs doGet như các
      trang khác), nên KHÔNG tự động có CSS chung từ 09_Style.html (file cũ, đã xóa) — trước đây
@@ -19,7 +20,7 @@
      bên dưới nhưng bị bỏ sót khi chép CSS từ 09_Style.html (file cũ, đã xóa) ở lần sửa trước — khiến
      tiêu đề "Hợp đồng" hiện chữ thường trần trụi thay vì tiêu đề lớn/đậm như thiết kế. */
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .card {
     background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 10px;
@@ -29,7 +30,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -38,64 +39,64 @@
     font-size: 13px; font-weight: 700; cursor: pointer; }
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: #1f2937; color: #fff; padding: 8px; text-align: left; }
   table.data-table td { border-bottom: 1px solid var(--border-light); padding: 8px; }
 
-  .hint { font-size: 11px; color: #889; }
+  .hint { font-size: 11px; color: var(--chu-phu, #889); }
   .khoa-khi-thanh-ly[disabled] { opacity: .6; }
 
-  .breadcrumb-bar { font-size: 13px; color: #889; margin-bottom: 6px; padding: 2px 0; }
+  .breadcrumb-bar { font-size: 13px; color: var(--chu-phu, #889); margin-bottom: 6px; padding: 2px 0; }
   .breadcrumb-bar a { color: var(--active-green); text-decoration: none; cursor: pointer; font-weight: 600; }
   .breadcrumb-bar a:hover { text-decoration: underline; }
   .breadcrumb-bar .sep { margin: 0 6px; color: #ccc; }
   .breadcrumb-bar .current { color: var(--heading); font-weight: 700; }
 
   .draft-banner {
-    background: #fef3c7; border: 1px solid #fde68a; border-left: 4px solid var(--accent-gold);
-    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #b45309;
+    background: var(--warn-bg, #fef3c7); border: 1px solid #fde68a; border-left: 4px solid var(--accent-gold);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: var(--warn-chu, #b45309);
     display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
   }
-  .draft-banner b { color: #b45309; }
+  .draft-banner b { color: var(--warn-chu, #b45309); }
   .draft-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .tab-bar2 { display: flex; gap: 4px; margin: 6px 0 16px 0; border-bottom: 2px solid var(--border-light); flex-wrap: wrap; }
-  .tab-btn2 { padding: 11px 18px; font-size: 13.5px; font-weight: 700; color: #778; background: #f3f4f6; border: none; border-radius: 8px 8px 0 0; cursor: pointer; margin-bottom: -2px; }
+  .tab-btn2 { padding: 11px 18px; font-size: 13.5px; font-weight: 700; color: var(--chu-phu, #778); background: var(--nen-phu, #f3f4f6); border: none; border-radius: 8px 8px 0 0; cursor: pointer; margin-bottom: -2px; }
   .tab-btn2.active { color: #fff; background: var(--active-green); }
   .tab-btn2 .dem { background: rgba(0,0,0,0.15); padding: 1px 7px; border-radius: 10px; font-size: 11px; margin-left: 5px; }
   .tab-btn2.active .dem { background: rgba(255,255,255,0.25); }
 
-  .row-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 8px; background: #fafbfa; cursor: pointer; transition: border-color .1s; }
+  .row-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 8px; background: var(--nen-phu, #fafbfa); cursor: pointer; transition: border-color .1s; }
   .row-card:hover { border-color: var(--active-green); }
-  .row-card.la-nhap { border-color: var(--accent-gold); background: #fef3c7; }
+  .row-card.la-nhap { border-color: var(--accent-gold); background: var(--warn-bg, #fef3c7); }
   .tag-nhap { background: var(--accent-gold); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; margin-left: 6px; }
 
-  .gps-row, .anh-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px; font-size: 12px; background: #fff; }
-  .gps-row.nhap { border-color: var(--accent-gold); background: #fef3c7; }
-  .badge-cho-duyet { background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
-  .badge-da-duyet { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .gps-row, .anh-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px; font-size: 12px; background: var(--card-bg, #fff); }
+  .gps-row.nhap { border-color: var(--accent-gold); background: var(--warn-bg, #fef3c7); }
+  .badge-cho-duyet { background: var(--warn-bg, #fef3c7); color: var(--warn-chu, #b45309); padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+  .badge-da-duyet { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
   .badge-status { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-status.badge-dang { background: #fef3c7; color: #b45309; }
-  .badge-status.badge-hoan { background: #dcfce7; color: #16a34a; }
-  .badge-status.badge-huy { background: #fee2e2; color: #dc2626; }
+  .badge-status.badge-dang { background: var(--warn-bg, #fef3c7); color: var(--warn-chu, #b45309); }
+  .badge-status.badge-hoan { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); }
+  .badge-status.badge-huy { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); }
 
   .ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-  .ct-item { background: #dcfce7; border: 1px solid #dcfce7; border-radius: 8px; padding: 10px 12px; }
-  .ct-item .lbl { font-size: 10.5px; font-weight: 700; color: #7a9; text-transform: uppercase; }
+  .ct-item { background: var(--ok-bg, #dcfce7); border: 1px solid #dcfce7; border-radius: 8px; padding: 10px 12px; }
+  .ct-item .lbl { font-size: 10.5px; font-weight: 700; color: var(--chu-phu, #7a9); text-transform: uppercase; }
   .ct-item .val { font-size: 14px; font-weight: 800; color: var(--heading); margin-top: 3px; word-break: break-word; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .modal-box { background: #fff; border-radius: 12px; padding: 22px; max-width: 720px; width: 100%; max-height: 85vh; overflow-y: auto; }
+  .modal-box { background: var(--card-bg, #fff); border-radius: 12px; padding: 22px; max-width: 720px; width: 100%; max-height: 85vh; overflow-y: auto; }
   .modal-box h3 { margin: 0 0 4px 0; }
 
-  .khoa-file-canh-bao { background: #fee2e2; border-left: 4px solid #dc2626; padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #dc2626; }
+  .khoa-file-canh-bao { background: var(--err-bg, #fee2e2); border-left: 4px solid #dc2626; padding: 10px 12px; border-radius: 6px; font-size: 12px; color: var(--err-chu, #dc2626); }
 </style>
 
 <div id="breadcrumbBar" class="breadcrumb-bar"></div>
@@ -232,7 +233,7 @@
     <div id="tabNoiDungTK" class="card khoa-khi-thanh-ly" style="display:none">
       <button class="btn btn-green" style="margin-bottom:12px" onclick="moFormTK(null)">➕ Thêm tài khoản</button>
       <div id="dsTKTomTat"><p class="hint">Chưa có tài khoản nào.</p></div>
-      <div class="inline-panel" id="panelFormTK" style="display:none;border:2px solid var(--active-green);border-radius:10px;padding:16px;margin-top:12px;background:#dcfce7">
+      <div class="inline-panel" id="panelFormTK" style="display:none;border:2px solid var(--active-green);border-radius:10px;padding:16px;margin-top:12px;background:var(--ok-bg, #dcfce7)">
         <div style="font-weight:800;color:var(--active-green);margin-bottom:10px" id="tieuDeFormTK">➕ Thêm tài khoản mới</div>
         <div class="field-row">
           <div class="field"><label>Số tài khoản</label><input id="tSoTK"></div>
@@ -251,12 +252,12 @@
       <button class="btn btn-green" style="margin-bottom:12px" onclick="moFormPhuLuc(null)">➕ Thêm phụ lục</button>
       <button class="btn btn-outline" style="margin-bottom:12px" onclick="moModalPhieuCan()">🧾 Xem phiếu cân tham khảo</button>
       <div id="dsPhuLucTomTat"><p class="hint">Chưa có phụ lục nào.</p></div>
-      <div class="inline-panel" id="panelFormPL" style="display:none;border:2px solid var(--active-green);border-radius:10px;padding:16px;margin-top:12px;background:#dcfce7">
+      <div class="inline-panel" id="panelFormPL" style="display:none;border:2px solid var(--active-green);border-radius:10px;padding:16px;margin-top:12px;background:var(--ok-bg, #dcfce7)">
         <div style="font-weight:800;color:var(--active-green);margin-bottom:10px" id="tieuDeFormPL">➕ Thêm phụ lục mới</div>
         <div class="field-row">
           <div class="field"><label>Đơn giá (đ/tấn)</label><input id="plDonGia" type="text" inputmode="decimal" oninput="tuTinhThanhTienPL()"></div>
           <div class="field"><label>Khối lượng (tấn)</label><input id="plKhoiLuong" type="text" inputmode="decimal" oninput="tuTinhThanhTienPL()"></div>
-          <div class="field"><label>Thành tiền <span class="hint">(tự tính)</span></label><input id="plThanhTien" readonly style="background:#f5f5f5"></div>
+          <div class="field"><label>Thành tiền <span class="hint">(tự tính)</span></label><input id="plThanhTien" readonly style="background:var(--nen-phu, #f5f5f5)"></div>
         </div>
         <div class="field-row"><div class="field" style="flex:2"><label>Ghi chú</label><input id="plGhiChu"></div></div>
         <button class="btn btn-green" onclick="luuPhuLucNhap()">💾 Lưu vào nháp</button>
@@ -266,8 +267,8 @@
   </div>
 
   <div class="card" id="khoNguyHiem" style="display:none">
-    <label class="lbl" style="color:#dc2626;font-weight:700">⚠️ Vùng nguy hiểm <span class="hint">(áp dụng ngay, không qua nháp)</span></label>
-    <button class="btn btn-outline" style="width:100%;margin-top:8px;color:#dc2626" onclick="huyHopDongForm()">🚫 Hủy hợp đồng (giữ lại dữ liệu)</button>
+    <label class="lbl" style="color:var(--err-chu, #dc2626);font-weight:700">⚠️ Vùng nguy hiểm <span class="hint">(áp dụng ngay, không qua nháp)</span></label>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--err-chu, #dc2626)" onclick="huyHopDongForm()">🚫 Hủy hợp đồng (giữ lại dữ liệu)</button>
     <label style="margin-top:10px;display:block;font-size:12px"><input type="checkbox" id="xacNhanXoaForm" style="width:auto;display:inline-block;margin-right:6px">Tôi hiểu và muốn xóa vĩnh viễn hợp đồng này</label>
     <button class="btn" style="width:100%;margin-top:8px;background:#dc2626;color:#fff" onclick="xoaVinhVienForm()">🗑️ Xóa vĩnh viễn</button>
     <div id="msgNguyHiem" class="msg" style="display:none;margin-top:8px"></div>
@@ -437,7 +438,7 @@
     // ném TypeError, làm cả hàm dừng giữa chừng: dòng "✅ Đã đọc xong" và debounceLuuNhap()
     // bên dưới không bao giờ chạy (thông báo bị kẹt mãi ở "⌛ Đang đọc bản scan..." dù đã
     // điền xong dữ liệu). Chỉ hiện khối này nếu có sẵn văn bản gốc.
-    if (kq.vanBanGoc) html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f7f7;padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
+    if (kq.vanBanGoc) html += '<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Xem văn bản OCR gốc</summary><pre style="white-space:pre-wrap;font-size:11px;background:var(--nen-phu, #f7f7f7);padding:8px;border-radius:6px;max-height:200px;overflow:auto">' + kq.vanBanGoc.replace(/</g, '&lt;') + '</pre></details>';
     document.getElementById('ketQuaBanScan').innerHTML = html;
     showMsg('msgBanScan', '✅ Đã đọc xong — kiểm tra lại trước khi Lưu chính thức.', true);
     document.getElementById('fileBanScan').value = ''; document.getElementById('tenFileBanScan').textContent = '';

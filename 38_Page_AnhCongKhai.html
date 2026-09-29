@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #f3f5f7; color: #1f2937; }
+    body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: var(--nen-phu, #f3f5f7); color: var(--chu-chinh, #1f2937); }
     .dau { background: #1e5631; color: #fff; padding: 16px; }
     .dau h1 { margin: 0 0 4px; font-size: 18px; }
     .dau p { margin: 0; font-size: 13px; opacity: .9; }
@@ -13,16 +13,17 @@
     .thanh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
     .nut { border: 0; border-radius: 6px; background: #1e5631; color: #fff; padding: 9px 14px; font-size: 14px; cursor: pointer; }
     .nut:disabled { opacity: .5; cursor: default; }
-    .nut.phu { background: #fff; color: #1e5631; border: 1px solid #1e5631; padding: 5px 10px; font-size: 13px; }
-    .tb { font-size: 13px; color: #4b5563; }
-    .loi { background: #fee2e2; color: #991b1b; padding: 14px; border-radius: 6px; }
+    .nut.phu { background: var(--card-bg, #fff); color: var(--ok-chu, #1e5631); border: 1px solid #1e5631; padding: 5px 10px; font-size: 13px; }
+    .tb { font-size: 13px; color: var(--chu-phu, #4b5563); }
+    .loi { background: var(--err-bg, #fee2e2); color: var(--err-chu, #991b1b); padding: 14px; border-radius: 6px; }
     h2 { font-size: 15px; margin: 18px 0 8px; }
     .luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-    .o { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08); display: flex; flex-direction: column; }
-    .o .anh { aspect-ratio: 4 / 3; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #6b7280; }
+    .o { background: var(--card-bg, #fff); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08); display: flex; flex-direction: column; }
+    .o .anh { aspect-ratio: 4 / 3; background: var(--nen-phu, #e5e7eb); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--chu-phu, #6b7280); }
     .o img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .o .duoi { padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; }
   </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
   <div class="dau">

@@ -50,11 +50,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -83,7 +83,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -124,55 +124,56 @@
 <style>
   .khung-den { background: var(--sidebar-bg); color: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 16px; }
   .khung-den h3 { margin: 0 0 4px 0; }
-  .header-hs { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; border: 1px solid var(--border-light); }
+  .header-hs { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg, #fff); border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; border: 1px solid var(--border-light); }
   .header-hs .ten { font-size: 17px; font-weight: 700; }
-  .header-hs .badge-ma { background: #dcfce7; color: var(--active-green); border-radius: 20px; padding: 2px 10px; font-size: 11px; margin-left: 8px; }
-  .header-hs .badge-tt { background: #dcfce7; color: var(--active-green); border-radius: 20px; padding: 2px 10px; font-size: 11px; margin-left: 6px; }
+  .header-hs .badge-ma { background: var(--ok-bg, #dcfce7); color: var(--active-green); border-radius: 20px; padding: 2px 10px; font-size: 11px; margin-left: 8px; }
+  .header-hs .badge-tt { background: var(--ok-bg, #dcfce7); color: var(--active-green); border-radius: 20px; padding: 2px 10px; font-size: 11px; margin-left: 6px; }
   .header-hs .phu { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
-  .card-con { background: #fff; border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; border: 1px solid var(--border-light); }
+  .card-con { background: var(--card-bg, #fff); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; border: 1px solid var(--border-light); }
   .card-con-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
   .card-con-head h4 { margin: 0 0 3px 0; font-size: 14px; }
   .card-con-head p { margin: 0; font-size: 11.5px; color: var(--text-muted); }
   table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
   table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
-  table.mecon-table tr:hover td { background: #dcfce7; }
+  table.mecon-table tr:hover td { background: var(--ok-bg, #dcfce7); }
   a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
   a.lnk-hd:hover { text-decoration: underline; }
   a.lnk-sua { color: var(--active-green); cursor: pointer; font-size: 12px; }
-  a.lnk-huy { color: #dc2626; cursor: pointer; font-size: 12px; margin-left: 8px; }
+  a.lnk-huy { color: var(--err-chu, #dc2626); cursor: pointer; font-size: 12px; margin-left: 8px; }
   .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
   .breadcrumb a { color: var(--active-green); cursor: pointer; text-decoration: none; }
   .tabbar2 { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 2px solid var(--border-light); flex-wrap: wrap; }
   .tabbar2 .tabitem { padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
   .tabbar2 .tabitem.active { color: var(--active-green); border-bottom-color: var(--active-green); }
   .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
-  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #dcfce7; color: var(--active-green); }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: var(--ok-bg, #dcfce7); color: var(--active-green); }
   .row-search { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
-  .row-search input { flex: 1; max-width: 340px; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .row-search input { flex: 1; max-width: 340px; padding: 8px 10px; border: 1px solid var(--vien, #ccc); border-radius: 6px; font-size: 13px; }
 
   /* ---- MODAL WIZARD (đúng kiểu ảnh mẫu: Bước 1/2/3, mỗi bước chỉ 1 nhóm nội dung) ---- */
   .modal-overlay-kh { display: none; position: fixed; inset: 0; background: rgba(20,35,27,0.55); z-index: 1000; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; }
   .modal-overlay-kh.mo { display: flex; }
   .modal-box-kh { background: var(--card-bg); border-radius: 12px; padding: 22px 26px; max-width: 620px; width: 100%; max-height: calc(100vh - 60px); overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
   .wizard-buoc { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
-  .wizard-buoc .cham { width: 26px; height: 26px; border-radius: 50%; background: var(--border-light); color: #888; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .wizard-buoc .cham { width: 26px; height: 26px; border-radius: 50%; background: var(--border-light); color: var(--chu-phu, #888); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
   .wizard-buoc .cham.active { background: var(--accent-gold); color: #fff; }
   .wizard-buoc .cham.done { background: var(--active-green); color: #fff; }
   .wizard-buoc .duong { flex: 1; height: 2px; background: var(--border-light); }
   .wizard-nhan { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
   .flabel { font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; margin-top: 10px; }
-  .finput { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .finput { width: 100%; padding: 8px 10px; border: 1px solid var(--vien, #ccc); border-radius: 6px; font-size: 13px; }
   .form2col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
   .form2col .full { grid-column: 1 / -1; }
   .ds-kh-ket-qua { max-height: 260px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border-light); border-radius: 8px; }
   .ds-kh-dong { padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border-light); font-size: 13px; }
   .ds-kh-dong:last-child { border-bottom: none; }
-  .ds-kh-dong:hover { background: #dcfce7; }
+  .ds-kh-dong:hover { background: var(--ok-bg, #dcfce7); }
   .ds-kh-dong .ten { font-weight: 600; }
   .ds-kh-dong .phu { color: var(--text-muted); font-size: 11.5px; }
   .wizard-nut-hang { display: flex; justify-content: space-between; margin-top: 18px; }
 </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
@@ -407,7 +408,7 @@
       elThanhDuyet.style.display = 'block';
       elThanhDuyet.innerHTML = buocKeTiep.map(function (tt) {
         var laHuy = tt === 'Đã hủy';
-        return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi-hl="' + escHtml_(tt) + '" style="padding:6px 12px;font-size:12px;margin-right:8px' + (laHuy ? ';color:#dc2626;border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy các dòng đã chọn' : '✅ Duyệt các dòng đã chọn (→ ' + escHtml_(tt) + ')') + '</button>';
+        return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi-hl="' + escHtml_(tt) + '" style="padding:6px 12px;font-size:12px;margin-right:8px' + (laHuy ? ';color:var(--err-chu, #dc2626);border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy các dòng đã chọn' : '✅ Duyệt các dòng đã chọn (→ ' + escHtml_(tt) + ')') + '</button>';
       }).join('') + '<span id="msgDuyetHD" class="hint" style="margin-left:8px"></span>';
       elThanhDuyet.querySelectorAll('[data-tt-moi-hl]').forEach(function (btn) {
         btn.addEventListener('click', function () { duyetTinhTrangHangLoat_(btn.dataset.ttMoiHl); });
@@ -682,12 +683,12 @@
       elKQ.textContent = '⌛ Đang tra cứu...';
       hakRun_()
         .withSuccessHandler(function (kq) {
-          if (!kq.thanhCong) { elKQ.innerHTML = '<span style="color:#dc2626">❌ ' + escHtml_(kq.loi) + '</span>'; return; }
+          if (!kq.thanhCong) { elKQ.innerHTML = '<span style="color:var(--err-chu, #dc2626)">❌ ' + escHtml_(kq.loi) + '</span>'; return; }
           var mau = kq.khopTen === null ? '#b45309' : (kq.khopTen ? '#16a34a' : '#dc2626');
           var dongKhop = kq.khopTen === null ? '' : (kq.khopTen ? ' ✅ Khớp tên chủ rừng đã nhập' : ' ⚠️ KHÔNG khớp tên chủ rừng đã nhập — kiểm tra lại!');
           elKQ.innerHTML = '<span style="color:' + mau + '">✅ Chủ TK thật: <b>' + escHtml_(kq.tenChuTKThat) + '</b> (' + escHtml_(kq.nganHangDaNhanDien) + ')' + dongKhop + '</span>';
         })
-        .withFailureHandler(function (err) { elKQ.innerHTML = '<span style="color:#dc2626">❌ Lỗi: ' + escHtml_(err.message) + '</span>'; })
+        .withFailureHandler(function (err) { elKQ.innerHTML = '<span style="color:var(--err-chu, #dc2626)">❌ Lỗi: ' + escHtml_(err.message) + '</span>'; })
         .TRA_CUU_TEN_CHU_TK(soTK, nganHang, tenChuRungThamChieu || '');
     });
   }
@@ -720,7 +721,7 @@
         // Tải danh sách lỗi (vd mất mạng) -> đổi tạm sang ô nhập chữ bình thường, không chặn người dùng thao tác tiếp
         var elCha = elSelect.parentElement;
         elCha.innerHTML = '<label class="flabel">Ngân hàng</label><input class="finput" id="' + idSelect + '" value="' + escHtml_(giaTriHienTai || '') + '">' +
-          '<div class="hint" style="color:#dc2626">⚠️ Không tải được danh sách ngân hàng chuẩn (' + escHtml_(err.message) + ') — gõ tay tên ngân hàng, không dùng được nút "Kiểm tra tên chủ TK" lúc này.</div>';
+          '<div class="hint" style="color:var(--err-chu, #dc2626)">⚠️ Không tải được danh sách ngân hàng chuẩn (' + escHtml_(err.message) + ') — gõ tay tên ngân hàng, không dùng được nút "Kiểm tra tên chủ TK" lúc này.</div>';
       })
       .LAY_DANH_SACH_NGAN_HANG_VIETQR();
   }
@@ -880,7 +881,7 @@
         var buocKeTiep = BUOC_KE_TIEP_[h.tinhTrang] || [];
         var htmlNutDuyet = buocKeTiep.map(function (tt, i) {
           var laHuy = tt === 'Đã hủy';
-          return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi="' + escHtml_(tt) + '" style="margin-right:8px' + (laHuy ? ';color:#dc2626;border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy hợp đồng' : '✅ Duyệt (→ ' + escHtml_(tt) + ')') + '</button>';
+          return '<button class="btn ' + (laHuy ? 'btn-outline' : 'btn-green') + '" data-tt-moi="' + escHtml_(tt) + '" style="margin-right:8px' + (laHuy ? ';color:var(--err-chu, #dc2626);border-color:#dc2626' : '') + '">' + (laHuy ? '❌ Hủy hợp đồng' : '✅ Duyệt (→ ' + escHtml_(tt) + ')') + '</button>';
         }).join('');
         var html = '<div class="breadcrumb"><a onclick="veDanhSachKhachHang()">👤 Khách hàng</a><span style="margin:0 6px;color:#ccc">/</span>' +
           '<a id="lnkBreadcrumbKH">' + escHtml_(h.tenChuRung) + '</a>' +
@@ -1169,9 +1170,9 @@
     var laSua = !!r;
     var urlDinhKemHienCo = (r && r.dinhKem && r.dinhKem.url) ? r.dinhKem.url : '';
     var html = '<h3 style="margin-top:0">' + (laSua ? '✏️ Sửa lô rừng' : '➕ Thêm lô rừng') + '</h3>' +
-      '<div class="card" style="background:#dcfce7;padding:8px 10px;margin-bottom:10px">' +
+      '<div class="card" style="background:var(--ok-bg, #dcfce7);padding:8px 10px;margin-bottom:10px">' +
       '<p style="margin:0;font-size:11.5px"><b>📎 Đính kèm hồ sơ tài liệu</b> — Giấy chứng nhận QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận (giấy tờ CHỨNG MINH NGUỒN GỐC đất/rừng). Khác với <b>Ảnh hiện trạng rừng</b> ở tab "Ảnh" (chụp thực tế cây/lô rừng) và <b>tọa độ GPS</b> ở tab "Tọa độ" — 3 loại khác nhau, xem thêm ở 📖 Hướng dẫn sử dụng.</p>' +
-      (urlDinhKemHienCo ? '<p style="margin:4px 0 0;font-size:11.5px">📄 File hiện có: <a href="' + urlAnToan_(urlDinhKemHienCo) + '" target="_blank">' + escHtml_(r.dinhKem.ten || 'xem file') + '</a> — quét file mới bên dưới sẽ THAY THẾ file này.</p>' : '<p style="margin:4px 0 0;font-size:11.5px;color:#b45309">⚠️ Chưa có file đính kèm nào.</p>') +
+      (urlDinhKemHienCo ? '<p style="margin:4px 0 0;font-size:11.5px">📄 File hiện có: <a href="' + urlAnToan_(urlDinhKemHienCo) + '" target="_blank">' + escHtml_(r.dinhKem.ten || 'xem file') + '</a> — quét file mới bên dưới sẽ THAY THẾ file này.</p>' : '<p style="margin:4px 0 0;font-size:11.5px;color:var(--warn-chu, #b45309)">⚠️ Chưa có file đính kèm nào.</p>') +
       '</div>' +
       '<input type="file" id="oScanHoSoRung" accept="image/*,application/pdf" style="display:none">' +
       '<button type="button" class="btn btn-outline" id="btnScanHoSoRung" style="margin-bottom:10px">📷 Đọc &amp; đính kèm hồ sơ pháp lý (GCN QSDĐ / Hợp đồng mua bán / Giấy xác nhận / Đơn xác nhận — tự nhận diện loại)</button>' +
