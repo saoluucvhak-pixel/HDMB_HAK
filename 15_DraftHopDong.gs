@@ -195,7 +195,10 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
  */
 function _giuTienDoLuuChinhThuc_(cu, moi) {
   if (!cu || !moi || typeof moi !== 'object') return moi;
-  if (!moi.idHD && cu.idHD) moi.idHD = cu.idHD;
+  if (!moi.idHD && cu.idHD) {
+    moi.idHD = cu.idHD;
+    if (moi.hopDong && !moi.hopDong.soHD && cu.hopDong && cu.hopDong.soHD) moi.hopDong.soHD = cu.hopDong.soHD;
+  }
   if (!moi.hopDongGoc && cu.hopDongGoc) moi.hopDongGoc = cu.hopDongGoc; // H-02: trình duyệt cũ không gửi lại ảnh chụp gốc
   const theoKhoa = function (ds, khoa) { const m = {}; (ds || []).forEach(function (x) { const k = x && khoa(x); if (k) m[k] = x; }); return m; };
   const khoaGps = function (p) { return p.lat + '|' + p.lng + '|' + (p.anhUrl || ''); };
@@ -343,7 +346,13 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
   const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac, boQuaTongHopRung: true });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
   const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
-  if (!du.idHD) { du.idHD = idHD; ghiTienDo(); }
+  if (!du.idHD) {
+    // Ghi cả Số HĐ vừa tự sinh: lần lưu lại đi đường "sửa hợp đồng" — thiếu Số HĐ thì bị chặn
+    // ("Số HĐ không được để trống"), trước đó còn ghi đè Số HĐ thành trống.
+    du.idHD = idHD;
+    if (du.hopDong && !du.hopDong.soHD) du.hopDong.soHD = soHD;
+    ghiTienDo();
+  }
 
   // 2) LÔ RỪNG — thêm mới / cập nhật / xóa, rồi ghi các điểm GPS mới thêm ở bản nháp
   (du.rung || []).forEach(function (rg) {
