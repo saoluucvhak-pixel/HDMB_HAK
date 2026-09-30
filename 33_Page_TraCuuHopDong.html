@@ -430,6 +430,14 @@ function veChiTiet_(ct) {
     ' <a class="btn btn-outline" style="padding:4px 10px;font-size:12px;text-decoration:none;margin-left:8px" target="_top" href="' + escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0') + '">Xem ảnh &amp; xuất PDF</a></h3>';
   h = h.replace('<h3>📄 Hợp đồng ', '<h3><a class="btn btn-gold" style="float:right;padding:5px 12px;font-size:12px;text-decoration:none" target="_top" title="Tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý" href="' +
     escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0&bc=1') + '">📊 Báo cáo thực hiện (PDF)</a>📄 Hợp đồng ');
+  // Nút Sửa: chỉ vai trò Nhập liệu / Quản trị — mở đúng hợp đồng này ở trang Nhập liệu (máy chủ vẫn kiểm tra quyền khi lưu).
+  // Hợp đồng đã chốt (Đã hoàn thành / Đã thanh lý / Đã hủy) mở ở chế độ chỉ xem như trang Nhập liệu vẫn làm.
+  if (typeof hakCoQuyen_ === 'function' && hakCoQuyen_('NHAP_LIEU') && !ct.daCheSo) {
+    var suaDuoc = !hd.tinhTrang || hd.tinhTrang === 'Chờ thực hiện' || hd.tinhTrang === 'Đang thực hiện';
+    h = h.replace('<h3>', '<h3><a class="btn ' + (suaDuoc ? 'btn-green' : 'btn-outline') + ' tc-nut-sua" style="float:right;padding:5px 12px;font-size:12px;text-decoration:none;margin-left:6px" target="_top" href="' +
+      escTC_(goc + '?page=hopdongmc&idHD=' + encodeURIComponent(ct.idHD)) + '" title="' + (suaDuoc ? 'Sửa thông tin, lô rừng, tài khoản, GPS, ảnh của hợp đồng này' : 'Hợp đồng đã chốt (' + escTC_(hd.tinhTrang) + ') — chỉ xem; muốn sửa phải duyệt lùi trên Sheet') + '">' +
+      (suaDuoc ? '✏️ Sửa hợp đồng' : '👁️ Mở ở Nhập liệu') + '</a>');
+  }
   if (!ct.anh.length) h += '<div class="empty-hint">Chưa có ảnh.</div>';
   else {
     h += '<div class="tc-anh">';

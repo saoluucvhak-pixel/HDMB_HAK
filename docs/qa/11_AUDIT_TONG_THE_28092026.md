@@ -806,3 +806,14 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 **Kiểm chứng:** 97/97 test máy chủ (thêm BT-01…BT-12: tìm nhóm, gợi ý giữ, chặn xóa hết nhóm, bỏ qua dòng đã đổi, xóa cùng ID giữ dữ liệu con, xóa khác ID kèm dữ liệu con, lưu trữ, xóa mồ côi kéo GPS, khôi phục lại, quyền API); `ui_trang_that.cjs` thêm 4 ca giao diện. Toàn bộ bộ test đạt.
 
 **Triển khai:** chép `28_BaoTri_DongBo.gs`, `34_PhanQuyen.gs`, `24_Page_ThietLap.html`; Deploy phiên bản mới.
+
+## ✅ Cập nhật: Tra cứu hợp đồng — nút Sửa hợp đồng
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Nút **✏️ Sửa hợp đồng** | Ở đầu phần chi tiết hợp đồng (cả kiểu 2 cột và điện thoại). Chỉ hiện với vai trò **Nhập liệu / Quản trị**; mở đúng hợp đồng đó ở trang Nhập liệu (`?page=hopdongmc&idHD=`). Hợp đồng đã chốt (Đã hoàn thành / Đã thanh lý / Đã hủy) hiện **👁️ Mở ở Nhập liệu** (chỉ xem, như quy tắc sẵn có). Máy chủ vẫn kiểm tra quyền khi lưu | 33 |
+| Nhập liệu mở theo `?idHD=` | Trước đây chỉ đọc `window.location.search` — trong khung sandbox của Apps Script / khung Portal thường không có tham số nên mở ra danh sách khách hàng thay vì đúng hợp đồng (ảnh hưởng cả nút "Sửa hợp đồng" ở Tổng quan). Nay đọc thêm qua `google.script.url.getLocation` như trang Tra cứu / Hình ảnh | 27 |
+
+**Kiểm chứng:** `ui_giao_dien_dot2.cjs` thêm 4 ca (Nhập liệu thấy nút Sửa + link đúng; HĐ đã chốt -> nút chỉ xem; vai trò Chỉ xem không có nút; link `?idHD=` mở thẳng hợp đồng qua getLocation — mã cũ trượt). Toàn bộ bộ test đạt.
+
+**Triển khai:** chép `33_Page_TraCuuHopDong.html`, `27_Page_HopDongMeCon.html`; Deploy phiên bản mới.

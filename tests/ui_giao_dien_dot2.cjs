@@ -5,8 +5,8 @@ const { moTrinhDuyet, ghiTrangTam, inKetQua } = require('./ui_chung.cjs');
 const giaLap = du => `<script>window.__du=${JSON.stringify(du)};(function(){function taoRunner(){var ok=null;var r=new Proxy({},{get:function(_,k){
  if(k==='withSuccessHandler')return function(f){ok=f;return r}; if(k==='withFailureHandler'||k==='withUserObject')return function(){return r};
  return function(){var ten=k==='api'?arguments[1]:k;window.__goi=(window.__goi||[]).concat(ten);setTimeout(function(){if(!ok)return;var kq=window.__du[ten];
- ok(ten==='thongTinDangNhap'?{daDangNhap:true,email:'qt@test.vn',vaiTroNhan:'Quản trị',quyen:['XEM','NHAP_LIEU','QUAN_TRI'],quaPhien:true}:(kq!==undefined?kq:null))},5)}}});return r}
- window.google={script:{url:{getLocation:function(f){f({parameter:{},hash:''})}},history:{replace:function(){},push:function(){}},host:{close:function(){}},run:new Proxy({},{get:function(_,k){return taoRunner()[k]}})}};})();</script>`;
+ ok(ten==='thongTinDangNhap'&&kq===undefined?{daDangNhap:true,email:'qt@test.vn',vaiTroNhan:'Quản trị',quyen:['XEM','NHAP_LIEU','QUAN_TRI'],quaPhien:true}:(kq!==undefined?kq:null))},5)}}});return r}
+ window.google={script:{url:{getLocation:function(f){f({parameter:(window.__du&&window.__du.__thamSo)||{},hash:''})}},history:{replace:function(){},push:function(){}},host:{close:function(){}},run:new Proxy({},{get:function(_,k){return taoRunner()[k]}})}};})();</script>`;
 async function mo(b, file, trang, du, kichThuoc) {
   let html = danhGia(file, { currentPage: trang, baseUrl: 'https://script.google.com/macros/s/X/exec', tabTrang: '', phien: '', loiDangNhap: '' });
   html = html.replace(/<head>/i, '<head>' + giaLap(du));
@@ -47,6 +47,26 @@ async function mo(b, file, trang, du, kichThuoc) {
   await p.fill('#tcTuKhoa', 'Chu'); await p.click('#tcNutTim'); await p.waitForTimeout(400);
   r = await p.evaluate(() => ({ goi: (window.__goi || []).filter(x => x === 'CHI_TIET_TRA_CUU_HOP_DONG').length, hai: document.getElementById('tcHaiCot').classList.contains('co-chi-tiet') }));
   kq.push(['Tra cứu điện thoại: giữ kiểu 1 cột, không tự mở chi tiết', r.goi === 0 && !r.hai ? true : JSON.stringify(r)]);
+  await p.close();
+  // 2b) Tra cứu: nút Sửa hợp đồng theo quyền + tình trạng
+  const ctTC = (tt) => ({ idHD: 'A&1', hopDong: { soHD: 'S1', tenChuRung: 'Chủ A', tinhTrang: tt }, thucHien: {}, loRung: [], taiKhoan: [], hoSo: [], anh: [] });
+  const nutSua = async (du) => {
+    const pp = await mo(b, '33_Page_TraCuuHopDong', 'tracuu', Object.assign({ TRA_CUU_HOP_DONG: { tongSo: 1, ketQua: ketQua.slice(0, 1) } }, du));
+    await pp.waitForTimeout(150); await pp.fill('#tcTuKhoa', 'Chu'); await pp.click('#tcNutTim'); await pp.waitForTimeout(400);
+    const x = await pp.evaluate(() => { const a = document.querySelector('#tcVungChiTiet .tc-nut-sua'); return a ? { chu: a.textContent.trim(), href: a.getAttribute('href'), target: a.target } : null; });
+    await pp.close(); return x;
+  };
+  r = await nutSua({ CHI_TIET_TRA_CUU_HOP_DONG: ctTC('Đang thực hiện') });
+  kq.push(['Tra cứu: Nhập liệu/Quản trị thấy nút "Sửa hợp đồng" mở đúng HĐ ở trang Nhập liệu', r && r.chu === '✏️ Sửa hợp đồng' && r.href === 'https://script.google.com/macros/s/X/exec?page=hopdongmc&idHD=A%261' && r.target === '_top' ? true : JSON.stringify(r)]);
+  r = await nutSua({ CHI_TIET_TRA_CUU_HOP_DONG: ctTC('Đã thanh lý') });
+  kq.push(['Tra cứu: HĐ đã chốt -> nút "Mở ở Nhập liệu" (chỉ xem)', r && r.chu === '👁️ Mở ở Nhập liệu' ? true : JSON.stringify(r)]);
+  r = await nutSua({ CHI_TIET_TRA_CUU_HOP_DONG: ctTC('Đang thực hiện'), thongTinDangNhap: { daDangNhap: true, email: 'x@test.vn', vaiTroNhan: 'Chỉ xem', quyen: ['XEM'], quaPhien: true } });
+  kq.push(['Tra cứu: vai trò Chỉ xem không có nút Sửa', r === null ? true : JSON.stringify(r)]);
+  // 2c) Nhập liệu mở đúng hợp đồng từ ?idHD= (đọc qua google.script.url.getLocation — khung sandbox / Portal)
+  p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { __thamSo: { page: 'hopdongmc', idHD: 'X9' }, layHopDongTheoIdHD: { idHD: 'X9', soDong: 5, soHD: 'S9', tenChuRung: 'Chủ Chín', tinhTrang: 'Đang thực hiện' } });
+  await p.waitForTimeout(600);
+  r = await p.evaluate(() => ({ goi: (window.__goi || []).slice(0, 12), chu: document.body.textContent.indexOf('S9') !== -1 }));
+  kq.push(['Nhập liệu: link ?idHD= (từ nút Sửa ở Tra cứu) mở thẳng hợp đồng đó', r.chu && r.goi.indexOf('layHopDongTheoIdHD') !== -1 ? true : JSON.stringify(r)]);
   await p.close();
   // 3) Nhập liệu: thanh 5 bước + so khớp OCR
   p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { layHopDongTheoIdHD: { idHD: 'X1', soDong: 5, soHD: 'S1', tenChuRung: 'Chủ A', cccdChuRung: '049000000001', tinhTrang: 'Chờ thực hiện' },

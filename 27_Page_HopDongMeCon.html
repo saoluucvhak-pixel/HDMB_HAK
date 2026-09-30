@@ -255,8 +255,15 @@
     // gian mở trang dù người dùng chưa chắc cần đến. Giờ chỉ tải danh sách hiển thị
     // (rẻ hơn nhiều lần vì có phân trang phía server); danh sách ĐẦY ĐỦ để tìm kiếm
     // trong wizard/form chỉ tải LƯỜI — đúng lúc bấm "Thêm hợp đồng"/"Thêm khách hàng".
+    // ?idHD=... (nút "Sửa hợp đồng" ở Tra cứu / Tổng quan). Trang webapp Apps Script chạy trong khung sandbox nên
+    // window.location thường KHÔNG mang tham số của webapp -> đọc thêm qua google.script.url.getLocation (cách chuẩn,
+    // đúng cả khi chuyển trang trong khung Portal vì địa chỉ đã được cập nhật trước khi nạp trang).
+    var moTheoThamSo_ = function (id) { if (id) { moChiTietHopDong(id); } else { veDanhSachKhachHang(); } };
     var idHDTuUrl = new URLSearchParams(window.location.search).get('idHD');
-    if (idHDTuUrl) { moChiTietHopDong(idHDTuUrl); } else { veDanhSachKhachHang(); }
+    if (idHDTuUrl) { moTheoThamSo_(idHDTuUrl); return; }
+    try {
+      google.script.url.getLocation(function (loc) { var p = (loc && loc.parameter) || {}; moTheoThamSo_(p.idHD || p.idhd || ''); });
+    } catch (e) { moTheoThamSo_(''); }
   });
   var daTaiKhachHangDayDu_ = false;
   /** Tải lười — chỉ gọi lần đầu tiên cần đến (mở wizard/form thêm hợp đồng), các lần sau dùng lại cache */
