@@ -10,6 +10,7 @@ const buoc = [
   ['Giao diện: hộp thoại + nhớ bộ lọc (A3/A4)', 'ui_hop_thoai_bo_loc.cjs', true],
   ['Giao diện: chế độ tối + hỗ trợ truy cập (A5)', 'ui_giao_dien.cjs', true],
   ['Giao diện mới: trang thật, menu chung, bản đồ', 'ui_trang_that.cjs', true],
+  ['Giao diện mới đợt 2: Tổng quan, Tra cứu 2 cột, tiến độ 5 bước, so khớp OCR', 'ui_giao_dien_dot2.cjs', true],
   ['Giao diện: nhúng trong Portal — chuyển trang trong khung', 'ui_nhung_portal.cjs', true]
 ];
 let hong = 0;

@@ -80,6 +80,21 @@ function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
  * khoảng ngày ký / trạng thái). Đọc từ cache Draft_BaoCaoHopDong (đã có sẵn
  * giá trị/khối lượng tính trước) — KHÔNG tính lại từ HD_RUNG mỗi lần lọc.
  */
+/**
+ * Giao diện mới: tiến độ hồ sơ 1 hợp đồng cho thanh 5 bước ở trang Nhập liệu (Chủ rừng → Tài khoản → Lô rừng & hồ sơ →
+ * GPS → Ảnh). Đọc từ cache Draft_BaoCaoHopDong (đã tính sẵn), không đọc lại các sheet gốc.
+ */
+function TIEN_DO_HO_SO_HD_(idHD) {
+  _yeuCauQuyen_(QUYEN.XEM);
+  idHD = (idHD || '').toString().trim();
+  const m = idHD ? docToanBoDraftBaoCao_().filter(function (x) { return String(x.idHD || '').trim() === idHD; })[0] : null;
+  if (!m) return { coDuLieu: false };
+  return {
+    coDuLieu: true, soTaiKhoan: Number(m.soTaiKhoan) || 0, soLoRung: Number(m.soLoRung) || 0,
+    hoSoDu: !!m.hoSoDu, daDoGPSDu: !!m.daDoGPSDu, coAnh: !!m.coAnh, thieuHoSoChiTiet: String(m.thieuHoSoChiTiet || '')
+  };
+}
+
 function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
   _yeuCauQuyen_(QUYEN.XEM);
   boLoc = boLoc || {};
@@ -117,9 +132,10 @@ function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
 
   const locDuTrangThai = tinhTrangLoc && tinhTrangLoc !== 'Tất cả' ? locChung.filter(function (m) { return (m.tinhTrang || 'Đang thực hiện') === tinhTrangLoc; }) : locChung;
 
-  let tongGiaTriHopDong = 0, tongKhoiLuongThucHien = 0, tongGiaTriThucHien = 0;
+  let tongGiaTriHopDong = 0, tongKhoiLuongThucHien = 0, tongGiaTriThucHien = 0, tongKhoiLuongDuKien = 0;
   locDuTrangThai.forEach(function (m) {
     tongGiaTriHopDong += Number(m.giaTriHopDong) || 0;
+    tongKhoiLuongDuKien += Number(m.khoiLuongDuKien) || 0;
     tongKhoiLuongThucHien += Number(m.khoiLuongThucHien) || 0;
     tongGiaTriThucHien += Number(m.giaTriThucHien) || 0;
   });
@@ -130,12 +146,15 @@ function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
   const trangChuan = Math.min(Math.max(1, trang), tongTrang);
   const batDau = (trangChuan - 1) * kichThuoc;
   const items = daSapXep.slice(batDau, batDau + kichThuoc).map(function (m) {
-    return { idHD: m.idHD, soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang };
+    return { idHD: m.idHD, soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
+      // Giao diện mới: bảng Tổng quan có khối lượng / giá trị / tiến độ từng hợp đồng
+      khoiLuongDuKien: Number(m.khoiLuongDuKien) || 0, khoiLuongThucHien: Number(m.khoiLuongThucHien) || 0, giaTriHopDong: Number(m.giaTriHopDong) || 0 };
   });
 
   return {
     tongSoHopDong: locChung.length, theoTrangThai: theoTrangThai,
     tongGiaTriHopDong: tongGiaTriHopDong, tongKhoiLuongThucHien: tongKhoiLuongThucHien, tongGiaTriThucHien: tongGiaTriThucHien,
+    tongKhoiLuongDuKien: tongKhoiLuongDuKien,
     items: items, trang: trangChuan, tongTrang: tongTrang, tongSo: tongSo
   };
 }

@@ -79,5 +79,5 @@
 - [ ] **Triển khai A5:** thêm file mới `GiaoDien_Chung.html` lên Apps Script (bắt buộc) + chép 14 file HTML
 - [x] ✅ Giao diện mới đợt 1: menu chung, lớp giao diện chung, Bản đồ GPS, mục lục Thiết lập/Hướng dẫn
 - [ ] **Triển khai giao diện mới:** thêm file `Menu_Chung.html` (bắt buộc) + chép các file đã đổi, Deploy lại
-- [ ] Giao diện mới đợt 2: Nhập liệu 5 bước + bảng so khớp OCR, Tra cứu 2 cột, 4 chỉ số trang Tổng quan, bản đồ điện thoại
+- [x] ✅ Giao diện mới đợt 2: Tổng quan 4 chỉ số, Tra cứu 2 cột, Nhập liệu tiến độ 5 bước + so khớp OCR, bản đồ điện thoại
 - [ ] Chờ quyết định: B1, B4, B5

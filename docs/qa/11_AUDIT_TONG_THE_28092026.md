@@ -760,3 +760,19 @@ Theo bản mẫu đã duyệt (giữ bộ màu portal cũ). **Không đổi ph�
 **Triển khai:** thêm file mới **`Menu_Chung.html`** (thiếu là mọi trang lỗi) + chép `05_Menu.gs`, `Code.gs`, `GiaoDien_Chung.html`, `MapContainer.html` và 9 trang HTML; Deploy phiên bản mới. Dữ liệu bản đồ đang cache: nút "Xem ảnh" hiện sau lần tải dữ liệu mới đầu tiên.
 
 **Chưa làm (đợt sau):** Nhập liệu chia 5 bước + bảng so khớp OCR; Tra cứu dạng 2 cột; Tổng quan thêm hàng 4 chỉ số; bản đồ trên điện thoại dạng thẻ trượt.
+
+---
+
+## ✅ Cập nhật: Giao diện mới — đợt 2 (Tổng quan, Tra cứu 2 cột, Nhập liệu 5 bước + so khớp OCR, bản đồ điện thoại)
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Tổng quan | Hàng **4 chỉ số** (số HĐ, giá trị HĐ, khối lượng đã thực hiện có % so với dự kiến, giá trị đã thực hiện có %) + thanh tiến độ; 6 **nút lọc tình trạng** kèm số lượng ngay trên bảng; bảng thêm cột KL dự kiến, **tiến độ thực hiện** (thanh + %), giá trị, nhãn tình trạng màu. Lúc tải: làm mờ số cũ thay vì xóa trắng. Máy chủ `LAY_TONG_QUAN_HOP_DONG_` trả thêm `tongKhoiLuongDuKien` và 3 trường mỗi dòng (không đổi trường cũ) | 30, 01_ContractManager.gs, GiaoDien_Chung |
+| Tra cứu | Màn rộng (≥ 1200px): **2 cột** — danh sách kết quả bên trái (dính khi cuộn), chi tiết bên phải, tự mở hợp đồng đầu tiên, dòng đang xem được đánh dấu; điện thoại/màn hẹp giữ kiểu cũ có nút Quay lại | 33 |
+| Nhập liệu — tiến độ 5 bước | Trong trang hợp đồng: thanh **Chủ rừng & hợp đồng → Tài khoản → Lô rừng & hồ sơ → GPS → Ảnh**, ✓ khi đủ, bấm để mở đúng thẻ, dòng "Còn thiếu: …". Dữ liệu từ cache báo cáo qua API mới `TIEN_DO_HO_SO_HD` (quyền Xem); đổi thẻ không gọi lại máy chủ. Quy trình lưu **không đổi** (vẫn tạo hợp đồng qua hộp thoại 3 bước — thanh bước đổi màu/kiểu theo mẫu) | 27, 01_ContractManager.gs, 34_PhanQuyen.gs |
+| Nhập liệu — so khớp OCR | Sau khi đọc scan (CCCD chủ rừng, CCCD / giấy ủy quyền, giấy tờ nguồn gốc rừng; form bên Sheet): **bảng Trường / Đọc từ scan / So khớp (Khớp · Khác · Ô trống)**, ô khớp bị khóa, ô khác/trống chọn sẵn, bấm "Áp dụng N trường" hoặc Bỏ qua/Esc. Trước đây: trang 27 chỉ điền ô trống (lệch thì im lặng bỏ qua), form Sheet ghi đè hết. File giấy tờ vẫn luôn được đính kèm | GiaoDien_Chung (`hakSoKhopOcr_`), 27, 07 |
+| Bản đồ điện thoại | Bấm lô: thẻ chi tiết **trượt từ đáy**, rộng hết màn, nút to; danh sách thu gọn để bản đồ rộng; đóng thẻ thì hiện lại | MapContainer |
+
+**Kiểm chứng:** 84/84 test máy chủ (thêm 4: dữ liệu Tổng quan, tiến độ hồ sơ, ID không có, quyền API); test giao diện mới `tests/ui_giao_dien_dot2.cjs` 10 ca (Tổng quan: 4 chỉ số / % / 6 nút / tiến độ dòng / escape tên; Tra cứu 2 cột màn rộng + giữ 1 cột trên điện thoại; thanh 5 bước + bấm bước mở thẻ không gọi lại máy chủ; OCR: khóa ô khớp, chỉ áp dụng trường đã chọn, phát sự kiện input, Esc bỏ qua; bản đồ điện thoại mở/đóng thẻ). Toàn bộ bộ test đạt.
+
+**Triển khai:** chép `01_ContractManager.gs`, `34_PhanQuyen.gs`, `GiaoDien_Chung.html`, `MapContainer.html`, `07_Form_HopDong.html`, `27`, `30`, `33`; Deploy phiên bản mới. Không có file mới.

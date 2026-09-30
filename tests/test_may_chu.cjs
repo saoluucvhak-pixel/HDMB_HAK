@@ -557,6 +557,20 @@ try {
       a.html === g && /FILE=33_Page_TraCuuHopDong\|TRANG=tracuu\|PHIEN=\|BASE=https:/.test(a.html) && /Tra cứu/.test(a.tieuDe) &&
       /FILE=30_Page_TongQuanHopDong\|TRANG=tongquan\|PHIEN=\|/.test(b.html) && /TRANG=hopdongmc/.test(c.html), J([a, b, c, g]));
   });
+  // ---------- Giao diện mới đợt 2: dữ liệu Tổng quan + tiến độ hồ sơ 5 bước ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const tq = t.run('LAY_TONG_QUAN_HOP_DONG_({})');
+    const it = (tq.items || [])[0] || {};
+    kiem('GD2 Tổng quan: trả thêm khối lượng dự kiến / thực hiện / giá trị từng HĐ + tổng dự kiến',
+      it.khoiLuongDuKien === 120 && it.khoiLuongThucHien === 0 && it.giaTriHopDong > 0 && tq.tongKhoiLuongDuKien === 120 && it.soHD === 'A1', J({ it: it, tong: tq.tongKhoiLuongDuKien }));
+    const td = t.run('TIEN_DO_HO_SO_HD_(' + J(A.idHD) + ')');
+    kiem('GD2 Tiến độ hồ sơ: đọc đúng số TK / số lô / cờ đủ hồ sơ-GPS-ảnh từ cache báo cáo',
+      td.coDuLieu === true && td.soTaiKhoan === 1 && td.soLoRung === 1 && td.daDoGPSDu === false && td.coAnh === false, J(td));
+    kiem('GD2 Tiến độ hồ sơ: ID không có -> coDuLieu=false', t.run('TIEN_DO_HO_SO_HD_("KHONG_CO")').coDuLieu === false);
+    kiem('GD2 API TIEN_DO_HO_SO_HD mở cho quyền Xem', t.run('_bangQuyenApi_()').TIEN_DO_HO_SO_HD !== undefined);
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

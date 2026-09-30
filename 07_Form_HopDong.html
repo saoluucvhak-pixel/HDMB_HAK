@@ -426,11 +426,19 @@
   function apDungKetQuaBanScan(kq, loai) {
     var banDoTen = { cccdChuRung: 'Số CCCD chủ rừng', tenChuRung: 'Họ tên chủ rừng', diaChiThuongTru: 'Địa chỉ thường trú', ngayCap: 'Ngày cấp CCCD', noiCap: 'Nơi cấp CCCD', cccdUyQuyen: 'CCCD người ủy quyền', tenUyQuyen: 'Họ tên người ủy quyền', diaChiUyQuyen: 'Địa chỉ người ủy quyền', ngayCapUyQuyen: 'Ngày cấp CCCD người ủy quyền', noiCapUyQuyen: 'Nơi cấp CCCD người ủy quyền' };
     var daApDung = [];
-    Object.keys(kq.truong).forEach(function (key) {
-      var giaTri = kq.truong[key]; if (!giaTri) return;
-      var elForm = document.getElementById(key);
-      if (elForm) { elForm.value = giaTri; daApDung.push((banDoTen[key] || key) + ': ' + giaTri); }
-    });
+    var dong = Object.keys(kq.truong).filter(function (key) { return kq.truong[key] && document.getElementById(key); })
+      .map(function (key) { return { nhan: banDoTen[key] || key, id: key, gt: kq.truong[key] }; });
+    if (typeof hakSoKhopOcr_ === 'function' && dong.length) { // giao diện mới: chọn trường áp dụng trên bảng so khớp
+      hakSoKhopOcr_(dong, { tieuDe: 'Kết quả đọc bản scan' }).then(function () {
+        dong.forEach(function (d) { if (document.getElementById(d.id).value === String(d.gt)) daApDung.push(d.nhan + ': ' + d.gt); });
+        hoanTatApDungBanScan_(kq, loai, daApDung);
+      });
+      return;
+    }
+    dong.forEach(function (d) { document.getElementById(d.id).value = d.gt; daApDung.push(d.nhan + ': ' + d.gt); });
+    hoanTatApDungBanScan_(kq, loai, daApDung);
+  }
+  function hoanTatApDungBanScan_(kq, loai, daApDung) {
     if (loai === 'cccd_uy_quyen' || loai === 'giay_uy_quyen') { document.getElementById('uyQuyenTT').value = 'Có'; toggleUyQuyen(); }
     var html = daApDung.length ? '<div class="msg ok">✅ Đã tự động điền ' + daApDung.length + ' mục (đã lưu nháp):<br>• ' + daApDung.join('<br>• ') + '</div>' : '<div class="msg err">⚠️ Không nhận diện được trường nào phù hợp.</div>';
     // ⚠️ ĐÃ SỬA: OCR_TU_BAN_SCAN (04_Reconciliation.gs) KHÔNG trả về trường `vanBanGoc`

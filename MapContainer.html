@@ -84,7 +84,15 @@
       #bdDau label, #bdDem, #timestamp, #bdDau select { display: none; }
       #panel { top: 108px; left: 0; width: 100%; bottom: auto; height: 34vh; }
       #map { top: calc(108px + 34vh); left: 0; }
-      #theChiTiet { left: 10px; right: 10px; width: auto; bottom: 10px; max-height: 55%; }
+      #theChiTiet { left: 0; right: 0; width: auto; bottom: 0; max-height: 60vh; border-radius: 18px 18px 0 0; border-bottom: 0; box-shadow: 0 -8px 24px rgba(31,41,55,.22); }
+      #theChiTiet::before { content: ''; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--vien, #d1d5db); margin: 8px auto 0; }
+      .ct-nut .nut { height: 46px; font-size: 14px; }
+      #nutViTri { width: 46px; height: 46px; }
+      body.co-the #panel { height: 0; overflow: hidden; border: 0; }
+      body.co-the #map { top: 108px; }
+      body.co-the #lopBanDo { top: 118px; }
+      body.co-the #nutViTri { top: 164px; }
+      body.co-the #hakNguoiDungChip { display: none !important; }
       #chuGiai { display: none; }
       #lopBanDo { top: calc(108px + 34vh + 10px); }
       #nutViTri { top: calc(108px + 34vh + 56px); }
@@ -323,7 +331,8 @@
         (coTam ? '<a class="nut" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + tamLat.toFixed(6) + ',' + tamLng.toFixed(6) + '">Chỉ đường</a>' : '') +
       '</div>';
     the.classList.add('hien');
-    document.getElementById('dongThe').onclick = function () { the.classList.remove('hien'); };
+    document.body.classList.add('co-the'); setTimeout(function () { map.invalidateSize(); }, 50);
+    document.getElementById('dongThe').onclick = function () { the.classList.remove('hien'); document.body.classList.remove('co-the'); setTimeout(function () { map.invalidateSize(); }, 50); };
     the.querySelectorAll('tr.diem').forEach(function (tr) {
       var i = +tr.getAttribute('data-i'), p = d.coords[i];
       var mo = function () { focusPoint(p.lat, p.lng, i, p.addr || ''); };

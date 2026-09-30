@@ -93,6 +93,39 @@
     html body .app-main { padding: 18px 16px; }
   }
 
+  /* Hàng chỉ số (KPI), nút lọc dạng chip, thanh tiến độ — dùng ở Tổng quan và các trang khác */
+  html body .hak-kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+  html body .hak-kpi { background: var(--card-bg, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  html body .hak-kpi .nhan { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--chu-phu, #6b7280); }
+  html body .hak-kpi .nhan i { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
+  html body .hak-kpi .so { font-size: 26px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  html body .hak-kpi .so small { font-size: 14px; font-weight: 500; color: var(--chu-phu, #6b7280); margin-left: 4px; }
+  html body .hak-kpi .phu { font-size: 12px; color: var(--chu-phu, #6b7280); }
+  html body .hak-thanh { height: 6px; background: var(--vien, #e5e7eb); border-radius: 3px; overflow: hidden; }
+  html body .hak-thanh > span { display: block; height: 100%; border-radius: 3px; }
+  html body .hak-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--nen-phu, #f3f4f6); padding: 4px; border-radius: 10px; }
+  html body .hak-chips button { border: 0; background: transparent; color: var(--chu-chinh, #374151); height: 32px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  html body .hak-chips button .dem { font-size: 12px; color: var(--chu-phu, #6b7280); font-variant-numeric: tabular-nums; }
+  html body .hak-chips button[aria-pressed="true"] { background: var(--card-bg, #fff); font-weight: 600; box-shadow: 0 1px 2px rgba(31,41,55,.12); }
+  html body .hak-tien-do { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+  html body .hak-tien-do .hak-thanh { flex: 1; }
+  html body .hak-tien-do b { font-size: 12px; font-weight: 500; color: var(--chu-phu, #6b7280); width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+  html body td.so, html body th.so { text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 1000px) { html body .hak-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* Hộp so khớp OCR (hakSoKhopOcr_) */
+  html body .hak-ocr-nen { position: fixed; inset: 0; z-index: 2147483100; background: rgba(17,24,39,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  html body .hak-ocr { background: var(--card-bg, #fff); color: var(--chu-chinh, #1f2937); border-radius: 16px; width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,.3); padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+  html body .hak-ocr h2 { margin: 0; font-size: 17px; font-weight: 700; }
+  html body .hak-ocr .phu { margin: 0; font-size: 13px; color: var(--chu-phu, #6b7280); }
+  html body .hak-ocr table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  html body .hak-ocr th { text-align: left; font-size: 12px; font-weight: 600; color: var(--chu-phu, #6b7280); padding: 6px 8px; border-bottom: 1px solid var(--vien, #e5e7eb); }
+  html body .hak-ocr td { padding: 9px 8px; border-bottom: 1px solid var(--vien, #f3f4f6); vertical-align: top; }
+  html body .hak-ocr td .cu { display: block; font-size: 12px; color: var(--chu-phu, #6b7280); margin-top: 2px; }
+  html body .hak-ocr .nhan-khop { display: inline-flex; padding: 2px 8px; border-radius: 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  html body .hak-ocr .nhan-khop.khop { background: #dcfce7; color: #166534; } html body .hak-ocr .nhan-khop.khac { background: #fef3c7; color: #92400e; } html body .hak-ocr .nhan-khop.moi { background: #dbeafe; color: #1e40af; }
+  html body .hak-ocr .nut-hang { display: flex; gap: 8px; justify-content: flex-end; }
+  html body .hak-ocr .nut-hang button { height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid var(--vien, #d1d5db); background: var(--card-bg, #fff); color: inherit; }
+  html body .hak-ocr .nut-hang button.chinh { background: #2563eb; border-color: #2563eb; color: #fff; }
   /* Mục lục dính bên trái trong trang dài (Thiết lập, Hướng dẫn) — dựng bằng hakTaoMucLuc_() */
   html body .hak-co-muc-luc { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
   html body .hak-muc-luc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card-bg, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
@@ -386,4 +419,65 @@ function hakHienTrangCon_(html, tieuDe) {
     } catch (e) { /* không có google.script.history */ }
   }
 })();
+
+/**
+ * Giao diện mới: bảng SO KHỚP kết quả đọc OCR với ô đang nhập, người dùng chọn trường áp dụng (thay vì ghi đè thẳng).
+ * dong: [{ nhan, id (id ô nhập), gt (giá trị OCR) }]. Ô đang trống / khác giá trị OCR được chọn sẵn; ô khớp thì bỏ qua.
+ * Trả Promise -> số trường đã áp dụng (0 nếu bỏ qua). Sau khi điền, phát sự kiện input + change để trang tự lưu nháp / tự tính.
+ */
+function hakSoKhopOcr_(dong, tuyChon) {
+  tuyChon = tuyChon || {};
+  var chuan = function (v) { return String(v == null ? '' : v).normalize('NFC').toLowerCase().replace(/[\s.,\-\/]+/g, ''); };
+  var ds = (dong || []).map(function (d) {
+    var el = document.getElementById(d.id);
+    var gt = String(d.gt == null ? '' : d.gt).trim();
+    return { nhan: d.nhan, el: el, gt: gt, cu: el ? String(el.value || '').trim() : '' };
+  }).filter(function (d) { return d.el && d.gt; });
+  return new Promise(function (xong) {
+    if (!ds.length) { xong(0); return; }
+    var nen = document.createElement('div'); nen.className = 'hak-ocr-nen';
+    var hop = document.createElement('div'); hop.className = 'hak-ocr'; hop.setAttribute('role', 'dialog'); hop.setAttribute('aria-modal', 'true');
+    var h = document.createElement('h2'); h.textContent = tuyChon.tieuDe || 'Kết quả đọc scan (OCR)'; h.id = 'hakOcrTieuDe'; hop.setAttribute('aria-labelledby', h.id);
+    var p = document.createElement('p'); p.className = 'phu'; p.textContent = 'So với thông tin đang nhập. Chọn các trường muốn lấy theo giấy tờ rồi bấm Áp dụng — OCR có thể đọc sai ở ảnh mờ/nghiêng.';
+    var bang = document.createElement('table');
+    bang.innerHTML = '<thead><tr><th scope="col"></th><th scope="col">Trường</th><th scope="col">Đọc từ scan</th><th scope="col">So khớp</th></tr></thead>';
+    var than = document.createElement('tbody');
+    var o = [];
+    ds.forEach(function (d, i) {
+      var khop = d.cu && chuan(d.cu) === chuan(d.gt);
+      var tr = document.createElement('tr');
+      var td0 = document.createElement('td'); var cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'hakOcr' + i; cb.checked = !khop; cb.disabled = khop; td0.appendChild(cb);
+      var td1 = document.createElement('td'); var lb = document.createElement('label'); lb.htmlFor = cb.id; lb.textContent = d.nhan; td1.appendChild(lb);
+      var td2 = document.createElement('td'); var b = document.createElement('b'); b.textContent = d.gt; td2.appendChild(b);
+      if (d.cu && !khop) { var cu = document.createElement('span'); cu.className = 'cu'; cu.textContent = 'Đang nhập: ' + d.cu; td2.appendChild(cu); }
+      var td3 = document.createElement('td'); var nk = document.createElement('span'); nk.className = 'nhan-khop ' + (khop ? 'khop' : d.cu ? 'khac' : 'moi'); nk.textContent = khop ? 'Khớp' : d.cu ? 'Khác' : 'Ô trống'; td3.appendChild(nk);
+      tr.appendChild(td0); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); than.appendChild(tr);
+      o.push(cb);
+    });
+    bang.appendChild(than);
+    var hang = document.createElement('div'); hang.className = 'nut-hang';
+    var boQua = document.createElement('button'); boQua.type = 'button'; boQua.textContent = 'Bỏ qua';
+    var apDung = document.createElement('button'); apDung.type = 'button'; apDung.className = 'chinh';
+    var capNhatNut = function () { var n = o.filter(function (c) { return c.checked && !c.disabled; }).length; apDung.textContent = n ? 'Áp dụng ' + n + ' trường' : 'Đóng'; };
+    o.forEach(function (c) { c.addEventListener('change', capNhatNut); }); capNhatNut();
+    hang.appendChild(boQua); hang.appendChild(apDung);
+    hop.appendChild(h); hop.appendChild(p); hop.appendChild(bang); hop.appendChild(hang);
+    nen.appendChild(hop); document.body.appendChild(nen);
+    var truoc = document.activeElement;
+    var dong_ = function (n) { document.removeEventListener('keydown', phim, true); if (nen.parentNode) nen.parentNode.removeChild(nen); try { truoc && truoc.focus && truoc.focus(); } catch (e) { /* bỏ qua */ } xong(n); };
+    var phim = function (e) { if (e.key === 'Escape') { e.stopPropagation(); dong_(0); } };
+    document.addEventListener('keydown', phim, true);
+    boQua.addEventListener('click', function () { dong_(0); });
+    apDung.addEventListener('click', function () {
+      var n = 0;
+      ds.forEach(function (d, i) {
+        if (!o[i].checked || o[i].disabled) return;
+        d.el.value = d.gt; n++;
+        d.el.dispatchEvent(new Event('input', { bubbles: true })); d.el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      dong_(n);
+    });
+    apDung.focus();
+  });
+}
 </script>

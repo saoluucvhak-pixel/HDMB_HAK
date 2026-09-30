@@ -120,6 +120,16 @@
     .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
     .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
   }
+  /* Giao diện mới: 2 cột trên màn rộng */
+  @media (min-width: 1200px) {
+    .tc-hai-cot.co-chi-tiet { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table th:nth-child(n+4), .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table td:nth-child(n+4) { display: none; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table th:nth-child(7), .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table td:nth-child(7) { display: table-cell; }
+    .tc-hai-cot.co-chi-tiet .tc-quay-lai { display: none; }
+  }
+  #tcVungKetQua tr.dang-chon td { background: var(--info-bg, #eff6ff); }
+  #tcVungKetQua tr.dang-chon td:first-child { box-shadow: inset 3px 0 0 #2563eb; }
 </style>
 <style>
   .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -193,8 +203,10 @@
       <div class="tc-ghi-chu" id="tcGhiChu">Từ khóa ít nhất 2 ký tự; CCCD / SĐT / số tài khoản nhập từ 4 chữ số (có thể chỉ 1 phần). Chỉ chọn ngày, để trống từ khóa = xem mọi hợp đồng ký trong khoảng đó.</div>
     </div>
 
-    <div id="tcVungKetQua"></div>
-    <div id="tcVungChiTiet"></div>
+    <div id="tcHaiCot" class="tc-hai-cot">
+      <div id="tcVungKetQua"></div>
+      <div id="tcVungChiTiet"></div>
+    </div>
   </div>
 
 <script>
@@ -243,6 +255,14 @@ function moTaLoc_(kq) {
   return p.join(', ');
 }
 
+// Giao diện mới: màn rộng (>= 1200px) hiện 2 cột — danh sách kết quả bên trái, chi tiết bên phải (không ẩn danh sách).
+function tcManRong_() { return !!(window.matchMedia && window.matchMedia('(min-width: 1200px)').matches); }
+function tcHaiCot_(bat) { document.getElementById('tcHaiCot').classList.toggle('co-chi-tiet', !!bat); }
+function tcDanhDauChon_(idHD) {
+  var ds = document.querySelectorAll('#tcVungKetQua tr[data-id]');
+  for (var i = 0; i < ds.length; i++) ds[i].classList.toggle('dang-chon', ds[i].getAttribute('data-id') === idHD);
+}
+
 function traCuu_() {
   var tk = document.getElementById('tcTuKhoa').value.trim();
   var tuNgay = document.getElementById('tcTuNgay').value;
@@ -276,6 +296,7 @@ function traCuu_() {
 function veKetQua_(kq) {
   var vung = document.getElementById('tcVungKetQua');
   document.getElementById('tcVungChiTiet').innerHTML = '';
+  tcHaiCot_(false);
   if (!kq) { vung.innerHTML = ''; return; }
   if (kq.loi) { vung.innerHTML = '<div class="msg err">' + escTC_(kq.loi) + '</div>'; return; }
   if (!kq.ketQua.length) {
@@ -286,7 +307,7 @@ function veKetQua_(kq) {
     (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất — nhập từ khóa hoặc thu hẹp khoảng ngày)</span>' : '') + '</h3>' +
     '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>CCCD chủ rừng</th><th>Địa chỉ rừng</th><th>Tình trạng</th><th>Khớp theo</th></tr></thead><tbody>';
   kq.ketQua.forEach(function (x, i) {
-    h += '<tr><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
+    h += '<tr data-id="' + escTC_(x.idHD) + '"><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
       '<td>' + escTC_(x.ngayKy) + '</td><td>' + escTC_(x.tenChuRung) + '</td><td>' + escTC_(x.tenUyQuyen) + '</td>' +
       '<td>' + escTC_(x.cccdChuRung) + '</td><td>' + escTC_(x.diaChiRung) + '</td>' +
       '<td>' + (x.tinhTrang ? '<span class="badge-trang-thai">' + escTC_(x.tinhTrang) + '</span>' : '') + '</td>' +
@@ -298,12 +319,13 @@ function veKetQua_(kq) {
   for (var k = 0; k < links.length; k++) {
     links[k].addEventListener('click', function () { xemChiTiet_(kq.ketQua[Number(this.getAttribute('data-i'))].idHD); });
   }
+  if (tcManRong_()) xemChiTiet_(kq.ketQua[0].idHD); // màn rộng: mở sẵn hợp đồng đầu tiên ở cột phải
 }
 
 function xemChiTiet_(idHD) {
   var vungKQ = document.getElementById('tcVungKetQua');
   var vung = document.getElementById('tcVungChiTiet');
-  vungKQ.style.display = 'none';
+  if (tcManRong_()) { tcHaiCot_(true); tcDanhDauChon_(idHD); } else vungKQ.style.display = 'none';
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
   hakRun_()
     .withSuccessHandler(function (ct) { veChiTiet_(ct); })
@@ -322,6 +344,7 @@ function ganNutQuayLai_() {
   if (b) b.addEventListener('click', function () {
     document.getElementById('tcVungChiTiet').innerHTML = '';
     document.getElementById('tcVungKetQua').style.display = '';
+    tcHaiCot_(false);
   });
 }
 

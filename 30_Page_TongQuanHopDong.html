@@ -147,7 +147,7 @@
 
   <div class="app-main">
     <div class="page-title">Tổng quan hợp đồng</div>
-    <div class="page-subtitle">Bấm vào 1 thẻ trạng thái để lọc danh sách theo đúng trạng thái đó. Số liệu ban đầu là TẤT CẢ — chọn bộ lọc rồi bấm "Lọc" để dashboard cập nhật theo.</div>
+    <div class="page-subtitle">Bấm nút tình trạng phía trên bảng để lọc danh sách. Số liệu ban đầu là TẤT CẢ — chọn bộ lọc rồi bấm "Lọc" để các chỉ số cập nhật theo.</div>
 
     <div class="card" style="margin-bottom:16px">
       <div class="field-row" style="align-items:flex-end">
@@ -160,16 +160,15 @@
       </div>
     </div>
 
-    <div class="the-thongke-row" id="vungKpiTien">
-      <div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>
-    </div>
-
-    <div class="the-thongke-row" id="vungTheThongKe">
-      <div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>
+    <div class="hak-kpi-row" id="vungKpiTien" aria-live="polite">
+      <div class="hak-kpi"><div class="nhan">Đang tải...</div><div class="so">⌛</div></div>
     </div>
 
     <div class="card">
-      <div id="tieuDeDanhSach" style="font-weight:700;margin-bottom:10px;font-size:14px">📋 Tất cả hợp đồng (mới ký trước)</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="hak-chips" id="vungTheThongKe" role="group" aria-label="Lọc theo tình trạng"></div>
+        <div id="tieuDeDanhSach" style="font-size:13px;color:var(--chu-phu,#6b7280);margin-left:auto">Tất cả hợp đồng (mới ký trước)</div>
+      </div>
       <div id="vungBangHD"><p class="hint">⌛ Đang tải...</p></div>
       <div id="phanTrangHD" style="margin-top:10px"></div>
     </div>
@@ -218,11 +217,13 @@
   function taiDashboard_(trang) {
     var boLoc = layBoLocHienTai_(boLocDaApDungNgay_);
     boLoc.trang = trang; boLoc.kichThuoc = 20;
-    document.getElementById('vungKpiTien').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
-    document.getElementById('vungTheThongKe').innerHTML = '<div class="the-thongke"><div class="so">⌛</div><div class="nhan">Đang tải...</div></div>';
+    // Giữ số cũ, làm mờ trong lúc tải (không nháy trắng cả hàng chỉ số / nút lọc)
+    ['vungKpiTien', 'vungTheThongKe'].forEach(function (id) { var el = document.getElementById(id); el.style.opacity = el.children.length ? '.55' : ''; });
+    if (!document.getElementById('vungKpiTien').children.length) document.getElementById('vungKpiTien').innerHTML = '<div class="hak-kpi"><div class="nhan">Đang tải...</div><div class="so">⌛</div></div>';
     document.getElementById('vungBangHD').innerHTML = '<p class="hint">⌛ Đang tải...</p>';
     hakRun_()
       .withSuccessHandler(function (kq) {
+        ['vungKpiTien', 'vungTheThongKe'].forEach(function (id) { document.getElementById(id).style.opacity = ''; });
         renderKpiTien_(kq);
         renderTheThongKe_(kq);
         renderBangHD_(kq);
@@ -235,15 +236,22 @@
       .LAY_TONG_QUAN_HOP_DONG(boLoc);
   }
 
+  // Giao diện mới: 4 chỉ số (số HĐ, giá trị, khối lượng đã thực hiện / dự kiến, giá trị đã thực hiện) + thanh tiến độ
+  function phanTramTQ_(a, b) { a = Number(a) || 0; b = Number(b) || 0; return b > 0 ? Math.min(100, Math.round(a / b * 100)) : 0; }
   function renderKpiTien_(kq) {
     var el = document.getElementById('vungKpiTien'); el.innerHTML = '';
+    var ptKL = phanTramTQ_(kq.tongKhoiLuongThucHien, kq.tongKhoiLuongDuKien), ptGT = phanTramTQ_(kq.tongGiaTriThucHien, kq.tongGiaTriHopDong);
     [
-      { nhan: 'TỔNG GIÁ TRỊ HỢP ĐỒNG', gia: formatTienTQ_(kq.tongGiaTriHopDong) + ' đ' },
-      { nhan: 'TỔNG KHỐI LƯỢNG ĐÃ THỰC HIỆN', gia: formatSoTQ_(kq.tongKhoiLuongThucHien) + ' Tấn' },
-      { nhan: 'TỔNG GIÁ TRỊ ĐÃ THỰC HIỆN', gia: formatTienTQ_(kq.tongGiaTriThucHien) + ' đ' }
+      { nhan: 'Số hợp đồng', mau: '#1f2937', so: formatSoTQ_(kq.tongSo), donVi: 'HĐ', phu: tinhTrangDangLoc_ ? 'Tình trạng: ' + tinhTrangDangLoc_ : 'Theo bộ lọc đang chọn' },
+      { nhan: 'Giá trị hợp đồng', mau: '#2563eb', so: formatTienTQ_(kq.tongGiaTriHopDong), donVi: 'đ', phu: 'Tổng giá trị ký kết' },
+      { nhan: 'Khối lượng đã thực hiện', mau: '#16a34a', so: formatSoTQ_(kq.tongKhoiLuongThucHien), donVi: 'tấn', phu: kq.tongKhoiLuongDuKien ? ptKL + '% của ' + formatSoTQ_(kq.tongKhoiLuongDuKien) + ' tấn dự kiến' : 'Chưa có khối lượng dự kiến', pt: kq.tongKhoiLuongDuKien ? ptKL : null },
+      { nhan: 'Giá trị đã thực hiện', mau: '#b45309', so: formatTienTQ_(kq.tongGiaTriThucHien), donVi: 'đ', phu: kq.tongGiaTriHopDong ? ptGT + '% giá trị hợp đồng' : '', pt: kq.tongGiaTriHopDong ? ptGT : null }
     ].forEach(function (t) {
-      var div = document.createElement('div'); div.className = 'the-thongke'; div.style.cursor = 'default';
-      div.innerHTML = '<div class="so" style="font-size:19px">' + escHtmlTQ_(t.gia) + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
+      var div = document.createElement('div'); div.className = 'hak-kpi';
+      div.innerHTML = '<div class="nhan"><i style="background:' + t.mau + '"></i>' + escHtmlTQ_(t.nhan) + '</div>' +
+        '<div class="so">' + escHtmlTQ_(t.so) + '<small>' + escHtmlTQ_(t.donVi) + '</small></div>' +
+        (t.pt !== null && t.pt !== undefined ? '<div class="hak-thanh" role="img" aria-label="' + t.pt + '%"><span style="width:' + t.pt + '%;background:' + t.mau + '"></span></div>' : '') +
+        '<div class="phu">' + escHtmlTQ_(t.phu) + '</div>';
       el.appendChild(div);
     });
   }
@@ -257,15 +265,16 @@
     );
     elThe.innerHTML = '';
     dsThe.forEach(function (t) {
-      var div = document.createElement('div');
-      div.className = 'the-thongke' + (t.ma === tinhTrangDangLoc_ ? ' active' : '');
-      div.innerHTML = '<div class="so">' + escHtmlTQ_(t.so) + '</div><div class="nhan">' + escHtmlTQ_(t.nhan) + '</div>';
-      div.addEventListener('click', function () {
+      var nut = document.createElement('button');
+      nut.type = 'button';
+      nut.setAttribute('aria-pressed', t.ma === tinhTrangDangLoc_ ? 'true' : 'false');
+      nut.innerHTML = escHtmlTQ_(t.nhan) + ' <span class="dem">' + escHtmlTQ_(t.so) + '</span>';
+      nut.addEventListener('click', function () {
         tinhTrangDangLoc_ = t.ma;
-        document.getElementById('tieuDeDanhSach').textContent = '📋 ' + (t.ma ? 'Hợp đồng "' + t.ma + '"' : 'Tất cả hợp đồng') + ' (mới ký trước)';
+        document.getElementById('tieuDeDanhSach').textContent = (t.ma ? 'Hợp đồng "' + t.ma + '"' : 'Tất cả hợp đồng') + ' (mới ký trước)';
         taiDashboard_(1);
       });
-      elThe.appendChild(div);
+      elThe.appendChild(nut);
     });
   }
 
@@ -273,12 +282,16 @@
     var elBang = document.getElementById('vungBangHD');
     if (!kq.items || !kq.items.length) { elBang.innerHTML = '<div class="empty-hint">Không có hợp đồng nào khớp bộ lọc.</div>'; document.getElementById('phanTrangHD').innerHTML = ''; return; }
     var table = document.createElement('table'); table.className = 'mecon-table';
-    table.innerHTML = '<thead><tr><th>Số HĐ</th><th>Chủ rừng</th><th>Ngày ký</th><th>Trạng thái</th><th></th></tr></thead>';
+    table.innerHTML = '<thead><tr><th>Số HĐ</th><th>Chủ rừng</th><th>Ngày ký</th><th class="so">KL dự kiến (tấn)</th><th>Đã thực hiện</th><th class="so">Giá trị (đ)</th><th>Tình trạng</th><th></th></tr></thead>';
     var tbody = document.createElement('tbody');
     kq.items.forEach(function (r) {
       var tr = document.createElement('tr');
       tr.innerHTML = '<td><a class="lnk-hd">' + escHtmlTQ_(r.soHD) + '</a></td><td>' + escHtmlTQ_(r.tenChuRung) + '</td>' +
-        '<td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td><td><span class="badge-trang-thai">' + escHtmlTQ_(r.tinhTrang) + '</span></td><td></td>';
+        '<td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
+        '<td class="so">' + formatSoTQ_(r.khoiLuongDuKien || 0) + '</td>' +
+        '<td>' + (r.khoiLuongDuKien ? (function (pt) { var mau = pt >= 100 ? '#16a34a' : pt > 0 ? '#2563eb' : '#9ca3af'; return '<div class="hak-tien-do"><div class="hak-thanh"><span style="width:' + pt + '%;background:' + mau + '"></span></div><b>' + pt + '%</b></div>'; })(phanTramTQ_(r.khoiLuongThucHien, r.khoiLuongDuKien)) : '<span style="color:var(--chu-phu,#9ca3af)">—</span>') + '</td>' +
+        '<td class="so">' + formatTienTQ_(r.giaTriHopDong || 0) + '</td>' +
+        '<td><span class="badge-trang-thai">' + escHtmlTQ_(r.tinhTrang) + '</span></td><td></td>';
       tr.querySelector('a').addEventListener('click', function () { moHopDong_(r.idHD); });
       var tdNut = tr.lastElementChild;
       var lnkXem = document.createElement('a'); lnkXem.className = 'lnk-hd'; lnkXem.style.fontWeight = '400'; lnkXem.textContent = 'Xem/Sửa →';
@@ -291,7 +304,7 @@
     var elTrang = document.getElementById('phanTrangHD'); elTrang.innerHTML = '';
     var bT = document.createElement('button'); bT.className = 'btn btn-outline'; bT.textContent = '‹ Trước'; bT.disabled = kq.trang <= 1;
     bT.addEventListener('click', function () { taiDashboard_(kq.trang - 1); });
-    var sp = document.createElement('span'); sp.style.margin = '0 10px'; sp.textContent = 'Trang ' + kq.trang + '/' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)';
+    var sp = document.createElement('span'); sp.style.margin = '0 10px'; sp.style.fontSize = '13px'; sp.style.color = 'var(--chu-phu,#6b7280)'; sp.textContent = 'Trang ' + kq.trang + '/' + kq.tongTrang + ' (' + kq.tongSo + ' hợp đồng)';
     var bS = document.createElement('button'); bS.className = 'btn btn-outline'; bS.textContent = 'Sau ›'; bS.disabled = kq.trang >= kq.tongTrang;
     bS.addEventListener('click', function () { taiDashboard_(kq.trang + 1); });
     elTrang.appendChild(bT); elTrang.appendChild(sp); elTrang.appendChild(bS);
