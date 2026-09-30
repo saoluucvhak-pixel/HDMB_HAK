@@ -123,7 +123,53 @@
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
 <?!= include_('PhanQuyen_JS') ?>
-<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
+<div class="app-sidebar">
+  <div class="brand">
+    <div class="logo">HAK</div>
+    <div>
+      <div class="title">HAKGROUP</div>
+      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
+    </div>
+  </div>
+
+  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
+    <span class="icon">📊</span> Tổng quan hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
+    <span class="icon">🔍</span> Tra cứu hợp đồng
+  </a>
+  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
+    <span class="icon">🖼️</span> Tra cứu hình ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
+    <span class="icon">🗺️</span> Bản đồ GPS
+  </a>
+  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
+    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
+  </a>
+  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
+    <span class="icon">📊</span> Báo cáo tổng hợp
+  </a>
+
+  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">📋</span> Kiểm tra hồ sơ
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🖼️</span> Kiểm tra ảnh
+  </a>
+  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
+    <span class="icon">🔎</span> Đối chiếu OCR
+  </a>
+
+  <div class="nav-group-label">Khác</div>
+  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
+    <span class="icon">📖</span> Hướng dẫn sử dụng
+  </a>
+  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
+    <span class="icon">⚙️</span> Thiết lập
+  </a>
+</div>
 
   <div class="app-main">
     <div class="page-title">Kiểm tra &amp; Đối chiếu</div>
@@ -809,18 +855,7 @@
     document.querySelectorAll('.panel2').forEach(function (p) { p.classList.remove('active'); });
     document.querySelector('.tab2[data-panel="' + tenPanel + '"]').classList.add('active');
     document.getElementById(tenPanel).classList.add('active');
-    // Menu chung: sáng đúng mục Kiểm tra hồ sơ / ảnh / OCR theo thẻ đang mở
-    var tab = tenPanel === 'pAnhLuu' ? 'anh' : tenPanel === 'pOCR' ? 'ocr' : 'hoso';
-    document.querySelectorAll('.hak-menu a.nav-item[href*="page=kiemtra"]').forEach(function (a) {
-      var dung = a.getAttribute('href').indexOf('tab=' + tab) !== -1;
-      a.classList.toggle('active', dung);
-      if (dung) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
-    });
   }
-  (function () { // mở đúng thẻ khi vào từ menu (?page=kiemtra&tab=anh|ocr)
-    var tab = '<?= typeof tabTrang === 'undefined' ? '' : tabTrang ?>';
-    if (tab === 'anh') chuyenTab('pAnhLuu'); else if (tab === 'ocr') chuyenTab('pOCR');
-  })();
 
   function datLichTrigger() {
     var tanSuat = document.getElementById('tanSuatTrigger').value;

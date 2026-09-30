@@ -6,99 +6,66 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
-    /* Giao diện mới (29/09): menu chung + thanh đầu + danh sách lô + bản đồ vệ tinh + thẻ chi tiết nổi.
-       Bố cục dùng position: fixed (không dùng chuỗi flex) để tránh lại lỗi bản đồ trắng/0px. */
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body { font-size: 14px; overflow: hidden; background: var(--page-bg, #f3f4f6); color: var(--chu-chinh, #1f2937); }
-    html body .app-sidebar { position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 1002; display: flex; flex-direction: column; }
-    .app-sidebar .brand { display: flex; align-items: center; gap: 10px; }
-    .app-sidebar .brand .logo { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #b45309; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b45309; font-size: 12px; }
-    .app-sidebar .brand .title { color: #fff; }
-    .app-sidebar .brand .subtitle { font-size: 11px; color: #8b98ab; }
-    .app-sidebar .nav-item { display: flex; align-items: center; text-decoration: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; overflow: hidden; height: 100vh; }
 
-    #bdDau { position: fixed; top: 0; left: 250px; right: 0; height: 64px; background: var(--card-bg, #fff); border-bottom: 1px solid var(--border-light, #e5e7eb);
-      display: flex; align-items: center; gap: 12px; padding: 0 18px 0 24px; z-index: 1001; }
-    #bdDau h1 { margin: 0; font-size: 19px; font-weight: 700; white-space: nowrap; }
-    #bdDem { font-size: 13px; color: var(--chu-phu, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #bdDau .gian { flex: 1; }
-    #bdDau label { font-size: 13px; color: var(--chu-phu, #6b7280); }
-    #bdDau select { height: 36px; padding: 0 8px; border: 1px solid var(--vien, #d1d5db); border-radius: 8px; font-size: 13px; background: var(--card-bg, #fff); color: inherit; }
-    #timestamp { font-size: 12.5px; color: var(--chu-phu, #6b7280); white-space: nowrap; }
-    .nut { height: 36px; padding: 0 12px; border: 1px solid var(--vien, #d1d5db); background: var(--card-bg, #fff); border-radius: 8px; font-size: 13px; font-weight: 600; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-    .nut:disabled { opacity: .55; cursor: not-allowed; }
-    .nut-chinh { background: #2563eb; border-color: #2563eb; color: #fff; }
-
-    #panel { position: fixed; top: 64px; left: 250px; width: 320px; bottom: 0; background: var(--card-bg, #fff); border-right: 1px solid var(--border-light, #e5e7eb); display: flex; flex-direction: column; z-index: 1000; }
-    #panelDau { padding: 14px 14px 10px; border-bottom: 1px solid var(--border-light, #e5e7eb); display: flex; flex-direction: column; gap: 10px; }
-    #searchInput { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--vien, #d1d5db); border-radius: 10px; font-size: 14px; background: var(--nen-phu, #f9fafb); color: inherit; }
-    #locGps { display: flex; gap: 6px; }
-    #locGps button { height: 30px; padding: 0 10px; border: 1px solid var(--vien, #d1d5db); background: var(--card-bg, #fff); color: inherit; border-radius: 15px; font-size: 12.5px; cursor: pointer; }
-    #locGps button[aria-pressed="true"] { background: #1f2937; border-color: #1f2937; color: #fff; font-weight: 600; }
-    #dsLo { flex: 1; overflow-y: auto; }
-    .lo { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px 10px 17px; border: 0; border-bottom: 1px solid var(--vien, #f3f4f6); background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
-    .lo:hover { background: var(--nen-phu, #f9fafb); }
-    .lo.chon { background: var(--info-bg, #eff6ff); border-left: 3px solid #2563eb; padding-left: 14px; }
-    .lo .cham { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-    .lo .chu { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .lo .ten { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lo .phu { font-size: 12px; color: var(--chu-phu, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .gps { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
-    .gps.co { color: #166534; background: #dcfce7; } .gps.thieu { color: #92400e; background: #fef3c7; }
-    #panelCuoi { padding: 8px 14px; border-top: 1px solid var(--border-light, #e5e7eb); font-size: 11.5px; color: var(--chu-phu, #6b7280); }
-    #info { font-size: 12.5px; margin-bottom: 2px; }
-    #info.err { color: var(--err-chu, #dc2626); }
-
-    #map { position: fixed; top: 64px; left: 570px; right: 0; bottom: 0; background: #cfd8c1; }
-    .bd-noi { position: fixed; z-index: 1001; background: var(--card-bg, #fff); border: 1px solid var(--vien, #d1d5db); border-radius: 12px; box-shadow: 0 2px 8px rgba(31,41,55,.15); }
-    #lopBanDo { top: 78px; right: 14px; display: flex; padding: 3px; }
-    #lopBanDo button { height: 32px; padding: 0 12px; border: 0; background: transparent; color: inherit; border-radius: 8px; font-size: 12.5px; cursor: pointer; }
-    #lopBanDo button[aria-pressed="true"] { background: #1f2937; color: #fff; font-weight: 600; }
-    #nutViTri { top: 124px; right: 14px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; }
-    #chuGiai { left: 584px; bottom: 26px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
-    #chuGiai b { font-size: 12px; }
-    #chuGiai span { display: flex; align-items: center; gap: 8px; }
-    #chuGiai i { width: 16px; height: 12px; border-radius: 3px; border: 2px solid; display: inline-block; }
-    #theChiTiet { right: 14px; bottom: 26px; width: 340px; max-height: calc(100% - 120px); overflow: auto; display: none; }
-    #theChiTiet.hien { display: block; }
-    .ct-dau { padding: 14px 16px; border-bottom: 1px solid var(--border-light, #e5e7eb); display: flex; gap: 8px; align-items: flex-start; }
-    .ct-dau h2 { margin: 0; font-size: 15px; font-weight: 700; }
-    .ct-dau .phu { font-size: 12.5px; color: var(--chu-phu, #6b7280); margin-top: 3px; }
-    .ct-dau button { margin-left: auto; width: 30px; height: 30px; border: 0; background: transparent; color: var(--chu-phu, #6b7280); border-radius: 8px; cursor: pointer; font-size: 16px; }
-    .ct-luoi { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-size: 13px; }
-    .ct-luoi span { display: block; font-size: 12px; color: var(--chu-phu, #6b7280); margin-bottom: 2px; }
-    #theChiTiet table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-    #theChiTiet th { background: var(--nen-phu, #f9fafb); color: var(--chu-phu, #6b7280); font-weight: 600; text-align: left; padding: 6px 16px; }
-    #theChiTiet td { padding: 5px 16px; border-top: 1px solid var(--vien, #f3f4f6); }
-    #theChiTiet tr.diem { cursor: pointer; } #theChiTiet tr.diem:hover td { background: var(--info-bg, #eff6ff); }
-    .ct-nut { padding: 12px 16px; display: flex; gap: 8px; border-top: 1px solid var(--border-light, #e5e7eb); }
-    .ct-nut .nut-chinh { flex: 1; justify-content: center; }
-    #chanDoan { position: fixed; left: 580px; bottom: 4px; z-index: 900; font-size: 11px; color: #374151; background: rgba(255,255,255,.85); border-radius: 6px; padding: 1px 8px; }
-    #chanDoan:empty { display: none; }
-    .leaflet-top.leaflet-right { top: 108px; }
-
-    @media (max-width: 800px) {
-      html body .app-sidebar { position: fixed; top: 0; left: 0; right: 0; bottom: auto; height: 56px; flex-direction: row; overflow-x: auto; }
-      #bdDau { top: 56px; left: 0; height: 52px; padding: 0 10px; gap: 8px; }
-      #bdDau label, #bdDem, #timestamp, #bdDau select { display: none; }
-      #panel { top: 108px; left: 0; width: 100%; bottom: auto; height: 34vh; }
-      #map { top: calc(108px + 34vh); left: 0; }
-      #theChiTiet { left: 0; right: 0; width: auto; bottom: 0; max-height: 60vh; border-radius: 18px 18px 0 0; border-bottom: 0; box-shadow: 0 -8px 24px rgba(31,41,55,.22); }
-      #theChiTiet::before { content: ''; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--vien, #d1d5db); margin: 8px auto 0; }
-      .ct-nut .nut { height: 46px; font-size: 14px; }
-      #nutViTri { width: 46px; height: 46px; }
-      body.co-the #panel { height: 0; overflow: hidden; border: 0; }
-      body.co-the #map { top: 108px; }
-      body.co-the #lopBanDo { top: 118px; }
-      body.co-the #nutViTri { top: 164px; }
-      body.co-the #hakNguoiDungChip { display: none !important; }
-      #chuGiai { display: none; }
-      #lopBanDo { top: calc(108px + 34vh + 10px); }
-      #nutViTri { top: calc(108px + 34vh + 56px); }
-      .leaflet-top.leaflet-right { top: 100px; }
-      #chanDoan { left: 10px; }
+    /* Panel trái cố định */
+    #panel {
+      position: fixed; top: 0; left: 0; width: 320px; height: 100vh;
+      background: var(--card-bg, #fff); border-right: 1px solid var(--vien, #ddd); overflow-y: auto;
+      padding: 14px; z-index: 1000;
     }
+    /* Bản đồ chiếm phần còn lại */
+    #map { position: fixed; top: 0; left: 320px; right: 0; bottom: 0; }
+
+    h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--chu-chinh, #1f2937); }
+
+    .btn {
+      display: block; width: 100%; padding: 9px 12px; margin-bottom: 8px;
+      border: none; border-radius: 6px; font-size: 13px; font-weight: 700;
+      cursor: pointer; text-align: center;
+    }
+    .btn-green { background: #2563eb; color: #fff; }
+    .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    #searchInput {
+      width: 100%; padding: 8px 10px; margin-bottom: 8px;
+      border: 1px solid var(--vien, #ddd); border-radius: 6px; font-size: 13px;
+    }
+    #sel {
+      width: 100%; height: 160px; padding: 4px;
+      border: 1px solid var(--vien, #ddd); border-radius: 6px; font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    #info {
+      background: var(--ok-bg, #dcfce7); border-left: 4px solid #2563eb;
+      padding: 10px; border-radius: 4px; font-size: 12px;
+      margin-bottom: 10px; line-height: 1.6;
+    }
+    #info.err { border-left-color: #dc2626; background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); }
+
+    .row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--vien, #eee); padding: 4px 0; }
+    .row b { color: var(--chu-chinh, #1f2937); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+    th { background: #1f2937; color: #fff; padding: 5px; text-align: left; }
+    td { border-bottom: 1px solid var(--vien, #eee); padding: 5px; }
+    tr:hover td { background: var(--ok-bg, #dcfce7); cursor: pointer; color: var(--info-chu, #2563eb); font-weight: 600; }
+
+    #chanDoan { font-size: 10px; color: var(--chu-phu, #999); margin-bottom: 6px; }
+    #timestamp { font-size: 10px; color: var(--chu-phu, #aaa); margin-bottom: 6px; }
+
+    /* Menu điều hướng gọn — không dùng flex chain để tránh lại lỗi bản đồ trắng */
+    #navMenu { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+    #navMenu a {
+      flex: 1; min-width: 60px; text-align: center; padding: 7px 4px;
+      background: var(--nen-phu, #f0f0f0); border-radius: 6px; text-decoration: none;
+      color: var(--chu-chinh, #444); font-size: 11px; font-weight: 600;
+    }
+    #navMenu a.active { background: #1f2937; color: #fff; }
+    #navMenu a:hover { background: #2563eb; color: #fff; }
   </style>
 <?!= include_('GiaoDien_Chung') ?>
 </head>
@@ -106,95 +73,72 @@
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
 <?!= include_('PhanQuyen_JS') ?>
 
-<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
-<header id="bdDau">
-  <h1>Bản đồ GPS</h1>
-  <span id="bdDem">Đang tải…</span>
-  <span class="gian"></span>
-  <label for="locTinhTrang">Tình trạng</label>
-  <select id="locTinhTrang" onchange="veTatCa_()"><option value="">Tất cả</option></select>
-  <span id="timestamp" role="status"></span>
-  <button type="button" class="nut" id="syncBtn" onclick="load()">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"></path></svg>
-    Tải lại
-  </button>
-</header>
-<aside id="panel" aria-label="Danh sách lô rừng">
-  <div id="panelDau">
-    <input type="search" id="searchInput" placeholder="Mã rừng, chủ rừng, số HĐ…" aria-label="Tìm lô rừng" oninput="onSearch()">
-    <div id="locGps" role="group" aria-label="Lọc theo GPS">
-      <button type="button" data-loc="" aria-pressed="true">Tất cả</button>
-      <button type="button" data-loc="co" aria-pressed="false">Có GPS</button>
-      <button type="button" data-loc="thieu" aria-pressed="false">Thiếu GPS</button>
-    </div>
-    <div id="info" role="status">Đang tải dữ liệu…</div>
+<div id="panel">
+  <h2>🗺️ Bản đồ GPS Rừng</h2>
+  <div id="navMenu">
+    <a href="<?= baseUrl ?>?page=tongquan">🏠 Menu chính</a>
+    <a href="<?= baseUrl ?>?page=tracuu">🔍 Tra cứu</a>
+    <a href="<?= baseUrl ?>?page=hinhanh">🖼️ Hình ảnh</a>
+    <a href="<?= baseUrl ?>?page=map" class="active">🗺️ Bản đồ</a>
+    <a href="<?= baseUrl ?>?page=kiemtra">🔎 Kiểm tra</a>
   </div>
-  <div id="dsLo"></div>
-  <div id="panelCuoi">Bấm 1 lô trong danh sách hoặc trên bản đồ để xem chi tiết.</div>
-</aside>
+  <div id="timestamp"></div>
+  <div id="chanDoan"></div>
+  <button class="btn btn-green" id="syncBtn" onclick="load()">⚡ TẢI DỮ LIỆU HỆ THỐNG</button>
+  <input type="text" id="searchInput" placeholder="🔍 Nhập Mã Rừng hoặc Tên..." onkeyup="onSearch()">
+  <select id="sel" size="8" onchange="showLand()"></select>
+  <div id="info">Bấm "TẢI DỮ LIỆU" rồi chọn lô rừng để xem chi tiết.</div>
+  <table>
+    <thead><tr><th>STT</th><th>Lat</th><th>Lng</th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+
 <div id="map"></div>
-<div id="lopBanDo" class="bd-noi" role="group" aria-label="Lớp bản đồ">
-  <button type="button" data-lop="veTinh" aria-pressed="true">Ảnh vệ tinh</button>
-  <button type="button" data-lop="duong" aria-pressed="false">Bản đồ đường</button>
-</div>
-<button type="button" id="nutViTri" class="bd-noi" aria-label="Về vị trí của tôi" title="Về vị trí của tôi">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle><path d="M12 1v3M12 20v3M1 12h3M20 12h3"></path></svg>
-</button>
-<div id="chuGiai" class="bd-noi" aria-label="Chú giải">
-  <b>Chú giải</b>
-  <span><i style="border-color:#2563eb;background:rgba(37,99,235,.2)"></i>Đang thực hiện</span>
-  <span><i style="border-color:#b45309;background:rgba(180,83,9,.2)"></i>Chờ thực hiện</span>
-  <span><i style="border-color:#16a34a;background:rgba(22,163,74,.2)"></i>Hoàn thành / thanh lý</span>
-  <span><i style="border-color:#6b7280;border-style:dashed;background:rgba(107,114,128,.2)"></i>Đã hủy</span>
-</div>
-<article id="theChiTiet" class="bd-noi" aria-label="Chi tiết lô đang chọn" aria-live="polite"></article>
-<div id="chanDoan"></div>
+
 <script>
-  /* ---- Leaflet ---- */
-  var map = L.map('map', { zoomControl: false }).setView([15.77, 108.16], 13);
-  L.control.zoom({ position: 'topright' }).addTo(map);
+  /* ---- Leaflet init ---- */
+  var map = L.map('map', { zoomControl: true }).setView([15.77, 108.16], 13);
+
   var lopVeTinh = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Tiles © Esri', maxZoom: 19, maxNativeZoom: 17 } // vùng rừng xa không có ảnh Esri độ phân giải cao -> phóng từ mức 17
+    { attribution: 'Tiles © Esri', maxZoom: 19, maxNativeZoom: 17 } // ⚠️ maxNativeZoom: nhiều vùng rừng ở xa không có ảnh vệ tinh Esri độ phân giải cao — nếu để Leaflet tự tải tile vượt mức ảnh gốc thực tế sẽ vỡ/lỗi hiển thị khi phóng to; giới hạn ở 17 để Leaflet TỰ PHÓNG TO MƯỢT từ ảnh gốc thay vì cố tải tile không tồn tại
   ).addTo(map);
-  var lopOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19, maxNativeZoom: 18 });
+
+  var lopOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19, maxNativeZoom: 18 // OSM có độ phủ tốt hơn nhưng vẫn giới hạn dưới maxZoom 1 mức để an toàn
+  });
+
+  L.control.layers({ 'Ảnh vệ tinh': lopVeTinh, 'Bản đồ đường': lopOSM }).addTo(map);
+
+  /* Đảm bảo bản đồ luôn đúng kích thước sau khi DOM ổn định */
   setTimeout(function () { map.invalidateSize(); chanDoan(); }, 400);
   window.addEventListener('resize', function () { map.invalidateSize(); });
 
-  document.querySelectorAll('#lopBanDo button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var veTinh = b.getAttribute('data-lop') === 'veTinh';
-      if (veTinh) { map.removeLayer(lopOSM); lopVeTinh.addTo(map); } else { map.removeLayer(lopVeTinh); lopOSM.addTo(map); }
-      document.querySelectorAll('#lopBanDo button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-    });
-  });
-  var viTriToi = null;
-  document.getElementById('nutViTri').addEventListener('click', function () { map.locate({ setView: true, maxZoom: 17 }); });
-  map.on('locationfound', function (e) { if (viTriToi) map.removeLayer(viTriToi); viTriToi = L.circleMarker(e.latlng, { radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map); });
-  map.on('locationerror', function () { setInfo('Không lấy được vị trí của bạn (trình duyệt chưa cho phép định vị).', true); });
-
   /* ---- Dữ liệu ---- */
   var groups = {};
-  var lopLo = L.layerGroup().addTo(map);
-  var hinhTheoId = {};
-  var idDangChon = '', curMarker = null, diemChon = null;
-  var locGps = '';
+  var curPoly = null, curMarker = null;
   var searchTimer = null;
-  var MAU_TT = [[/hủy/i, '#6b7280', true], [/thanh lý|hoàn thành/i, '#16a34a'], [/chờ/i, '#b45309'], [/./, '#2563eb']];
-  function mauTT_(tt) { for (var i = 0; i < MAU_TT.length; i++) if (MAU_TT[i][0].test(tt || 'Đang')) return MAU_TT[i]; return MAU_TT[3]; }
-  function esc_(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-  function goc_() { var el = document.getElementById('hakPhanQuyen'); return el ? (el.getAttribute('data-base') || '') : ''; }
 
-  /* ---- Chẩn đoán ảnh nền ---- */
+  /* ---- Chẩn đoán ---- */
   var soTile = 0;
   lopVeTinh.on('tileload', function () { soTile++; });
-  lopVeTinh.on('tileerror', function () { document.getElementById('chanDoan').textContent = 'Không tải được ảnh vệ tinh — thử "Bản đồ đường" hoặc đổi mạng.'; });
+  lopVeTinh.on('tileerror', function () {
+    document.getElementById('chanDoan').textContent =
+      '⚠️ Không tải được ảnh vệ tinh — thử chuyển sang "Bản đồ đường" hoặc đổi mạng.';
+  });
   function chanDoan() {
     setTimeout(function () {
       var el = document.getElementById('chanDoan');
-      var w = document.getElementById('map').offsetWidth, h = document.getElementById('map').offsetHeight;
-      if (w < 50 || h < 50) el.textContent = 'Lỗi hiển thị: khung bản đồ ' + w + '×' + h + 'px — báo quản trị để sửa.';
-      else if (soTile === 0 && !el.textContent) el.textContent = 'Chưa tải được ảnh nền bản đồ — kiểm tra mạng.';
+      var w = document.getElementById('map').offsetWidth;
+      var h = document.getElementById('map').offsetHeight;
+      if (w < 50 || h < 50) {
+        el.textContent = '❌ Lỗi CSS: #map ' + w + '×' + h + 'px — báo mình để sửa.';
+      } else if (soTile === 0) {
+        el.textContent = '⚠️ Container OK (' + w + '×' + h + ') nhưng chưa tải được tile.';
+      } else {
+        el.textContent = '✅ Bản đồ ' + w + '×' + h + 'px, ' + soTile + ' tile đã tải.';
+      }
     }, 2500);
   }
 
@@ -202,150 +146,105 @@
   function load() {
     var btn = document.getElementById('syncBtn');
     btn.disabled = true;
-    setInfo('Đang tải dữ liệu…', false);
+    setInfo('⌛ Đang tải dữ liệu...', false);
+
     hakRun_()
       .withSuccessHandler(function (res) {
         groups = res || {};
-        var tts = {};
-        Object.keys(groups).forEach(function (id) { tts[(groups[id].details || {}).tinhTrang || 'Đang thực hiện'] = true; });
-        var sel = document.getElementById('locTinhTrang'), cu = sel.value;
-        sel.innerHTML = '<option value="">Tất cả</option>' + Object.keys(tts).sort().map(function (t) { return '<option>' + esc_(t) + '</option>'; }).join('');
-        sel.value = cu;
-        veTatCa_();
+        filterList('');
+        setInfo('✅ Sẵn sàng — ' + Object.keys(groups).length + ' mã rừng. Chọn từ danh sách để xem.', false);
         btn.disabled = false;
       })
       .withFailureHandler(function (err) {
-        setInfo('Lỗi: ' + (err && err.message ? err.message : err), true);
+        setInfo('❌ Lỗi: ' + (err && err.message ? err.message : err), true);
         btn.disabled = false;
       })
       .getMapData();
+
     hakRun_().withSuccessHandler(function (iso) {
       if (iso) {
         var phut = Math.round((new Date().getTime() - new Date(iso).getTime()) / 60000);
-        document.getElementById('timestamp').textContent = 'Cập nhật ' + (phut < 1 ? 'vừa xong' : phut < 60 ? phut + ' phút trước' : Math.floor(phut / 60) + ' giờ trước');
+        var txt = phut < 1 ? 'vừa xong' : phut < 60 ? phut + ' phút trước' : Math.floor(phut / 60) + ' giờ trước';
+        document.getElementById('timestamp').textContent = '🕓 Cập nhật: ' + txt;
       }
     }).withFailureHandler(function (err) { console.error('layThoiGianCapNhatBanDo:', err); }).layThoiGianCapNhatBanDo();
   }
 
-  /* ---- Lọc ---- */
-  function onSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(veTatCa_, 200); }
-  document.querySelectorAll('#locGps button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      locGps = b.getAttribute('data-loc');
-      document.querySelectorAll('#locGps button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-      veTatCa_();
-    });
-  });
-  function khop_(id) {
-    var d = groups[id], ct = d.details || {};
-    var kw = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-    var tt = document.getElementById('locTinhTrang').value;
-    if (kw && ((ct.maRung || id) + ' ' + (ct.ten || '') + ' ' + (ct.soHD || '')).toLowerCase().indexOf(kw) === -1) return false;
-    if (tt && (ct.tinhTrang || 'Đang thực hiện') !== tt) return false;
-    if (locGps === 'co' && d.coords.length < 3) return false;
-    if (locGps === 'thieu' && d.coords.length >= 3) return false;
-    return true;
+  /* ---- Tìm kiếm ---- */
+  function onSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      filterList(document.getElementById('searchInput').value);
+    }, 200);
   }
 
-  /* ---- Vẽ danh sách + mọi lô trên bản đồ ---- */
-  function veTatCa_() {
-    lopLo.clearLayers(); hinhTheoId = {};
-    var ds = Object.keys(groups).filter(khop_);
-    var htmlDs = '';
-    ds.forEach(function (id) {
-      var d = groups[id], ct = d.details || {}, m = mauTT_(ct.tinhTrang), du = d.coords.length >= 3;
-      htmlDs += '<button type="button" class="lo' + (id === idDangChon ? ' chon' : '') + '" data-id="' + esc_(id) + '">' +
-        '<span class="cham" style="background:' + m[1] + '"></span>' +
-        '<span class="chu"><span class="ten">[' + esc_(ct.maRung || id) + '] ' + esc_(ct.ten || '') + '</span>' +
-        '<span class="phu">HĐ ' + esc_(ct.soHD || '—') + (ct.diaChi ? ' · ' + esc_(ct.diaChi) : '') + '</span></span>' +
-        '<span class="gps ' + (du ? 'co' : 'thieu') + '">' + (du ? d.coords.length + ' điểm' : d.coords.length + '/4') + '</span></button>';
-      if (!d.coords.length) return;
-      var lls = d.coords.map(function (p) { return [p.lat, p.lng]; });
-      var hinh = du
-        ? L.polygon(lls, { color: m[1], weight: 2, fillOpacity: 0.2, dashArray: m[2] ? '6 5' : null })
-        : L.circleMarker(lls[0], { radius: 7, color: m[1], weight: 2, fillOpacity: 0.35 });
-      hinh.on('click', function () { chonLo_(id, false); });
-      hinh.bindTooltip(esc_(ct.maRung || id) + ' · ' + esc_(ct.ten || ''), { sticky: true });
-      hinh.addTo(lopLo);
-      hinhTheoId[id] = hinh;
-    });
-    var dsEl = document.getElementById('dsLo');
-    dsEl.innerHTML = htmlDs || '<div style="padding:18px 14px;color:var(--chu-phu,#6b7280);font-size:13px">Không có lô rừng nào khớp bộ lọc.</div>';
-    dsEl.querySelectorAll('.lo').forEach(function (b) { b.addEventListener('click', function () { chonLo_(b.getAttribute('data-id'), true); }); });
-    var tong = Object.keys(groups).length, coGps = Object.keys(groups).filter(function (id) { return groups[id].coords.length >= 3; }).length;
-    document.getElementById('bdDem').textContent = tong + ' lô rừng · ' + coGps + ' lô đủ GPS';
-    setInfo(ds.length === tong ? '' : 'Đang hiện ' + ds.length + '/' + tong + ' lô theo bộ lọc.', false);
-    if (idDangChon && hinhTheoId[idDangChon]) toDam_(idDangChon);
-    else if (!idDangChon && lopLo.getLayers().length) { try { map.fitBounds(L.featureGroup(lopLo.getLayers()).getBounds(), { padding: [40, 40], maxZoom: 16 }); } catch (e) { /* bỏ qua */ } }
+  function filterList(q) {
+    var kw = (q || '').toLowerCase();
+    var sel = document.getElementById('sel');
+    sel.innerHTML = '';
+    for (var id in groups) {
+      var d = groups[id];
+      var label = ((d.details.maRung || '') + ' ' + (d.details.ten || '')).toLowerCase();
+      if (!kw || label.includes(kw)) {
+        var opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = '[' + d.details.maRung + '] ' + d.details.ten;
+        sel.appendChild(opt);
+      }
+    }
   }
 
-  function toDam_(id) {
-    Object.keys(hinhTheoId).forEach(function (k) {
-      var h = hinhTheoId[k], m = mauTT_(((groups[k] || {}).details || {}).tinhTrang);
-      if (h.setStyle) h.setStyle(k === id ? { weight: 4, fillOpacity: 0.45 } : { weight: 2, fillOpacity: 0.2, color: m[1] });
-    });
-    if (hinhTheoId[id] && hinhTheoId[id].bringToFront) hinhTheoId[id].bringToFront();
-  }
-
-  /* ---- Chọn 1 lô ---- */
-  function chonLo_(id, bay) {
+  /* ---- Hiển thị lô rừng ---- */
+  function showLand() {
+    var id = document.getElementById('sel').value;
     var d = groups[id];
     if (!d) return;
-    idDangChon = id;
-    document.querySelectorAll('#dsLo .lo').forEach(function (b) { b.classList.toggle('chon', b.getAttribute('data-id') === id); });
+
+    if (curPoly) { map.removeLayer(curPoly); curPoly = null; }
     if (curMarker) { map.removeLayer(curMarker); curMarker = null; }
-    if (diemChon) { map.removeLayer(diemChon); diemChon = null; }
-    toDam_(id);
-    var ct = d.details || {};
+
+    var info = document.getElementById('info');
+    info.className = '';
+    info.innerHTML =
+      '<b style="font-size:14px;color:var(--info-chu, #2563eb)">' + (d.details.ten || 'N/A') + '</b><br>' +
+      '<div class="row"><span>Mã rừng</span><b>' + (d.details.maRung || id) + '</b></div>' +
+      '<div class="row"><span>Số HĐ</span><b>' + (d.details.soHD || 'N/A') + '</b></div>' +
+      '<div class="row"><span>DT ký HĐ</span><b style="color:var(--info-chu, #2563eb)">' + fmt(d.details.dtKyHD) + ' m²</b></div>' +
+      '<div class="row"><span>DT GPS</span><b style="color:var(--err-chu, #dc2626)">' + fmt(d.details.dtGPS) + ' m²</b></div>';
+
+    /* Vẽ đa giác hoặc điểm */
     if (d.coords.length >= 3) {
-      diemChon = L.layerGroup(d.coords.map(function (p) { return L.circleMarker([p.lat, p.lng], { radius: 5, color: '#2563eb', weight: 3, fillColor: '#fff', fillOpacity: 1 }); })).addTo(map);
-      if (bay) map.fitBounds(L.latLngBounds(d.coords.map(function (p) { return [p.lat, p.lng]; })), { padding: [60, 60] });
-    } else if (d.coords.length > 0 && bay) {
+      var lls = d.coords.map(function (p) { return [p.lat, p.lng]; });
+      curPoly = L.polygon(lls, { color: '#f1c40f', weight: 3, fillOpacity: 0.4 }).addTo(map);
+      map.fitBounds(curPoly.getBounds(), { padding: [50, 50] });
+    } else if (d.coords.length > 0) {
+      curMarker = L.marker([d.coords[0].lat, d.coords[0].lng]).addTo(map);
       map.setView([d.coords[0].lat, d.coords[0].lng], 17);
     }
-    var tamLat = 0, tamLng = 0;
-    d.coords.forEach(function (p) { tamLat += p.lat; tamLng += p.lng; });
-    var coTam = d.coords.length > 0;
-    if (coTam) { tamLat /= d.coords.length; tamLng /= d.coords.length; }
-    var base = goc_();
-    var lkHD = base && ct.soHD ? base + '?page=tracuu&q=' + encodeURIComponent(ct.soHD) : '';
-    var lkAnh = base && ct.idHD ? base + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) : '';
-    var tt = ct.tinhTrang || 'Đang thực hiện';
-    var the = document.getElementById('theChiTiet');
-    the.innerHTML =
-      '<div class="ct-dau"><div><h2>' + esc_(ct.ten || 'Chưa rõ chủ rừng') + '</h2><div class="phu">Mã rừng ' + esc_(ct.maRung || id) + (ct.diaChi ? ' · ' + esc_(ct.diaChi) : '') + '</div></div>' +
-      '<button type="button" id="dongThe" aria-label="Đóng">✕</button></div>' +
-      '<div class="ct-luoi">' +
-        '<div><span>Số HĐ</span><b>' + esc_(ct.soHD || '—') + '</b></div>' +
-        '<div><span>Tình trạng</span><span class="badge-trang-thai" data-tinh-trang="' + esc_(tt) + '" style="display:inline-flex;margin:0">' + esc_(tt) + '</span></div>' +
-        '<div><span>Diện tích ký HĐ</span><b>' + fmt(ct.dtKyHD) + ' m²</b></div>' +
-        '<div><span>Diện tích theo GPS</span><b>' + fmt(ct.dtGPS) + ' m²</b></div>' +
-      '</div>' +
-      '<table><thead><tr><th scope="col">Điểm</th><th scope="col">Vĩ độ</th><th scope="col">Kinh độ</th></tr></thead><tbody id="tbl">' +
-      (d.coords.length ? d.coords.map(function (p, i) { return '<tr class="diem" data-i="' + i + '" tabindex="0"><td>Góc ' + (i + 1) + '</td><td>' + p.lat.toFixed(6) + '</td><td>' + p.lng.toFixed(6) + '</td></tr>'; }).join('')
-        : '<tr><td colspan="3">Lô này chưa có tọa độ GPS.</td></tr>') +
-      '</tbody></table>' +
-      '<div class="ct-nut">' +
-        (lkHD ? '<a class="nut nut-chinh" target="_top" href="' + esc_(lkHD) + '">Mở hợp đồng</a>' : '') +
-        (lkAnh ? '<a class="nut" target="_top" href="' + esc_(lkAnh) + '">Xem ảnh</a>' : '') +
-        (coTam ? '<a class="nut" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + tamLat.toFixed(6) + ',' + tamLng.toFixed(6) + '">Chỉ đường</a>' : '') +
-      '</div>';
-    the.classList.add('hien');
-    document.body.classList.add('co-the'); setTimeout(function () { map.invalidateSize(); }, 50);
-    document.getElementById('dongThe').onclick = function () { the.classList.remove('hien'); document.body.classList.remove('co-the'); setTimeout(function () { map.invalidateSize(); }, 50); };
-    the.querySelectorAll('tr.diem').forEach(function (tr) {
-      var i = +tr.getAttribute('data-i'), p = d.coords[i];
-      var mo = function () { focusPoint(p.lat, p.lng, i, p.addr || ''); };
-      tr.addEventListener('click', mo);
-      tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') mo(); });
+
+    /* Bảng tọa độ */
+    var tbody = document.getElementById('tbl');
+    tbody.innerHTML = '';
+    d.coords.forEach(function (p, i) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+        '<td style="color:var(--info-chu, #2563eb)">' + p.lat.toFixed(6) + '</td>' +
+        '<td style="color:var(--err-chu, #dc2626)">' + p.lng.toFixed(6) + '</td>';
+      (function (lat, lng, addr) {
+        tr.onclick = function () { focusPoint(lat, lng, i, addr); };
+      })(p.lat, p.lng, p.addr || '');
+      tbody.appendChild(tr);
     });
-    if (typeof hakToMauTinhTrang_ === 'function') hakToMauTinhTrang_(the);
   }
 
   function focusPoint(lat, lng, i, addr) {
     if (curMarker) map.removeLayer(curMarker);
     curMarker = L.marker([lat, lng]).addTo(map);
-    curMarker.bindPopup('<b>Góc ' + (i + 1) + '</b><br>' + (addr ? esc_(addr) + '<br>' : '') + lat.toFixed(6) + ', ' + lng.toFixed(6)).openPopup();
+    curMarker.bindPopup(
+      '<b>Điểm ' + (i + 1) + '</b><br>' +
+      (addr ? addr + '<br>' : '') +
+      lat.toFixed(6) + ', ' + lng.toFixed(6)
+    ).openPopup();
     map.setView([lat, lng], 19);
   }
 

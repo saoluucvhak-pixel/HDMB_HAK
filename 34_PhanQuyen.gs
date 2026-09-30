@@ -383,7 +383,6 @@ function _bangQuyenApi_() {
   _bangQuyenApiCache_ = {
     // --- Xem: tổng quan, bản đồ, báo cáo, tra cứu, trợ lý AI ---
     LAY_TONG_QUAN_HOP_DONG: r(LAY_TONG_QUAN_HOP_DONG_, X),
-    TIEN_DO_HO_SO_HD: r(TIEN_DO_HO_SO_HD_, X),                 // giao diện mới: thanh 5 bước ở trang Nhập liệu
     getMapData: r(getMapData_, X),
     layThoiGianCapNhatBanDo: r(layThoiGianCapNhatBanDo_, X),
     TAI_TRANG_BAO_CAO_TONG_HOP: r(TAI_TRANG_BAO_CAO_TONG_HOP_, X),
