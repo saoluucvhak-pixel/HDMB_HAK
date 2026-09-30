@@ -558,6 +558,72 @@ try {
       /FILE=30_Page_TongQuanHopDong\|TRANG=tongquan\|PHIEN=\|/.test(b.html) && /TRANG=hopdongmc/.test(c.html), J([a, b, c, g]));
   });
   // ---------- Giao diện mới đợt 2: dữ liệu Tổng quan + tiến độ hồ sơ 5 bước ----------
+  // ---------- BT-01..: bảo trì — dòng nghi trùng & dòng mồ côi ----------
+  chay(function () {
+    const t = moi();
+    const nccSh = () => t.ss.getSheetByName('HD_NCC'), rungSh = () => t.ss.getSheetByName('HD_RUNG');
+    const nccRows = () => nccSh().getDataRange().getValues().slice(1), rungRows = () => rungSh().getDataRange().getValues().slice(1);
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1', '2026-05-10');
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo 1', dienTichM2: 3000, donGia: 2000, khoiLuongDuKien: 36 }) + ')');
+    const B = t.tao('Nguyen A', '049000000001', '2222', 'A2', '2026-05-10'); // bấm tạo 2 lần: cùng CCCD + ngày ký, khác ID
+    t.tao('Tran C', '049000000003', '3333', 'C1');
+    // Dòng HD_NCC bị chép trùng nguyên văn (cùng ID_HD) do sửa tay trên Sheet
+    const dongA = nccRows().find(r => String(r[29]) === A.idHD);
+    nccSh().appendRow(dongA);
+    // Lô rừng chép trùng (cùng ID_RUNG)
+    const soLoA = rungRows().filter(r => String(r[0]) === A.idHD).length; // tạo HĐ tự sinh 1 lô + lô thêm ở trên
+    const loA = rungRows().find(r => String(r[0]) === A.idHD);
+    rungSh().appendRow(loA);
+    const kq = t.run('TIM_DONG_NGHI_TRUNG_()');
+    const nhomA = kq.hopDong.find(n => n.dong.some(d => d.idHD === A.idHD));
+    kiem('BT-01 tìm được 1 nhóm hợp đồng nghi trùng gồm 3 dòng (2 dòng cùng ID + 1 HĐ cùng CCCD & ngày ký), lý do đủ',
+      kq.hopDong.length === 1 && nhomA && nhomA.dong.length === 3 && nhomA.lyDo.indexOf('Cùng ID_HD') !== -1 && nhomA.lyDo.indexOf('Cùng CCCD chủ rừng + ngày ký') !== -1, J(kq.hopDong.map(n => [n.lyDo, n.dong.length])));
+    kiem('BT-02 tìm được lô rừng trùng cùng ID_RUNG, gợi ý giữ dòng trên', kq.loRung.length === 1 && kq.loRung[0].dong.length === 2 && kq.loRung[0].dong[0].goiYGiu === true && kq.loRung[0].dong[0].cheDoXoa === 'dong', J(kq.loRung));
+    // Chọn xóa hết cả nhóm -> bị chặn
+    const chan = t.run('XOA_DONG_NGHI_TRUNG_(' + J(nhomA.dong.map(d => ({ bang: d.bang, dong: d.dong, dau: d.dau }))) + ')');
+    kiem('BT-03 không cho xóa hết cả nhóm (phải giữ ít nhất 1 dòng), không xóa gì', !chan.thanhCong && nccRows().length === 4, J(chan));
+    // Dòng đã bị sửa sau khi xem -> bỏ qua
+    const saoA = nhomA.dong.filter(d => d.idHD === A.idHD)[1];
+    nccSh().getRange(saoA.dong, 5).setValue('Nguyen A (sửa)');
+    const cu = t.run('XOA_DONG_NGHI_TRUNG_(' + J([{ bang: 'HD_NCC', dong: saoA.dong, dau: saoA.dau }]) + ')');
+    kiem('BT-04 dòng đã đổi sau khi xem -> bỏ qua, không xóa', !cu.thanhCong && nccRows().length === 4 && /thay đổi/.test(J(cu.boQua)), J(cu));
+    // Quét lại, xóa dòng chép trùng cùng ID + hợp đồng trùng B (khác ID) + lô chép trùng
+    const kq2 = t.run('TIM_DONG_NGHI_TRUNG_()');
+    const n2 = kq2.hopDong[0].dong;
+    const chonXoa = n2.filter(d => d.idHD === B.idHD || (d.idHD === A.idHD && d.dong !== n2.find(x => x.idHD === A.idHD).dong)).concat([kq2.loRung[0].dong[1]]);
+    const x = t.run('XOA_DONG_NGHI_TRUNG_(' + J(chonXoa.map(d => ({ bang: d.bang, dong: d.dong, dau: d.dau }))) + ')');
+    const conNcc = nccRows().map(r => String(r[29]));
+    kiem('BT-05 xóa dòng trùng: còn đúng 1 dòng HĐ A (lô, TK của A còn nguyên), HĐ B bị xóa kèm TK, lô chép trùng bị xóa',
+      x.thanhCong && conNcc.filter(i => i === A.idHD).length === 1 && conNcc.indexOf(B.idHD) === -1 && conNcc.length === 2
+      && rungRows().filter(r => String(r[0]) === A.idHD).length === soLoA && t.stk().some(r => String(r[0]) === A.idHD) && !t.stk().some(r => String(r[0]) === B.idHD), J(x) + ' ' + J(conNcc));
+    const lt = t.run('LAY_DS_LUU_TRU_XOA_(20)');
+    kiem('BT-06 các dòng bị xóa đều được lưu trữ (khôi phục được)', lt.some(d => /trùng ID ở HD_NCC|trùng ID/.test(d.hanhDong)) && lt.some(d => d.idHD === B.idHD), J(lt.map(d => d.hanhDong)));
+    kiem('BT-07 quét lại không còn nhóm trùng', t.run('TIM_DONG_NGHI_TRUNG_()').soNhom === 0);
+  });
+
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const rungSh = t.ss.getSheetByName('HD_RUNG'), gpsSh = t.ss.getSheetByName('HD_GPS'), stkSh = t.ss.getSheetByName('HD_STK');
+    const gpsTruoc = gpsSh.getLastRow(); // tạo HĐ tự sinh 1 dòng GPS khung
+    const dongRung = Array(20).fill(''); dongRung[0] = 'HD_KHONG_CO'; dongRung[1] = 'MR_X'; dongRung[2] = 'RUNG_MOCOI_1'; dongRung[3] = 'X9';
+    rungSh.appendRow(dongRung);
+    gpsSh.appendRow(['RUNG_MOCOI_1', 'G1', 15.4, 108.3, '', '', 'X', '', '', '']);
+    gpsSh.appendRow(['RUNG_MOCOI_1', 'G2', 15.41, 108.31, '', '', 'X', '', '', '']);
+    stkSh.appendRow(['HD_KHONG_CO_2', 'HD_KHONG_CO_2', 'Y', '', '', '5555', 'VCB', '', '', '']);
+    const cd = t.run('CHAN_DOAN_MO_COI_TOAN_HE_THONG_()');
+    kiem('BT-08 chẩn đoán: 1 lô, 1 STK mồ côi (GPS gắn theo lô mồ côi chưa tính), có dấu vân tay dòng', cd.rung_moCoi.length === 1 && cd.gps_moCoi.length === 0 && cd.stk_moCoi.length === 1 && !!cd.rung_moCoi[0].dau, J(cd));
+    const ds = [{ loai: 'rung_moCoi', dong: cd.rung_moCoi[0].dong, dau: cd.rung_moCoi[0].dau }, { loai: 'stk_moCoi', dong: cd.stk_moCoi[0].dong, dau: cd.stk_moCoi[0].dau }, { loai: 'stk_moCoi', dong: 2, dau: 'sai' }];
+    const x = t.run('XOA_DONG_MO_COI_(' + J(ds) + ')');
+    kiem('BT-09 xóa lô mồ côi kéo theo 2 điểm GPS của lô đó, xóa STK mồ côi; dòng sai dấu bị bỏ qua; TK của A còn',
+      x.thanhCong && x.daXoa === 2 && x.daXoaKem === 2 && x.boQua.length === 1 && gpsSh.getLastRow() === gpsTruoc && t.stk().length === 1 && String(t.stk()[0][0]) === A.idHD, J(x));
+    kiem('BT-10 chẩn đoán lại sạch', t.run('CHAN_DOAN_MO_COI_TOAN_HE_THONG_()').tongSoVanDe === 0);
+    const kp = t.run('KHOI_PHUC_DU_LIEU_DA_XOA_(' + J(x.maDot) + ')');
+    kiem('BT-11 khôi phục đợt xóa mồ côi: lô, 2 GPS, STK trở lại', rungSh.getDataRange().getValues().some(r => r[2] === 'RUNG_MOCOI_1') && gpsSh.getLastRow() === gpsTruoc + 2 && t.stk().length === 2, J(kp));
+    const q = t.run('_bangQuyenApi_()');
+    kiem('BT-12 API bảo trì xóa trùng / mồ côi chỉ dành cho Quản trị', ['TIM_DONG_NGHI_TRUNG', 'XOA_DONG_NGHI_TRUNG', 'XOA_DONG_MO_COI'].every(k => q[k] && q[k].quyen === t.run('QUYEN.QUAN_TRI')));
+  });
+
   chay(function () {
     const t = moi();
     const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');

@@ -791,3 +791,18 @@ Theo bản mẫu đã duyệt (giữ bộ màu portal cũ). **Không đổi ph�
 **Chưa làm (cần đổi luồng lưu):** Nhập liệu 5 bước tuần tự thật sự (đang giữ hộp thoại 3 bước + thanh tiến độ 5 bước).
 
 **Triển khai:** chép `01_ContractManager.gs`, `GiaoDien_Chung.html`, `10_Page_BaoCao.html`, `13_HuongDan.html`, `24_Page_ThietLap.html`, `35_Page_TraCuuHinhAnh.html`; Deploy phiên bản mới. Không có file mới.
+
+## ✅ Cập nhật: Bảo trì — xóa dòng HD_NCC / HD_RUNG nghi trùng và dòng mồ côi (Thiết lập, Quản trị)
+
+Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng mồ côi, không tìm dòng trùng và không cho xóa.
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Tìm dòng nghi trùng | HD_NCC: **cùng ID_HD**, **cùng Số HĐ**, **cùng CCCD chủ rừng + ngày ký**. HD_RUNG: **cùng ID_RUNG**, **cùng hợp đồng + Mã rừng**, **cùng hợp đồng + địa chỉ + diện tích**. Gom nhóm bắc cầu, mỗi nhóm hiện lý do, số dữ liệu con (lô / TK / GPS / ảnh) và **gợi ý giữ** dòng có nhiều dữ liệu con nhất | 28_BaoTri_DongBo.gs (`TIM_DONG_NGHI_TRUNG_`) |
+| Xóa dòng nghi trùng | Tick chọn / "Chọn theo gợi ý". Trùng **cùng ID**: xóa đúng dòng thừa, dữ liệu con giữ nguyên. Trùng **khác ID**: xóa cả hợp đồng / cả lô kèm dữ liệu con (dùng lại `XOA_VINH_VIEN_HOP_DONG_` / `XOA_LO_RUNG_`). Chặn xóa hết nhóm; chặn xóa hết các dòng mang cùng 1 ID | 28 (`XOA_DONG_NGHI_TRUNG_`), 24 |
+| Xóa dòng mồ côi | Kết quả chẩn đoán có ô chọn từng dòng: mồ côi chọn sẵn, **thiếu ID không chọn sẵn**. Xóa lô rừng mồ côi kéo theo GPS / ảnh gắn theo lô đó | 28 (`XOA_DONG_MO_COI_`), 24 |
+| An toàn | Quét lại lúc xóa; mỗi dòng có **dấu vân tay** — dòng bị sửa/dịch sau khi xem thì bỏ qua. Mọi dòng xóa chép vào `LuuTru_DaXoa` trước (khôi phục được ở Thiết lập). Cập nhật cache báo cáo, Hồ sơ rừng, bản đồ. API chỉ Quản trị | 28, 34_PhanQuyen.gs |
+
+**Kiểm chứng:** 97/97 test máy chủ (thêm BT-01…BT-12: tìm nhóm, gợi ý giữ, chặn xóa hết nhóm, bỏ qua dòng đã đổi, xóa cùng ID giữ dữ liệu con, xóa khác ID kèm dữ liệu con, lưu trữ, xóa mồ côi kéo GPS, khôi phục lại, quyền API); `ui_trang_that.cjs` thêm 4 ca giao diện. Toàn bộ bộ test đạt.
+
+**Triển khai:** chép `28_BaoTri_DongBo.gs`, `34_PhanQuyen.gs`, `24_Page_ThietLap.html`; Deploy phiên bản mới.
