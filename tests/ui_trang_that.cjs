@@ -11,6 +11,11 @@ const giaLap = `<script>(function(){function taoRunner(){var ok=null;var r=new P
 const duBanDo = `<script>window.__du={getMapData:{
  "L1":{coords:[{lat:15.48,lng:108.30},{lat:15.481,lng:108.302},{lat:15.479,lng:108.303},{lat:15.478,lng:108.3}],details:{maRung:"L1",ten:"<b>Chủ A</b>",soHD:"HD1",tinhTrang:"Đang thực hiện",dtKyHD:1000,dtGPS:990,idHD:"ID1",diaChi:"Thôn 1"}},
  "L2":{coords:[{lat:15.49,lng:108.31}],details:{maRung:"L2",ten:"Chủ B",soHD:"HD2",tinhTrang:"Đã hủy",idHD:"ID2"}}},layThoiGianCapNhatBanDo:null};</script>`;
+const duHinhAnh = `<script>window.__du={LAY_ANH_TRA_CUU:{khachHang:{ten:"Chủ A",cccd:"049092012217"},tongAnh:5,tongHoSo:1,
+ hopDong:[{soHD:"HD1",idHD:"X1",ngayKy:"18/09/2026",tinhTrang:"Đang thực hiện",diaChiRung:"Thôn 1",soLo:2,
+  nhom:[{tieuDe:"Lô 1",anh:[{id:"a1",loai:"Ảnh hiện trường"},{id:"a2",loai:"Ảnh hiện trường"},{id:"a3",loai:"Ảnh GPS",lat:15.48,lng:108.3}]},
+        {tieuDe:"Lô 2",anh:[{id:"a4",loai:"Ảnh hiện trường"},{id:"a5",loai:"Ảnh GPS",lat:15.49,lng:108.31}]}],
+  hoSo:[{id:"h1",hoSoNguonGoc:"Giấy chứng nhận QSDĐ",soGiayTo:"CS 1",lo:"Lô 1"}]}]}};</script>`;
 const TRANG = [
   ['30_Page_TongQuanHopDong', 'tongquan', '', 'Tổng quan hợp đồng'], ['33_Page_TraCuuHopDong', 'tracuu', '', 'Tra cứu hợp đồng'],
   ['27_Page_HopDongMeCon', 'hopdongmc', '', 'Nhập liệu HĐ / Rừng / TK'], ['11_Page_NhapLieu', 'form', '', 'Nhập liệu HĐ / Rừng / TK'],
@@ -25,7 +30,7 @@ const TRANG = [
     let html;
     try { html = danhGia(file, { currentPage: trang, baseUrl: 'https://script.google.com/macros/s/X/exec', tabTrang: tab, phien: '', loiDangNhap: '' }); }
     catch (e) { kq.push([file + ': dựng template', e.message]); continue; }
-    html = html.replace(/<head>/i, '<head>' + giaLap + (trang === 'map' ? duBanDo : ''));
+    html = html.replace(/<head>/i, '<head>' + giaLap + (trang === 'map' ? duBanDo : trang === 'hinhanh' ? duHinhAnh : ''));
     const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
     await p.route(/^https?:\/\//, r => {
       const u = r.request().url();
@@ -47,6 +52,36 @@ const TRANG = [
       await p.fill('.hak-muc-luc input', 'telegram');
       const loc = await p.evaluate(() => ({ hien: [...document.querySelectorAll('.card')].filter(c => c.style.display !== 'none' && c.querySelector(':scope > h3')).length }));
       kq.push(['Thiết lập: ô tìm lọc còn thẻ Telegram', loc.hien >= 1 && loc.hien <= 3 ? true : JSON.stringify(loc)]);
+    }
+    if (trang === 'thietlap') {
+      await p.fill('.hak-muc-luc input', '');
+      const nh = await p.evaluate(() => {
+        const nhom = [...document.querySelectorAll('.hak-muc-luc .hak-ml-nhom')].map(x => x.textContent.trim());
+        const ml = [...document.querySelectorAll('.hak-muc-luc a')].map(a => a.getAttribute('href').slice(1));
+        const dom = [...document.querySelectorAll('[id^="hak_ml_"], .card > h3[id]')].map(h => h.id).filter(id => ml.indexOf(id) !== -1);
+        return { nhom, dauTien: nhom[0], cungThuTu: JSON.stringify(ml) === JSON.stringify(dom) };
+      });
+      kq.push(['Thiết lập: mục lục chia nhóm (Truy cập đầu tiên) và thẻ sắp đúng thứ tự mục lục', nh.nhom.length >= 4 && nh.dauTien === 'Truy cập' && nh.cungThuTu ? true : JSON.stringify(nh)]);
+    }
+    if (trang === 'huongdan') {
+      const hd = await p.evaluate(() => ({ phan: document.querySelectorAll('.hd-phan').length, buoc: [...document.querySelectorAll('.hd-buoc .hd-so')].map(x => x.textContent).join(','), tt: document.querySelectorAll('.warn.hd-tt').length, lu: document.querySelectorAll('.warn.hd-lu').length }));
+      kq.push(['Hướng dẫn: mỗi phần 1 thẻ, 5 thẻ bước đánh số, hộp lưu ý tô theo loại', hd.phan >= 8 && hd.buoc === '1,2,3,4,5' && hd.tt >= 2 && hd.lu >= 1 ? true : JSON.stringify(hd)]);
+    }
+    if (trang === 'baocao') {
+      const bc = await p.evaluate(() => {
+        renderTongHopWebapp({ soHopDong: 7, tongKhoiLuong: 1000, tongGiaTri: 5e8, tongKhoiLuongThucHien: 250, tongGiaTriThucHien: 1e8, chiTiet: [], trang: 1, tongTrang: 1, tongSo: 0 });
+        return { kl: document.getElementById('kpiKLDaTH').textContent.trim(), rong: document.getElementById('thanhKLDaTH').style.width, loc: !!document.querySelector('.hak-loc-gon') };
+      });
+      kq.push(['Báo cáo: ô KPI "Đã thực hiện" + thanh tiến độ 25%, bộ lọc gọn', bc.kl !== '0' && bc.kl !== '—' && bc.rong === '25%' && bc.loc ? true : JSON.stringify(bc)]);
+    }
+    if (trang === 'hinhanh') {
+      await p.evaluate(() => haMoAnh_('X1', false));
+      await p.waitForTimeout(300);
+      const dem = () => p.evaluate(() => [...document.querySelectorAll('.ha-o')].filter(o => o.style.display !== 'none').length);
+      const tatCa = await dem();
+      await p.click('#haLocLoai button[data-loai="gps"]');
+      const gps = await dem();
+      kq.push(['Tra cứu hình ảnh: lọc "Ảnh GPS" chỉ còn 2 ảnh (không mất ảnh khác khi bỏ lọc)', tatCa >= 5 && gps === 2 ? true : JSON.stringify({ tatCa, gps })]);
     }
     if (trang === 'map') {
       const bd = await p.evaluate(() => ({ lo: document.querySelectorAll('#dsLo .lo').length, hinh: typeof lopLo !== 'undefined' ? lopLo.getLayers().length : -1, xss: !!document.querySelector('#dsLo b') }));

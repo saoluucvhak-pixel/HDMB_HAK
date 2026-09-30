@@ -776,3 +776,18 @@ Theo bản mẫu đã duyệt (giữ bộ màu portal cũ). **Không đổi ph�
 **Kiểm chứng:** 84/84 test máy chủ (thêm 4: dữ liệu Tổng quan, tiến độ hồ sơ, ID không có, quyền API); test giao diện mới `tests/ui_giao_dien_dot2.cjs` 10 ca (Tổng quan: 4 chỉ số / % / 6 nút / tiến độ dòng / escape tên; Tra cứu 2 cột màn rộng + giữ 1 cột trên điện thoại; thanh 5 bước + bấm bước mở thẻ không gọi lại máy chủ; OCR: khóa ô khớp, chỉ áp dụng trường đã chọn, phát sự kiện input, Esc bỏ qua; bản đồ điện thoại mở/đóng thẻ). Toàn bộ bộ test đạt.
 
 **Triển khai:** chép `01_ContractManager.gs`, `34_PhanQuyen.gs`, `GiaoDien_Chung.html`, `MapContainer.html`, `07_Form_HopDong.html`, `27`, `30`, `33`; Deploy phiên bản mới. Không có file mới.
+
+## ✅ Cập nhật: Giao diện mới — đợt 3 (Báo cáo, Tra cứu hình ảnh, Thiết lập, Hướng dẫn theo mẫu)
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| Báo cáo tổng hợp | Bộ lọc gọn dạng lưới (nút nằm cùng hàng); ô chỉ số theo mẫu: thêm **Đã thực hiện (tấn)** và **Giá trị đã thực hiện** có thanh tiến độ + % so với dự kiến; các ô GPS đủ / Hồ sơ đủ / Có ảnh có thanh tỉ lệ; nhãn tình trạng màu. Máy chủ `_tongHopWebappTuDraft_` trả thêm `tongKhoiLuongThucHien`, `tongGiaTriThucHien` (không đổi trường cũ) | 10, 01_ContractManager.gs, GiaoDien_Chung |
+| Tra cứu hình ảnh | Thanh lọc: nút **Ảnh hiện trường / Ảnh GPS / Hồ sơ** kèm số lượng + chọn lô; chỉ ẩn/hiện trên trang, không gọi lại máy chủ; xuất PDF, xem ảnh giữ nguyên | 35 |
+| Thiết lập | Mục lục **chia nhóm** (Truy cập · Kết nối · Dữ liệu & bảo trì · Nhật ký & khôi phục · Định dạng & xuất · Khác), các thẻ được sắp theo đúng nhóm; bảng người dùng có chữ viết tắt, nhãn vai trò/trạng thái màu. Chức năng từng thẻ không đổi | 24, GiaoDien_Chung (`hakTaoMucLuc_` thêm tùy chọn `nhom`) |
+| Hướng dẫn | Mỗi phần 1 thẻ; "Bước 1…5" của quy trình nhập liệu thành **thẻ bước đánh số**; hộp lưu ý tô màu theo loại (⚠️ cảnh báo đỏ, 🔒 vàng, 💳/✅ xanh). Nội dung chữ giữ nguyên | 13 |
+
+**Kiểm chứng:** 85/85 test máy chủ (thêm: tổng đã thực hiện chỉ cộng HĐ đang/chờ); `tests/ui_trang_that.cjs` thêm 4 ca (Báo cáo KPI + thanh 25% + bộ lọc gọn; lọc Ảnh GPS còn 2 ảnh; Thiết lập nhóm + thứ tự thẻ khớp mục lục; Hướng dẫn thẻ phần/bước/lưu ý). Toàn bộ bộ test đạt.
+
+**Chưa làm (cần đổi luồng lưu):** Nhập liệu 5 bước tuần tự thật sự (đang giữ hộp thoại 3 bước + thanh tiến độ 5 bước).
+
+**Triển khai:** chép `01_ContractManager.gs`, `GiaoDien_Chung.html`, `10_Page_BaoCao.html`, `13_HuongDan.html`, `24_Page_ThietLap.html`, `35_Page_TraCuuHinhAnh.html`; Deploy phiên bản mới. Không có file mới.

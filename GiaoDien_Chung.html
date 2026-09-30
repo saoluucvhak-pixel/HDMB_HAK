@@ -35,6 +35,7 @@
   html body .card { border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 20px 22px; box-shadow: none; }
   html body .card h3 { font-size: 16px; font-weight: 700; }
   html body .card > p:not([class]) { font-size: 14px; line-height: 1.55; }
+  html body .hint { font-size: 12.5px; line-height: 1.5; color: var(--chu-phu, #6b7280); }
   html body .modal-box { border-radius: 16px; }
 
   /* Thẻ (tab) */
@@ -126,6 +127,16 @@
   html body .hak-ocr .nut-hang { display: flex; gap: 8px; justify-content: flex-end; }
   html body .hak-ocr .nut-hang button { height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid var(--vien, #d1d5db); background: var(--card-bg, #fff); color: inherit; }
   html body .hak-ocr .nut-hang button.chinh { background: #2563eb; border-color: #2563eb; color: #fff; }
+  /* Bộ lọc gọn: các ô lọc xếp lưới 4 cột, nút một hàng (Báo cáo) */
+  html body .hak-loc-gon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; align-items: end; }
+  html body .hak-loc-gon > :not(.field-row) { grid-column: 1 / -1; }
+  html body .hak-loc-gon > h3 { margin-bottom: 0; }
+  html body .hak-loc-gon .field-row { display: contents; }
+  html body .hak-loc-gon .field { min-width: 0; }
+  html body .hak-loc-nut { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  html body .hak-loc-nut .gian { flex: 1; }
+  @media (max-width: 1000px) { html body .hak-loc-gon { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { html body .hak-loc-gon { grid-template-columns: minmax(0, 1fr); } }
   /* Mục lục dính bên trái trong trang dài (Thiết lập, Hướng dẫn) — dựng bằng hakTaoMucLuc_() */
   html body .hak-co-muc-luc { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
   html body .hak-muc-luc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card-bg, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
@@ -133,6 +144,7 @@
   html body .hak-muc-luc input { margin: 0 4px 8px 4px; padding: 8px 10px; border: 1px solid var(--vien, #d1d5db); border-radius: 9px; font-size: 13px; background: var(--nen-phu, #f9fafb); color: inherit; }
   html body .hak-muc-luc a { display: block; padding: 7px 10px; border-radius: 8px; color: var(--chu-chinh, #374151); text-decoration: none; font-size: 13.5px; line-height: 1.35; }
   html body .hak-muc-luc a:hover { background: var(--nen-phu, #f3f4f6); }
+  html body .hak-muc-luc .hak-ml-nhom { font-size: 11px; font-weight: 600; color: var(--chu-phu, #6b7280); text-transform: uppercase; letter-spacing: .05em; padding: 12px 10px 4px 10px; }
   html body .hak-muc-luc a.dang-xem { background: var(--info-bg, #dbeafe); color: var(--info-chu, #1e40af); font-weight: 600; }
   @media (max-width: 1000px) { html body .hak-co-muc-luc { display: block; } html body .hak-muc-luc { position: static; max-height: none; margin-bottom: 16px; } }
 </style>
@@ -285,8 +297,30 @@ function hakTaoMucLuc_(vung, tieuDe, tuyChon) {
   var nhan = document.createElement('div'); nhan.className = 'hak-ml-nhan'; nhan.textContent = tuyChon.nhan || 'Mục lục'; nav.appendChild(nhan);
   var o = null;
   if (tuyChon.timKiem) { o = document.createElement('input'); o.type = 'search'; o.placeholder = tuyChon.timKiem; o.setAttribute('aria-label', tuyChon.timKiem); nav.appendChild(o); }
+  var khoiCua = tuyChon.khoi || function (h) { return h; };
+  if (tuyChon.nhom) { // gom mục theo nhóm: sắp danh sách (và nếu yêu cầu, sắp cả khối nội dung) theo thứ tự nhóm
+    var thuTu = tuyChon.thuTuNhom || [];
+    var viTri = function (g) { var i = thuTu.indexOf(g); return i === -1 ? thuTu.length : i; };
+    ds = ds.map(function (h, i) { return { h: h, g: tuyChon.nhom(h), i: i }; })
+      .sort(function (a, b) { return viTri(a.g) - viTri(b.g) || a.i - b.i; })
+      .map(function (x) { x.h.setAttribute('data-hak-nhom', x.g); return x.h; });
+    if (tuyChon.sapKhoiTheoNhom) { // đưa các khối (thẻ) về đúng thứ tự nhóm, đặt tại vị trí khối đầu tiên hiện có
+      var cacKhoi = [];
+      ds.forEach(function (h) { var k = khoiCua(h); if (k && k.parentNode === noiDung && cacKhoi.indexOf(k) === -1) cacKhoi.push(k); });
+      var dau = cacKhoi.reduce(function (a, k) { return a.compareDocumentPosition(k) & Node.DOCUMENT_POSITION_PRECEDING ? k : a; }, cacKhoi[0]);
+      if (dau) {
+        var moc = document.createComment('hak-muc-luc');
+        noiDung.insertBefore(moc, dau);
+        cacKhoi.forEach(function (k) { noiDung.insertBefore(k, moc); });
+        noiDung.removeChild(moc);
+      }
+    }
+  }
+  var nhomTruoc = null;
   var lk = ds.map(function (h, i) {
     if (!h.id) h.id = 'hak_ml_' + i;
+    var g = h.getAttribute('data-hak-nhom');
+    if (g && g !== nhomTruoc) { var dn = document.createElement('div'); dn.className = 'hak-ml-nhom'; dn.textContent = g; nav.appendChild(dn); nhomTruoc = g; }
     var a = document.createElement('a');
     a.href = '#' + h.id;
     a.textContent = (h.textContent || '').replace(/^[^\wÀ-ỹ0-9]+/u, '').trim();
@@ -298,7 +332,7 @@ function hakTaoMucLuc_(vung, tieuDe, tuyChon) {
   vung.classList.add('hak-co-muc-luc');
   vung.appendChild(nav); vung.appendChild(noiDung);
   if (truTop && tuyChon.giuTieuDeTren) { vung.parentNode.insertBefore(truTop, vung); }
-  var khoi = tuyChon.khoi || function (h) { return h; };
+  var khoi = khoiCua;
   if (o) o.addEventListener('input', function () {
     var q = o.value.trim().toLowerCase();
     ds.forEach(function (h, i) {

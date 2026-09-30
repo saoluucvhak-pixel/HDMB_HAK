@@ -569,6 +569,9 @@ try {
     kiem('GD2 Tiến độ hồ sơ: đọc đúng số TK / số lô / cờ đủ hồ sơ-GPS-ảnh từ cache báo cáo',
       td.coDuLieu === true && td.soTaiKhoan === 1 && td.soLoRung === 1 && td.daDoGPSDu === false && td.coAnh === false, J(td));
     kiem('GD2 Tiến độ hồ sơ: ID không có -> coDuLieu=false', t.run('TIEN_DO_HO_SO_HD_("KHONG_CO")').coDuLieu === false);
+    const th = t.run('_tongHopWebappTuDraft_([{soHD:"1",tinhTrang:"Đang thực hiện",khoiLuongDuKien:100,khoiLuongThucHien:40,giaTriHopDong:1000,giaTriThucHien:400},{soHD:"2",tinhTrang:"Chờ thực hiện",khoiLuongDuKien:50,khoiLuongThucHien:10,giaTriHopDong:500,giaTriThucHien:"100"},{soHD:"3",tinhTrang:"Đã hủy",khoiLuongDuKien:999,khoiLuongThucHien:999}], {}, 1, 20)');
+    kiem('GD2 Báo cáo: tổng đã thực hiện (KL/giá trị) chỉ cộng HĐ đang/chờ thực hiện',
+      th.tongKhoiLuongThucHien === 50 && th.tongGiaTriThucHien === 500 && th.tongKhoiLuong === 150 && th.soHopDong === 2);
     kiem('GD2 API TIEN_DO_HO_SO_HD mở cho quyền Xem', t.run('_bangQuyenApi_()').TIEN_DO_HO_SO_HD !== undefined);
   });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }

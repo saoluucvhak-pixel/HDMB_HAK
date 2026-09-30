@@ -125,6 +125,16 @@
     .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
     .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
   }
+  /* Giao diện mới: bảng người dùng */
+  .nd-bang .nd-o { display: flex; align-items: center; gap: 10px; }
+  .nd-bang .nd-tat { width: 34px; height: 34px; border-radius: 17px; background: var(--nen-phu, #e5e7eb); color: var(--chu-chinh, #374151); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nd-bang .nd-email { font-size: 12px; color: var(--chu-phu, #6b7280); }
+  .nd-vt, .nd-tt { display: inline-flex; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .nd-vt { background: var(--nen-phu, #e5e7eb); color: var(--chu-chinh, #374151); }
+  .nd-vt.nd-vt-ADMIN { background: #1f2937; color: #fff; }
+  .nd-vt.nd-vt-NHAP_LIEU { background: var(--info-bg, #dbeafe); color: var(--info-chu, #1e40af); }
+  .nd-tt.bat { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #166534); }
+  .nd-tt.tat { background: var(--err-bg, #fee2e2); color: var(--err-chu, #991b1b); }
 </style>
 <?!= include_('GiaoDien_Chung') ?>
 </head>
@@ -1179,10 +1189,13 @@
           [kq.chuScript].concat(kq.quanTriCoDinh).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(', ');
         var el = document.getElementById('bangNguoiDung');
         if (!kq.nguoiDung.length) { el.innerHTML = '<p class="hint">Chưa có người dùng nào — thêm ở trên.</p>'; return; }
-        var h = '<table class="data-table"><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+        var h = '<table class="data-table nd-bang"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+        var tat = function (x) { var t = String(x.hoTen || x.email || '?').trim().split(/\s+/); return (t.length > 1 ? t[0].charAt(0) + t[t.length - 1].charAt(0) : t[0].slice(0, 2)).toUpperCase(); };
         kq.nguoiDung.forEach(function (x, i) {
-          h += '<tr><td>' + escHtmlBT_(x.email) + '</td><td>' + escHtmlBT_(x.hoTen) + '</td><td>' + escHtmlBT_(ND_VAI_TRO_NHAN_[x.vaiTro] || x.vaiTro) + '</td>' +
-            '<td>' + escHtmlBT_(x.trangThai) + '</td><td><button class="btn btn-outline" type="button" data-nd="' + i + '" style="padding:4px 10px">✏️ Sửa</button></td></tr>';
+          var hoatDong = String(x.trangThai || '') === 'Hoạt động';
+          h += '<tr><td><div class="nd-o"><span class="nd-tat" aria-hidden="true">' + escHtmlBT_(tat(x)) + '</span><span><b>' + escHtmlBT_(x.hoTen || '—') + '</b><br><span class="nd-email">' + escHtmlBT_(x.email) + '</span></span></div></td>' +
+            '<td><span class="nd-vt nd-vt-' + escHtmlBT_(x.vaiTro) + '">' + escHtmlBT_(ND_VAI_TRO_NHAN_[x.vaiTro] || x.vaiTro) + '</span></td>' +
+            '<td><span class="nd-tt ' + (hoatDong ? 'bat' : 'tat') + '">' + escHtmlBT_(x.trangThai) + '</span></td><td><button class="btn btn-outline" type="button" data-nd="' + i + '" style="padding:6px 12px">Sửa</button></td></tr>';
         });
         el.innerHTML = h + '</tbody></table>';
         var nut = el.querySelectorAll('button[data-nd]');
@@ -1266,7 +1279,19 @@
   // Giao diện mới: mục lục "Mục thiết lập" dính bên trái + ô tìm lọc thẻ thiết lập
   hakTaoMucLuc_(document.querySelector('.app-main'), '.card > h3', {
     nhan: 'Mục thiết lập', timKiem: 'Tìm mục thiết lập…', anKhoi: true,
-    khoi: function (h) { return h.closest('.card'); }
+    khoi: function (h) { return h.closest('.card'); },
+    // Gom ~20 thẻ thành 5 nhóm (theo chữ tiêu đề); thẻ mới chưa có trong danh sách -> nhóm "Khác"
+    nhom: function (h) {
+      var t = (h.textContent || '').toLowerCase();
+      if (/người dùng|cổng đăng nhập|chia sẻ dữ liệu|ai đang có quyền/.test(t)) return 'Truy cập';
+      if (/kết nối dữ liệu|chatbot|telegram|chủ tài khoản/.test(t)) return 'Kết nối';
+      if (/khóa định dạng|chuyển tên file|bảo trì|điền sl|xây dựng lại/.test(t)) return 'Dữ liệu & bảo trì';
+      if (/nhật ký|lịch sử thay đổi/.test(t)) return 'Nhật ký & khôi phục';
+      if (/vùng|locale|misa/.test(t)) return 'Định dạng & xuất';
+      return 'Khác';
+    },
+    thuTuNhom: ['Truy cập', 'Kết nối', 'Dữ liệu & bảo trì', 'Nhật ký & khôi phục', 'Định dạng & xuất', 'Khác'],
+    sapKhoiTheoNhom: true
   });
 </script>
 </body>

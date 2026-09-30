@@ -185,6 +185,17 @@
   #haPhongTo .dong { top: 16px; right: 16px; font-size: 20px; }
   #haPhongTo .truoc { left: 16px; top: 50%; }
   #haPhongTo .sau { right: 16px; top: 50%; }
+  /* Giao diện mới: thanh lọc ảnh + ô ảnh bo góc */
+  .ha-loc { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
+  .ha-loc label { font-size: 13px; color: var(--chu-phu, #6b7280); }
+  .ha-loc select { height: 36px; padding: 0 8px; border: 1px solid var(--vien, #d1d5db); border-radius: 8px; font-size: 13px; background: var(--card-bg, #fff); color: inherit; }
+  .ha-luoi { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .ha-o { border-radius: 12px; transition: box-shadow .15s; }
+  .ha-o:hover { box-shadow: 0 4px 14px rgba(31,41,55,.12); }
+  .ha-cap { padding: 8px 10px; font-size: 12px; }
+  .ha-cap .loai { font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .ha-chon { width: 22px; height: 22px; accent-color: #2563eb; }
+  .ha-nhom { font-size: 14px; margin-top: 18px; }
 </style>
 <?!= include_('GiaoDien_Chung') ?>
 </head>
@@ -315,41 +326,69 @@ function haVeThuVien_(d) {
     '<div><div class="nhan">Tổng số ảnh</div><div class="gt">' + d.tongAnh + '</div></div>' +
     '<div><div class="nhan">Hồ sơ pháp lý</div><div class="gt">' + (d.hoSoBiAn ? '🔒 ' + d.hoSoBiAn + ' file (cần vai trò Nhập liệu)' : (d.tongHoSo || 0) + ' file') + '</div></div></div>' +
     (d.chuaCoLink ? '<div class="tc-ghi-chu">⚠️ ' + d.chuaCoLink + ' ảnh còn lưu tên file chưa tìm được trên Drive — chạy menu "Chuyển tên file ảnh sang URL thật" rồi xem lại.</div>' : '') + '</div>';
+  // Giao diện mới: lọc XEM theo loại ảnh và theo nhóm (không đổi ảnh được chọn để xuất PDF)
+  var cacNhom = [];
+  d.hopDong.forEach(function (hd) { hd.nhom.forEach(function (n) { if (cacNhom.indexOf(n.tieuDe) === -1) cacNhom.push(n.tieuDe); }); });
+  var demLoai = { ht: 0, gps: 0, hs: 0 };
+  d.hopDong.forEach(function (hd) { hd.nhom.forEach(function (n) { n.anh.forEach(function (a) { demLoai[a.loai === 'Ảnh GPS' ? 'gps' : 'ht']++; }); }); demLoai.hs += (hd.hoSo || []).length; });
+  h += '<div class="ha-loc" role="group" aria-label="Lọc ảnh để xem"><div class="hak-chips" id="haLocLoai">' +
+    [['', 'Tất cả', demLoai.ht + demLoai.gps + demLoai.hs], ['ht', 'Ảnh hiện trường', demLoai.ht], ['gps', 'Ảnh GPS', demLoai.gps], ['hs', 'Hồ sơ pháp lý', demLoai.hs]]
+      .map(function (x, i) { return '<button type="button" data-loai="' + x[0] + '" aria-pressed="' + (i === 0) + '">' + x[1] + ' <span class="dem">' + x[2] + '</span></button>'; }).join('') + '</div>' +
+    (cacNhom.length > 1 ? '<label for="haLocNhom">Nhóm</label><select id="haLocNhom"><option value="">Tất cả nhóm</option>' + cacNhom.map(function (t) { return '<option value="' + escHA_(t) + '">' + escHA_(t) + '</option>'; }).join('') + '</select>' : '') +
+    '<span class="hint">Lọc chỉ để xem — xuất PDF vẫn theo các ô đã tích.</span></div>';
   d.hopDong.forEach(function (hd) {
     h += '<div class="card"><h3>Hợp đồng ' + escHA_(hd.soHD || hd.idHD) + (hd.ngayKy ? ' — ký ' + escHA_(hd.ngayKy) : '') +
       (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escHA_(hd.tinhTrang) + '</span>' : '') + '</h3>' +
       (hd.diaChiRung ? '<div class="tc-ghi-chu" style="margin-top:-8px">' + escHA_(hd.diaChiRung) + ' · ' + hd.soLo + ' lô rừng</div>' : '');
     if (!hd.nhom.length) h += '<div class="empty-hint">Hợp đồng này chưa có ảnh.</div>';
     hd.nhom.forEach(function (n) {
-      h += '<div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
+      h += '<div class="ha-khoi" data-nhom="' + escHA_(n.tieuDe) + '"><div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
       n.anh.forEach(function (a) {
         var vt = haDanhSach_.length;
         haDanhSach_.push(Object.assign({ nhom: n.tieuDe, soHD: hd.soHD }, a));
         var coGps = a.lat !== null && a.lat !== undefined && a.lng !== null && a.lng !== undefined;
-        h += '<div class="ha-o" id="haO' + vt + '">' +
+        h += '<div class="ha-o" id="haO' + vt + '" data-loai="' + (a.loai === 'Ảnh GPS' ? 'gps' : 'ht') + '">' +
           '<input type="checkbox" class="ha-chon" checked data-vt="' + vt + '" aria-label="Chọn ảnh ' + (vt + 1) + ' để xuất PDF">' +
           '<div class="ha-khung" data-vt="' + vt + '" data-id="' + escHA_(a.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
           '<div class="ha-cap"><span class="loai' + (a.loai === 'Ảnh GPS' ? ' gps' : '') + '">' + escHA_(a.loai) + '</span> #' + (vt + 1) +
           (coGps ? '<br>📍 ' + escHA_(a.lat + ', ' + a.lng) : '') + (a.diaChi ? '<br>' + escHA_(a.diaChi) : '') + '</div></div>';
       });
-      h += '</div>';
+      h += '</div></div>';
     });
     if ((hd.hoSo || []).length) {
-      h += '<div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
+      h += '<div class="ha-khoi" data-nhom=""><div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
       hd.hoSo.forEach(function (x) {
         var k = haHoSo_.length;
         haHoSo_.push(Object.assign({ soHD: hd.soHD }, x));
-        h += '<div class="ha-o hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
+        h += '<div class="ha-o hs" data-loai="hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
           '<div class="ha-cap"><span class="loai hs">Hồ sơ pháp lý</span><br><b>' + escHA_(x.hoSoNguonGoc || 'Hồ sơ') + '</b>' + (x.soGiayTo ? ' · số ' + escHA_(x.soGiayTo) : '') +
           (x.ngayGiayTo ? ' · ' + escHA_(x.ngayGiayTo) : '') + '<br>' + escHA_(x.lo) + '</div></div>';
       });
-      h += '</div>';
+      h += '</div></div>';
     }
     h += '</div>';
   });
   if (!d.tongAnh && !d.tongHoSo) h += '<div class="card"><div class="empty-hint">Chưa có ảnh nào cho ' + (d.theoKhachHang ? 'khách hàng' : 'hợp đồng') + ' này.</div></div>';
   vung.innerHTML = h;
   haGanNutVe_();
+  var locLoai = '', locNhom = '';
+  var apLoc = function () {
+    vung.querySelectorAll('.ha-o').forEach(function (o) { o.style.display = !locLoai || o.getAttribute('data-loai') === locLoai ? '' : 'none'; });
+    vung.querySelectorAll('.ha-khoi').forEach(function (k) {
+      var nhom = k.getAttribute('data-nhom');
+      var dungNhom = !locNhom || nhom === locNhom || nhom === ''; // khối Hồ sơ pháp lý không thuộc nhóm ảnh nào
+      var conAnh = Array.prototype.some.call(k.querySelectorAll('.ha-o'), function (o) { return o.style.display !== 'none'; });
+      k.style.display = dungNhom && conAnh ? '' : 'none';
+    });
+  };
+  vung.querySelectorAll('#haLocLoai button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      locLoai = b.getAttribute('data-loai');
+      vung.querySelectorAll('#haLocLoai button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      apLoc();
+    });
+  });
+  if (document.getElementById('haLocNhom')) document.getElementById('haLocNhom').addEventListener('change', function () { locNhom = this.value; apLoc(); });
   document.getElementById('haChonHet').addEventListener('click', function () { haChonTatCa_(true); });
   document.getElementById('haBoHet').addEventListener('click', function () { haChonTatCa_(false); });
   document.getElementById('haXuatPdf').addEventListener('click', function () { haXuatPdf_('anh'); });

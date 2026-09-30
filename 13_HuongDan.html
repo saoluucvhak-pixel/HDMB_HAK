@@ -134,6 +134,18 @@
   .app-main code { background: var(--nen-phu, #eee); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
   .app-main .warn { background: var(--err-bg, #fee2e2); border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; }
   .app-main a { color: var(--active-green); }
+  /* Giao diện mới (đồng bộ mẫu): mỗi phần là 1 thẻ, các "Bước N" là thẻ bước có số tròn, hộp lưu ý theo loại */
+  .app-main .hd-phan { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 4px 22px 16px; margin: 0 0 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .app-main .hd-phan > h2 { margin: 16px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+  .app-main .hd-buoc { position: relative; border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 16px 6px 58px; margin: 12px 0; background: var(--nen-phu, #f9fafb); }
+  .app-main .hd-buoc > h3 { margin-top: 2px; font-size: 14px; }
+  .app-main .hd-buoc .hd-so { position: absolute; left: 14px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--active-green); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .app-main .warn { border-radius: 8px; padding: 10px 14px; line-height: 1.55; }
+  .app-main .warn.hd-tt { background: #eff6ff; border-left-color: var(--active-green); color: #1e3a8a; }
+  .app-main .warn.hd-lu { background: #fffbeb; border-left-color: var(--accent-gold); color: #78350f; }
+  html[data-giao-dien="toi"] .app-main .warn.hd-tt { background: rgba(37,99,235,.14); color: inherit; }
+  html[data-giao-dien="toi"] .app-main .warn.hd-lu { background: rgba(180,83,9,.16); color: inherit; }
+  html[data-giao-dien="toi"] .app-main .hd-buoc { background: rgba(255,255,255,.03); }
 </style>
 <?!= include_('GiaoDien_Chung') ?>
 </head>
@@ -329,6 +341,30 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 
   </div>
 <script>
+  // Giao diện mới: gói mỗi phần (h2 + nội dung tới h2 kế) thành thẻ; h3 "Bước N — ..." thành thẻ bước có số tròn;
+  // tô màu hộp lưu ý theo loại. Chỉ sắp lại cách hiển thị, không đổi nội dung.
+  (function () {
+    var vung = document.querySelector('.app-main');
+    if (!vung) return;
+    Array.prototype.slice.call(vung.querySelectorAll(':scope > h2')).forEach(function (h) {
+      var the = document.createElement('section'); the.className = 'hd-phan';
+      vung.insertBefore(the, h);
+      var n = h; while (n && !(n !== h && n.nodeType === 1 && n.tagName === 'H2')) { var tiep = n.nextSibling; the.appendChild(n); n = tiep; }
+    });
+    Array.prototype.slice.call(vung.querySelectorAll('.hd-phan > h3')).forEach(function (h) {
+      var m = /^\s*Bước\s+(\d+)\s*[—-]\s*/.exec(h.textContent || '');
+      if (!m) return;
+      var the = document.createElement('div'); the.className = 'hd-buoc';
+      h.parentNode.insertBefore(the, h);
+      var so = document.createElement('span'); so.className = 'hd-so'; so.textContent = m[1]; so.setAttribute('aria-hidden', 'true');
+      the.appendChild(so);
+      var n = h; while (n && !(n !== h && n.nodeType === 1 && /^H[23]$/.test(n.tagName))) { var tiep = n.nextSibling; the.appendChild(n); n = tiep; }
+    });
+    Array.prototype.slice.call(vung.querySelectorAll('.warn')).forEach(function (w) {
+      var t = (w.textContent || '').trim();
+      if (/^(💳|✅|ℹ)/u.test(t)) w.classList.add('hd-tt'); else if (/^🔒/u.test(t)) w.classList.add('hd-lu');
+    });
+  })();
   // Giao diện mới: mục lục dính bên trái theo các phần (h2) + ô lọc mục
   if (typeof hakTaoMucLuc_ === 'function') hakTaoMucLuc_(document.querySelector('.app-main'), 'h2', { nhan: 'Mục lục', timKiem: 'Tìm trong mục lục…' });
 </script>

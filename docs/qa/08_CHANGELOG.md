@@ -25,6 +25,7 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | `8517e17` | ✨♿ | A5: chế độ tối (Tự động / Sáng / Tối, nút 🌓) + gom 305 màu về biến CSS (chế độ sáng giống hệt từng điểm ảnh) + tự gắn nhãn vào ô và đặt tên nút biểu tượng — 57/57 test máy chủ, 26/26 test giao diện | GiaoDien_Chung (mới), PhanQuyen_JS, 14 file HTML, tests/ |
 | `4a8d917` | 🎨 | Giao diện mới đợt 1: menu trái dùng chung (`Menu_Chung.html`), lớp giao diện chung, Bản đồ GPS làm lại (vẽ mọi lô trên ảnh vệ tinh, thẻ chi tiết, chỉ đường), mục lục Thiết lập/Hướng dẫn — 57/57 test máy chủ, 42/42 test giao diện | Menu_Chung (mới), GiaoDien_Chung, MapContainer, 05_Menu, Code, 10, 11, 12, 13, 24, 27, 30, 33, 35, tests/ |
 | (commit tiếp) | 🎨 | Giao diện mới đợt 2: Tổng quan 4 chỉ số + nút lọc + tiến độ, Tra cứu 2 cột, Nhập liệu thanh tiến độ 5 bước + bảng so khớp OCR, bản đồ điện thoại dạng thẻ trượt — 84/84 test máy chủ, toàn bộ test giao diện đạt | 01, 34, GiaoDien_Chung, MapContainer, 07, 27, 30, 33, tests/ |
+| (commit tiếp) | 🎨 | Giao diện mới đợt 3: Báo cáo chỉ số có thanh tiến độ + lọc gọn, Tra cứu hình ảnh lọc theo loại ảnh, Thiết lập mục lục chia nhóm, Hướng dẫn thẻ bước — 85/85 test máy chủ, toàn bộ test giao diện đạt | 01, GiaoDien_Chung, 10, 13, 24, 35, tests/ |
 
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 

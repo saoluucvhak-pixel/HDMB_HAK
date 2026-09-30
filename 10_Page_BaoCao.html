@@ -182,7 +182,7 @@
 
     <!-- ============ 1. BÁO CÁO HỢP ĐỒNG (lọc + phân trang + màu) ============ -->
     <div class="panel2 active" id="pBaoCaoHD">
-      <div class="card">
+      <div class="card hak-loc-gon">
         <h3>Bộ lọc</h3>
         <div class="field-row">
           <div class="field"><label>Từ ngày (ngày ký)</label><input id="bcTuNgay" type="date"></div>
@@ -207,10 +207,13 @@
             </select>
           </div>
         </div>
-        <button class="btn btn-green" style="margin-top:10px" onclick="taiBaoCaoHD(1)">🔍 Lọc dữ liệu</button>
-        <button class="btn btn-outline" style="margin-top:10px" onclick="taiBaoCaoHD(1, true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
-        <button class="btn btn-outline" style="margin-top:10px" onclick="xuatBaoCaoHD_('xlsx')">📊 Xuất Excel (toàn bộ, không chỉ trang hiện tại)</button>
-        <button class="btn btn-outline" style="margin-top:10px" onclick="xuatBaoCaoHD_('pdf')">📄 Xuất PDF</button>
+        <div class="hak-loc-nut">
+        <button class="btn btn-green" onclick="taiBaoCaoHD(1)">🔍 Lọc dữ liệu</button>
+        <button class="btn btn-outline" onclick="taiBaoCaoHD(1, true)" title="Bỏ qua cache, quét lại toàn bộ dữ liệu từ đầu">🔄 Làm mới dữ liệu</button>
+        <span class="gian"></span>
+        <button class="btn btn-outline" onclick="xuatBaoCaoHD_('xlsx')" title="Toàn bộ kết quả lọc, không chỉ trang hiện tại">📊 Xuất Excel</button>
+        <button class="btn btn-outline" onclick="xuatBaoCaoHD_('pdf')">📄 Xuất PDF</button>
+        </div>
         <div id="msgLocBC" class="msg" style="display:none;margin-top:8px"></div>
         <p class="hint">🔴 Dòng đỏ: thiếu hồ sơ bắt buộc (CCCD / giấy xác nhận-nguồn gốc-QSDĐ / giấy ủy quyền nếu có ủy quyền). 🟡 Dòng vàng: thiếu ảnh hoặc tọa độ GPS.</p>
       </div>
@@ -248,18 +251,19 @@
         <div id="msg" class="msg" style="display:none"></div>
       </div>
 
-      <div class="kpi-row" style="margin-bottom:18px">
-        <div class="kpi-card"><div class="label">SỐ HỢP ĐỒNG</div><div class="value" id="kpiSoHD">0</div></div>
-        <div class="kpi-card"><div class="label">TỔNG KHỐI LƯỢNG DỰ KIẾN</div><div class="value" id="kpiKhoiLuong">0</div></div>
-        <div class="kpi-card"><div class="label">TỔNG GIÁ TRỊ (VNĐ)</div><div class="value" id="kpiGiaTri">0</div></div>
+      <div class="hak-kpi-row">
+        <div class="hak-kpi"><div class="nhan"><i style="background:#1f2937"></i>Hợp đồng đang / chờ thực hiện</div><div class="so" id="kpiSoHD">0</div><div class="phu">Chỉ tính HĐ chưa thanh lý / hủy</div></div>
+        <div class="hak-kpi"><div class="nhan"><i style="background:#6b7280"></i>Khối lượng dự kiến (tấn)</div><div class="so" id="kpiKhoiLuong">0</div><div class="phu">Giá trị hợp đồng: <b id="kpiGiaTri">0</b> đ</div></div>
+        <div class="hak-kpi"><div class="nhan"><i style="background:#16a34a"></i>Đã thực hiện (tấn)</div><div class="so" id="kpiKLDaTH">0</div><div class="hak-thanh"><span id="thanhKLDaTH" style="width:0;background:#16a34a"></span></div><div class="phu" id="phuKLDaTH">—</div></div>
+        <div class="hak-kpi"><div class="nhan"><i style="background:#2563eb"></i>Giá trị đã thực hiện (đ)</div><div class="so" id="kpiGTDaTH">0</div><div class="hak-thanh"><span id="thanhGTDaTH" style="width:0;background:#2563eb"></span></div><div class="phu" id="phuGTDaTH">—</div></div>
       </div>
 
       <div class="card">
         <h3>Trạng thái &amp; tiến độ hồ sơ</h3>
-        <div class="kpi-row" style="margin-bottom:14px">
-          <div class="kpi-card"><div class="label">ĐÃ ĐO GPS ĐỦ</div><div class="value" id="kpiGPSDu">0</div></div>
-          <div class="kpi-card"><div class="label">ĐÃ ĐỦ HỒ SƠ</div><div class="value" id="kpiHoSoDu">0</div></div>
-          <div class="kpi-card"><div class="label">ĐÃ CÓ ẢNH</div><div class="value" id="kpiCoAnh">0</div></div>
+        <div class="hak-kpi-row" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">
+          <div class="hak-kpi"><div class="nhan"><i style="background:#2563eb"></i>Đã đo GPS đủ</div><div class="so" id="kpiGPSDu">0</div><div class="hak-thanh"><span id="thanhGPSDu" style="width:0;background:#2563eb"></span></div></div>
+          <div class="hak-kpi"><div class="nhan"><i style="background:#16a34a"></i>Đã đủ hồ sơ</div><div class="so" id="kpiHoSoDu">0</div><div class="hak-thanh"><span id="thanhHoSoDu" style="width:0;background:#16a34a"></span></div></div>
+          <div class="hak-kpi"><div class="nhan"><i style="background:#b45309"></i>Đã có ảnh hiện trường</div><div class="so" id="kpiCoAnh">0</div><div class="hak-thanh"><span id="thanhCoAnh" style="width:0;background:#b45309"></span></div></div>
         </div>
         <div id="theoTrangThai" style="display:flex;gap:10px;flex-wrap:wrap"></div>
       </div>
@@ -828,6 +832,15 @@
     document.getElementById('kpiSoHD').textContent = formatSo(kq.soHopDong);
     document.getElementById('kpiKhoiLuong').textContent = formatKL(kq.tongKhoiLuong);
     document.getElementById('kpiGiaTri').textContent = formatTien(kq.tongGiaTri);
+    // Giao diện mới: đã thực hiện + thanh tiến độ (máy chủ cũ chưa trả trường này -> hiện "—")
+    var pt = function (a, b) { a = Number(a) || 0; b = Number(b) || 0; return b > 0 ? Math.min(100, Math.round(a / b * 100)) : 0; };
+    var coTH = kq.tongKhoiLuongThucHien !== undefined;
+    document.getElementById('kpiKLDaTH').textContent = coTH ? formatKL(kq.tongKhoiLuongThucHien) : '—';
+    document.getElementById('kpiGTDaTH').textContent = coTH ? formatTien(kq.tongGiaTriThucHien) : '—';
+    document.getElementById('thanhKLDaTH').style.width = (coTH ? pt(kq.tongKhoiLuongThucHien, kq.tongKhoiLuong) : 0) + '%';
+    document.getElementById('thanhGTDaTH').style.width = (coTH ? pt(kq.tongGiaTriThucHien, kq.tongGiaTri) : 0) + '%';
+    document.getElementById('phuKLDaTH').textContent = coTH ? pt(kq.tongKhoiLuongThucHien, kq.tongKhoiLuong) + '% khối lượng dự kiến' : '—';
+    document.getElementById('phuGTDaTH').textContent = coTH ? pt(kq.tongGiaTriThucHien, kq.tongGiaTri) + '% giá trị hợp đồng' : '—';
     veBangChiTiet_(kq);
     showMsg('msg', '✅ Đã tổng hợp ' + kq.soHopDong + ' hợp đồng.' + (forceLamMoi ? ' 🔄 (vừa tính lại toàn bộ)' : ''), true);
   }
@@ -837,11 +850,14 @@
     document.getElementById('kpiGPSDu').textContent = formatSo(kq.soHDDaDoGPSDu) + ' / ' + formatSo(kq.tongSoHopDong);
     document.getElementById('kpiHoSoDu').textContent = formatSo(kq.soHDDuHoSo) + ' / ' + formatSo(kq.tongSoHopDong);
     document.getElementById('kpiCoAnh').textContent = formatSo(kq.soHDCoAnh) + ' / ' + formatSo(kq.tongSoHopDong);
+    [['thanhGPSDu', kq.soHDDaDoGPSDu], ['thanhHoSoDu', kq.soHDDuHoSo], ['thanhCoAnh', kq.soHDCoAnh]].forEach(function (x) {
+      document.getElementById(x[0]).style.width = (kq.tongSoHopDong ? Math.min(100, Math.round((Number(x[1]) || 0) / kq.tongSoHopDong * 100)) : 0) + '%';
+    });
     var badgeWrap = document.getElementById('theoTrangThai');
     badgeWrap.innerHTML = '';
     Object.keys(kq.theoTrangThai).forEach(function (tt) {
       var span = document.createElement('span');
-      span.className = 'btn btn-outline'; span.style.cursor = 'default';
+      span.className = 'badge-trang-thai'; span.setAttribute('data-tinh-trang', tt);
       span.textContent = tt + ': ' + kq.theoTrangThai[tt];
       badgeWrap.appendChild(span);
     });

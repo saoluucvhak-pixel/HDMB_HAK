@@ -80,4 +80,6 @@
 - [x] ✅ Giao diện mới đợt 1: menu chung, lớp giao diện chung, Bản đồ GPS, mục lục Thiết lập/Hướng dẫn
 - [ ] **Triển khai giao diện mới:** thêm file `Menu_Chung.html` (bắt buộc) + chép các file đã đổi, Deploy lại
 - [x] ✅ Giao diện mới đợt 2: Tổng quan 4 chỉ số, Tra cứu 2 cột, Nhập liệu tiến độ 5 bước + so khớp OCR, bản đồ điện thoại
+- [x] ✅ Giao diện mới đợt 3: Báo cáo (chỉ số + thanh tiến độ, lọc gọn), Tra cứu hình ảnh (lọc loại ảnh), Thiết lập (mục lục chia nhóm), Hướng dẫn (thẻ bước)
+- [ ] Nhập liệu 5 bước tuần tự thật (cần đổi luồng lưu — chờ đồng ý)
 - [ ] Chờ quyết định: B1, B4, B5

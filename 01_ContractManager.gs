@@ -41,6 +41,9 @@ function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
   const list = tatCa.filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
   const tongKhoiLuong = list.reduce(function (s, m) { return s + (Number(m.khoiLuongDuKien) || 0); }, 0);
   const tongGiaTri = list.reduce(function (s, m) { return s + (Number(m.giaTriHopDong) || 0); }, 0);
+  // Giao diện mới: ô tổng có thanh tiến độ (đã thực hiện / dự kiến)
+  const tongKhoiLuongThucHien = list.reduce(function (s, m) { return s + (Number(m.khoiLuongThucHien) || 0); }, 0);
+  const tongGiaTriThucHien = list.reduce(function (s, m) { return s + (Number(m.giaTriThucHien) || 0); }, 0);
   const tkSoHD = (boLoc.soHD || '').toString().trim().toLowerCase();
   const tkTen = (boLoc.tenChuRung || '').toString().trim().toLowerCase();
   const loc = list.filter(function (m) {
@@ -53,6 +56,7 @@ function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
   const batDau = (trangThat - 1) * kichThuoc;
   return {
     soHopDong: list.length, tongKhoiLuong: tongKhoiLuong, tongGiaTri: tongGiaTri,
+    tongKhoiLuongThucHien: tongKhoiLuongThucHien, tongGiaTriThucHien: tongGiaTriThucHien,
     trang: trangThat, tongTrang: tongTrang, tongSo: loc.length,
     chiTiet: loc.slice(batDau, batDau + kichThuoc).map(function (m) {
       return {
