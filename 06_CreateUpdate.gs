@@ -614,10 +614,26 @@ function _hopDongGocChoLoRung_(idHD) {
   return null;
 }
 
+/**
+ * Năm trồng rừng (HD_RUNG cột T) -> số năm 4 chữ số (1950 .. năm nay + 1), '' nếu để trống, null nếu KHÔNG hợp lệ.
+ * Ô bị Sheets đổi thành ngày -> lấy năm. Trước đây ghi nguyên giá trị nhập -> "01/2019" thành ngày, ô định dạng ngày
+ * biến 2019 thành ngày -> đọc hợp đồng trả về rỗng / tính tuổi rừng sai.
+ */
+function _chuanNamTrong_(v) {
+  if (v === null || v === undefined || String(v).trim() === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? null : v.getFullYear();
+  const s = String(v).trim();
+  if (!/^\d{4}$/.test(s)) return null;
+  const n = Number(s), nay = new Date().getFullYear();
+  return n >= 1950 && n <= nay + 1 ? n : null;
+}
+const LOI_NAM_TRONG_ = 'Năm trồng rừng phải là năm 4 chữ số (vd 2019), từ 1950 đến năm nay — hoặc để trống nếu chưa rõ.';
+
 function THEM_LO_RUNG_MOI_(d) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   damBaoTieuDeCotMoRongRung_();
   if (!d.idHD) return { thanhCong: false, loi: 'Thiếu ID_HD' };
+  if (_chuanNamTrong_(d.namTrong) === null) return { thanhCong: false, loi: LOI_NAM_TRONG_ };
 
   // Lưu chính thức từ bản nháp / nút "Thêm lô rừng" ở trang mẹ-con không truyền đủ thông tin
   // hợp đồng -> trước đây lô mới mang NGÀY HÔM NAY thay vì ngày ký hợp đồng (ID_GPS lệch
@@ -693,7 +709,7 @@ function THEM_LO_RUNG_MOI_(d) {
     row[RUNG_COL.NGAY_GIAY_TO] = ngayGhiSheet_(d.ngayGiayTo);
     row[RUNG_COL.DINH_KEM_GIAY_TO] = d.dinhKemGiayTo || '';
     row[RUNG_COL.TIMESTAMP] = new Date();
-    row[RUNG_COL.NAM_TRONG] = d.namTrong ? Number(d.namTrong) : '';
+    row[RUNG_COL.NAM_TRONG] = _chuanNamTrong_(d.namTrong) || '';
 
     // M-06: appendRow vào ô định dạng Automatic làm CCCD / Số HĐ mất số 0 đầu (cùng lỗi BUG-03) ->
     // định dạng TEXT trước rồi mới ghi, giống TAO_HOP_DONG_MOI_.
@@ -702,6 +718,7 @@ function THEM_LO_RUNG_MOI_(d) {
     for (let k = 0; k < row.length; k++) if (row[k] === undefined) row[k] = '';
     [RUNG_COL.CCCD, RUNG_COL.SO_HD, RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG, RUNG_COL.MA_RUNG]
       .forEach(function (c) { shRungGhi.getRange(soDongMoiRung, c + 1).setNumberFormat('@'); });
+    shRungGhi.getRange(soDongMoiRung, RUNG_COL.NAM_TRONG + 1).setNumberFormat('0'); // năm là SỐ — ô định dạng ngày sẽ biến 2019 thành ngày
     shRungGhi.getRange(soDongMoiRung, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
 
     // Tạo sẵn 1 dòng khung trong HD_GPS để người dùng điền tọa độ cho lô rừng này
@@ -779,11 +796,28 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
     dinhKemGiayTo: RUNG_COL.DINH_KEM_GIAY_TO, diaChiRung: RUNG_COL.DIA_CHI_RUNG, thuongTru: RUNG_COL.THUONG_TRU,
     namTrong: RUNG_COL.NAM_TRONG
   };
+  if (patch.hasOwnProperty('namTrong')) {
+    const nt = _chuanNamTrong_(patch.namTrong);
+    if (nt === null) return { thanhCong: false, loi: LOI_NAM_TRONG_ };
+    patch = Object.assign({}, patch, { namTrong: nt });
+  }
   const dongCuLo = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), RUNG_COL.NAM_TRONG + 1)).getValues()[0];
-  ghiNhatKyChiTiet_('Sửa lô rừng', SHEET_NAME.HD_RUNG, dongCuLo[RUNG_COL.ID_KEY_HD], idRung, Object.keys(patch).filter(function (k) { return map.hasOwnProperty(k); })
-    .map(function (k) { return { truong: k, cu: dongCuLo[map[k]], moi: k === 'ngayGiayTo' ? ngayToISO_(patch[k]) : patch[k] }; })); // B2
-  Object.keys(patch).forEach(function (key) {
-    if (map.hasOwnProperty(key)) sh.getRange(soDong, map[key] + 1).setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : giaTriAnToan_(patch[key])); // M-18
+  // Tốc độ: form gửi lại MỌI trường — chỉ ghi ô THỰC SỰ đổi (mỗi lần ghi 1 ô là 1 lượt gọi Sheets); không đổi gì -> xong ngay,
+  // khỏi tính lại cache báo cáo / Hồ sơ rừng / ct_hopdong (mỗi việc đọc lại cả sheet).
+  const chuan = function (k, v) {
+    if (k === 'ngayGiayTo') return ngayToISO_(v);
+    if (k === 'namTrong') { const n = _chuanNamTrong_(v); return n === null ? String(v) : String(n); }
+    if (Object.prototype.toString.call(v) === '[object Date]') return ngayToISO_(v);
+    return v === null || v === undefined ? '' : String(v).trim();
+  };
+  const doi = Object.keys(patch).filter(function (k) { return map.hasOwnProperty(k) && chuan(k, dongCuLo[map[k]]) !== chuan(k, patch[k]); });
+  if (!doi.length) return { thanhCong: true, dong: soDong, khongDoi: true };
+  ghiNhatKyChiTiet_('Sửa lô rừng', SHEET_NAME.HD_RUNG, dongCuLo[RUNG_COL.ID_KEY_HD], idRung,
+    doi.map(function (k) { return { truong: k, cu: dongCuLo[map[k]], moi: k === 'ngayGiayTo' ? ngayToISO_(patch[k]) : patch[k] }; })); // B2
+  doi.forEach(function (key) {
+    const o = sh.getRange(soDong, map[key] + 1);
+    if (key === 'namTrong') o.setNumberFormat('0');
+    o.setValue(key === 'ngayGiayTo' ? ngayGhiSheet_(patch[key]) : giaTriAnToan_(patch[key])); // M-18
   });
 
   // Nếu có sửa địa chỉ rừng, đồng bộ luôn vào DM_DIACHI
@@ -873,8 +907,7 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
     if (ghiDe) {
       _xoaCacDongKhop_(sh, GPS_COL.ID_KEY_GPS, [idRung], { maDot: taoMaDotXoa_(), hanhDong: 'Ghi đè điểm GPS lô ' + idRung, idHD: '' }); // P-04 + B2
     }
-    const rungRows = readData_(SHEET_NAME.HD_RUNG);
-    const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
+    const rung = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, [idRung])[0]; // tốc độ: chỉ đọc đúng dòng lô này
     const idGPS = rung ? rung[RUNG_COL.SO_HD] + '-' + formatNgay_(rung[RUNG_COL.NGAY_KY]) : idRung;
 
     sh.appendRow([
@@ -1478,12 +1511,15 @@ function layGPSCuaRung_(idRung) {
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   const rows = readData_(SHEET_NAME.HD_GPS);
   return rows
-    .filter(function (r) { return (r[GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim(); })
-    .map(function (r) {
+    .map(function (r, i) { return { r: r, soDong: i + 2 }; })
+    .filter(function (x) { return (x.r[GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim(); })
+    .map(function (x) {
+      const r = x.r;
       const type = r[GPS_COL.HE_TOA_DO];
       const lat = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LAT]) : parseFloat(r[GPS_COL.LAT]);
       const lng = (type === 'DMS') ? convertDmsToDd_(r[GPS_COL.LNG]) : parseFloat(r[GPS_COL.LNG]);
-      return { lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, diaChi: r[GPS_COL.ADDRESS], hinhAnh: r[GPS_COL.HINH_ANH] || '' };
+      // soDong + dau: để XÓA đúng điểm này (XOA_DIEM_GPS_ kiểm tra lại dòng chưa bị đổi/dịch)
+      return { lat: isNaN(lat) ? null : lat, lng: isNaN(lng) ? null : lng, diaChi: r[GPS_COL.ADDRESS], hinhAnh: r[GPS_COL.HINH_ANH] || '', soDong: x.soDong, dau: _dauDongBT_(r) };
     })
     // ⚠️ SỬA: trước lọc bằng `p.lat && p.lng` nên vô tình loại luôn điểm có tọa độ
     // hợp lệ đúng bằng 0 (0 là falsy) — giờ chỉ loại khi thật sự không parse được (null).
@@ -1784,7 +1820,7 @@ function layDraftAnhChoRung_(idRung, idHD) {
   if (idHD) {
     const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
     const idHDChuan = idHD.toString().trim();
-    pictureRows.forEach(function (r) {
+    pictureRows.forEach(function (r, iPic) {
       const idThoTrongSheet = (r[PICTURE_COL.ID_HD] || '').toString().trim();
       // Đối chiếu kép: khớp đúng ID_HD, HOẶC (dữ liệu cũ lỡ lưu ID_RUNG vào cột này) khớp đúng idRung đang xem
       if (idThoTrongSheet !== idHDChuan && idThoTrongSheet !== idRung.toString().trim()) return;
@@ -1796,7 +1832,8 @@ function layDraftAnhChoRung_(idRung, idHD) {
           nguon: 'cu', trangThai: 'Đã duyệt', // ảnh cũ trong HD_Picture coi như đã ở trạng thái chính thức từ trước
           tenFile: link ? link.ten : giaTri.toString().split('/').pop(),
           url: link ? link.url : (giaTri.toString().indexOf('http') === 0 ? giaTri : ''),
-          gpsLat: '', gpsLng: '', diaChiRung: '', ghiChu: 'Ảnh cũ (có sẵn trong hồ sơ trước khi dùng luồng tải ảnh mới) — không phân biệt theo từng lô cụ thể'
+          gpsLat: '', gpsLng: '', diaChiRung: '', ghiChu: 'Ảnh cũ (có sẵn trong hồ sơ trước khi dùng luồng tải ảnh mới) — không phân biệt theo từng lô cụ thể',
+          soDongPic: iPic + 2, cot: c, giaTriGoc: giaTri.toString() // để XÓA đúng ô ảnh này (XOA_ANH_RUNG_)
         });
       }
     });
@@ -2599,4 +2636,109 @@ function luuHopDongDayDuThucThi_(payload) {
   if (!payload.boQuaTongHopRung) dongBoTongHopRungVaoHdNcc_(idHD); // Lưu chính thức tự tổng hợp 1 lần ở cuối (P-10)
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); // cập nhật Draft NGAY sau khi mọi thứ (hợp đồng + rừng + tài khoản) đã ghi xong
   return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK, nhacDuyet: nhacDuyet };
+}
+
+
+/**
+ * ============================================================
+ *  XÓA 1 ĐIỂM GPS / 1 ẢNH CỦA LÔ RỪNG (trang Nhập liệu > chi tiết lô rừng)
+ *  Chỉ khi hợp đồng còn "Chờ thực hiện" / "Đang thực hiện" (cùng quy tắc nút Thêm).
+ *  Điểm GPS: kiểm tra lại dòng (dấu vân tay) rồi chép vào LuuTru_DaXoa trước khi xóa (khôi phục được ở Thiết lập).
+ *  Ảnh: bỏ link ảnh khỏi HD_Picture (giá trị cũ ghi vào NhatKy_ChiTiet), dòng Draft_AnhRung đánh dấu "Đã xóa".
+ *  File ảnh trên Drive KHÔNG bị xóa (lấy lại được nếu xóa nhầm).
+ * ============================================================
+ */
+function _hopDongConSuaDuoc_(idHD) {
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
+  if (soDong === -1) return false;
+  const tt = String(getSheet_(SHEET_NAME.HD_NCC).getRange(soDong, NCC_COL.TINH_TRANG + 1).getValue() || '').trim();
+  return tt === 'Chờ thực hiện' || tt === 'Đang thực hiện';
+}
+function _hopDongCuaLo_(idRung) {
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, idRung);
+  return soDong === -1 ? '' : String(getSheet_(SHEET_NAME.HD_RUNG).getRange(soDong, RUNG_COL.ID_KEY_HD + 1).getValue() || '').trim();
+}
+const LOI_HD_DA_CHOT_ = 'Hợp đồng đã qua "Đang thực hiện" (đã chốt) — không xóa được. Muốn sửa phải duyệt lùi trạng thái trên Sheet.';
+
+function XOA_DIEM_GPS_(idRung, soDong, dau) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  idRung = (idRung || '').toString().trim();
+  const idHD = _hopDongCuaLo_(idRung);
+  if (!idHD) return { thanhCong: false, loi: 'Không tìm thấy lô rừng ' + idRung };
+  if (!_hopDongConSuaDuoc_(idHD)) return { thanhCong: false, loi: LOI_HD_DA_CHOT_ };
+  const sh = getSheet_(SHEET_NAME.HD_GPS);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  let maDot, r;
+  try {
+    soDong = Number(soDong);
+    if (!(soDong >= 2 && soDong <= sh.getLastRow())) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+    r = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0];
+    if ((r[GPS_COL.ID_KEY_GPS] || '').toString().trim() !== idRung || _dauDongBT_(r) !== dau) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+    maDot = taoMaDotXoa_();
+    luuTruDongBiXoa_(maDot, 'Xóa điểm GPS lô ' + idRung, sh, [r], idHD); // lỗi lưu trữ -> ném, không xóa
+    sh.deleteRow(soDong);
+  } finally { lock.releaseLock(); }
+  ghiNhatKy_('Xóa điểm GPS', idHD, idRung + ': ' + r[GPS_COL.LAT] + ', ' + r[GPS_COL.LNG] + ' — lưu trữ đợt ' + maDot + ' (khôi phục được ở Thiết lập)');
+  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
+  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  xoaCacheBanDo_();
+  return { thanhCong: true, maDot: maDot };
+}
+
+/**
+ * anh: { idRung, idDraft } — ảnh tải qua lô rừng (Draft_AnhRung, đã duyệt)
+ *   hoặc { idRung, soDongPic, cot, giaTriGoc } — ảnh cũ nằm thẳng trong HD_Picture.
+ */
+function XOA_ANH_RUNG_(anh) {
+  _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  anh = anh || {};
+  const idRung = (anh.idRung || '').toString().trim();
+  const idHD = _hopDongCuaLo_(idRung);
+  if (!idHD) return { thanhCong: false, loi: 'Không tìm thấy lô rừng ' + idRung };
+  if (!_hopDongConSuaDuoc_(idHD)) return { thanhCong: false, loi: LOI_HD_DA_CHOT_ };
+  const shPic = getSheet_(SHEET_NAME.HD_PICTURE);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  let tenFile = '';
+  try {
+    // Bỏ 1 ô ảnh trong HD_Picture (dòng thuộc đúng hợp đồng / lô này), ghi giá trị cũ vào nhật ký chi tiết
+    const boO = function (dong, cot) {
+      const cu = shPic.getRange(dong, cot + 1).getValue();
+      shPic.getRange(dong, cot + 1).setValue('');
+      ghiNhatKyChiTiet_('Xóa ảnh lô rừng', SHEET_NAME.HD_PICTURE, idHD, idRung, [{ truong: 'Picture' + (cot - PICTURE_COL.PICTURE_START + 1) + ' (dòng ' + dong + ')', cu: cu, moi: '' }]);
+    };
+    const khopHD = function (v) { const x = (v || '').toString().trim(); return x === idHD || x === idRung; };
+    if (anh.idDraft) {
+      const shD = getOrCreateDraftAnhSheet_();
+      const dong = _timDongDraftAnh_(shD, null, anh.idDraft);
+      if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      const r = shD.getRange(dong, 1, 1, shD.getLastColumn()).getValues()[0];
+      if ((r[DRAFT_ANH_COL.ID_RUNG] || '').toString().trim() !== idRung) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      const url = (r[DRAFT_ANH_COL.DRIVE_URL] || '').toString().trim();
+      tenFile = r[DRAFT_ANH_COL.TEN_FILE];
+      const cuoi = shPic.getLastRow();
+      if (url && cuoi >= 2) {
+        const data = shPic.getRange(2, 1, cuoi - 1, shPic.getLastColumn()).getValues();
+        for (let i = 0, xong = false; i < data.length && !xong; i++) {
+          if (!khopHD(data[i][PICTURE_COL.ID_HD])) continue;
+          for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
+            if ((data[i][c] || '').toString().trim() === url) { boO(i + 2, c); xong = true; break; }
+          }
+        }
+      }
+      shD.getRange(dong, DRAFT_ANH_COL.TRANG_THAI + 1).setValue('Đã xóa');
+    } else {
+      const dong = Number(anh.soDongPic), cot = Number(anh.cot);
+      if (!(dong >= 2 && dong <= shPic.getLastRow()) || !(cot >= PICTURE_COL.PICTURE_START && cot <= PICTURE_COL.PICTURE_END)) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      const r = shPic.getRange(dong, 1, 1, shPic.getLastColumn()).getValues()[0];
+      if (!khopHD(r[PICTURE_COL.ID_HD]) || (r[cot] || '').toString() !== (anh.giaTriGoc || '').toString()) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      tenFile = (r[cot] || '').toString().split('/').pop();
+      boO(dong, cot);
+    }
+  } finally { lock.releaseLock(); }
+  ghiNhatKy_('Xóa ảnh lô rừng', idHD, idRung + ' — ' + tenFile + ' (file trên Drive vẫn giữ; link cũ trong NhatKy_ChiTiet)');
+  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
+  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  return { thanhCong: true };
 }

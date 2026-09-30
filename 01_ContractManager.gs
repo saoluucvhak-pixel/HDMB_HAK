@@ -432,24 +432,23 @@ function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
   if (!idHD) return;
   if (_draftDangGom_) { _draftDangGom_.hd.add(idHD); return; } // H-12: cập nhật 1 lần cuối thao tác
   try {
-    const nccRows = readData_(SHEET_NAME.HD_NCC);
-    const row = nccRows.find(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
+    // Tốc độ: chỉ đọc đúng các dòng của hợp đồng này (docDongTheoKhoa_) — trước đây đọc TOÀN BỘ 5 sheet sau MỖI lần lưu.
+    const row = docDongTheoKhoa_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, [idHD])[0];
     if (!row) { XOA_DRAFT_MOT_HOP_DONG_(idHD); return; } // hợp đồng đã bị xóa hẳn -> xóa luôn khỏi Draft
 
-    const rungRows = readData_(SHEET_NAME.HD_RUNG).filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD; });
-    const stkRows = readData_(SHEET_NAME.HD_STK).filter(function (r) { return (r[STK_COL.ID_HD] || '').toString().trim() === idHD; });
+    const rungRows = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD]);
+    const stkRows = docDongTheoKhoa_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD]);
 
     const dntt = docCacheBaoCao_ChiDoc_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_);
     const ngayCan = docCacheBaoCao_ChiDoc_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_);
 
-    const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
     let coAnh = false;
-    pictureRows.forEach(function (r) {
-      if ((r[PICTURE_COL.ID_HD] || '').toString().trim() !== idHD) return;
+    docDongTheoKhoa_(SHEET_NAME.HD_PICTURE, PICTURE_COL.ID_HD, [idHD]).forEach(function (r) {
       for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) { if (r[c]) { coAnh = true; break; } }
     });
 
-    const gpsRowsRaw = readData_(SHEET_NAME.HD_GPS);
+    // Chỉ các điểm GPS của lô thuộc hợp đồng này (tinhDongDraftChoHopDong_ chỉ dùng gpsRows[idRung] của các lô đó)
+    const gpsRowsRaw = docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, rungRows.map(function (r) { return r[RUNG_COL.ID_RUNG]; }));
     const gpsByIdRung = {};
     gpsRowsRaw.forEach(function (g) {
       const idRung = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();

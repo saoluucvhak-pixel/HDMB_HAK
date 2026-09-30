@@ -197,9 +197,7 @@ function dongBoTongHopRungVaoHdNcc_(idHD) {
   idHD = idHD.toString().trim();
   let th;
   try {
-    th = tinhTongHopLoRung_(readData_(SHEET_NAME.HD_RUNG).filter(function (r) {
-      return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD;
-    }));
+    th = tinhTongHopLoRung_(docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD])); // chỉ đọc lô của HĐ này
     ghiCtHopDong_(idHD, th);
   } catch (e) {
     log_('ERROR', 'dongBoTongHopRungVaoHdNcc_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e);

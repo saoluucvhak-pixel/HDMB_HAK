@@ -831,3 +831,16 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 - **Tìm & dọn:** Thiết lập > Bảo trì > "Chỉ chẩn đoán" liệt kê **ô số đang chứa NGÀY** (HD_NCC: diện tích ký / SL dự kiến / đơn giá; HD_RUNG: diện tích / đơn giá / KL dự kiến / diện tích GPS / KL thực hiện) kèm địa chỉ ô; nút **"Xóa trống"** (Quản trị) xóa các ô đó, ghi giá trị cũ vào NhatKy_ChiTiet, tính lại cache báo cáo.
 - **File:** 00, 01, 06, 14, 16, 22, 28, 34, 36, 24. **Test:** SO-NGAY (4 ca), 1 ca giao diện.
 - **Sau khi triển khai:** chạy "Chỉ chẩn đoán" -> "Xóa trống" -> nhập lại KL thực hiện đúng (nếu có); hoặc "Xây dựng lại cache Báo cáo" để mọi hợp đồng tính lại.
+
+## ✅ Cập nhật: xóa điểm GPS / ảnh, chuẩn hóa Năm trồng, tăng tốc lưu
+
+| Nội dung | Chi tiết | File |
+|---|---|---|
+| **Xóa điểm GPS** | Nhập liệu > chi tiết lô > tab Tọa độ GPS: mỗi điểm có 🗑️ Xóa (Nhập liệu / Quản trị; chỉ khi HĐ Chờ / Đang thực hiện). Máy chủ kiểm tra lại đúng dòng (dấu vân tay), chép vào `LuuTru_DaXoa` trước khi xóa -> khôi phục được ở Thiết lập. Cập nhật cache báo cáo, Hồ sơ rừng, bản đồ | 06 (`XOA_DIEM_GPS_`), 27, 34 |
+| **Xóa ảnh** | Tab Ảnh: 🗑️ Xóa cho ảnh tải qua lô (bỏ link trong HD_Picture, nháp Draft_AnhRung -> "Đã xóa") và ảnh cũ (bỏ ô trong HD_Picture). Link cũ ghi vào `NhatKy_ChiTiet`; **file trên Drive giữ nguyên** | 06 (`XOA_ANH_RUNG_`), 27, 34 |
+| **Năm trồng** | Trước đây ghi nguyên giá trị nhập, không kiểm tra -> "01/2019" hoặc ô định dạng ngày biến năm thành NGÀY (lỗi đọc hợp đồng rỗng, tuổi rừng sai). Nay chỉ nhận năm 4 chữ số 1950..năm nay (trống = chưa rõ), ô ghi định dạng số. Gợi ý trên form vẫn = ngày ký − 3,5 năm | 06 (`_chuanNamTrong_`) |
+| **Tăng tốc lưu** | (1) Sửa lô: chỉ ghi ô thực sự đổi; không đổi gì -> xong ngay, bỏ qua tính lại cache (luồng "Lưu chính thức" gửi lại mọi lô nên hưởng lợi nhiều). (2) Sau mỗi lần lưu, cache Báo cáo / Hồ sơ rừng / tổng hợp lô rừng chỉ đọc đúng dòng của HĐ / lô đang sửa (`docDongTheoKhoa_`) thay vì đọc lại cả 5 sheet; cache Hồ sơ rừng chỉ ghi đúng dòng thay vì ghi lại cả sheet. Đo trên bộ giả lập 250 HĐ: sửa 1 lô đọc ~7 nghìn ô thay vì ~89 nghìn; bản cũ tăng theo số HĐ, bản mới gần như không đổi | 00, 01, 06, 14, 16 |
+
+**Kiểm chứng:** 112/112 test máy chủ, trong đó `TOC-DO` so cache cập nhật từng HĐ (dòng các HĐ xen kẽ) với cache xây lại toàn bộ — giống hệt; `NAM-TRONG`; `XOA-GPS` / `XOA-ANH` (xóa đúng dòng, từ chối dòng đã đổi, từ chối HĐ đã chốt, khôi phục lại).
+
+**Sản lượng (KL) thực hiện lấy từ đâu:** ưu tiên sheet thanh toán **DNTT_GK_DN_CT** (file app Thanh toán) — cộng cột M "Khối lượng" (tấn) và cột giá trị theo **Số HĐ**; có số ở đó thì dùng. Không có -> cộng cột **S "Khối lượng thực hiện" của HD_RUNG** (các lô của HĐ). Webapp **không có ô nhập** cột S — chỉ có khi nhập tay trên Sheet hoặc app khác ghi vào. Kết quả lưu ở cache Draft_BaoCaoHopDong, cập nhật khi lưu HĐ và đồng bộ thanh toán định kỳ 30 phút.

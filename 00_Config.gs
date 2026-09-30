@@ -1087,6 +1087,32 @@ function soTuO_(v) {
   return isFinite(n) ? n : 0;
 }
 
+/**
+ * Tốc độ: đọc CHỈ các dòng có cột khóa thuộc cacKhoa — đọc 1 cột khóa, rồi từng khối dòng liền nhau — thay vì cả sheet
+ * (readData_). Dùng cho các việc chạy sau MỖI lần lưu (cache báo cáo, Hồ sơ rừng, tổng hợp lô rừng) vốn chỉ cần vài dòng
+ * của 1 hợp đồng. Khớp như chỗ cũ: toString().trim() bằng nhau. Giữ đúng thứ tự dòng trên sheet.
+ * Quá nhiều khối rời (> 25) -> đọc cả sheet 1 lần (rẻ hơn nhiều lượt gọi nhỏ).
+ */
+function docDongTheoKhoa_(sheetName, colIndex0, cacKhoa) {
+  const can = {};
+  (cacKhoa || []).forEach(function (k) { k = (k === null || k === undefined ? '' : k).toString().trim(); if (k) can[k] = true; });
+  if (!Object.keys(can).length) return [];
+  const sh = getSheet_(sheetName);
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const cot = sh.getRange(2, colIndex0 + 1, last - 1, 1).getValues();
+  const dong = [];
+  for (let i = 0; i < cot.length; i++) if (can[(cot[i][0] === null || cot[i][0] === undefined ? '' : cot[i][0]).toString().trim()]) dong.push(i);
+  if (!dong.length) return [];
+  const khoi = [];
+  dong.forEach(function (i) { const k = khoi[khoi.length - 1]; if (k && i === k[1] + 1) k[1] = i; else khoi.push([i, i]); });
+  const soCot = sh.getLastColumn();
+  if (khoi.length > 25) { const tatCa = sh.getRange(2, 1, last - 1, soCot).getValues(); return dong.map(function (i) { return tatCa[i]; }); }
+  let kq = [];
+  khoi.forEach(function (k) { kq = kq.concat(sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, soCot).getValues()); });
+  return kq;
+}
+
 function readData_(sheetName) {
   const sh = getSheet_(sheetName);
   const lastRow = sh.getLastRow();

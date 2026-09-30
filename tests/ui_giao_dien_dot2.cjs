@@ -74,6 +74,32 @@ async function mo(b, file, trang, du, kichThuoc) {
   r = await p.evaluate(() => document.getElementById('vungChinh').textContent);
   kq.push(['Nhập liệu: máy chủ trả rỗng -> báo lỗi rõ ràng, không treo "Đang tải"', /trả về rỗng/.test(r) && !loiJs.length ? true : r.slice(0, 120) + ' ' + loiJs.join('|')]);
   await p.close();
+  // 2d) Nhập liệu > chi tiết lô: nút Xóa điểm GPS / ảnh (chỉ khi HĐ còn sửa được)
+  const moLo = async (tt) => {
+    const pp = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', {
+      layGPSCuaRung: [{ lat: 15.1, lng: 108.1, hinhAnh: '', soDong: 3, dau: 'g3' }, { lat: 15.2, lng: 108.2, hinhAnh: '', soDong: 4, dau: 'g4' }],
+      layDraftAnhChoRung: [{ nguon: 'moi', trangThai: 'Đã duyệt', tenFile: 'a.jpg', url: 'https://drive.google.com/x', idDraft: 'D1' }, { nguon: 'cu', trangThai: 'Đã duyệt', tenFile: 'b.jpg', url: 'https://drive.google.com/y', soDongPic: 2, cot: 3, giaTriGoc: 'y' }],
+      XOA_DIEM_GPS: { thanhCong: true, maDot: 'X' }, XOA_ANH_RUNG: { thanhCong: true } });
+    await pp.evaluate((t) => moChiTietRung({ idHD: 'H1', soHD: 'S1', tenChuRung: 'A', cccdChuRung: '0', tinhTrang: t }, 'L1'), tt); await pp.waitForTimeout(300);
+    return pp;
+  };
+  const bamXoa = async (pp, sel) => {
+    await pp.evaluate(() => { window.__goi = []; }); await pp.click(sel);
+    await pp.waitForFunction(() => [...document.querySelectorAll('[role="dialog"] button')].some(x => x.textContent.trim() === 'Xóa'));
+    await pp.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find(x => x.textContent.trim() === 'Xóa').click()); await pp.waitForTimeout(200);
+    return pp.evaluate(() => window.__goi.slice());
+  };
+  p = await moLo('Đang thực hiện');
+  r = { soNut: await p.evaluate(() => document.querySelectorAll('.lnk-xoa-gps').length), goi: await bamXoa(p, '.lnk-xoa-gps') };
+  kq.push(['Nhập liệu lô: mỗi điểm GPS có nút Xóa, xác nhận rồi gọi XOA_DIEM_GPS', r.soNut === 2 && r.goi.indexOf('XOA_DIEM_GPS') !== -1 ? true : JSON.stringify(r)]);
+  await p.evaluate(() => chonTabRung('anh')); await p.waitForTimeout(300);
+  r = { soNut: await p.evaluate(() => document.querySelectorAll('.lnk-xoa-anh').length), goi: await bamXoa(p, '.lnk-xoa-anh') };
+  kq.push(['Nhập liệu lô: mỗi ảnh (mới + cũ) có nút Xóa, gọi XOA_ANH_RUNG', r.soNut === 2 && r.goi.indexOf('XOA_ANH_RUNG') !== -1 ? true : JSON.stringify(r)]);
+  await p.close();
+  p = await moLo('Đã thanh lý');
+  r = await p.evaluate(async () => { const g = document.querySelectorAll('.lnk-xoa-gps').length; chonTabRung('anh'); await new Promise(x => setTimeout(x, 300)); return { g: g, a: document.querySelectorAll('.lnk-xoa-anh').length }; });
+  kq.push(['Nhập liệu lô: HĐ đã chốt -> không có nút Xóa GPS / ảnh', r.g === 0 && r.a === 0 ? true : JSON.stringify(r)]);
+  await p.close();
   // 3) Nhập liệu: thanh 5 bước + so khớp OCR
   p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { layHopDongTheoIdHD: { idHD: 'X1', soDong: 5, soHD: 'S1', tenChuRung: 'Chủ A', cccdChuRung: '049000000001', tinhTrang: 'Chờ thực hiện' },
     TIEN_DO_HO_SO_HD: { coDuLieu: true, soTaiKhoan: 1, soLoRung: 2, hoSoDu: true, daDoGPSDu: false, coAnh: false, thieuHoSoChiTiet: 'Lô 2 thiếu GPS' } });

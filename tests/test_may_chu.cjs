@@ -594,6 +594,84 @@ try {
     kiem('SO-NGAY API dọn chỉ Quản trị', t.run('_bangQuyenApi_().LAM_SACH_O_SO_LA_NGAY.quyen === QUYEN.QUAN_TRI'));
   });
 
+  // ---------- TOC-DO: cache cập nhật từng HĐ (đọc có chọn lọc) phải GIỐNG HỆT xây lại toàn bộ ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const B = t.tao('Tran B', '049000000002', '2222', 'B1');
+    // Lô / GPS / ảnh của A và B xen kẽ nhau trên sheet (dòng của 1 HĐ không liền nhau)
+    const la = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo A2', dienTichM2: 3000, donGia: 2000, khoiLuongDuKien: 36, namTrong: '2019' }) + ')');
+    const lb = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: B.idHD, diaChiRung: 'Lo B2', dienTichM2: 5000, donGia: 1500, khoiLuongDuKien: 60 }) + ')');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(la.idRung) + ', {lat: 15.1, lng: 108.1}, false)');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lb.idRung) + ', {lat: 15.3, lng: 108.3}, false)');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(la.idRung) + ', {lat: 15.2, lng: 108.2}, false)');
+    t.ss.getSheetByName('HD_Picture').appendRow([A.idHD, A.idHD, 'Nguyen A', 'https://drive.google.com/file/d/ANH1/view']);
+    t.run('CAP_NHAT_DRAFT_MOT_HOP_DONG_(' + J(A.idHD) + ')');
+    t.run('CAP_NHAT_LO_RUNG_(' + J(la.idRung) + ', {donGia: 2100})');
+    const chup = (code, cotId, cotBo) => t.run('(function(){ var v = ' + code + '.getDataRange().getValues().slice(1).filter(function(r){ return String(r[' + cotId + ']).trim(); }); return v.map(function(r){ return r.map(function(x,i){ return i === ' + cotBo + ' ? "" : (Object.prototype.toString.call(x) === "[object Date]" ? x.getTime() : x); }); }).sort(function(a,b){ return String(a[' + cotId + ']) < String(b[' + cotId + ']) ? -1 : 1; }); })()');
+    const bc1 = chup('getOrCreateDraftBaoCaoSheet_()', 'DRAFT_BAOCAO_COL.ID_HD', 'DRAFT_BAOCAO_COL.CAP_NHAT_LUC');
+    const hs1 = chup('getOrCreateDraftHoSoRungSheet_()', 'DRAFT_HSR_COL.ID_RUNG', 'DRAFT_HSR_COL.CAP_NHAT_LUC');
+    t.run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()'); t.run('XAY_DUNG_LAI_DRAFT_HOSORUNG_()');
+    const bc2 = chup('getOrCreateDraftBaoCaoSheet_()', 'DRAFT_BAOCAO_COL.ID_HD', 'DRAFT_BAOCAO_COL.CAP_NHAT_LUC');
+    const hs2 = chup('getOrCreateDraftHoSoRungSheet_()', 'DRAFT_HSR_COL.ID_RUNG', 'DRAFT_HSR_COL.CAP_NHAT_LUC');
+    kiem('TOC-DO cache Báo cáo cập nhật từng HĐ (đọc chọn lọc) giống hệt xây lại toàn bộ', bc1.length === 2 && J(bc1) === J(bc2), J(bc1) + '\n' + J(bc2));
+    kiem('TOC-DO cache Hồ sơ rừng ghi đúng dòng giống hệt xây lại toàn bộ', hs1.length === 4 && J(hs1) === J(hs2), J(hs1) + '\n' + J(hs2));
+    const ct = t.run('_tinhHinhThucHienCuaHD_(' + J(A.idHD) + ')');
+    kiem('TOC-DO số liệu HĐ A đúng dù dòng xen kẽ (KL dự kiến gồm lô tự sinh + lô thêm)', Number(ct.khoiLuongDuKien) > 36, J(ct));
+    // Lưu lại lô KHÔNG đổi gì -> không ghi, không tính lại
+    const khong = t.run('CAP_NHAT_LO_RUNG_(' + J(la.idRung) + ', {donGia: "2100", dienTichM2: 3000, namTrong: 2019})');
+    kiem('TOC-DO lưu lô không đổi gì -> bỏ qua (khongDoi), không ghi ô nào', khong.thanhCong && khong.khongDoi === true, J(khong));
+  });
+
+  // ---------- NAM-TRONG: năm trồng phải là năm 4 chữ số ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const sai = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'X', namTrong: '01/2019' }) + ')');
+    const lo = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Y', namTrong: '2019' }) + ')');
+    const sh = t.ss.getSheetByName('HD_RUNG');
+    const dong = sh.getDataRange().getValues().findIndex(r => r[2] === lo.idRung) + 1;
+    const sai2 = t.run('CAP_NHAT_LO_RUNG_(' + J(lo.idRung) + ', {namTrong: "1800"})');
+    const dung = t.run('CAP_NHAT_LO_RUNG_(' + J(lo.idRung) + ', {namTrong: "2020"})');
+    kiem('NAM-TRONG sai định dạng / ngoài khoảng bị từ chối, năm đúng lưu thành SỐ với định dạng số',
+      !sai.thanhCong && !sai2.thanhCong && dung.thanhCong && sh.getRange(dong, 20).getValue() === 2020 && sh.fmt[dong + ',20'] === '0', J([sai, sai2, dung, sh.getRange(dong, 20).getValue()]));
+  });
+
+  // ---------- XOA-GPS / XOA-ANH: xóa điểm GPS, ảnh của lô rừng ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const lo = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo 1' }) + ')');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.1, lng: 108.1}, false)');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.2, lng: 108.2}, false)');
+    let ds = t.run('layGPSCuaRung_(' + J(lo.idRung) + ')');
+    const sai = t.run('XOA_DIEM_GPS_(' + J(lo.idRung) + ',' + ds[0].soDong + ', "sai")');
+    const x = t.run('XOA_DIEM_GPS_(' + J(lo.idRung) + ',' + ds[0].soDong + ',' + J(ds[0].dau) + ')');
+    ds = t.run('layGPSCuaRung_(' + J(lo.idRung) + ')');
+    kiem('XOA-GPS xóa đúng 1 điểm (điểm 15.2 còn lại), dòng sai dấu bị từ chối, có mã lưu trữ', !sai.thanhCong && x.thanhCong && ds.length === 1 && ds[0].lat === 15.2 && !!x.maDot, J([sai, x, ds]));
+    t.run('KHOI_PHUC_DU_LIEU_DA_XOA_(' + J(x.maDot) + ')');
+    kiem('XOA-GPS khôi phục lại được điểm đã xóa', t.run('layGPSCuaRung_(' + J(lo.idRung) + ')').length === 2);
+    // Ảnh mới (Draft_AnhRung đã duyệt + link trong HD_Picture) và ảnh cũ (chỉ HD_Picture)
+    const shD = t.run('getOrCreateDraftAnhSheet_()');
+    const urlMoi = 'https://drive.google.com/file/d/MOI/view';
+    t.run('getOrCreateDraftAnhSheet_().appendRow(["D1",' + J(A.idHD) + ',' + J(lo.idRung) + ',"moi.jpg","MOI",' + J(urlMoi) + ',"","","","","Đã duyệt",new Date()])');
+    t.ss.getSheetByName('HD_Picture').appendRow([A.idHD, A.idHD, 'Nguyen A', 'https://drive.google.com/file/d/CU/view', urlMoi]);
+    let anh = t.run('layDraftAnhChoRung_(' + J(lo.idRung) + ',' + J(A.idHD) + ')').filter(a => a.trangThai === 'Đã duyệt');
+    const aMoi = anh.find(a => a.nguon === 'moi'), aCu = anh.find(a => a.nguon === 'cu' && /CU/.test(a.url));
+    const x1 = t.run('XOA_ANH_RUNG_(' + J({ idRung: lo.idRung, idDraft: aMoi.idDraft }) + ')');
+    const x2 = t.run('XOA_ANH_RUNG_(' + J({ idRung: lo.idRung, soDongPic: aCu.soDongPic, cot: aCu.cot, giaTriGoc: aCu.giaTriGoc }) + ')');
+    anh = t.run('layDraftAnhChoRung_(' + J(lo.idRung) + ',' + J(A.idHD) + ')').filter(a => a.trangThai === 'Đã duyệt');
+    const nk = t.ss.getSheetByName('NhatKy_ChiTiet').getDataRange().getValues().filter(r => r[2] === 'Xóa ảnh lô rừng');
+    kiem('XOA-ANH xóa ảnh mới (bỏ link HD_Picture + nháp "Đã xóa") và ảnh cũ; link cũ ghi nhật ký chi tiết', x1.thanhCong && x2.thanhCong && anh.length === 0 && nk.length === 2, J([x1, x2, anh, nk.length]));
+    // Hợp đồng đã chốt -> không xóa được
+    t.ss.getSheetByName('HD_NCC').getRange(2, 31).setValue('Đã thanh lý');
+    const ds2 = t.run('layGPSCuaRung_(' + J(lo.idRung) + ')');
+    const chot = t.run('XOA_DIEM_GPS_(' + J(lo.idRung) + ',' + ds2[0].soDong + ',' + J(ds2[0].dau) + ')');
+    kiem('XOA-GPS hợp đồng đã chốt -> từ chối', !chot.thanhCong && /chốt/.test(chot.loi), J(chot));
+    const q = t.run('_bangQuyenApi_()');
+    kiem('XOA-GPS/ANH API cho quyền Nhập liệu', t.run('_bangQuyenApi_().XOA_DIEM_GPS.quyen === QUYEN.NHAP_LIEU && _bangQuyenApi_().XOA_ANH_RUNG.quyen === QUYEN.NHAP_LIEU'));
+  });
+
   // ---------- BT-01..: bảo trì — dòng nghi trùng & dòng mồ côi ----------
   chay(function () {
     const t = moi();

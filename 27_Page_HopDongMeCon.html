@@ -1321,12 +1321,25 @@
   function taiBangGPS_(idRung) {
     hakRun_().withSuccessHandler(function (list) {
       var elBang = document.querySelector('.vung-bang-gps');
+      var coTheXoa = coTheSuaHopDong_(ctxRung.h.tinhTrang);
       elBang.innerHTML = !list.length ? '<div class="empty-hint">Chưa có điểm GPS nào.</div>' :
-        ('<table class="mecon-table"><thead><tr><th>Điểm</th><th>Tọa độ</th><th>Ảnh</th></tr></thead><tbody>' +
+        ('<table class="mecon-table"><thead><tr><th>Điểm</th><th>Tọa độ</th><th>Ảnh</th>' + (coTheXoa ? '<th></th>' : '') + '</tr></thead><tbody>' +
           list.map(function (p, i) {
             return '<tr><td>Điểm ' + (i + 1) + '</td><td><a href="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '" target="_blank">' + p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + ' 🗺️</a></td>' +
-              '<td>' + (p.hinhAnh ? '<a href="' + urlAnToan_(p.hinhAnh) + '" target="_blank">🖼️ xem</a>' : '—') + '</td></tr>';
+              '<td>' + (p.hinhAnh ? '<a href="' + urlAnToan_(p.hinhAnh) + '" target="_blank">🖼️ xem</a>' : '—') + '</td>' +
+              (coTheXoa ? '<td><a class="lnk-xoa-gps" data-i="' + i + '" style="cursor:pointer;color:var(--err-chu, #dc2626)">🗑️ Xóa</a></td>' : '') + '</tr>';
           }).join('') + '</tbody></table>');
+      elBang.querySelectorAll('.lnk-xoa-gps').forEach(function (a) {
+        a.addEventListener('click', async function () {
+          var p = list[Number(a.dataset.i)];
+          if (!(await hakXacNhan_('Xóa điểm ' + (Number(a.dataset.i) + 1) + ' (' + p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + ') của lô này? Điểm bị xóa được lưu trữ, khôi phục được ở Thiết lập.', { nguyHiem: true, nutDongY: 'Xóa' }))) return;
+          a.textContent = '⌛';
+          hakRun_().withSuccessHandler(function (kq) {
+            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else thongBao_('✅ Đã xóa điểm GPS.');
+            taiBangGPS_(idRung);
+          }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); taiBangGPS_(idRung); }).XOA_DIEM_GPS(idRung, p.soDong, p.dau);
+        });
+      });
     }).withFailureHandler(function (err) { document.querySelector('.vung-bang-gps').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtml_(err.message) + '</div>'; }).layGPSCuaRung(idRung);
   }
   function themDiemGpsMC_(idRung) {
@@ -1369,9 +1382,24 @@
   function taiBangAnhRung_(idHD, idRung) {
     hakRun_().withSuccessHandler(function (list) {
       var daDuyet = (list || []).filter(function (a) { return a.trangThai === 'Đã duyệt'; });
-      document.querySelector('.vung-bang-anh').innerHTML = !daDuyet.length ? '<div class="empty-hint">Chưa có ảnh nào cho lô này.</div>' :
-        ('<table class="mecon-table"><thead><tr><th>Tên file</th><th>Nguồn</th><th>Xem</th></tr></thead><tbody>' +
-          daDuyet.map(function (a) { return '<tr><td>' + escHtml_(a.tenFile) + '</td><td>' + (a.nguon === 'cu' ? '<span class="hint" title="' + escHtml_(a.ghiChu) + '">Ảnh cũ (chung hợp đồng)</span>' : 'Tải qua lô rừng này') + '</td><td><a href="' + urlAnToan_(a.url) + '" target="_blank">🖼️ xem</a></td></tr>'; }).join('') + '</tbody></table>');
+      var coTheXoa = coTheSuaHopDong_(ctxRung.h.tinhTrang);
+      var vung = document.querySelector('.vung-bang-anh');
+      vung.innerHTML = !daDuyet.length ? '<div class="empty-hint">Chưa có ảnh nào cho lô này.</div>' :
+        ('<table class="mecon-table"><thead><tr><th>Tên file</th><th>Nguồn</th><th>Xem</th>' + (coTheXoa ? '<th></th>' : '') + '</tr></thead><tbody>' +
+          daDuyet.map(function (a, i) { return '<tr><td>' + escHtml_(a.tenFile) + '</td><td>' + (a.nguon === 'cu' ? '<span class="hint" title="' + escHtml_(a.ghiChu) + '">Ảnh cũ (chung hợp đồng)</span>' : 'Tải qua lô rừng này') + '</td><td><a href="' + urlAnToan_(a.url) + '" target="_blank">🖼️ xem</a></td>' +
+            (coTheXoa ? '<td><a class="lnk-xoa-anh" data-i="' + i + '" style="cursor:pointer;color:var(--err-chu, #dc2626)">🗑️ Xóa</a></td>' : '') + '</tr>'; }).join('') + '</tbody></table>');
+      vung.querySelectorAll('.lnk-xoa-anh').forEach(function (lnk) {
+        lnk.addEventListener('click', async function () {
+          var a = daDuyet[Number(lnk.dataset.i)];
+          if (!(await hakXacNhan_('Xóa ảnh "' + (a.tenFile || '') + '" khỏi hồ sơ lô rừng này?' + (a.nguon === 'cu' ? ' (Ảnh cũ này gắn chung cả hợp đồng.)' : '') + ' File gốc trên Drive vẫn được giữ lại.', { nguyHiem: true, nutDongY: 'Xóa' }))) return;
+          lnk.textContent = '⌛';
+          var tt = a.nguon === 'cu' ? { idRung: idRung, soDongPic: a.soDongPic, cot: a.cot, giaTriGoc: a.giaTriGoc } : { idRung: idRung, idDraft: a.idDraft };
+          hakRun_().withSuccessHandler(function (kq) {
+            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else thongBao_('✅ Đã xóa ảnh.');
+            taiBangAnhRung_(idHD, idRung);
+          }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); taiBangAnhRung_(idHD, idRung); }).XOA_ANH_RUNG(tt);
+        });
+      });
     }).withFailureHandler(function (err) { document.querySelector('.vung-bang-anh').innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtml_(err.message) + '</div>'; }).layDraftAnhChoRung(idRung, idHD);
   }
   function themAnhRungMC_(idHD, idRung) {
