@@ -1034,7 +1034,7 @@ function layDanhSachRung_(idHD) {
         dienTichGPS: r[RUNG_COL.DIEN_TICH_GPS], hoSoNguonGoc: r[RUNG_COL.HO_SO_NGUON_GOC],
         soGiayTo: r[RUNG_COL.SO_GIAY_TO],
         ngayGiayTo: ngayToISO_(r[RUNG_COL.NGAY_GIAY_TO]), // L-06: cùng múi giờ bảng tính như mọi ngày khác
-        namTrong: r[RUNG_COL.NAM_TRONG] || '',
+        namTrong: Object.prototype.toString.call(r[RUNG_COL.NAM_TRONG]) === '[object Date]' ? r[RUNG_COL.NAM_TRONG].getFullYear() : (r[RUNG_COL.NAM_TRONG] || ''), // ô bị Sheets đổi thành ngày -> lấy năm
         dinhKem: resolveDriveLink_(r[RUNG_COL.DINH_KEM_GIAY_TO])
       };
     });

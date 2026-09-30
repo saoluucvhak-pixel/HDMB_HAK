@@ -68,6 +68,12 @@ async function mo(b, file, trang, du, kichThuoc) {
   r = await p.evaluate(() => ({ goi: (window.__goi || []).slice(0, 12), chu: document.body.textContent.indexOf('S9') !== -1 }));
   kq.push(['Nhập liệu: link ?idHD= (từ nút Sửa ở Tra cứu) mở thẳng hợp đồng đó', r.chu && r.goi.indexOf('layHopDongTheoIdHD') !== -1 ? true : JSON.stringify(r)]);
   await p.close();
+  p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { __thamSo: { page: 'hopdongmc', idHD: 'Z1' } }); // máy chủ trả null
+  const loiJs = []; p.on('pageerror', e => loiJs.push(e.message));
+  await p.waitForTimeout(600);
+  r = await p.evaluate(() => document.getElementById('vungChinh').textContent);
+  kq.push(['Nhập liệu: máy chủ trả rỗng -> báo lỗi rõ ràng, không treo "Đang tải"', /trả về rỗng/.test(r) && !loiJs.length ? true : r.slice(0, 120) + ' ' + loiJs.join('|')]);
+  await p.close();
   // 3) Nhập liệu: thanh 5 bước + so khớp OCR
   p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { layHopDongTheoIdHD: { idHD: 'X1', soDong: 5, soHD: 'S1', tenChuRung: 'Chủ A', cccdChuRung: '049000000001', tinhTrang: 'Chờ thực hiện' },
     TIEN_DO_HO_SO_HD: { coDuLieu: true, soTaiKhoan: 1, soLoRung: 2, hoSoDu: true, daDoGPSDu: false, coAnh: false, thieuHoSoChiTiet: 'Lô 2 thiếu GPS' } });

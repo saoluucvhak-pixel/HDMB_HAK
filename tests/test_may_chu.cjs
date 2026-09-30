@@ -558,6 +558,21 @@ try {
       /FILE=30_Page_TongQuanHopDong\|TRANG=tongquan\|PHIEN=\|/.test(b.html) && /TRANG=hopdongmc/.test(c.html), J([a, b, c, g]));
   });
   // ---------- Giao diện mới đợt 2: dữ liệu Tổng quan + tiến độ hồ sơ 5 bước ----------
+  // ---------- API-DATE: kết quả api() có Date -> google.script.run trả null cho cả kết quả (trang Nhập liệu lỗi khongTimThay) ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Nguyen A', '049000000001', '1111', 'A1');
+    const rungSh = t.ss.getSheetByName('HD_RUNG'), nccSh = t.ss.getSheetByName('HD_NCC');
+    const dongLo = rungSh.getDataRange().getValues().findIndex(r => String(r[0]) === A.idHD) + 1;
+    rungSh.getRange(dongLo, 20).setValue(t.run('new Date(2019, 0, 1)'));           // "Năm trồng" bị Sheets đổi thành ngày
+    const dongHD = nccSh.getDataRange().getValues().findIndex(r => String(r[29]) === A.idHD) + 1;
+    nccSh.getRange(dongHD, 23).setValue(t.run('new Date(2024, 4, 6, 9, 30, 0)')); // ô Số giấy tờ lỡ là ngày giờ
+    const coDate = t.run('(function kt(v){ if (v && typeof v === "object") { if (Object.prototype.toString.call(v) === "[object Date]") return true; return Object.keys(v).some(function(k){ return kt(v[k]); }); } return false; })');
+    const kq = t.run('api("", "layHopDongTheoIdHD", [' + J(A.idHD) + '])');
+    const lo = (kq.danhSachRung || [])[0] || {};
+    kiem('API-DATE kết quả api() không còn giá trị Date (Năm trồng -> năm, ngày giờ -> chuỗi)', kq && !coDate(kq) && lo.namTrong === 2019 && kq.soGiayTo === '2024-05-06 09:30:00', J({ nam: lo.namTrong, sgt: kq && kq.soGiayTo }));
+  });
+
   // ---------- BT-01..: bảo trì — dòng nghi trùng & dòng mồ côi ----------
   chay(function () {
     const t = moi();

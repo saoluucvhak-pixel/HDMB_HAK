@@ -817,3 +817,9 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 **Kiểm chứng:** `ui_giao_dien_dot2.cjs` thêm 4 ca (Nhập liệu thấy nút Sửa + link đúng; HĐ đã chốt -> nút chỉ xem; vai trò Chỉ xem không có nút; link `?idHD=` mở thẳng hợp đồng qua getLocation — mã cũ trượt). Toàn bộ bộ test đạt.
 
 **Triển khai:** chép `33_Page_TraCuuHopDong.html`, `27_Page_HopDongMeCon.html`; Deploy phiên bản mới.
+
+## 🐛 Sửa: mở hợp đồng ở Nhập liệu báo lỗi `Cannot read properties of null (reading 'khongTimThay')`
+
+- **Nguyên nhân:** `google.script.run` trả **null cho cả kết quả** nếu trong đó có 1 giá trị `Date`. `layHopDongTheoIdHD_` trả thẳng ô **Năm trồng** (HD_RUNG cột T) — ô này bị Sheets tự đổi thành ngày thì hợp đồng đó không mở được ở Nhập liệu (cả từ nút Sửa ở Tra cứu lẫn từ danh sách khách hàng), trang treo "Đang tải…".
+- **Sửa:** (1) `api()` đổi mọi `Date` trong kết quả thành chuỗi (`yyyy-MM-dd`, có giờ thì `yyyy-MM-dd HH:mm:ss`) — chặn lỗi này cho mọi chức năng; (2) Năm trồng dạng ngày -> lấy năm; (3) trang Nhập liệu nhận rỗng thì báo lỗi rõ ràng.
+- **File:** 34_PhanQuyen.gs, 06_CreateUpdate.gs, 27_Page_HopDongMeCon.html. **Test:** `API-DATE` (mã cũ trượt), ca giao diện "máy chủ trả rỗng".

@@ -28,6 +28,7 @@ Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đ�
 | (commit tiếp) | 🎨 | Giao diện mới đợt 3: Báo cáo chỉ số có thanh tiến độ + lọc gọn, Tra cứu hình ảnh lọc theo loại ảnh, Thiết lập mục lục chia nhóm, Hướng dẫn thẻ bước — 85/85 test máy chủ, toàn bộ test giao diện đạt | 01, GiaoDien_Chung, 10, 13, 24, 35, tests/ |
 | (commit tiếp) | 🧹 | Bảo trì: tìm & xóa dòng HD_NCC / HD_RUNG nghi trùng + xóa dòng mồ côi (chọn từng dòng, dấu vân tay chống xóa nhầm, lưu trữ khôi phục được) — 97/97 test máy chủ, toàn bộ test giao diện đạt | 28, 34, 24, tests/ |
 | (commit tiếp) | ✨🐛 | Tra cứu: nút Sửa hợp đồng (Nhập liệu/Quản trị) mở đúng HĐ ở trang Nhập liệu; Nhập liệu đọc `?idHD=` qua getLocation (trước đây mở ra danh sách trong khung sandbox/Portal) | 33, 27, tests/ |
+| (commit tiếp) | 🐛 | Nhập liệu không mở được hợp đồng (null / khongTimThay): kết quả có Date (ô Năm trồng dạng ngày) -> google.script.run trả null. `api()` đổi Date thành chuỗi, Năm trồng lấy năm, trang báo lỗi rõ khi nhận rỗng | 34, 06, 27, tests/ |
 
 ## 28/09/2026 — Đợt 5 (nhánh `main`): số liệu hợp đồng cho app Thanh toán, ngày tháng theo vùng, chống tạo trùng
 

@@ -862,6 +862,7 @@
     el.innerHTML = '<div class="breadcrumb"><a onclick="veDanhSachKhachHang()">👤 Khách hàng</a></div><p class="hint">⌛ Đang tải...</p>';
     hakRun_()
       .withSuccessHandler(function (h) {
+        if (!h) { el.innerHTML = '<div class="empty-hint">❌ Không đọc được dữ liệu hợp đồng ' + escHtml_(ctxHD.idHD) + ' (máy chủ trả về rỗng). Bấm Tải lại; nếu vẫn lỗi, báo quản trị kiểm tra dòng hợp đồng này trên Sheet.</div>'; return; }
         if (h.khongTimThay) { el.innerHTML = '<div class="empty-hint">❌ ' + escHtml_(h.chanDoan) + '</div>'; return; }
         ctxKH = { cccd: h.cccdChuRung, tenChuRung: h.tenChuRung }; // đồng bộ lại để breadcrumb luôn đúng dù vào trực tiếp (vd vừa tạo xong hợp đồng)
         var coTheSua = coTheSuaHopDong_(h.tinhTrang);

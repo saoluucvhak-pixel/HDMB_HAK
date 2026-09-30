@@ -363,10 +363,30 @@ function api(phien, tenHam, thamSo) {
       _nguoiDungHienTai_ = { email: email, vaiTro: _vaiTroCua_(email) };
     }
     _yeuCauQuyen_(route.quyen);
-    return route.fn.apply(null, Array.isArray(thamSo) ? thamSo : []);
+    return _anToanChoTrinhDuyet_(route.fn.apply(null, Array.isArray(thamSo) ? thamSo : []), 0);
   } finally {
     _nguoiDungHienTai_ = null;
   }
+}
+
+/**
+ * google.script.run trả NULL cho CẢ kết quả nếu bên trong có 1 giá trị Date (vd ô "Năm trồng" / ô ngày trên Sheet
+ * chưa qua ngayToISO_) -> trang nhận null và lỗi "Cannot read properties of null". Đổi mọi Date thành chuỗi:
+ * ngày thuần -> "yyyy-MM-dd", có giờ -> "yyyy-MM-dd HH:mm:ss" (múi giờ bảng tính). Sửa tại chỗ (kết quả là dữ liệu mới).
+ */
+function _anToanChoTrinhDuyet_(v, sau) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return '';
+    const tz = layMuiGioBangTinh_();
+    const coGio = Utilities.formatDate(v, tz, 'HH:mm:ss') !== '00:00:00';
+    return Utilities.formatDate(v, tz, coGio ? 'yyyy-MM-dd HH:mm:ss' : 'yyyy-MM-dd');
+  }
+  if (sau > 20) return v;
+  if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) v[i] = _anToanChoTrinhDuyet_(v[i], sau + 1); return v; }
+  if (Object.getPrototypeOf(v) !== Object.prototype && Object.getPrototypeOf(v) !== null) return v; // chỉ đi vào object dữ liệu thuần
+  Object.keys(v).forEach(function (k) { v[k] = _anToanChoTrinhDuyet_(v[k], sau + 1); });
+  return v;
 }
 
 let _bangQuyenApiCache_ = null;
