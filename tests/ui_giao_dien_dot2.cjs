@@ -5,7 +5,7 @@ const { moTrinhDuyet, ghiTrangTam, inKetQua } = require('./ui_chung.cjs');
 const giaLap = du => `<script>window.__du=${JSON.stringify(du)};(function(){function taoRunner(){var ok=null;var r=new Proxy({},{get:function(_,k){
  if(k==='withSuccessHandler')return function(f){ok=f;return r}; if(k==='withFailureHandler'||k==='withUserObject')return function(){return r};
  return function(){var ten=k==='api'?arguments[1]:k;window.__goi=(window.__goi||[]).concat(ten);setTimeout(function(){if(!ok)return;var kq=window.__du[ten];
- ok(ten==='thongTinDangNhap'&&kq===undefined?{daDangNhap:true,email:'qt@test.vn',vaiTroNhan:'Quản trị',quyen:['XEM','NHAP_LIEU','QUAN_TRI'],quaPhien:true}:(kq!==undefined?kq:null))},5)}}});return r}
+ ok(ten==='thongTinDangNhap'&&kq===undefined?{daDangNhap:true,email:'qt@test.vn',vaiTroNhan:'Quản trị',quyen:['XEM','NHAP_LIEU','QUAN_TRI'],quaPhien:true}:(kq!==undefined?kq:null))},(window.__du.__tre||{})[ten]||5)}}});return r}
  window.google={script:{url:{getLocation:function(f){f({parameter:(window.__du&&window.__du.__thamSo)||{},hash:''})}},history:{replace:function(){},push:function(){}},host:{close:function(){}},run:new Proxy({},{get:function(_,k){return taoRunner()[k]}})}};})();</script>`;
 async function mo(b, file, trang, du, kichThuoc) {
   let html = danhGia(file, { currentPage: trang, baseUrl: 'https://script.google.com/macros/s/X/exec', tabTrang: '', phien: '', loiDangNhap: '' });
@@ -100,6 +100,23 @@ async function mo(b, file, trang, du, kichThuoc) {
   r = await p.evaluate(async () => { const g = document.querySelectorAll('.lnk-xoa-gps').length; chonTabRung('anh'); await new Promise(x => setTimeout(x, 300)); return { g: g, a: document.querySelectorAll('.lnk-xoa-anh').length }; });
   kq.push(['Nhập liệu lô: HĐ đã chốt -> không có nút Xóa GPS / ảnh', r.g === 0 && r.a === 0 ? true : JSON.stringify(r)]);
   await p.close();
+  // 2e) Chỉ báo trạng thái lưu: bấm Lưu -> "Đang lưu" (không đóng được cửa sổ lúc đang lưu) -> "✅ Đã lưu … lúc"; lỗi -> "❌ Chưa lưu được"
+  const loMau = { idRung: 'L1', maRung: 'M1', diaChiRung: 'Thôn 1', dienTichM2: 3000, donGia: 2000, khoiLuongDuKien: 36, namTrong: 2019 };
+  const luuLo = async (kqMayChu) => {
+    const pp = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { CAP_NHAT_LO_RUNG: kqMayChu, layDanhSachRung: [], __tre: { CAP_NHAT_LO_RUNG: 400 } });
+    await pp.evaluate((lo) => moModalThemSuaRung_({ idHD: 'H1', soHD: 'S1', tenChuRung: 'A', cccdChuRung: '0', tinhTrang: 'Đang thực hiện', ngayKy: '2026-05-10' }, lo), loMau);
+    await pp.click('#btnLuuRung'); await pp.waitForTimeout(80);
+    const dang = await pp.evaluate(() => { const c = document.getElementById('hakTrangThaiLuu'); document.getElementById('modalChung').click(); return { lop: c && c.className, chu: c && c.textContent, moSauBamNgoai: document.getElementById('modalChung').classList.contains('mo') }; });
+    await pp.waitForTimeout(600);
+    const sau = await pp.evaluate(() => { const c = document.getElementById('hakTrangThaiLuu'); return { lop: c.className, chu: c.textContent, mo: document.getElementById('modalChung').classList.contains('mo'), msg: (document.getElementById('msgModal') || {}).textContent || '' }; });
+    await pp.close(); return { dang, sau };
+  };
+  r = await luuLo({ thanhCong: true, dong: 5 });
+  kq.push(['Lưu: đang lưu hiện chỉ báo, bấm ra ngoài không đóng cửa sổ; xong -> "✅ Đã lưu lô rừng lúc …", cửa sổ tự đóng',
+    /dang/.test(r.dang.lop) && /Đang lưu lô rừng/.test(r.dang.chu) && r.dang.moSauBamNgoai && /ok/.test(r.sau.lop) && /Đã lưu lô rừng lúc \d/.test(r.sau.chu) && !r.sau.mo ? true : JSON.stringify(r)]);
+  r = await luuLo({ thanhCong: false, loi: 'Năm trồng rừng phải là năm 4 chữ số' });
+  kq.push(['Lưu lỗi: chỉ báo "❌ Chưa lưu được … lý do", cửa sổ giữ nguyên với thông báo lỗi',
+    /loi/.test(r.sau.lop) && /Chưa lưu được lô rừng: Năm trồng/.test(r.sau.chu) && r.sau.mo && /Năm trồng/.test(r.sau.msg) ? true : JSON.stringify(r)]);
   // 3) Nhập liệu: thanh 5 bước + so khớp OCR
   p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { layHopDongTheoIdHD: { idHD: 'X1', soDong: 5, soHD: 'S1', tenChuRung: 'Chủ A', cccdChuRung: '049000000001', tinhTrang: 'Chờ thực hiện' },
     TIEN_DO_HO_SO_HD: { coDuLieu: true, soTaiKhoan: 1, soLoRung: 2, hoSoDu: true, daDoGPSDu: false, coAnh: false, thieuHoSoChiTiet: 'Lô 2 thiếu GPS' } });

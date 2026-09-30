@@ -843,4 +843,6 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 
 **Kiểm chứng:** 112/112 test máy chủ, trong đó `TOC-DO` so cache cập nhật từng HĐ (dòng các HĐ xen kẽ) với cache xây lại toàn bộ — giống hệt; `NAM-TRONG`; `XOA-GPS` / `XOA-ANH` (xóa đúng dòng, từ chối dòng đã đổi, từ chối HĐ đã chốt, khôi phục lại).
 
+**Biết đã lưu chưa:** trước đây bấm Lưu -> cửa sổ "Đang lưu..." rồi tự đóng khi xong, KHÔNG báo gì; lỡ bấm ra ngoài thì lỗi (nếu có) hiện vào cửa sổ đã đóng -> mất. Nay có chỉ báo cố định góc trên phải (GiaoDien_Chung `hakBatDauLuu_`, dùng lại được ở mọi trang): ⏳ Đang lưu … -> ✅ Đã lưu … lúc hh:mm:ss (giữ nguyên) / ❌ Chưa lưu được … lý do (giữ tới khi đóng). Đang lưu thì Hủy / bấm ra ngoài không đóng cửa sổ; rời trang / tải lại khi còn việc đang lưu -> hỏi lại (cả khi nhúng Portal). Test: 2 ca giao diện (mã cũ trượt).
+
 **Sản lượng (KL) thực hiện lấy từ đâu:** ưu tiên sheet thanh toán **DNTT_GK_DN_CT** (file app Thanh toán) — cộng cột M "Khối lượng" (tấn) và cột giá trị theo **Số HĐ**; có số ở đó thì dùng. Không có -> cộng cột **S "Khối lượng thực hiện" của HD_RUNG** (các lô của HĐ). Webapp **không có ô nhập** cột S — chỉ có khi nhập tay trên Sheet hoặc app khác ghi vào. Kết quả lưu ở cache Draft_BaoCaoHopDong, cập nhật khi lưu HĐ và đồng bộ thanh toán định kỳ 30 phút.

@@ -145,6 +145,16 @@
   html body .hak-muc-luc a { display: block; padding: 7px 10px; border-radius: 8px; color: var(--chu-chinh, #374151); text-decoration: none; font-size: 13.5px; line-height: 1.35; }
   html body .hak-muc-luc a:hover { background: var(--nen-phu, #f3f4f6); }
   html body .hak-muc-luc .hak-ml-nhom { font-size: 11px; font-weight: 600; color: var(--chu-phu, #6b7280); text-transform: uppercase; letter-spacing: .05em; padding: 12px 10px 4px 10px; }
+  /* Chỉ báo trạng thái lưu cố định (hakBatDauLuu_): luôn biết đã lưu xong chưa, kể cả khi đã đóng cửa sổ nhập */
+  #hakTrangThaiLuu { position: fixed; top: 10px; right: 12px; z-index: 100001; display: none; align-items: center; gap: 8px; max-width: min(460px, calc(100vw - 24px));
+    padding: 7px 12px; border-radius: 999px; font: 600 12.5px/1.35 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  #hakTrangThaiLuu.hien { display: flex; }
+  #hakTrangThaiLuu.dang { background: #1f2937; color: #fff; }
+  #hakTrangThaiLuu.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  #hakTrangThaiLuu.loi { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; border-radius: 10px; }
+  #hakTrangThaiLuu button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0 2px; }
+  #hakTrangThaiLuu .xoay { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: hakXoay .8s linear infinite; flex: none; }
+  @keyframes hakXoay { to { transform: rotate(360deg); } }
   html body .hak-muc-luc a.dang-xem { background: var(--info-bg, #dbeafe); color: var(--info-chu, #1e40af); font-weight: 600; }
   @media (max-width: 1000px) { html body .hak-co-muc-luc { display: block; } html body .hak-muc-luc { position: static; max-height: none; margin-bottom: 16px; } }
 </style>
@@ -385,6 +395,51 @@ function hakManChuyenTrang_(noiDung) {
   }
   m.textContent = noiDung;
 }
+/**
+ * CHỈ BÁO TRẠNG THÁI LƯU dùng chung. Trước đây bấm Lưu: cửa sổ nhập hiện "Đang lưu..." rồi TỰ ĐÓNG khi xong, không báo gì
+ * -> không biết đã lưu chưa, phải ngồi chờ; lỡ đóng cửa sổ thì lỗi (nếu có) hiện vào cửa sổ đã đóng -> mất.
+ * Cách dùng: var L = hakBatDauLuu_('lô rừng'); ... L.xong() khi máy chủ báo thành công, L.loi('lý do') khi lỗi.
+ * Chip góc trên phải: "⏳ Đang lưu…" -> "✅ Đã lưu lô rừng lúc 10:32:05" (giữ nguyên để luôn biết) / "❌ Chưa lưu được …" (giữ tới khi đóng).
+ * Còn việc đang lưu mà rời trang / tải lại -> hỏi lại.
+ */
+var hakLuuDangCho_ = 0;
+function hakVeTrangThaiLuu_(loai, chu) {
+  var el = document.getElementById('hakTrangThaiLuu');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'hakTrangThaiLuu';
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    (document.body || document.documentElement).appendChild(el);
+  }
+  el.className = 'hien ' + loai;
+  el.innerHTML = '';
+  if (loai === 'dang') { var x = document.createElement('span'); x.className = 'xoay'; x.setAttribute('aria-hidden', 'true'); el.appendChild(x); }
+  var t = document.createElement('span'); t.textContent = chu; el.appendChild(t);
+  if (loai !== 'dang') {
+    var d = document.createElement('button'); d.type = 'button'; d.textContent = '✕'; d.title = 'Ẩn'; d.setAttribute('aria-label', 'Ẩn thông báo lưu');
+    d.onclick = function () { el.className = ''; }; el.appendChild(d);
+  }
+}
+function hakBatDauLuu_(nhan) {
+  nhan = String(nhan || 'dữ liệu');
+  hakLuuDangCho_++;
+  hakVeTrangThaiLuu_('dang', 'Đang lưu ' + nhan + '…' + (hakLuuDangCho_ > 1 ? ' (' + hakLuuDangCho_ + ' việc)' : ''));
+  var daXong = false;
+  var ket = function () { if (daXong) return false; daXong = true; hakLuuDangCho_ = Math.max(0, hakLuuDangCho_ - 1); return true; };
+  return {
+    xong: function (ghiChu) {
+      if (!ket()) return;
+      var gio = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (hakLuuDangCho_) hakVeTrangThaiLuu_('dang', 'Đã lưu ' + nhan + ' — còn ' + hakLuuDangCho_ + ' việc đang lưu…');
+      else hakVeTrangThaiLuu_('ok', '✅ Đã lưu ' + nhan + ' lúc ' + gio + (ghiChu ? ' — ' + ghiChu : ''));
+    },
+    loi: function (lyDo) {
+      if (!ket()) return;
+      hakVeTrangThaiLuu_('loi', '❌ Chưa lưu được ' + nhan + ': ' + String(lyDo || 'lỗi không rõ').replace(/^❌\s*/, ''));
+    }
+  };
+}
+window.addEventListener('beforeunload', function (e) { if (hakLuuDangCho_ > 0) { e.preventDefault(); e.returnValue = ''; } });
+
 var hakLanChuyen_ = 0;
 /** url: link ?page=... của chính webapp, hoặc object tham số. ghiLichSu: thêm vào lịch sử (bấm link) hay không (Quay lại). */
 function hakChuyenTrangTrongKhung_(url, ghiLichSu) {
@@ -442,7 +497,13 @@ function hakHienTrangCon_(html, tieuDe) {
     if (!ma || ma !== hakMaTrienKhai_(hakGocWebapp_())) return; // link sang webapp khác (Cổng đăng nhập...) -> như cũ
     var url = typeof hakGanPhienVaoLink_ === 'function' ? hakGanPhienVaoLink_(a.href) : a.href;
     e.preventDefault();
-    hakTrangGoc_().hakChuyenTrangTrongKhung_(url, true);
+    var di = function () { hakTrangGoc_().hakChuyenTrangTrongKhung_(url, true); };
+    // Còn việc đang lưu (hakBatDauLuu_) -> hỏi trước khi rời trang (trong khung không có beforeunload)
+    if (hakLuuDangCho_ > 0 && typeof hakXacNhan_ === 'function') {
+      hakXacNhan_('Còn ' + hakLuuDangCho_ + ' việc đang lưu. Rời trang bây giờ có thể chưa lưu xong. Vẫn rời trang?', { nguyHiem: true, nutDongY: 'Rời trang' }).then(function (ok) { if (ok) di(); });
+      return;
+    }
+    di();
   });
   // Quay lại / Tiến tới của trình duyệt (chỉ trang gốc theo dõi)
   if (hakTrangGoc_() === window) {

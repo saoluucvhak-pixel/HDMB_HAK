@@ -204,7 +204,7 @@
     <div id="vungChinh"></div>
   </div>
 
-  <div class="modal-overlay-kh" id="modalChung" onclick="if(event.target===this) dongModal()">
+  <div class="modal-overlay-kh" id="modalChung" onclick="if(event.target===this) dongModalTay_()">
     <div class="modal-box-kh" id="modalChungNoiDung"></div>
   </div>
 
@@ -236,8 +236,30 @@
   function formatTien_(v) { return Math.round(Number(v) || 0).toLocaleString('vi-VN'); }
   function chuyenNgay_(v) { return v ? v.toString().split('T')[0] : ''; }
   function moModal(html) { document.getElementById('modalChungNoiDung').innerHTML = html; document.getElementById('modalChung').classList.add('mo'); }
-  function dongModal() { document.getElementById('modalChung').classList.remove('mo'); document.getElementById('modalChungNoiDung').innerHTML = ''; }
-  function showMsgModal_(text) { var el = document.getElementById('msgModal'); if (el) { el.style.display = 'block'; el.textContent = text; } }
+  // Trạng thái lưu: "⌛ Đang lưu..." bật chỉ báo góc trên phải (hakBatDauLuu_ — GiaoDien_Chung); code tự đóng cửa sổ
+  // (dongModal) khi máy chủ báo xong -> "✅ Đã lưu … lúc hh:mm:ss"; báo ❌ / ⚠️ -> "❌ Chưa lưu được …".
+  // Trước đây lưu xong cửa sổ tự đóng không báo gì -> không biết đã lưu chưa; lỡ bấm ra ngoài thì mất cả thông báo lỗi.
+  var luuModal_ = null;
+  function tenViecModal_() {
+    var h = document.querySelector('#modalChungNoiDung h3');
+    var t = h ? h.textContent.replace(/^[^\wÀ-ỹ]+/u, '').replace(/^(Thêm|Sửa|Tạo)\s+/i, '').trim() : '';
+    return t || 'dữ liệu';
+  }
+  function dongModal() {
+    if (luuModal_) { luuModal_.xong(); luuModal_ = null; }
+    document.getElementById('modalChung').classList.remove('mo'); document.getElementById('modalChungNoiDung').innerHTML = '';
+  }
+  /** Người dùng tự đóng (Hủy / bấm ra ngoài): đang lưu thì KHÔNG đóng — kết quả lưu (nhất là lỗi) hiện trong cửa sổ này. */
+  function dongModalTay_() {
+    if (luuModal_) { thongBao_('⏳ Đang lưu — đợi xong (xem góc trên bên phải), cửa sổ sẽ tự đóng.'); return; }
+    dongModal();
+  }
+  function showMsgModal_(text) {
+    var s = String(text == null ? '' : text);
+    if (/^⌛ Đang lưu/.test(s) && typeof hakBatDauLuu_ === 'function') { if (luuModal_) luuModal_.xong(); luuModal_ = hakBatDauLuu_(tenViecModal_()); }
+    else if (luuModal_ && /^(❌|⚠️)/.test(s)) { luuModal_.loi(s); luuModal_ = null; }
+    var el = document.getElementById('msgModal'); if (el) { el.style.display = 'block'; el.textContent = s; }
+  }
   var DINH_MUC_TAN_TREN_HA = 120;
   /** Đọc số từ ô đang hiển thị kiểu VN "1.234.567,5" (DinhDangSo_JS.html). Trống/sai -> 0. */
   function layGiaTriSoTuChuoi_(str) {
@@ -454,7 +476,7 @@
       truong_('nfSdtUyQuyen', 'SĐT người ủy quyền', '') + truong_('nfDiaChiUyQuyen', 'Địa chỉ người ủy quyền', '') + '</div></div>' +
       '<label class="flabel" style="margin-top:12px">Số tài khoản nhận tiền</label>' +
       '<div class="form2col">' + truong_('nfSoTK', 'Số tài khoản', '') + truong_('nfNganHang', 'Ngân hàng', '') + '</div>' +
-      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuHDChoKH">💾 Lưu</button></div>' +
+      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModalTay_()">Hủy</button><button class="btn btn-green" id="btnLuuHDChoKH">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
     document.getElementById('nfUyQuyenTT').addEventListener('change', function () { document.getElementById('vungUyQuyenNF').style.display = this.value === 'Có' ? 'block' : 'none'; });
@@ -525,7 +547,7 @@
       '<p class="hint" style="margin-top:-4px">Tìm khách hàng đã ký hợp đồng trước đó, hoặc bấm "Khách hàng mới" nếu đây là người lần đầu.</p>' +
       '<input id="oTimKH" class="finput" placeholder="Gõ tên chủ rừng hoặc số CCCD...">' +
       '<div class="ds-kh-ket-qua" id="dsKhachHangW"></div>' +
-      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button>' +
+      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModalTay_()">Hủy</button>' +
       '<button class="btn btn-green" id="btnKhachHangMoiW">➕ Khách hàng mới →</button></div>');
     moModal(html);
     document.getElementById('oTimKH').addEventListener('input', locKHW_);
@@ -892,9 +914,10 @@
             var ttMoi = btn.dataset.ttMoi;
             if (ttMoi === 'Đã hủy' && !(await hakXacNhan_('Chắc chắn HỦY hợp đồng này?', { nguyHiem: true, nutDongY: 'Hủy hợp đồng' }))) return; // A3
             el.querySelectorAll('[data-tt-moi]').forEach(function (b) { b.disabled = true; });
+            var L = hakBatDauLuu_('trạng thái "' + ttMoi + '"');
             hakRun_()
-              .withSuccessHandler(function (kq) { if (!kq.thanhCong) { thongBao_('❌ ' + kq.loi); renderChiTietHopDong(); return; } renderChiTietHopDong(); })
-              .withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); renderChiTietHopDong(); })
+              .withSuccessHandler(function (kq) { if (!kq.thanhCong) { thongBao_('❌ ' + kq.loi); L.loi(kq.loi); renderChiTietHopDong(); return; } L.xong(); renderChiTietHopDong(); })
+              .withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); L.loi(err.message); renderChiTietHopDong(); })
               .CAP_NHAT_HOP_DONG(h.soDong, { tinhTrang: ttMoi }, h.idHD);
           });
         });
@@ -1018,7 +1041,7 @@
             var lnkSua = document.createElement('a'); lnkSua.className = 'lnk-sua'; lnkSua.textContent = 'Sửa';
             lnkSua.addEventListener('click', function () { moModalThemSuaSTK_(h, r); });
             var lnkHuy = document.createElement('a'); lnkHuy.className = 'lnk-huy'; lnkHuy.textContent = 'Xóa';
-            lnkHuy.addEventListener('click', async function () { if (await hakXacNhan_('Xóa số tài khoản này?', { nguyHiem: true, nutDongY: 'Xóa' })) hakRun_().withSuccessHandler(function (kqXoa) { if (kqXoa && !kqXoa.thanhCong) thongBao_('❌ ' + kqXoa.loi); taiBangSTK_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).XOA_TAI_KHOAN(r.soDong, h.idHD, r.soTK); });
+            lnkHuy.addEventListener('click', async function () { if (!(await hakXacNhan_('Xóa số tài khoản này?', { nguyHiem: true, nutDongY: 'Xóa' }))) return; var L = hakBatDauLuu_('xóa tài khoản ' + (r.soTK || '')); hakRun_().withSuccessHandler(function (kqXoa) { if (kqXoa && !kqXoa.thanhCong) { thongBao_('❌ ' + kqXoa.loi); L.loi(kqXoa.loi); } else L.xong(); taiBangSTK_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); L.loi(err.message); }).XOA_TAI_KHOAN(r.soDong, h.idHD, r.soTK); });
             tdNut.appendChild(lnkSua); tdNut.appendChild(lnkHuy);
           }
           tbody.appendChild(tr);
@@ -1042,7 +1065,7 @@
       '<select class="finput" id="mfUyQuyenTT"><option value="Không"' + (!r || r.uyQuyenTT !== 'Có' ? ' selected' : '') + '>Không (người nhận là chủ rừng)</option>' +
       '<option value="Có"' + (r && r.uyQuyenTT === 'Có' ? ' selected' : '') + '>Có</option></select>' +
       truong_('mfTenUyQuyen', 'Tên người nhận (nếu ủy quyền)', r ? r.tenUyQuyen : '') +
-      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuSTK">💾 Lưu</button></div>' +
+      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModalTay_()">Hủy</button><button class="btn btn-green" id="btnLuuSTK">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
     napChonNganHang_('mfNganHang', r ? r.nganHang : '');
@@ -1085,7 +1108,7 @@
       '</div></div>' +
       '<label class="flabel" style="margin-top:12px">Số tài khoản nhận tiền</label>' +
       '<div class="form2col">' + truong_('wSoTK', 'Số tài khoản', h.soTK) + truongChonNganHang_('wNganHang', 'Ngân hàng', h.nganHang) + '</div>' +
-      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuSuaHD">💾 Lưu</button></div>' +
+      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModalTay_()">Hủy</button><button class="btn btn-green" id="btnLuuSuaHD">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
     hakRun_().withSuccessHandler(function (list) { var dl = document.getElementById('dlNhomKHSua'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).withFailureHandler(function (err) { console.error('layDanhSachNhomKH:', err); }).layDanhSachNhomKH();
@@ -1165,7 +1188,7 @@
             var lnkSua = document.createElement('a'); lnkSua.className = 'lnk-sua'; lnkSua.style.marginLeft = '8px'; lnkSua.textContent = 'Sửa';
             lnkSua.addEventListener('click', function () { moModalThemSuaRung_(h, r); });
             var lnkHuy = document.createElement('a'); lnkHuy.className = 'lnk-huy'; lnkHuy.textContent = 'Xóa';
-            lnkHuy.addEventListener('click', async function () { if (await hakXacNhan_('Xóa lô rừng này?', { nguyHiem: true, nutDongY: 'Xóa' })) hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiBangRung_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi xóa lô rừng: ' + err.message); }).XOA_LO_RUNG(r.idRung); });
+            lnkHuy.addEventListener('click', async function () { if (!(await hakXacNhan_('Xóa lô rừng này?', { nguyHiem: true, nutDongY: 'Xóa' }))) return; var L = hakBatDauLuu_('xóa lô rừng ' + (r.maRung || r.idRung)); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) { thongBao_('❌ ' + kq.loi); L.loi(kq.loi); } else L.xong(); taiBangRung_(h); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi xóa lô rừng: ' + err.message); L.loi(err.message); }).XOA_LO_RUNG(r.idRung); });
             tdNut.appendChild(lnkSua); tdNut.appendChild(lnkHuy);
           }
           tbody.appendChild(tr);
@@ -1207,7 +1230,7 @@
       '</div><datalist id="dlHoSoMC"></datalist>' +
       (!r ? '<p class="hint" style="margin-top:-6px">💡 "Năm trồng rừng" tự gợi ý = Ngày ký hợp đồng trừ 3,5 năm (thời gian trung bình gỗ keo trước khai thác) — sửa lại thoải mái nếu biết đúng năm thật.</p>' : '') +
       '<p class="hint" id="goiYDonGiaMC" style="margin-top:6px"><a onclick="goiYDonGiaMC(\'' + (h.ngayKy ? h.ngayKy.split('T')[0] : '') + '\')" style="cursor:pointer;color:var(--active-green)">💰 Xem gợi ý đơn giá bình quân theo Báo giá</a></p>' +
-      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModal()">Hủy</button><button class="btn btn-green" id="btnLuuRung">💾 Lưu</button></div>' +
+      '<div class="wizard-nut-hang"><button class="btn btn-outline" onclick="dongModalTay_()">Hủy</button><button class="btn btn-green" id="btnLuuRung">💾 Lưu</button></div>' +
       '<div id="msgModal" class="msg" style="display:none;margin-top:10px"></div>';
     moModal(html);
     hakRun_().withSuccessHandler(function (list) { var dl = document.getElementById('dlHoSoMC'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).withFailureHandler(function (err) { console.error('layDanhSachLoaiHoSo:', err); }).layDanhSachLoaiHoSo();
@@ -1347,13 +1370,17 @@
     if (!lat || !lng) { document.getElementById('msgGpsMC').textContent = '❌ Nhập đủ Vĩ độ và Kinh độ.'; return; }
     var fi = document.getElementById('oGpsAnh');
     document.getElementById('msgGpsMC').textContent = '⌛ Đang lưu...';
+    var L = hakBatDauLuu_('điểm GPS');
+    var msg = function (t) { var el = document.getElementById('msgGpsMC'); if (el) el.textContent = t; }; // đã chuyển tab / trang -> bỏ qua ô báo, chỉ báo góc trên phải vẫn hiện
     function ghiDiem_(anhUrl) {
       hakRun_().withSuccessHandler(function (kq) {
-        if (!kq.thanhCong) { document.getElementById('msgGpsMC').textContent = '❌ ' + kq.loi; return; }
+        if (!kq.thanhCong) { msg('❌ ' + kq.loi); L.loi(kq.loi); return; }
+        L.xong();
+        if (!document.getElementById('oGpsLat')) return;
         document.getElementById('oGpsLat').value = ''; document.getElementById('oGpsLng').value = ''; document.getElementById('tenAnhGps').textContent = '';
-        document.getElementById('msgGpsMC').textContent = '✅ Đã thêm.';
+        msg('✅ Đã thêm lúc ' + new Date().toLocaleTimeString('vi-VN') + '.');
         taiBangGPS_(idRung);
-      }).withFailureHandler(function (err) { document.getElementById('msgGpsMC').textContent = '❌ Lỗi: ' + err.message; }).CAP_NHAT_GPS_RUNG(idRung, { lat: Number(lat), lng: Number(lng), anhUrl: anhUrl || '' }, false);
+      }).withFailureHandler(function (err) { msg('❌ Lỗi: ' + err.message); L.loi(err.message); }).CAP_NHAT_GPS_RUNG(idRung, { lat: Number(lat), lng: Number(lng), anhUrl: anhUrl || '' }, false);
     }
     if (fi.files.length) {
       var reader = new FileReader();
@@ -1407,18 +1434,23 @@
     if (!fi.files.length) { document.getElementById('msgAnhMC').textContent = '❌ Chọn file trước.'; return; }
     document.getElementById('msgAnhMC').textContent = '⌛ Đang tải lên...';
     var file = fi.files[0];
+    var L = hakBatDauLuu_('ảnh "' + file.name + '"');
+    var msg = function (t) { var el = document.getElementById('msgAnhMC'); if (el) el.textContent = t; };
     var reader = new FileReader();
     reader.onload = function (e) {
       hakRun_()
         .withSuccessHandler(function (kq) {
-          if (!kq.thanhCong) { document.getElementById('msgAnhMC').textContent = '❌ ' + kq.loi; return; }
-          hakRun_().withSuccessHandler(function () {
-            document.getElementById('msgAnhMC').textContent = '✅ Đã tải lên và duyệt.';
+          if (!kq.thanhCong) { msg('❌ ' + kq.loi); L.loi(kq.loi); return; }
+          hakRun_().withSuccessHandler(function (kqD) {
+            if (kqD && kqD.thanhCong === false) { msg('⚠️ Đã tải lên nhưng chưa duyệt được: ' + kqD.loi); L.loi('đã tải lên nhưng chưa duyệt được — ' + kqD.loi); return; }
+            L.xong();
+            msg('✅ Đã tải lên và duyệt lúc ' + new Date().toLocaleTimeString('vi-VN') + '.');
+            if (!document.getElementById('tenAnhRung')) return;
             fi.value = ''; document.getElementById('tenAnhRung').textContent = '';
             taiBangAnhRung_(idHD, idRung);
-          }).withFailureHandler(function (err) { document.getElementById('msgAnhMC').textContent = '⚠️ Đã tải lên nhưng lỗi tự duyệt: ' + err.message; }).DUYET_ANH_RUNG(kq.soDongDraft, kq.idDraft);
+          }).withFailureHandler(function (err) { msg('⚠️ Đã tải lên nhưng lỗi tự duyệt: ' + err.message); L.loi('đã tải lên nhưng lỗi tự duyệt — ' + err.message); }).DUYET_ANH_RUNG(kq.soDongDraft, kq.idDraft);
         })
-        .withFailureHandler(function (err) { document.getElementById('msgAnhMC').textContent = '❌ Lỗi: ' + err.message; })
+        .withFailureHandler(function (err) { msg('❌ Lỗi: ' + err.message); L.loi(err.message); })
         .THEM_ANH_RUNG({ idHD: idHD, idRung: idRung, base64Data: e.target.result.split(',')[1], mimeType: file.type, tenFileGoc: file.name });
     };
     reader.readAsDataURL(file);
