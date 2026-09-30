@@ -91,7 +91,7 @@ function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
 function TIEN_DO_HO_SO_HD_(idHD) {
   _yeuCauQuyen_(QUYEN.XEM);
   idHD = (idHD || '').toString().trim();
-  const m = idHD ? docToanBoDraftBaoCao_().filter(function (x) { return String(x.idHD || '').trim() === idHD; })[0] : null;
+  const m = docDraftBaoCaoMotHD_(idHD); // tốc độ: chỉ đọc dòng của hợp đồng này
   if (!m) return { coDuLieu: false };
   return {
     coDuLieu: true, soTaiKhoan: Number(m.soTaiKhoan) || 0, soLoRung: Number(m.soLoRung) || 0,
@@ -496,6 +496,9 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
 function capNhatDraftHangLoat_(idsHopDong) {
   idsHopDong = Array.from(new Set((idsHopDong || []).map(function (id) { return (id || '').toString().trim(); }).filter(Boolean)));
   if (!idsHopDong.length) return true;
+  // Tốc độ: ít hợp đồng (lưu 1 hợp đồng, tạo mới...) -> từng HĐ đọc đúng dòng & ghi đúng dòng; trước đây đọc cả 5 sheet
+  // và GHI LẠI CẢ sheet cache. Nhiều hợp đồng (đồng bộ thanh toán, bảo trì) -> đọc 1 lần như cũ.
+  if (idsHopDong.length <= 10) { idsHopDong.forEach(function (id) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); }); return true; }
   try {
     const nccRows = readData_(SHEET_NAME.HD_NCC);
     const nccTheoId = {};

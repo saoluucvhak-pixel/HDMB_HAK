@@ -944,10 +944,19 @@ let _draftDataCache = null; // bộ nhớ đệm TRONG 1 LƯỢT CHẠY — nế
  * @return {Object} { theoIdHD: { [idHD]: {coAnh, daDoGPSDu, toaDoTrungBinh} },
  *                     theoIdRung: { [idRung]: {toaDo: {lat,lng}|null, soDiemGPS} } }
  */
-function layCoAnhVaGpsTrucTiep_() {
-  const rungRows = readData_(SHEET_NAME.HD_RUNG);
-  const gpsRows = readData_(SHEET_NAME.HD_GPS);
-  const pictureRows = readData_(SHEET_NAME.HD_PICTURE);
+function layCoAnhVaGpsTrucTiep_(chiCacHD) {
+  // chiCacHD (tùy chọn): chỉ tính cho các hợp đồng này — đọc đúng dòng liên quan thay vì cả 3 sheet (tốc độ)
+  let rungRows, gpsRows, pictureRows;
+  if (Array.isArray(chiCacHD)) {
+    rungRows = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, chiCacHD);
+    const idRungs = rungRows.map(function (r) { return r[RUNG_COL.ID_RUNG]; });
+    gpsRows = docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, idRungs);
+    pictureRows = docDongTheoKhoa_(SHEET_NAME.HD_PICTURE, PICTURE_COL.ID_HD, chiCacHD.concat(idRungs)); // cột ID_HD có thể lỡ chứa ID_RUNG
+  } else {
+    rungRows = readData_(SHEET_NAME.HD_RUNG);
+    gpsRows = readData_(SHEET_NAME.HD_GPS);
+    pictureRows = readData_(SHEET_NAME.HD_PICTURE);
+  }
 
   // ---- Gom tọa độ GPS hợp lệ theo ID_RUNG (đúng 1 lượt đọc HD_GPS) ----
   const gpsByIdRung = {}; // { [idRung]: { latTong, lngTong, dem } }
@@ -1035,7 +1044,48 @@ function docToanBoDraftBaoCao_() {
   const giu = {};
   Object.keys(moiNhatTheoId).forEach(function (k) { giu[moiNhatTheoId[k]] = true; });
   const data = tatCa.filter(function (r, i) { return giu[i]; });
-  _draftDataCache = data.map(function (r) {
+  _draftDataCache = data.map(_dongDraftBaoCaoThanhDoiTuong_);
+
+  // ---- GHI ĐÈ coAnh/daDoGPSDu/toaDoTrungBinh bằng dữ liệu đọc THẲNG từ
+  // HD_GPS/HD_Picture (xem layCoAnhVaGpsTrucTiep_ ở trên) — đảm bảo báo cáo luôn
+  // khớp với dữ liệu THẬT, không phụ thuộc Draft có được đồng bộ đúng lúc hay
+  // không (vd dữ liệu GPS/ảnh được nhập thẳng vào sheet bằng tay, hoặc 1 hàm
+  // ghi nào đó lỡ quên gọi cập nhật Draft).
+  _ghiDeAnhGpsTrucTiep_(_draftDataCache);
+  return _draftDataCache;
+}
+
+function _ghiDeAnhGpsTrucTiep_(ds, chiCacHD) {
+  try {
+    const truc = layCoAnhVaGpsTrucTiep_(chiCacHD);
+    ds.forEach(function (m) {
+      const tt = truc.theoIdHD[(m.idHD || '').toString().trim()];
+      if (tt) { m.coAnh = tt.coAnh; m.daDoGPSDu = tt.daDoGPSDu; m.toaDoTrungBinh = tt.toaDoTrungBinh; }
+    });
+  } catch (e) { /* nếu đọc lỗi thì giữ nguyên giá trị từ Draft, không làm hỏng cả báo cáo */ }
+}
+
+/**
+ * Tốc độ: 1 dòng cache báo cáo của ĐÚNG 1 hợp đồng (thanh tiến độ ở Nhập liệu) — đọc cột ID + đúng dòng đó, bổ sung
+ * ảnh / GPS thật chỉ của hợp đồng đó. Trước đây đọc cả cache + cả HD_RUNG / HD_GPS / HD_Picture. Cùng kết quả với
+ * docToanBoDraftBaoCao_() lọc theo idHD (nhiều dòng trùng -> lấy dòng cập nhật sau cùng).
+ */
+function docDraftBaoCaoMotHD_(idHD) {
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return null;
+  if (_draftDataCache) return _draftDataCache.filter(function (x) { return String(x.idHD || '').trim() === idHD; })[0] || null;
+  const c = DRAFT_BAOCAO_COL;
+  const ds = docDongTheoKhoa_(getOrCreateDraftBaoCaoSheet_(), c.ID_HD, [idHD]);
+  if (!ds.length) return null;
+  let r = ds[0];
+  ds.forEach(function (x) { if (new Date(x[c.CAP_NHAT_LUC] || 0) >= new Date(r[c.CAP_NHAT_LUC] || 0)) r = x; });
+  const m = _dongDraftBaoCaoThanhDoiTuong_(r);
+  _ghiDeAnhGpsTrucTiep_([m], [idHD]);
+  return m;
+}
+
+function _dongDraftBaoCaoThanhDoiTuong_(r) {
+    const c = DRAFT_BAOCAO_COL;
     return {
       idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
       diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
@@ -1056,22 +1106,6 @@ function docToanBoDraftBaoCao_() {
       thieuHoSoChiTiet: r[c.THIEU_HO_SO_CHI_TIET] || '', toaDoTrungBinh: r[c.TOA_DO_TRUNG_BINH] || '',
       diaChiRung: r[c.DIA_CHI_RUNG] || ''
     };
-  });
-
-  // ---- GHI ĐÈ coAnh/daDoGPSDu/toaDoTrungBinh bằng dữ liệu đọc THẲNG từ
-  // HD_GPS/HD_Picture (xem layCoAnhVaGpsTrucTiep_ ở trên) — đảm bảo báo cáo luôn
-  // khớp với dữ liệu THẬT, không phụ thuộc Draft có được đồng bộ đúng lúc hay
-  // không (vd dữ liệu GPS/ảnh được nhập thẳng vào sheet bằng tay, hoặc 1 hàm
-  // ghi nào đó lỡ quên gọi cập nhật Draft).
-  try {
-    const truc = layCoAnhVaGpsTrucTiep_();
-    _draftDataCache.forEach(function (m) {
-      const tt = truc.theoIdHD[(m.idHD || '').toString().trim()];
-      if (tt) { m.coAnh = tt.coAnh; m.daDoGPSDu = tt.daDoGPSDu; m.toaDoTrungBinh = tt.toaDoTrungBinh; }
-    });
-  } catch (e) { /* nếu đọc lỗi thì giữ nguyên giá trị từ Draft, không làm hỏng cả báo cáo */ }
-
-  return _draftDataCache;
 }
 
 
@@ -1094,10 +1128,15 @@ function soTuO_(v) {
  * Quá nhiều khối rời (> 25) -> đọc cả sheet 1 lần (rẻ hơn nhiều lượt gọi nhỏ).
  */
 function docDongTheoKhoa_(sheetName, colIndex0, cacKhoa) {
+  return docDongTheoKhoaKemSo_(sheetName, colIndex0, cacKhoa).map(function (x) { return x.r; });
+}
+/** Như docDongTheoKhoa_ nhưng trả [{ r: dòng, soDong: số dòng thật trên sheet }]. sheetName: tên sheet chính HOẶC đối tượng Sheet. */
+function docDongTheoKhoaKemSo_(sheetName, colIndex0, cacKhoa) {
   const can = {};
   (cacKhoa || []).forEach(function (k) { k = (k === null || k === undefined ? '' : k).toString().trim(); if (k) can[k] = true; });
   if (!Object.keys(can).length) return [];
-  const sh = getSheet_(sheetName);
+  const sh = typeof sheetName === 'string' ? getSheet_(sheetName) : sheetName;
+  if (!sh) return [];
   const last = sh.getLastRow();
   if (last < 2) return [];
   const cot = sh.getRange(2, colIndex0 + 1, last - 1, 1).getValues();
@@ -1107,9 +1146,9 @@ function docDongTheoKhoa_(sheetName, colIndex0, cacKhoa) {
   const khoi = [];
   dong.forEach(function (i) { const k = khoi[khoi.length - 1]; if (k && i === k[1] + 1) k[1] = i; else khoi.push([i, i]); });
   const soCot = sh.getLastColumn();
-  if (khoi.length > 25) { const tatCa = sh.getRange(2, 1, last - 1, soCot).getValues(); return dong.map(function (i) { return tatCa[i]; }); }
-  let kq = [];
-  khoi.forEach(function (k) { kq = kq.concat(sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, soCot).getValues()); });
+  if (khoi.length > 25) { const tatCa = sh.getRange(2, 1, last - 1, soCot).getValues(); return dong.map(function (i) { return { r: tatCa[i], soDong: i + 2 }; }); }
+  const kq = [];
+  khoi.forEach(function (k) { sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, soCot).getValues().forEach(function (r, j) { kq.push({ r: r, soDong: k[0] + j + 2 }); }); });
   return kq;
 }
 

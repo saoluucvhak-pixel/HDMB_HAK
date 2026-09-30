@@ -623,6 +623,28 @@ try {
     kiem('TOC-DO lưu lô không đổi gì -> bỏ qua (khongDoi), không ghi ô nào', khong.thanhCong && khong.khongDoi === true, J(khong));
   });
 
+  // ---------- TOC-DO-2: tra cứu 1 HĐ đọc chọn lọc phải ra đúng như đọc cả sheet ----------
+  chay(function () {
+    const t = moi();
+    const ds = [];
+    for (let i = 0; i < 6; i++) ds.push(t.tao('KH ' + i, '0490000000' + (10 + i), '1' + i, 'S' + i));
+    ds.forEach((x, i) => { x.lo = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: x.idHD, diaChiRung: 'Lo ' + i, dienTichM2: 1000, donGia: 2000, khoiLuongDuKien: 12 }) + ')').idRung; });
+    ds.forEach((x, i) => { if (i % 2) t.run('THEM_TAI_KHOAN_MOI_(' + J({ idHD: x.idHD, soTK: '9' + i, nganHang: 'ACB' }) + ')'); });
+    ds.forEach((x, i) => { if (i % 3) t.run('CAP_NHAT_GPS_RUNG_(' + J(x.lo) + ', {lat: 15.' + i + ', lng: 108.' + i + '}, false)'); });
+    t.ss.getSheetByName('HD_Picture').appendRow([ds[2].lo, ds[2].idHD, 'KH', 'https://drive.google.com/file/d/A/view']); // ảnh lưu nhầm ID_RUNG
+    const sai = [];
+    ds.forEach(x => {
+      const moiTD = J(t.run('TIEN_DO_HO_SO_HD_(' + J(x.idHD) + ')'));
+      const cuTD = J(t.run('(function(){ _draftDataCache = null; var m = docToanBoDraftBaoCao_().filter(function(z){ return String(z.idHD).trim() === ' + J(x.idHD) + '; })[0]; _draftDataCache = null; return { coDuLieu: true, soTaiKhoan: Number(m.soTaiKhoan) || 0, soLoRung: Number(m.soLoRung) || 0, hoSoDu: !!m.hoSoDu, daDoGPSDu: !!m.daDoGPSDu, coAnh: !!m.coAnh, thieuHoSoChiTiet: String(m.thieuHoSoChiTiet || "") }; })()'));
+      if (moiTD !== cuTD) sai.push('tiến độ ' + x.idHD + ' ' + moiTD + ' / ' + cuTD);
+      const tk = t.run('layDanhSachTaiKhoan_(' + J(x.idHD) + ')');
+      const tkThat = t.stk().map((r, i) => ({ r, soDong: i + 2 })).filter(z => String(z.r[0]) === x.idHD).map(z => z.soDong + ':' + z.r[5]);
+      if (J(tk.map(z => z.soDong + ':' + z.soTK)) !== J(tkThat)) sai.push('tài khoản ' + x.idHD);
+    });
+    const coAnh2 = t.run('TIEN_DO_HO_SO_HD_(' + J(ds[2].idHD) + ')').coAnh;
+    kiem('TOC-DO-2 thanh tiến độ (đọc 1 HĐ) = đọc cả cache; số dòng tài khoản đúng; ảnh lưu nhầm ID_RUNG vẫn nhận', !sai.length && coAnh2 === true, J(sai));
+  });
+
   // ---------- NAM-TRONG: năm trồng phải là năm 4 chữ số ----------
   chay(function () {
     const t = moi();

@@ -163,18 +163,20 @@ function CHI_TIET_TRA_CUU_HOP_DONG_(idHD) {
   const sdt = function (v) { return duocXemDu ? (v || '').toString() : _cheSdt_(v); };
   const stk = function (v) { return duocXemDu ? (v || '').toString() : _cheStk_(v); };
 
-  const r = readData_(SHEET_NAME.HD_NCC).find(function (x) { return (x[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
+  // Tốc độ: chỉ đọc đúng dòng của hợp đồng này (trước đây đọc cả HD_NCC / HD_RUNG / HD_GPS)
+  const r = docDongTheoKhoa_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, [idHD])[0];
   if (!r) return { khongTimThay: true, loi: 'Không tìm thấy hợp đồng ' + idHD + ' (có thể đã bị xóa).' };
 
+  const rungCuaHD = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD]);
   const gpsTheoRung = {};
-  readData_(SHEET_NAME.HD_GPS).forEach(function (g) {
+  docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, rungCuaHD.map(function (x) { return x[RUNG_COL.ID_RUNG]; })).forEach(function (g) {
     const id = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
     if (id) gpsTheoRung[id] = (gpsTheoRung[id] || 0) + 1;
   });
 
   const loRung = [];
   const hoSo = [];
-  readData_(SHEET_NAME.HD_RUNG).forEach(function (x) {
+  rungCuaHD.forEach(function (x) {
     if ((x[RUNG_COL.ID_KEY_HD] || '').toString().trim() !== idHD) return;
     const idRung = (x[RUNG_COL.ID_RUNG] || '').toString().trim();
     loRung.push({
@@ -201,7 +203,7 @@ function CHI_TIET_TRA_CUU_HOP_DONG_(idHD) {
   dinhDanhAnh[idHD] = true;
   loRung.forEach(function (l) { if (l.idRung) dinhDanhAnh[l.idRung] = true; });
   const anh = [];
-  readData_(SHEET_NAME.HD_PICTURE).forEach(function (p) {
+  docDongTheoKhoa_(SHEET_NAME.HD_PICTURE, PICTURE_COL.ID_HD, Object.keys(dinhDanhAnh)).forEach(function (p) { // chỉ ảnh của HĐ / lô này
     if (!dinhDanhAnh[(p[PICTURE_COL.ID_HD] || '').toString().trim()]) return;
     for (let c = PICTURE_COL.PICTURE_START; c <= PICTURE_COL.PICTURE_END; c++) {
       const link = _linkTrongO_(p[c]);
@@ -210,7 +212,7 @@ function CHI_TIET_TRA_CUU_HOP_DONG_(idHD) {
   });
 
   const taiKhoan = [];
-  readData_(SHEET_NAME.HD_STK).forEach(function (s) {
+  docDongTheoKhoa_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD]).forEach(function (s) { // chỉ TK của HĐ này
     if ((s[STK_COL.ID_HD] || '').toString().trim() !== idHD) return;
     taiKhoan.push({
       soTK: stk(s[STK_COL.SO_TK]), nganHang: (s[STK_COL.NGAN_HANG] || '').toString(),

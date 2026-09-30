@@ -843,6 +843,21 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 
 **Kiểm chứng:** 112/112 test máy chủ, trong đó `TOC-DO` so cache cập nhật từng HĐ (dòng các HĐ xen kẽ) với cache xây lại toàn bộ — giống hệt; `NAM-TRONG`; `XOA-GPS` / `XOA-ANH` (xóa đúng dòng, từ chối dòng đã đổi, từ chối HĐ đã chốt, khôi phục lại).
 
+**Rà hiệu suất tra cứu / ghi / sửa (30/09):** đo bằng `tests/do_hieu_suat.cjs` (bộ giả lập, đếm lượt đọc + ô đọc Sheet), 1.000 HĐ × 2 lô × 4 điểm GPS:
+
+| Thao tác | Ô đọc trước -> sau |
+|---|---|
+| Xem chi tiết 1 HĐ (Tra cứu) | 134.031 -> 10.164 |
+| Mở 1 HĐ ở Nhập liệu | 51.033 -> 4.083 |
+| Thanh tiến độ 5 bước | 121.000 -> 8.121 |
+| Tab Lô rừng / Tài khoản / GPS | 40.000 / 10.000 / 50.000 -> 2.040 / 1.010 / 5.040 |
+| Tạo hợp đồng mới | 269.238 -> 36.243 |
+| Thêm lô rừng | 73.400 -> 32.384 |
+| Duyệt trạng thái | 61.439 -> 23.461 |
+| Mở nháp / Lưu chính thức | 51.094 / 238.532 -> 4.118 / 37.594 |
+
+Cách làm: mọi chỗ chỉ cần dữ liệu của 1 HĐ / 1 lô đọc cột mã rồi đúng các dòng đó (`docDongTheoKhoa_` / `docDongTheoKhoaKemSo_`) thay vì cả sheet; cập nhật cache cho ≤ 10 HĐ ghi đúng dòng thay vì ghi lại cả sheet; kiểm tra trùng CCCD / Số HĐ đọc 2 cột thay vì 30–33. Tìm kiếm (theo tên, CCCD, danh sách khách hàng) vẫn quét HD_NCC 1 lượt — cần thiết vì tìm trên mọi HĐ. Số lượt gọi tăng nhẹ ở vài thao tác (đọc nhiều khối nhỏ) nhưng số ô giảm hàng chục nghìn. **Đối chiếu:** chạy code cũ và mới trên cùng dữ liệu (dòng các HĐ xen kẽ, ảnh lưu nhầm ID_RUNG, nhiều TK) — 99 kết quả tra cứu và toàn bộ sheet sau ghi / sửa giống hệt; thêm test `TOC-DO-2`.
+
 **Biết đã lưu chưa:** trước đây bấm Lưu -> cửa sổ "Đang lưu..." rồi tự đóng khi xong, KHÔNG báo gì; lỡ bấm ra ngoài thì lỗi (nếu có) hiện vào cửa sổ đã đóng -> mất. Nay có chỉ báo cố định góc trên phải (GiaoDien_Chung `hakBatDauLuu_`, dùng lại được ở mọi trang): ⏳ Đang lưu … -> ✅ Đã lưu … lúc hh:mm:ss (giữ nguyên) / ❌ Chưa lưu được … lý do (giữ tới khi đóng). Đang lưu thì Hủy / bấm ra ngoài không đóng cửa sổ; rời trang / tải lại khi còn việc đang lưu -> hỏi lại (cả khi nhúng Portal). Test: 2 ca giao diện (mã cũ trượt).
 
 **Sản lượng (KL) thực hiện lấy từ đâu:** ưu tiên sheet thanh toán **DNTT_GK_DN_CT** (file app Thanh toán) — cộng cột M "Khối lượng" (tấn) và cột giá trị theo **Số HĐ**; có số ở đó thì dùng. Không có -> cộng cột **S "Khối lượng thực hiện" của HD_RUNG** (các lô của HĐ). Webapp **không có ô nhập** cột S — chỉ có khi nhập tay trên Sheet hoặc app khác ghi vào. Kết quả lưu ở cache Draft_BaoCaoHopDong, cập nhật khi lưu HĐ và đồng bộ thanh toán định kỳ 30 phút.

@@ -56,7 +56,7 @@ function CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD) {
   try {
     if (!idHD) return;
     const can = idHD.toString().trim();
-    const ids = readData_(SHEET_NAME.HD_RUNG)
+    const ids = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [can]) // tốc độ: chỉ lô của HĐ này
       .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === can; })
       .map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); }).filter(Boolean);
     if (_draftDangGom_) { ids.forEach(function (id) { _draftDangGom_.rung.add(id); }); return; }

@@ -335,21 +335,19 @@ function dongBoDiaChiTuRung_(idHD, thongTin) {
     tenChuRung: thongTin.tenChuRung, diaChiThuongTru: thongTin.diaChiThuongTru,
     diaChiUyQuyen: thongTin.diaChiUyQuyen, diaChiRung: thongTin.diaChiRung, nganHang: thongTin.nganHang
   };
-  const lastRow = sh.getLastRow();
   const soCot = DIACHI_COL.NGAN_HANG + 1;
-  const data = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, soCot).getValues() : [];
-  const cacDong = [];
-  data.forEach(function (r, i) { if ((r[DIACHI_COL.ID_HD] || '').toString().trim() === can) cacDong.push(i); });
-  if (cacDong.length) {
+  // Tốc độ: chỉ đọc cột ID + đúng dòng của HĐ này (trước đây đọc cả DM_DIACHI)
+  const tim = docDongTheoKhoaKemSo_(sh, DIACHI_COL.ID_HD, [can]);
+  if (tim.length) {
     // M-15 (rà soát 28/09): sửa trong bộ nhớ rồi ghi CẢ DÒNG 1 lệnh (trước đây tới 5 lệnh setValue riêng lẻ);
     // dòng trùng do 2 lượt tạo chạy song song trước đây -> gộp về dòng đầu, xóa các dòng thừa.
-    const i0 = cacDong[0];
-    const dong = data[i0].slice();
+    const dong = tim[0].r.slice(0, soCot);
+    while (dong.length < soCot) dong.push('');
     const dat = function (cot, v) { if (v !== undefined) dong[cot] = giaTriAnToan_(v || ''); };
     dat(DIACHI_COL.TEN_CHU_RUNG, gia.tenChuRung); dat(DIACHI_COL.DIA_CHI_TT, gia.diaChiThuongTru);
     dat(DIACHI_COL.DIA_CHI_UQ, gia.diaChiUyQuyen); dat(DIACHI_COL.DIA_CHI_RUNG, gia.diaChiRung); dat(DIACHI_COL.NGAN_HANG, gia.nganHang);
-    sh.getRange(i0 + 2, 1, 1, soCot).setValues([dong]);
-    cacDong.slice(1).reverse().forEach(function (i) { sh.deleteRow(i + 2); });
+    sh.getRange(tim[0].soDong, 1, 1, soCot).setValues([dong]);
+    tim.slice(1).reverse().forEach(function (x) { sh.deleteRow(x.soDong); });
   } else {
     sh.appendRow([
       idHD, idHD, new Date(), giaTriAnToan_(gia.tenChuRung || ''), giaTriAnToan_(gia.diaChiThuongTru || ''),
@@ -471,10 +469,13 @@ function taoHopDongMoiThucThi_(d) {
   if (!isoNgayKy) return { thanhCong: false, loi: 'Ngày ký hợp đồng không hợp lệ: ' + d.ngayKy };
 
   // Cảnh báo trùng CCCD đang còn hiệu lực (không chặn, chỉ cảnh báo trong kết quả trả về)
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  const trungCCCD = nccRows.some(function (r) {
-    return (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim() === d.cccdChuRung.toString().trim()
-      && (r[NCC_COL.TINH_TRANG] || '').toString().trim().toLowerCase() !== 'đã thanh lý';
+  // Tốc độ: chỉ đọc 2 cột CCCD + Tình trạng (trước đây đọc cả 33 cột HD_NCC)
+  const shNccKt = getSheet_(SHEET_NAME.HD_NCC), cuoiNcc = shNccKt.getLastRow();
+  const cotCccd = cuoiNcc >= 2 ? shNccKt.getRange(2, NCC_COL.CCCD_CHU_RUNG + 1, cuoiNcc - 1, 1).getValues() : [];
+  const cotTT = cuoiNcc >= 2 ? shNccKt.getRange(2, NCC_COL.TINH_TRANG + 1, cuoiNcc - 1, 1).getValues() : [];
+  const trungCCCD = cotCccd.some(function (x, i) {
+    return (x[0] || '').toString().trim() === d.cccdChuRung.toString().trim()
+      && (cotTT[i][0] || '').toString().trim().toLowerCase() !== 'đã thanh lý';
   });
 
   const lock = LockService.getScriptLock();
@@ -658,7 +659,10 @@ function THEM_LO_RUNG_MOI_(d) {
   }
 
   try {
-    const rungRows = readData_(SHEET_NAME.HD_RUNG);
+    // Tốc độ: chỉ cần ID_KEY_HD + ID_RUNG để tính STT -> đọc 3 cột đầu thay vì cả 20 cột HD_RUNG
+    const shRungDoc = getSheet_(SHEET_NAME.HD_RUNG), cuoiRung = shRungDoc.getLastRow();
+    const soCotDoc = Math.max(RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG) + 1;
+    const rungRows = cuoiRung >= 2 ? shRungDoc.getRange(2, 1, cuoiRung - 1, soCotDoc).getValues() : [];
     const rungCuaHD = rungRows.filter(function (r) {
       return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === d.idHD.toString().trim();
     });
@@ -971,17 +975,11 @@ function CAP_NHAT_TAI_KHOAN_(soDong, patch, idHD, soTKGoc) {
 function layDanhSachTaiKhoan_(idHD) {
   // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
-  const sh = getSheet_(SHEET_NAME.HD_STK);
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return [];
-  const data = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
-  const ketQua = [];
-  data.forEach(function (r, i) {
-    if ((r[STK_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) {
-      ketQua.push({ soDong: i + 2, soTK: r[STK_COL.SO_TK], nganHang: r[STK_COL.NGAN_HANG], uyQuyenTT: r[STK_COL.UY_QUYEN_TT], tenUyQuyen: r[STK_COL.TEN_UY_QUYEN] });
-    }
+  // Tốc độ: chỉ đọc dòng của HĐ này (kèm số dòng thật để sửa / xóa đúng dòng)
+  return docDongTheoKhoaKemSo_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD]).map(function (x) {
+    const r = x.r;
+    return { soDong: x.soDong, soTK: r[STK_COL.SO_TK], nganHang: r[STK_COL.NGAN_HANG], uyQuyenTT: r[STK_COL.UY_QUYEN_TT], tenUyQuyen: r[STK_COL.TEN_UY_QUYEN] };
   });
-  return ketQua;
 }
 
 /** Lấy danh sách các lô rừng của 1 hợp đồng (để hiển thị lên form cập nhật) */
@@ -1057,7 +1055,7 @@ function layHopDongTheoKhachHang_(cccd) {
 function layDanhSachRung_(idHD) {
   // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
-  const rows = readData_(SHEET_NAME.HD_RUNG);
+  const rows = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD]); // tốc độ: chỉ dòng của HĐ này
   return rows
     .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD.toString().trim(); })
     .map(function (r) {
@@ -1295,10 +1293,9 @@ function _soHDDaTonTai_(soHD, boQuaIdHD) {
   const sh = getSheet_(SHEET_NAME.HD_NCC);
   const last = sh.getLastRow();
   if (last < 2) return false;
-  const soCot = Math.max(NCC_COL.SO_HD, NCC_COL.ID_HD) + 1;
-  return sh.getRange(2, 1, last - 1, soCot).getValues().some(function (r) {
-    return chuan(r[NCC_COL.SO_HD]) === can && String(r[NCC_COL.ID_HD]).trim() !== boQua;
-  });
+  const cotSo = sh.getRange(2, NCC_COL.SO_HD + 1, last - 1, 1).getValues(); // tốc độ: 2 cột thay vì 30
+  const cotId = sh.getRange(2, NCC_COL.ID_HD + 1, last - 1, 1).getValues();
+  return cotSo.some(function (r, i) { return chuan(r[0]) === can && String(cotId[i][0]).trim() !== boQua; });
 }
 
 /** C-03: đổi Số HĐ / Ngày ký của hợp đồng -> ghi theo vào HD_RUNG, HD_STK, PhuLucHopDong (chỉ cột dữ liệu, không đổi khóa). */
@@ -1509,9 +1506,7 @@ function _xoaCacDongKhop_(sh, colIndex0, danhSachGiaTri, luuTru) {
 function layGPSCuaRung_(idRung) {
   // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
-  const rows = readData_(SHEET_NAME.HD_GPS);
-  return rows
-    .map(function (r, i) { return { r: r, soDong: i + 2 }; })
+  return docDongTheoKhoaKemSo_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, [idRung]) // tốc độ: chỉ điểm của lô này
     .filter(function (x) { return (x.r[GPS_COL.ID_KEY_GPS] || '').toString().trim() === idRung.toString().trim(); })
     .map(function (x) {
       const r = x.r;
