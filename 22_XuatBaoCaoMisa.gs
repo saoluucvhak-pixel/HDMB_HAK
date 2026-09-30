@@ -146,8 +146,8 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
     const cccd = (ncc[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     const masoThue = (ncc[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     const nguoiLienHe = coUyQuyen ? (ncc[NCC_COL.TEN_UY_QUYEN] || '') : (ncc[NCC_COL.TEN_CHU_RUNG] || '');
-    const soLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
+    const soLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+    const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
     const gps = theoIdRung[idRung];
     const toaDo = gps && gps.toaDo ? (gps.toaDo.lat.toFixed(6) + ', ' + gps.toaDo.lng.toFixed(6)) : '';
 
@@ -155,7 +155,7 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
       r[RUNG_COL.SO_HD] || '', r[RUNG_COL.NGAY_KY] || '', '', thietLap.loaiTienMacDinh, '',
       soLuong * donGia, '', cccd, r[RUNG_COL.THUONG_TRU] || '', masoThue, nguoiLienHe, ncc[NCC_COL.TINH_TRANG] || '',
       thietLap.maHangMacDinh, thietLap.tenHangMacDinh, thietLap.donViTinhMacDinh, soLuong, donGia, soLuong * donGia,
-      Number(r[RUNG_COL.DIEN_TICH_M2]) || 0, toaDo,
+      soTuO_(r[RUNG_COL.DIEN_TICH_M2]), toaDo,
       r[RUNG_COL.HO_SO_NGUON_GOC] || '', r[RUNG_COL.SO_GIAY_TO] || '',
       idHD, idRung, '', ''
     ]);

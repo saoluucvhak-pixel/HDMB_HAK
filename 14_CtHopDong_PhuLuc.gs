@@ -78,9 +78,9 @@ function tinhTongHopLoRung_(rungRows) {
 
   rungRows.forEach(function (r) {
     soHD = r[RUNG_COL.SO_HD] || soHD;
-    const dt = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const kl = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-    const dg = Number(r[RUNG_COL.DON_GIA]) || 0;
+    const dt = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+    const kl = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+    const dg = soTuO_(r[RUNG_COL.DON_GIA]);
     tongDienTich += dt; tongKhoiLuong += kl; tongGiaTri += kl * dg;
     if (dg > 0) { tongDonGia += dg; soRungCoGia++; }
     them(diaChiSet, r[RUNG_COL.DIA_CHI_RUNG]);

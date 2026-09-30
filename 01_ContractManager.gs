@@ -333,9 +333,9 @@ function layBaoCaoThanhToan_() {
 function tinhDongDraftChoHopDong_(idHD, row, rungRows, stkRows, gpsRows, coAnh, dntt, ngayCan) {
   let tongKhoiLuongDuKien = 0, tongGiaTri = 0, tongKhoiLuongThucHienRung = 0, tongGiaTriThucHienRung = 0;
   rungRows.forEach(function (r) {
-    const kl = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-    const dg = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const klTH = Number(r[RUNG_COL.KHOI_LUONG_THUC_HIEN]) || 0;
+    const kl = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+    const dg = soTuO_(r[RUNG_COL.DON_GIA]);
+    const klTH = soTuO_(r[RUNG_COL.KHOI_LUONG_THUC_HIEN]);
     tongKhoiLuongDuKien += kl; tongGiaTri += dg * kl;
     tongKhoiLuongThucHienRung += klTH; tongGiaTriThucHienRung += dg * klTH;
   });
@@ -347,7 +347,7 @@ function tinhDongDraftChoHopDong_(idHD, row, rungRows, stkRows, gpsRows, coAnh, 
   const nc = (ngayCan && ngayCan.thanhCong && ngayCan.theoSoHD[soHDChuan]) || null;
 
   const soLo = rungRows.length;
-  const soLoDaDoGPS = rungRows.filter(function (r) { return Number(r[RUNG_COL.DIEN_TICH_GPS]) > 0; }).length;
+  const soLoDaDoGPS = rungRows.filter(function (r) { return soTuO_(r[RUNG_COL.DIEN_TICH_GPS]) > 0; }).length;
   const soLoDuHoSo = rungRows.filter(function (r) { return kiemTraHoSoMotLoRung_(r, true).dat; }).length;
 
   const thieuChiTiet = [];

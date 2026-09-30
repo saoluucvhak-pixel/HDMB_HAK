@@ -46,7 +46,8 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG_() {
     rung_thieuIdRung: [], // HD_RUNG bị sót chính ID_RUNG của nó
     stk_moCoi: [], // HD_STK trỏ về ID_HD không tồn tại trong HD_NCC
     gps_moCoi: [], // HD_GPS trỏ về ID_RUNG (cột ID_KEY_GPS) không tồn tại trong HD_RUNG
-    picture_moCoi: [] // HD_Picture không khớp cả ID_HD lẫn bất kỳ ID_RUNG nào (theo đúng cơ chế đối chiếu kép đã dùng ở nơi khác)
+    picture_moCoi: [], // HD_Picture không khớp cả ID_HD lẫn bất kỳ ID_RUNG nào (theo đúng cơ chế đối chiếu kép đã dùng ở nơi khác)
+    o_soLaNgay: _timOSoLaNgay_(nccRows, rungRows) // ô SỐ (diện tích / đơn giá / khối lượng) đang chứa NGÀY -> trước đây bị tính thành mili-giây
   };
 
   nccRows.forEach(function (r, idx) {
@@ -79,7 +80,7 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG_() {
     if (idHD && !idHDHopLe[idHD] && !idRungHopLe[idHD]) ketQua.picture_moCoi.push({ dong: idx + 2, dau: _dauDongBT_(r), idPicture: r[PICTURE_COL.ID_PICTURE], idSai: idHD, tenChuRung: r[PICTURE_COL.TEN_CHU_RUNG] });
   });
 
-  const tongSoVanDe = ketQua.ncc_thieuIdHD.length + ketQua.rung_moCoi.length + ketQua.rung_thieuIdRung.length + ketQua.stk_moCoi.length + ketQua.gps_moCoi.length + ketQua.picture_moCoi.length;
+  const tongSoVanDe = ketQua.ncc_thieuIdHD.length + ketQua.rung_moCoi.length + ketQua.rung_thieuIdRung.length + ketQua.stk_moCoi.length + ketQua.gps_moCoi.length + ketQua.picture_moCoi.length + ketQua.o_soLaNgay.length;
   return Object.assign({ tongSoVanDe: tongSoVanDe }, ketQua);
 }
 
@@ -94,7 +95,8 @@ function CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU() {
   tb += 'HD_RUNG thiếu ID_RUNG: ' + kq.rung_thieuIdRung.length + ' dòng\n';
   tb += 'HD_STK mồ côi: ' + kq.stk_moCoi.length + ' dòng\n';
   tb += 'HD_GPS mồ côi: ' + kq.gps_moCoi.length + ' dòng\n';
-  tb += 'HD_Picture mồ côi: ' + kq.picture_moCoi.length + ' dòng\n\n';
+  tb += 'HD_Picture mồ côi: ' + kq.picture_moCoi.length + ' dòng\n';
+  tb += 'Ô số (diện tích / đơn giá / khối lượng) đang chứa NGÀY: ' + kq.o_soLaNgay.length + ' ô\n\n';
   tb += 'Xem chi tiết từng dòng trong Log (Executions) hoặc trang Thiết lập trên webapp.';
   Logger.log(JSON.stringify(kq, null, 2));
   SpreadsheetApp.getUi().alert(tb);
@@ -582,4 +584,71 @@ function XOA_DONG_MO_COI_(ds) {
   if (daXoa) xoaCacheBanDo_();
   ghiNhatKy_('Bảo trì: xóa dòng mồ côi', '', 'Đã xóa ' + daXoa + ' dòng' + (daXoaKem ? ' + ' + daXoaKem + ' dòng GPS/ảnh của lô mồ côi' : '') + ', bỏ qua ' + boQua.length + ' — lưu trữ đợt ' + maDot + ' (Thiết lập > Khôi phục).');
   return { thanhCong: daXoa > 0, loi: daXoa ? '' : 'Không có dòng nào xóa được.', daXoa: daXoa, daXoaKem: daXoaKem, boQua: boQua, maDot: maDot };
+}
+
+
+/**
+ * ============ 7. Ô SỐ ĐANG CHỨA NGÀY (HD_NCC / HD_RUNG) ============
+ * Ô Diện tích / Đơn giá / Khối lượng mà Sheets đang lưu là NGÀY (do app khác ghi, công thức, kéo/dán...) -> trước đây
+ * Number(ngày) ra mili-giây (vd KL thực hiện 1.790.735.658.000 tấn). Nay khi tính đã coi là 0 (soTuO_), mục này để
+ * TÌM và DỌN các ô đó cho sạch dữ liệu gốc.
+ */
+const COT_SO_BT_ = {
+  HD_NCC: [['DIEN_TICH_KY', 'Diện tích ký'], ['SL_DU_KIEN', 'SL dự kiến'], ['DON_GIA', 'Đơn giá']],
+  HD_RUNG: [['DIEN_TICH_M2', 'Diện tích (m²)'], ['DON_GIA', 'Đơn giá'], ['KHOI_LUONG_DK', 'KL dự kiến'], ['DIEN_TICH_GPS', 'Diện tích GPS'], ['KHOI_LUONG_THUC_HIEN', 'KL thực hiện']]
+};
+function _chuCotBT_(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function _laNgayBT_(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
+
+function _timOSoLaNgay_(nccRows, rungRows) {
+  const ds = [], tz = layMuiGioBangTinh_();
+  const quet = function (bang, rows, map, layId) {
+    rows.forEach(function (r, i) {
+      COT_SO_BT_[bang].forEach(function (c) {
+        const v = r[map[c[0]]];
+        if (!_laNgayBT_(v)) return;
+        const id = layId(r);
+        ds.push({ bang: bang, dong: i + 2, o: _chuCotBT_(map[c[0]]) + (i + 2), tenCot: c[1], giaTri: isNaN(v.getTime()) ? '(ngày lỗi)' : Utilities.formatDate(v, tz, 'dd/MM/yyyy HH:mm:ss'), idHD: id.idHD, idRung: id.idRung || '', soHD: id.soHD });
+      });
+    });
+  };
+  quet('HD_NCC', nccRows, NCC_COL, function (r) { return { idHD: (r[NCC_COL.ID_HD] || '').toString().trim(), soHD: (r[NCC_COL.SO_HD] || '').toString() }; });
+  quet('HD_RUNG', rungRows, RUNG_COL, function (r) { return { idHD: (r[RUNG_COL.ID_KEY_HD] || '').toString().trim(), idRung: (r[RUNG_COL.ID_RUNG] || '').toString().trim(), soHD: (r[RUNG_COL.SO_HD] || '').toString() }; });
+  return ds;
+}
+
+/** QUẢN TRỊ: xóa trống các ô số đang chứa NGÀY (ghi nhật ký chi tiết cũ -> mới từng ô), cập nhật lại cache báo cáo. */
+function LAM_SACH_O_SO_LA_NGAY_() {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  const hdCapNhat = {}, rungCapNhat = {};
+  let soO = 0;
+  try {
+    [['HD_NCC', NCC_COL, NCC_COL.ID_HD, null], ['HD_RUNG', RUNG_COL, RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG]].forEach(function (b) {
+      const sh = getSheet_(SHEET_NAME[b[0]]);
+      const cuoi = sh.getLastRow();
+      if (cuoi < 2) return;
+      const data = sh.getRange(2, 1, cuoi - 1, Math.max(sh.getLastColumn(), 1)).getValues();
+      data.forEach(function (r, i) {
+        const doi = [];
+        COT_SO_BT_[b[0]].forEach(function (c) {
+          const col = b[1][c[0]];
+          if (!_laNgayBT_(r[col])) return;
+          doi.push({ truong: c[1], cu: r[col], moi: '' });
+          sh.getRange(i + 2, col + 1).setValue('');
+          soO++;
+        });
+        if (!doi.length) return;
+        const idHD = (r[b[2]] || '').toString().trim(), idRung = b[3] === null ? '' : (r[b[3]] || '').toString().trim();
+        ghiNhatKyChiTiet_('Bảo trì: xóa ngày sai trong ô số', SHEET_NAME[b[0]], idHD, idRung || idHD, doi);
+        if (idHD) hdCapNhat[idHD] = true;
+        if (idRung) rungCapNhat[idRung] = true;
+      });
+    });
+  } finally { lock.releaseLock(); }
+  Object.keys(hdCapNhat).forEach(function (id) { try { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); } catch (e) { /* bỏ qua */ } });
+  Object.keys(rungCapNhat).forEach(function (id) { try { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(id); } catch (e) { /* bỏ qua */ } });
+  if (soO) ghiNhatKy_('Bảo trì: xóa ngày sai trong ô số', '', 'Đã xóa trống ' + soO + ' ô, cập nhật lại ' + Object.keys(hdCapNhat).length + ' hợp đồng (xem NhatKy_ChiTiet để biết giá trị cũ).');
+  return { thanhCong: true, soO: soO, soHopDong: Object.keys(hdCapNhat).length };
 }

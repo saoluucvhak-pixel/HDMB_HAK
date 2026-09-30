@@ -24,7 +24,8 @@ const duThietLap = `<script>window.__du={
   loRung:[{ma:1,lyDo:["Cùng ID_RUNG"],dong:[{bang:"HD_RUNG",dong:4,dau:"r4",idRung:"L1",maRung:"M1",idHD:"A1",soHD:"A1",tenChuRung:"Chủ A",diaChi:"Thôn 1",dienTich:3000,soGps:2,cheDoXoa:"dong",goiYGiu:true},
    {bang:"HD_RUNG",dong:9,dau:"r9",idRung:"L1",maRung:"M1",idHD:"A1",soHD:"A1",tenChuRung:"Chủ A",diaChi:"Thôn 1",dienTich:3000,soGps:2,cheDoXoa:"dong",goiYGiu:false}]}]},
  XOA_DONG_NGHI_TRUNG:{thanhCong:true,daXoa:3,boQua:[],conLai:0,maDot:["XOA_1"]},
- CHAN_DOAN_MO_COI_TOAN_HE_THONG:{tongSoVanDe:3,ncc_thieuIdHD:[{dong:7,dau:"n7",soHD:"X",tenChuRung:"Y"}],rung_moCoi:[{dong:8,dau:"m8",maRung:"MR",soHD:"Z",idKeyHDSai:"KHONG"}],rung_thieuIdRung:[],stk_moCoi:[{dong:6,dau:"s6",soTK:"555",tenChuRung:"Q",idHDSai:"KHONG2"}],gps_moCoi:[],picture_moCoi:[]},
+ CHAN_DOAN_MO_COI_TOAN_HE_THONG:{tongSoVanDe:3,ncc_thieuIdHD:[{dong:7,dau:"n7",soHD:"X",tenChuRung:"Y"}],rung_moCoi:[{dong:8,dau:"m8",maRung:"MR",soHD:"Z",idKeyHDSai:"KHONG"}],rung_thieuIdRung:[],stk_moCoi:[{dong:6,dau:"s6",soTK:"555",tenChuRung:"Q",idHDSai:"KHONG2"}],gps_moCoi:[],picture_moCoi:[],o_soLaNgay:[{bang:"HD_RUNG",dong:12,o:"S12",tenCot:"KL thực hiện",giaTri:"30/09/2026 09:34:18",soHD:"20260914003",idRung:"L9"}]},
+ LAM_SACH_O_SO_LA_NGAY:{thanhCong:true,soO:1,soHopDong:1},
  XOA_DONG_MO_COI:{thanhCong:true,daXoa:2,daXoaKem:1,boQua:[],maDot:"XOA_2"}};</script>`;
 const TRANG = [
   ['30_Page_TongQuanHopDong', 'tongquan', '', 'Tổng quan hợp đồng'], ['33_Page_TraCuuHopDong', 'tracuu', '', 'Tra cứu hợp đồng'],
@@ -89,6 +90,13 @@ const TRANG = [
       kq.push(['Thiết lập mồ côi: có ô chọn từng dòng, chọn sẵn dòng mồ côi, KHÔNG chọn sẵn dòng thiếu ID', mc.o === 3 && mc.chon === 'rung_moCoi8,stk_moCoi6' ? true : JSON.stringify(mc)]);
       await p.evaluate(() => { window.__goi = []; }); await p.click('#btnXoaMoCoi'); await bamDongY(); await p.waitForTimeout(150);
       const g2 = await p.evaluate(() => ({ goi: (window.__goi.find(g => g[0] === 'XOA_DONG_MO_COI') || [])[1], msg: document.getElementById('msgBaoTri').textContent }));
+      await p.evaluate(() => chanDoanMoCoi()); await p.waitForTimeout(150);
+      const on = await p.evaluate(() => ({ nut: !!document.getElementById('btnLamSachONgay'), o: document.getElementById('ketQuaBaoTri').textContent.indexOf('S12') !== -1, chon: document.querySelectorAll('.mcChon').length }));
+      await p.evaluate(() => { window.__goi = []; }); await p.click('#btnLamSachONgay');
+      await p.waitForFunction(() => [...document.querySelectorAll('[role="dialog"] button')].some(x => x.textContent.trim() === 'Xóa trống'));
+      await p.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find(x => x.textContent.trim() === 'Xóa trống').click()); await p.waitForTimeout(150);
+      const lsn = await p.evaluate(() => ({ goi: window.__goi.some(g => g[0] === 'LAM_SACH_O_SO_LA_NGAY'), msg: document.getElementById('msgBaoTri').textContent }));
+      kq.push(['Thiết lập chẩn đoán: liệt kê ô số chứa NGÀY (không có ô tick xóa dòng) + nút xóa trống gọi đúng API', on.nut && on.o && on.chon === 3 && lsn.goi && /Đã xóa trống 1 ô/.test(lsn.msg) ? true : JSON.stringify([on, lsn])]);
       kq.push(['Thiết lập mồ côi: xóa gửi 2 dòng đã chọn + báo mã lưu trữ', g2.goi && boc(g2.goi[0]).length === 2 && /XOA_2/.test(g2.msg) ? true : JSON.stringify(g2)]);
     }
     if (trang === 'huongdan') {

@@ -1076,6 +1076,17 @@ function docToanBoDraftBaoCao_() {
 
 
 /** Đọc toàn bộ dữ liệu (trừ header) của 1 sheet, trả về mảng 2 chiều */
+/**
+ * Đổi 1 ô Sheet thành SỐ để cộng/tính. Ô là NGÀY (Date) -> 0: trước đây Number(ngày) ra mili-giây
+ * (vd ô "Khối lượng thực hiện" lỡ chứa ngày giờ -> KL thực hiện = 1.790.735.658.000 tấn). Không phải số -> 0.
+ */
+function soTuO_(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (Object.prototype.toString.call(v) === '[object Date]') return 0;
+  const n = Number(v);
+  return isFinite(n) ? n : 0;
+}
+
 function readData_(sheetName) {
   const sh = getSheet_(sheetName);
   const lastRow = sh.getLastRow();

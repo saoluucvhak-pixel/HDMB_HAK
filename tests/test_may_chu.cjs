@@ -573,6 +573,27 @@ try {
     kiem('API-DATE kết quả api() không còn giá trị Date (Năm trồng -> năm, ngày giờ -> chuỗi)', kq && !coDate(kq) && lo.namTrong === 2019 && kq.soGiayTo === '2024-05-06 09:30:00', J({ nam: lo.namTrong, sgt: kq && kq.soGiayTo }));
   });
 
+  // ---------- SO-NGAY: ô số chứa NGÀY (HD_RUNG "KL thực hiện" = ngày giờ) -> KL thực hiện 1.790.735.658.000 ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Mai Thanh', '049064018539', '1111', '20260914003');
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo 1', dienTichM2: 29650, donGia: 1750000, khoiLuongDuKien: 355.8 }) + ')');
+    const rungSh = t.ss.getSheetByName('HD_RUNG');
+    const dong = rungSh.getDataRange().getValues().findIndex(r => String(r[0]) === A.idHD && String(r[8]) === 'Lo 1') + 1;
+    rungSh.getRange(dong, 19).setValue(t.run('new Date(2026, 8, 30, 9, 34, 18)')); // cột S "Khối lượng thực hiện"
+    t.run('CAP_NHAT_DRAFT_MOT_HOP_DONG_(' + J(A.idHD) + ')');
+    const th = t.run('_tinhHinhThucHienCuaHD_(' + J(A.idHD) + ')');
+    kiem('SO-NGAY ô KL thực hiện chứa ngày giờ -> KL / giá trị thực hiện không nhảy số (coi là 0)', Number(th.khoiLuongThucHien) === 0 && Number(th.giaTriThucHien) === 0, J(th));
+    const cd = t.run('CHAN_DOAN_MO_COI_TOAN_HE_THONG_()');
+    const o = cd.o_soLaNgay || [];
+    kiem('SO-NGAY chẩn đoán tìm đúng ô S của lô đó', o.length === 1 && o[0].o === 'S' + dong && o[0].tenCot === 'KL thực hiện' && o[0].bang === 'HD_RUNG', J(o));
+    const x = t.run('LAM_SACH_O_SO_LA_NGAY_()');
+    const nk = t.ss.getSheetByName('NhatKy_ChiTiet');
+    kiem('SO-NGAY dọn: xóa trống đúng 1 ô, ghi nhật ký chi tiết, chẩn đoán lại sạch', x.soO === 1 && rungSh.getRange(dong, 19).getValue() === '' && !!nk && nk.getLastRow() >= 2
+      && t.run('CHAN_DOAN_MO_COI_TOAN_HE_THONG_()').o_soLaNgay.length === 0 && Number(rungSh.getRange(dong, 12).getValue()) === 355.8, J(x));
+    kiem('SO-NGAY API dọn chỉ Quản trị', t.run('_bangQuyenApi_().LAM_SACH_O_SO_LA_NGAY.quyen === QUYEN.QUAN_TRI'));
+  });
+
   // ---------- BT-01..: bảo trì — dòng nghi trùng & dòng mồ côi ----------
   chay(function () {
     const t = moi();

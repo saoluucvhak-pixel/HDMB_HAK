@@ -823,3 +823,11 @@ Trước đây mục "Bảo trì dữ liệu" chỉ **đếm/liệt kê** dòng 
 - **Nguyên nhân:** `google.script.run` trả **null cho cả kết quả** nếu trong đó có 1 giá trị `Date`. `layHopDongTheoIdHD_` trả thẳng ô **Năm trồng** (HD_RUNG cột T) — ô này bị Sheets tự đổi thành ngày thì hợp đồng đó không mở được ở Nhập liệu (cả từ nút Sửa ở Tra cứu lẫn từ danh sách khách hàng), trang treo "Đang tải…".
 - **Sửa:** (1) `api()` đổi mọi `Date` trong kết quả thành chuỗi (`yyyy-MM-dd`, có giờ thì `yyyy-MM-dd HH:mm:ss`) — chặn lỗi này cho mọi chức năng; (2) Năm trồng dạng ngày -> lấy năm; (3) trang Nhập liệu nhận rỗng thì báo lỗi rõ ràng.
 - **File:** 34_PhanQuyen.gs, 06_CreateUpdate.gs, 27_Page_HopDongMeCon.html. **Test:** `API-DATE` (mã cũ trượt), ca giao diện "máy chủ trả rỗng".
+
+## 🐛 Sửa: "KL thực hiện" nhảy số khổng lồ (vd HĐ 20260914003 — 1.790.735.658.000)
+
+- **Nguyên nhân:** số đó là **mốc thời gian mili-giây** (= 30/09/2026 09:34:18): ô số của lô rừng (HD_RUNG cột S "Khối lượng thực hiện") đang chứa **ngày giờ** — code webapp không ghi ngày vào cột này, nhiều khả năng do app khác / công thức / kéo-dán trên Sheet. Khi tính, `Number(ngày)` ra mili-giây -> KL thực hiện 1,79 nghìn tỷ tấn, giá trị = KL × đơn giá, "còn lại" âm.
+- **Sửa:** hàm dùng chung `soTuO_()` (00_Config.gs) — ô là ngày / không phải số -> 0; áp cho mọi phép tính diện tích / đơn giá / khối lượng lô rừng (cache Báo cáo, Hồ sơ rừng, ct_hopdong, MISA, báo cáo thực hiện PDF) và số liệu DNTT.
+- **Tìm & dọn:** Thiết lập > Bảo trì > "Chỉ chẩn đoán" liệt kê **ô số đang chứa NGÀY** (HD_NCC: diện tích ký / SL dự kiến / đơn giá; HD_RUNG: diện tích / đơn giá / KL dự kiến / diện tích GPS / KL thực hiện) kèm địa chỉ ô; nút **"Xóa trống"** (Quản trị) xóa các ô đó, ghi giá trị cũ vào NhatKy_ChiTiet, tính lại cache báo cáo.
+- **File:** 00, 01, 06, 14, 16, 22, 28, 34, 36, 24. **Test:** SO-NGAY (4 ca), 1 ca giao diện.
+- **Sau khi triển khai:** chạy "Chỉ chẩn đoán" -> "Xóa trống" -> nhập lại KL thực hiện đúng (nếu có); hoặc "Xây dựng lại cache Báo cáo" để mọi hợp đồng tính lại.

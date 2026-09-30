@@ -71,9 +71,9 @@ function _dongDraftHoSoRung_(r, tinhTrang, diemGPS) {
     latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
     lngTB = diemGPS.reduce(function (s, p) { return s + p.lng; }, 0) / diemGPS.length;
   }
-  const dienTich = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-  const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-  const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
+  const dienTich = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+  const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
+  const khoiLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
   const c = DRAFT_HSR_COL;
   const dong = [];
   dong[c.ID_RUNG] = (r[RUNG_COL.ID_RUNG] || '').toString().trim(); dong[c.ID_HD] = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
@@ -218,9 +218,9 @@ function XAY_DUNG_LAI_DRAFT_HOSORUNG_() {
       latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
       lngTB = diemGPS.reduce(function (s, p) { return s + p.lng; }, 0) / diemGPS.length;
     }
-    const dienTich = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
+    const dienTich = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+    const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
+    const khoiLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
 
     const dong = [];
     dong[c.ID_RUNG] = idRung; dong[c.ID_HD] = idHD; dong[c.SO_HD] = r[RUNG_COL.SO_HD]; dong[c.NGAY_KY] = r[RUNG_COL.NGAY_KY];

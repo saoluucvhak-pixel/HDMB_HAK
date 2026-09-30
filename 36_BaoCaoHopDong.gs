@@ -218,8 +218,8 @@ function BAO_CAO_HOP_DONG_PDF_(idHD, theoKhachHang, maChon, tuyChon) {
     const idH = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
     if (idHDs.indexOf(idH) === -1) return;
     const lo = { idRung: (r[RUNG_COL.ID_RUNG] || '').toString().trim(), maRung: (r[RUNG_COL.MA_RUNG] || '').toString(), diaChiRung: (r[RUNG_COL.DIA_CHI_RUNG] || '').toString(),
-      dienTichM2: r[RUNG_COL.DIEN_TICH_M2], dienTichGPS: r[RUNG_COL.DIEN_TICH_GPS], klDuKien: r[RUNG_COL.KHOI_LUONG_DK], klThucHien: r[RUNG_COL.KHOI_LUONG_THUC_HIEN],
-      donGia: r[RUNG_COL.DON_GIA], namTrong: (r[RUNG_COL.NAM_TRONG] || '').toString(), hoSoNguonGoc: (r[RUNG_COL.HO_SO_NGUON_GOC] || '').toString(), soGiayTo: (r[RUNG_COL.SO_GIAY_TO] || '').toString() };
+      dienTichM2: soTuO_(r[RUNG_COL.DIEN_TICH_M2]), dienTichGPS: soTuO_(r[RUNG_COL.DIEN_TICH_GPS]), klDuKien: soTuO_(r[RUNG_COL.KHOI_LUONG_DK]), klThucHien: soTuO_(r[RUNG_COL.KHOI_LUONG_THUC_HIEN]),
+      donGia: soTuO_(r[RUNG_COL.DON_GIA]), namTrong: (r[RUNG_COL.NAM_TRONG] || '').toString(), hoSoNguonGoc: (r[RUNG_COL.HO_SO_NGUON_GOC] || '').toString(), soGiayTo: (r[RUNG_COL.SO_GIAY_TO] || '').toString() };
     (loTheoHD[idH] = loTheoHD[idH] || []).push(lo);
     if (lo.idRung) idRungs.push(lo.idRung);
   });

@@ -681,7 +681,8 @@
       { nhan: 'HD_RUNG thiếu ID_RUNG', list: kq.rung_thieuIdRung, loai: 'rung_thieuIdRung', chonSan: false, cot: [['dong', 'Dòng'], ['maRung', 'Mã rừng'], ['soHD', 'Số HĐ']] },
       { nhan: 'HD_STK mồ côi', list: kq.stk_moCoi, loai: 'stk_moCoi', chonSan: true, cot: [['dong', 'Dòng'], ['soTK', 'Số TK'], ['tenChuRung', 'Tên (ghi trên STK)'], ['idHDSai', 'ID_HD đang trỏ (sai)']] },
       { nhan: 'HD_GPS mồ côi', list: kq.gps_moCoi, loai: 'gps_moCoi', chonSan: true, cot: [['dong', 'Dòng'], ['idGps', 'ID GPS'], ['tenChuRung', 'Tên (ghi trên GPS)'], ['idRungSai', 'ID_RUNG đang trỏ (sai)']] },
-      { nhan: 'HD_Picture mồ côi', list: kq.picture_moCoi, loai: 'picture_moCoi', chonSan: true, cot: [['dong', 'Dòng'], ['idPicture', 'ID ảnh'], ['tenChuRung', 'Tên (ghi trên ảnh)'], ['idSai', 'ID đang trỏ (sai)']] }
+      { nhan: 'HD_Picture mồ côi', list: kq.picture_moCoi, loai: 'picture_moCoi', chonSan: true, cot: [['dong', 'Dòng'], ['idPicture', 'ID ảnh'], ['tenChuRung', 'Tên (ghi trên ảnh)'], ['idSai', 'ID đang trỏ (sai)']] },
+      { nhan: 'Ô số (diện tích / đơn giá / khối lượng) đang chứa NGÀY — làm sai KL / giá trị thực hiện', list: kq.o_soLaNgay || [], khongXoa: true, cot: [['bang', 'Sheet'], ['o', 'Ô'], ['tenCot', 'Cột'], ['giaTri', 'Giá trị đang là ngày'], ['soHD', 'Số HĐ'], ['idRung', 'ID_RUNG']] }
     ];
     var h = '<table class="mecon-table" style="margin-top:6px"><thead><tr><th>Loại vấn đề</th><th>Số dòng</th></tr></thead><tbody>';
     nhom.forEach(function (n) { h += '<tr><td>' + escHtmlBT_(n.nhan) + '</td><td>' + n.list.length + '</td></tr>'; });
@@ -689,20 +690,34 @@
     nhom.forEach(function (n) {
       if (!n.list.length) return;
       h += '<h4 style="margin:14px 0 4px">📋 Chi tiết — ' + escHtmlBT_(n.nhan) + ' (' + n.list.length + ' dòng)</h4>';
-      h += '<table class="mecon-table"><thead><tr><th style="width:34px"><input type="checkbox" class="mcTatCa" data-loai="' + n.loai + '"' + (n.chonSan ? ' checked' : '') + ' aria-label="Chọn tất cả ' + escHtmlBT_(n.nhan) + '"></th>' + n.cot.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+      h += '<table class="mecon-table"><thead><tr>' + (n.khongXoa ? '' : '<th style="width:34px"><input type="checkbox" class="mcTatCa" data-loai="' + n.loai + '"' + (n.chonSan ? ' checked' : '') + ' aria-label="Chọn tất cả ' + escHtmlBT_(n.nhan) + '"></th>') + n.cot.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
       n.list.forEach(function (r) {
-        h += '<tr><td><input type="checkbox" class="mcChon" data-loai="' + n.loai + '" data-dong="' + r.dong + '" data-dau="' + escHtmlBT_(r.dau) + '"' + (n.chonSan ? ' checked' : '') + ' aria-label="Chọn dòng ' + r.dong + '"></td>' + n.cot.map(function (c) { return '<td>' + escHtmlBT_(r[c[0]]) + '</td>'; }).join('') + '</tr>';
+        h += '<tr>' + (n.khongXoa ? '' : '<td><input type="checkbox" class="mcChon" data-loai="' + n.loai + '" data-dong="' + r.dong + '" data-dau="' + escHtmlBT_(r.dau) + '"' + (n.chonSan ? ' checked' : '') + ' aria-label="Chọn dòng ' + r.dong + '"></td>') + n.cot.map(function (c) { return '<td>' + escHtmlBT_(r[c[0]]) + '</td>'; }).join('') + '</tr>';
       });
       h += '</tbody></table>';
+      if (n.khongXoa) h += '<p class="hint" style="margin:6px 0 0">Các ô này phải là SỐ nhưng Sheet đang lưu là ngày giờ (thường do app khác ghi vào, công thức, hoặc kéo / dán). Hệ thống nay đã coi chúng là trống khi tính, nhưng nên dọn cho sạch: bấm nút dưới để xóa trống các ô này (giá trị cũ được ghi vào NhatKy_ChiTiet), rồi nhập lại số đúng nếu có. <button class="btn btn-gold" type="button" id="btnLamSachONgay" onclick="lamSachOSoLaNgay()">🧽 Xóa trống ' + n.list.length + ' ô chứa ngày</button></p>';
     });
     h += '<p class="hint" style="margin-top:10px">Cột "Dòng" là số dòng thật trong đúng Sheet (dòng tiêu đề = dòng 1). Dòng mồ côi đã được chọn sẵn; dòng <b>thiếu ID</b> không chọn sẵn — xem kỹ trước khi xóa (có thể chỉ cần điền lại ID trên Sheet). Xóa <b>lô rừng mồ côi</b> sẽ xóa luôn điểm GPS / ảnh gắn theo lô đó. Mọi dòng xóa đều lưu trữ, khôi phục được.</p>';
-    h += '<button class="btn btn-gold" type="button" id="btnXoaMoCoi" onclick="xoaDongMoCoiDaChon()">🗑️ Xóa các dòng đã chọn</button>';
+    if (el && nhom.some(function (n) { return !n.khongXoa && n.list.length; })) h += '<button class="btn btn-gold" type="button" id="btnXoaMoCoi" onclick="xoaDongMoCoiDaChon()">🗑️ Xóa các dòng đã chọn</button>';
     el.innerHTML = h;
     el.querySelectorAll('.mcTatCa').forEach(function (o) {
       o.addEventListener('change', function () { el.querySelectorAll('.mcChon[data-loai="' + o.dataset.loai + '"]').forEach(function (c) { c.checked = o.checked; }); demChonMoCoi_(); });
     });
     el.querySelectorAll('.mcChon').forEach(function (c) { c.addEventListener('change', demChonMoCoi_); });
     demChonMoCoi_();
+  }
+  async function lamSachOSoLaNgay() {
+    if (!(await hakXacNhan_('Xóa trống các ô số (diện tích / đơn giá / khối lượng) đang chứa NGÀY trong HD_NCC / HD_RUNG? Giá trị cũ được ghi vào NhatKy_ChiTiet; cache báo cáo của các hợp đồng liên quan được tính lại.', { nutDongY: 'Xóa trống', nguyHiem: true }))) return; // A3
+    document.getElementById('btnLamSachONgay').disabled = true;
+    showMsg('msgBaoTri', '⌛ Đang dọn...', true);
+    hakRun_()
+      .withSuccessHandler(function (kq) {
+        if (!kq.thanhCong) { showMsg('msgBaoTri', '❌ ' + (kq.loi || 'Không dọn được'), false); return; }
+        showMsg('msgBaoTri', '✅ Đã xóa trống ' + kq.soO + ' ô, tính lại ' + kq.soHopDong + ' hợp đồng. Nhập lại số đúng (nếu có) trên Sheet hoặc ở trang Nhập liệu.', true);
+        chanDoanMoCoi_(true);
+      })
+      .withFailureHandler(function (err) { showMsg('msgBaoTri', '❌ Lỗi: ' + err.message, false); })
+      .LAM_SACH_O_SO_LA_NGAY();
   }
   function demChonMoCoi_() {
     var n = document.querySelectorAll('#ketQuaBaoTri .mcChon:checked').length, b = document.getElementById('btnXoaMoCoi');

@@ -194,8 +194,8 @@ function layDuLieuThucHienTuDNTT_() {
       // (không phải KG như nhận định trước đây) — người dùng xác nhận trực tiếp.
       // TRƯỚC ĐÂY code chia thêm /1000 khiến khối lượng thực hiện bị nhỏ hơn thực
       // tế 1000 lần. Giờ lấy nguyên giá trị, KHÔNG chia gì thêm.
-      if (colKL !== -1) theoSoHD[soHD].khoiLuong += (Number(data[i][colKL]) || 0);
-      if (colGiaTri !== -1) theoSoHD[soHD].giaTri += Number(data[i][colGiaTri]) || 0;
+      if (colKL !== -1) theoSoHD[soHD].khoiLuong += soTuO_(data[i][colKL]);
+      if (colGiaTri !== -1) theoSoHD[soHD].giaTri += soTuO_(data[i][colGiaTri]);
     }
     return { thanhCong: true, theoSoHD: theoSoHD };
   } catch (e) {
@@ -2371,7 +2371,7 @@ function THANH_LY_HOP_DONG_(idHD, boQuaCanhBaoPhu) {
   rungRows.forEach(function (r) {
     const kq = kiemTraHoSoMotLoRung_(r);
     thieuBatBuoc.push.apply(thieuBatBuoc, kq.thieu.map(function (t) { return r[RUNG_COL.ID_RUNG] + ': ' + t; }));
-    if (!(Number(r[RUNG_COL.DIEN_TICH_GPS]) > 0)) thieuPhu.push(r[RUNG_COL.ID_RUNG] + ': Chưa đo tọa độ GPS');
+    if (!(soTuO_(r[RUNG_COL.DIEN_TICH_GPS]) > 0)) thieuPhu.push(r[RUNG_COL.ID_RUNG] + ': Chưa đo tọa độ GPS');
   });
   if (rowNCC) {
     thieuBatBuoc.push.apply(thieuBatBuoc, kiemTraUyQuyenVaTaiKhoan_(rowNCC));
