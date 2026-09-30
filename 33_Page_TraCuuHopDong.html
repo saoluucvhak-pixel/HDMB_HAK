@@ -283,6 +283,8 @@ function traCuu_() {
       tcDangTim_ = false;
       document.getElementById('tcNutTim').disabled = false;
       tcKetQuaCuoi_ = kq;
+      tcNhoChiTiet_ = {}; // lượt tìm mới -> bỏ chi tiết đã nhớ (dữ liệu có thể vừa đổi)
+      if (kq && kq.chiTietDau && kq.ketQua && kq.ketQua.length) tcNhoChiTiet_[kq.ketQua[0].idHD] = kq.chiTietDau;
       veKetQua_(kq);
     })
     .withFailureHandler(function (err) {
@@ -290,7 +292,7 @@ function traCuu_() {
       document.getElementById('tcNutTim').disabled = false;
       vung.innerHTML = '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
     })
-    .TRA_CUU_HOP_DONG(tk, tuNgay, denNgay);
+    .TRA_CUU_HOP_DONG(tk, tuNgay, denNgay, tcManRong_()); // màn rộng: máy chủ trả luôn chi tiết HĐ đầu (bớt 1 lượt gọi)
 }
 
 function veKetQua_(kq) {
@@ -322,13 +324,22 @@ function veKetQua_(kq) {
   if (tcManRong_()) xemChiTiet_(kq.ketQua[0].idHD); // màn rộng: mở sẵn hợp đồng đầu tiên ở cột phải
 }
 
+// Tốc độ: chi tiết đã tải trong lượt tìm này được nhớ lại — bấm qua lại giữa các hợp đồng hiện ngay, không gọi lại máy chủ
+var tcNhoChiTiet_ = {};
+var tcDangXem_ = '';
 function xemChiTiet_(idHD) {
   var vungKQ = document.getElementById('tcVungKetQua');
   var vung = document.getElementById('tcVungChiTiet');
   if (tcManRong_()) { tcHaiCot_(true); tcDanhDauChon_(idHD); } else vungKQ.style.display = 'none';
+  tcDangXem_ = idHD;
+  if (tcNhoChiTiet_[idHD]) { veChiTiet_(tcNhoChiTiet_[idHD]); return; }
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
   hakRun_()
-    .withSuccessHandler(function (ct) { veChiTiet_(ct); })
+    .withSuccessHandler(function (ct) {
+      if (ct && !ct.khongTimThay) tcNhoChiTiet_[idHD] = ct;
+      if (tcDangXem_ !== idHD) return; // đã bấm sang hợp đồng khác trong lúc chờ
+      veChiTiet_(ct);
+    })
     .withFailureHandler(function (err) {
       vung.innerHTML = nutQuayLai_() + '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
       ganNutQuayLai_();

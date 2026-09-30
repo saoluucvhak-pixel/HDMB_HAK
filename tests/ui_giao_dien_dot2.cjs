@@ -48,6 +48,17 @@ async function mo(b, file, trang, du, kichThuoc) {
   r = await p.evaluate(() => ({ goi: (window.__goi || []).filter(x => x === 'CHI_TIET_TRA_CUU_HOP_DONG').length, hai: document.getElementById('tcHaiCot').classList.contains('co-chi-tiet') }));
   kq.push(['Tra cứu điện thoại: giữ kiểu 1 cột, không tự mở chi tiết', r.goi === 0 && !r.hai ? true : JSON.stringify(r)]);
   await p.close();
+  // 2a) Tra cứu nhanh: chi tiết HĐ đầu đi kèm kết quả tìm (không gọi lần 2); xem lại HĐ đã mở không gọi lại máy chủ
+  p = await mo(b, '33_Page_TraCuuHopDong', 'tracuu', { TRA_CUU_HOP_DONG: { tongSo: 2, ketQua: ketQua, chiTietDau: { idHD: 'A', hopDong: { soHD: 'S1', tenChuRung: 'Chủ A' }, thucHien: {}, loRung: [], taiKhoan: [], hoSo: [], anh: [] } },
+    CHI_TIET_TRA_CUU_HOP_DONG: { idHD: 'B', hopDong: { soHD: 'S2', tenChuRung: 'Chủ B' }, thucHien: {}, loRung: [], taiKhoan: [], hoSo: [], anh: [] } });
+  await p.fill('#tcTuKhoa', 'Chu'); await p.click('#tcNutTim'); await p.waitForTimeout(400);
+  const dem1 = await p.evaluate(() => ({ goi: (window.__goi || []).filter(x => x === 'CHI_TIET_TRA_CUU_HOP_DONG').length, s1: document.getElementById('tcVungChiTiet').textContent.indexOf('S1') !== -1 }));
+  await p.click('#tcVungKetQua a.lnk-hd[data-i="1"]'); await p.waitForTimeout(300);
+  await p.click('#tcVungKetQua a.lnk-hd[data-i="0"]'); await p.waitForTimeout(200);
+  await p.click('#tcVungKetQua a.lnk-hd[data-i="1"]'); await p.waitForTimeout(200);
+  const dem2 = await p.evaluate(() => ({ goi: (window.__goi || []).filter(x => x === 'CHI_TIET_TRA_CUU_HOP_DONG').length, s2: document.getElementById('tcVungChiTiet').textContent.indexOf('S2') !== -1 }));
+  kq.push(['Tra cứu nhanh: HĐ đầu hiện ngay từ kết quả tìm (0 lượt gọi thêm); qua lại giữa 2 HĐ chỉ gọi máy chủ 1 lần', dem1.goi === 0 && dem1.s1 && dem2.goi === 1 && dem2.s2 ? true : JSON.stringify([dem1, dem2])]);
+  await p.close();
   // 2b) Tra cứu: nút Sửa hợp đồng theo quyền + tình trạng
   const ctTC = (tt) => ({ idHD: 'A&1', hopDong: { soHD: 'S1', tenChuRung: 'Chủ A', tinhTrang: tt }, thucHien: {}, loRung: [], taiKhoan: [], hoSo: [], anh: [] });
   const nutSua = async (du) => {

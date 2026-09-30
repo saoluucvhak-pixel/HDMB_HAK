@@ -430,6 +430,7 @@ function ketThucGomDraft_(laNguoiGom) {
 function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
   idHD = (idHD || '').toString().trim();
   if (!idHD) return;
+  xoaCacheTraCuu_(); // dữ liệu HĐ vừa đổi -> chỉ mục Tra cứu dựng lại ở lần tìm sau
   if (_draftDangGom_) { _draftDangGom_.hd.add(idHD); return; } // H-12: cập nhật 1 lần cuối thao tác
   try {
     // Tốc độ: chỉ đọc đúng các dòng của hợp đồng này (docDongTheoKhoa_) — trước đây đọc TOÀN BỘ 5 sheet sau MỖI lần lưu.
@@ -475,6 +476,7 @@ function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
 }
 
 function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
+  xoaCacheTraCuu_();
   try {
     const sh = getOrCreateDraftBaoCaoSheet_();
     const soDong = timDongDraftBaoCao_(sh, idHD);
@@ -496,6 +498,7 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
 function capNhatDraftHangLoat_(idsHopDong) {
   idsHopDong = Array.from(new Set((idsHopDong || []).map(function (id) { return (id || '').toString().trim(); }).filter(Boolean)));
   if (!idsHopDong.length) return true;
+  xoaCacheTraCuu_();
   // Tốc độ: ít hợp đồng (lưu 1 hợp đồng, tạo mới...) -> từng HĐ đọc đúng dòng & ghi đúng dòng; trước đây đọc cả 5 sheet
   // và GHI LẠI CẢ sheet cache. Nhiều hợp đồng (đồng bộ thanh toán, bảo trì) -> đọc 1 lần như cũ.
   if (idsHopDong.length <= 10) { idsHopDong.forEach(function (id) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); }); return true; }
@@ -646,6 +649,7 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT() {
  */
 function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  xoaCacheTraCuu_();
   const GIOI_HAN_THOI_GIAN_MS = 4.5 * 60 * 1000; // dừng an toàn ở phút 4.5 (giới hạn thật ~6 phút)
   const thoiDiemBatDau = new Date().getTime();
   const props = PropertiesService.getScriptProperties();

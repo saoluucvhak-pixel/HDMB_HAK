@@ -645,6 +645,22 @@ try {
     kiem('TOC-DO-2 thanh tiến độ (đọc 1 HĐ) = đọc cả cache; số dòng tài khoản đúng; ảnh lưu nhầm ID_RUNG vẫn nhận', !sai.length && coAnh2 === true, J(sai));
   });
 
+  // ---------- TC-NHANH: tra cứu dùng chỉ mục (cache), tự làm mới khi ghi, trả kèm chi tiết HĐ đầu ----------
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Mai Thành', '049064018539', '1111', 'A1');
+    t.tao('Trần Thị Lan', '049000000002', '2222', 'B1');
+    const r1 = t.run('TRA_CUU_HOP_DONG_("mai thanh", "", "", true)');
+    t.m.demDoc.n = 0; t.m.demDoc.o = 0; t.m.demDoc.theo = {};
+    const r2 = t.run('TRA_CUU_HOP_DONG_("mai thanh", "", "")');
+    const docNcc = Object.keys(t.m.demDoc.theo || {}).filter(k => /^HD_NCC|^HD_STK/.test(k)).length;
+    kiem('TC-NHANH lần tìm thứ 2 không đọc lại HD_NCC / HD_STK, cùng kết quả', r1.tongSo === 1 && J(r1.ketQua) === J(r2.ketQua) && docNcc === 0, J({ theo: t.m.demDoc.theo, r1: r1.tongSo, r2: r2.tongSo }));
+    kiem('TC-NHANH màn rộng: trả kèm chi tiết HĐ đầu giống hệt CHI_TIET_TRA_CUU', !!r1.chiTietDau && J(r1.chiTietDau) === J(t.run('CHI_TIET_TRA_CUU_HOP_DONG_(' + J(A.idHD) + ')')) && r2.chiTietDau === undefined);
+    t.run('THEM_TAI_KHOAN_MOI_(' + J({ idHD: A.idHD, soTK: '777555333', nganHang: 'BIDV' }) + ')');
+    const r3 = t.run('TRA_CUU_HOP_DONG_("777555333", "", "")');
+    kiem('TC-NHANH ghi dữ liệu -> chỉ mục làm mới (tìm thấy số TK vừa thêm)', r3.tongSo === 1 && r3.ketQua[0].khopTheo === 'Số tài khoản', J(r3));
+  });
+
   // ---------- NAM-TRONG: năm trồng phải là năm 4 chữ số ----------
   chay(function () {
     const t = moi();

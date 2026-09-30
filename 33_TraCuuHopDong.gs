@@ -50,7 +50,74 @@ function _ngayHienThi_(v) {
  * Ngày ký bị loại. Trả { tuKhoa, tuNgay, denNgay, tongSo, gioiHan, ketQua: [...] }
  * (tối đa TRA_CUU_GIOI_HAN_KET_QUA dòng, mới ký trước).
  */
-function TRA_CUU_HOP_DONG_(tuKhoa, tuNgay, denNgay) {
+/**
+ * ============ CHỈ MỤC TRA CỨU (tốc độ) ============
+ * Trước đây MỖI lần tìm đọc lại cả HD_NCC (33 cột) + HD_STK và bỏ dấu 5 trường của MỌI hợp đồng. Nay dựng 1 lần
+ * danh sách đã chuẩn hóa sẵn (bỏ dấu / chỉ lấy số) rồi lưu vào CacheService (chia khúc); lần tìm sau chỉ so chuỗi.
+ * Tự làm mới: mọi lần ghi dữ liệu hợp đồng (CAP_NHAT_DRAFT_MOT_HOP_DONG_ / hàng loạt / xóa HĐ / xây lại cache) gọi
+ * xoaCacheTraCuu_(); ngoài ra hết hạn sau 15 phút (phòng sửa tay thẳng trên Sheet).
+ * Mỗi dòng: [idHD, soHD, ngayKyIso, tenChuRung, tenUyQuyen, cccdChuRung, diaChiRung, tinhTrang, [5 trường chữ đã chuẩn hóa],
+ *            [5 trường số chỉ còn chữ số], chuỗi các Số TK trong HD_STK (chỉ số, cách nhau khoảng trắng)]
+ */
+const KHOA_CHI_MUC_TC_ = 'TC_CHI_MUC_V1';
+const TRUONG_CHU_TC_ = [['Số HĐ', 'SO_HD'], ['ID', 'ID_HD'], ['Chủ rừng', 'TEN_CHU_RUNG'], ['Người ủy quyền', 'TEN_UY_QUYEN'], ['Địa chỉ rừng', 'DIA_CHI_RUNG']];
+const TRUONG_SO_TC_ = [['CCCD chủ rừng', 'CCCD_CHU_RUNG'], ['CCCD ủy quyền', 'CCCD_UY_QUYEN'], ['SĐT chủ rừng', 'SDT_CHU_RUNG'], ['SĐT ủy quyền', 'SDT_UQ'], ['Số tài khoản', 'SO_TK']];
+
+function xoaCacheTraCuu_() {
+  try { CacheService.getScriptCache().remove(KHOA_CHI_MUC_TC_); } catch (e) { /* không có cache -> bỏ qua */ }
+}
+
+function _dungChiMucTraCuu_() {
+  const stkTheoHD = {};
+  readData_(SHEET_NAME.HD_STK).forEach(function (r) {
+    const id = (r[STK_COL.ID_HD] || '').toString().trim();
+    const so = _chiLaySo_(r[STK_COL.SO_TK]);
+    if (so) (stkTheoHD[id] = stkTheoHD[id] || []).push(so);
+  });
+  const ds = [];
+  readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
+    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
+    if (!idHD && !r[NCC_COL.SO_HD]) return;
+    ds.push([
+      idHD, (r[NCC_COL.SO_HD] || '').toString(), ngayToISO_(r[NCC_COL.NGAY_KY]),
+      (r[NCC_COL.TEN_CHU_RUNG] || '').toString(), (r[NCC_COL.TEN_UY_QUYEN] || '').toString(), (r[NCC_COL.CCCD_CHU_RUNG] || '').toString(),
+      (r[NCC_COL.DIA_CHI_RUNG] || '').toString(), (r[NCC_COL.TINH_TRANG] || '').toString(),
+      TRUONG_CHU_TC_.map(function (t) { return _chuoiSoKhop_(r[NCC_COL[t[1]]]); }),
+      TRUONG_SO_TC_.map(function (t) { return _chiLaySo_(r[NCC_COL[t[1]]]); }),
+      (stkTheoHD[idHD] || []).join(' ')
+    ]);
+  });
+  return ds;
+}
+
+function _layChiMucTraCuu_() {
+  let cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) { /* không có cache */ }
+  if (cache) {
+    try {
+      const meta = cache.get(KHOA_CHI_MUC_TC_);
+      if (meta) {
+        const m = JSON.parse(meta), khoa = [];
+        for (let i = 0; i < m.n; i++) khoa.push(KHOA_CHI_MUC_TC_ + '_' + m.ma + '_' + i);
+        const tat = cache.getAll(khoa);
+        if (khoa.every(function (k) { return typeof tat[k] === 'string'; })) return JSON.parse(khoa.map(function (k) { return tat[k]; }).join(''));
+      }
+    } catch (e) { /* hỏng -> dựng lại */ }
+  }
+  const ds = _dungChiMucTraCuu_();
+  if (cache) {
+    try {
+      const s = JSON.stringify(ds), ma = Utilities.getUuid().slice(0, 8), KHUC = 25000, o = {}; // 25k ký tự ≈ < 100KB kể cả chữ có dấu
+      let n = 0;
+      for (let i = 0; i < s.length; i += KHUC) o[KHOA_CHI_MUC_TC_ + '_' + ma + '_' + (n++)] = s.slice(i, i + KHUC);
+      cache.putAll(o, 900);
+      cache.put(KHOA_CHI_MUC_TC_, JSON.stringify({ ma: ma, n: n }), 900);
+    } catch (e) { /* quá lớn / lỗi cache -> lần sau dựng lại, kết quả vẫn đúng */ }
+  }
+  return ds;
+}
+
+function TRA_CUU_HOP_DONG_(tuKhoa, tuNgay, denNgay, kemChiTietDau) {
   _yeuCauQuyen_(QUYEN.XEM);
   const tk = _chuoiSoKhop_(tuKhoa);
   tuNgay = (tuNgay || '').toString().trim();
@@ -66,59 +133,43 @@ function TRA_CUU_HOP_DONG_(tuKhoa, tuNgay, denNgay) {
   const timTheoSo = tkSo.length >= 4 && tkSo.length === tk.replace(/[\s.\-]/g, '').length; // từ khóa toàn chữ số (CCCD/SĐT/STK)
   const duocXemDu = _coQuyen_(QUYEN.NHAP_LIEU);
 
-  // Số tài khoản nằm ở cả HD_NCC (TK chính) và HD_STK (các TK khác của hợp đồng)
-  const idTheoStk = {};
-  if (coTuKhoa && timTheoSo) {
-    readData_(SHEET_NAME.HD_STK).forEach(function (r) {
-      if (_chiLaySo_(r[STK_COL.SO_TK]).indexOf(tkSo) !== -1) idTheoStk[(r[STK_COL.ID_HD] || '').toString().trim()] = true;
-    });
-  }
-
-  const truongChu = [
-    ['Số HĐ', NCC_COL.SO_HD], ['ID', NCC_COL.ID_HD], ['Chủ rừng', NCC_COL.TEN_CHU_RUNG],
-    ['Người ủy quyền', NCC_COL.TEN_UY_QUYEN], ['Địa chỉ rừng', NCC_COL.DIA_CHI_RUNG]
-  ];
-  const truongSo = [
-    ['CCCD chủ rừng', NCC_COL.CCCD_CHU_RUNG], ['CCCD ủy quyền', NCC_COL.CCCD_UY_QUYEN],
-    ['SĐT chủ rừng', NCC_COL.SDT_CHU_RUNG], ['SĐT ủy quyền', NCC_COL.SDT_UQ], ['Số tài khoản', NCC_COL.SO_TK]
-  ];
-
+  // Tốc độ: tìm trên chỉ mục đã chuẩn hóa sẵn (xem _layChiMucTraCuu_) — cùng thứ tự so khớp như trước:
+  // 5 trường chữ (bỏ dấu) -> 5 trường số (khi từ khóa toàn chữ số) -> Số TK trong HD_STK.
   const khop = [];
-  readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
-    const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
-    if (!idHD && !r[NCC_COL.SO_HD]) return;
-    const ngayKyIso = ngayToISO_(r[NCC_COL.NGAY_KY]);
+  _layChiMucTraCuu_().forEach(function (d) {
+    const ngayKyIso = d[2];
     if (locNgay && (!ngayKyIso || (tuNgay && ngayKyIso < tuNgay) || (denNgay && ngayKyIso > denNgay))) return;
     let khopTheo = coTuKhoa ? '' : 'Ngày ký';
-    for (let i = 0; i < truongChu.length && !khopTheo; i++) {
-      if (_chuoiSoKhop_(r[truongChu[i][1]]).indexOf(tk) !== -1) khopTheo = truongChu[i][0];
+    for (let i = 0; i < TRUONG_CHU_TC_.length && !khopTheo; i++) {
+      if (d[8][i].indexOf(tk) !== -1) khopTheo = TRUONG_CHU_TC_[i][0];
     }
     if (!khopTheo && timTheoSo) {
-      for (let j = 0; j < truongSo.length && !khopTheo; j++) {
-        if (_chiLaySo_(r[truongSo[j][1]]).indexOf(tkSo) !== -1) khopTheo = truongSo[j][0];
+      for (let j = 0; j < TRUONG_SO_TC_.length && !khopTheo; j++) {
+        if (d[9][j].indexOf(tkSo) !== -1) khopTheo = TRUONG_SO_TC_[j][0];
       }
-      if (!khopTheo && idTheoStk[idHD]) khopTheo = 'Số tài khoản';
+      if (!khopTheo && d[10].indexOf(tkSo) !== -1) khopTheo = 'Số tài khoản'; // số TK cách nhau khoảng trắng -> không khớp chéo 2 số
     }
     if (!khopTheo) return;
     khop.push({
-      idHD: idHD,
-      soHD: (r[NCC_COL.SO_HD] || '').toString(),
+      idHD: d[0], soHD: d[1],
       ngayKy: ngayKyIso ? ngayKyIso.split('-').reverse().join('/') : '',
       ngayKyIso: ngayKyIso,
-      tenChuRung: (r[NCC_COL.TEN_CHU_RUNG] || '').toString(),
-      tenUyQuyen: (r[NCC_COL.TEN_UY_QUYEN] || '').toString(),
-      cccdChuRung: duocXemDu ? (r[NCC_COL.CCCD_CHU_RUNG] || '').toString() : _cheCccd_(r[NCC_COL.CCCD_CHU_RUNG]),
-      diaChiRung: (r[NCC_COL.DIA_CHI_RUNG] || '').toString(),
-      tinhTrang: (r[NCC_COL.TINH_TRANG] || '').toString(),
-      khopTheo: khopTheo
+      tenChuRung: d[3], tenUyQuyen: d[4],
+      cccdChuRung: duocXemDu ? d[5] : _cheCccd_(d[5]),
+      diaChiRung: d[6], tinhTrang: d[7], khopTheo: khopTheo
     });
   });
   khop.sort(function (a, b) { return (b.ngayKyIso || '').localeCompare(a.ngayKyIso || ''); });
-  return Object.assign(traVe, {
+  Object.assign(traVe, {
     tongSo: khop.length,
     ketQua: khop.slice(0, TRA_CUU_GIOI_HAN_KET_QUA).map(function (x) { delete x.ngayKyIso; return x; }),
     daCheSo: !duocXemDu
   });
+  // Màn rộng mở sẵn HĐ đầu tiên: trả luôn chi tiết trong CÙNG lượt gọi (bớt 1 lượt gọi máy chủ ~1 giây)
+  if (kemChiTietDau && traVe.ketQua.length) {
+    try { traVe.chiTietDau = CHI_TIET_TRA_CUU_HOP_DONG_(traVe.ketQua[0].idHD); } catch (e) { /* trình duyệt tự gọi lại như cũ */ }
+  }
+  return traVe;
 }
 
 /** Dòng Draft báo cáo (khối lượng/giá trị thực hiện, phiếu cân) của 1 hợp đồng — {} nếu chưa có. */
