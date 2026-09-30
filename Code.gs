@@ -50,7 +50,7 @@ function doGet(e) {
     phien = dangNhap.phien;
     loiDangNhap = dangNhap.loi;
   }
-  var trang = _dungTrangWebapp_(page, phien, loiDangNhap, e.parameter.sso ? '' : e.parameter.ph);
+  var trang = _dungTrangWebapp_(page, phien, loiDangNhap, e.parameter.sso ? '' : e.parameter.ph, e.parameter.tab);
   return trang.tmpl.evaluate()
     .setTitle(trang.cauHinh.title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -58,7 +58,7 @@ function doGet(e) {
 }
 
 /** Dựng template 1 trang webapp (?page=...) — dùng chung cho doGet và trangTrongKhung (chuyển trang khi nhúng). */
-function _dungTrangWebapp_(page, phien, loiDangNhap, ph) {
+function _dungTrangWebapp_(page, phien, loiDangNhap, ph, tab) {
   // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
   // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
   var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
@@ -66,6 +66,7 @@ function _dungTrangWebapp_(page, phien, loiDangNhap, ph) {
   var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
   tmpl.baseUrl = ScriptApp.getService().getUrl();
   tmpl.currentPage = cauHinh.currentPage || tenTrang;
+  tmpl.tabTrang = /^(hoso|anh|ocr)$/.test(String(tab || '')) ? String(tab) : ''; // thẻ con trang Kiểm tra (menu chung)
   tmpl.phien = phien || '';
   tmpl.loiDangNhap = loiDangNhap || '';
   if (!tmpl.phien && ph && _docPhien_(ph)) {
@@ -82,7 +83,7 @@ function _dungTrangWebapp_(page, phien, loiDangNhap, ph) {
  */
 function trangTrongKhung(thamSo) {
   var p = thamSo || {};
-  var trang = _dungTrangWebapp_(String(p.page || ''), '', '', p.ph ? String(p.ph) : '');
+  var trang = _dungTrangWebapp_(String(p.page || ''), '', '', p.ph ? String(p.ph) : '', p.tab ? String(p.tab) : '');
   return { html: trang.tmpl.evaluate().getContent(), tieuDe: trang.cauHinh.title };
 }
 
@@ -289,7 +290,9 @@ function getMapData_ThucThi_() {
       ten: rungData[j][RUNG_COL.TEN_CHU_RUNG],
       dtKyHD: rungData[j][RUNG_COL.DIEN_TICH_M2],
       dtGPS: rungData[j][RUNG_COL.DIEN_TICH_GPS],
-      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện"
+      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện",
+      idHD: idKeyHD, // giao diện mới: nút "Xem ảnh" mở thẳng thư viện ảnh của hợp đồng
+      diaChi: rungData[j][RUNG_COL.DIA_CHI_RUNG] || ""
     };
   }
 

@@ -120,6 +120,25 @@
     .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
     .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
   }
+  /* Giao diện mới: thanh tiến độ 5 bước trong hợp đồng + thanh bước của hộp thoại tạo hợp đồng */
+  .hak-tien-do-hs { background: var(--card-bg, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 14px; padding: 14px 16px; margin: 12px 0 14px; }
+  .hak-tien-do-hs ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .hak-tien-do-hs li { border-top: 4px solid var(--vien, #e5e7eb); border-radius: 2px; padding-top: 8px; }
+  .hak-tien-do-hs li.xong { border-top-color: #16a34a; }
+  .hak-tien-do-hs li.dang { border-top-color: #2563eb; }
+  .hak-tien-do-hs button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent; color: inherit; padding: 2px 0; cursor: pointer; text-align: left; font: inherit; }
+  .hak-tien-do-hs .so { width: 24px; height: 24px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--nen-phu, #f3f4f6); color: var(--chu-phu, #6b7280); border: 1px solid var(--vien, #d1d5db); }
+  .hak-tien-do-hs li.xong .so { background: #16a34a; border-color: #16a34a; color: #fff; }
+  .hak-tien-do-hs li.dang .so { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .hak-tien-do-hs .ten { font-size: 13px; font-weight: 500; color: var(--chu-phu, #6b7280); }
+  .hak-tien-do-hs li.dang .ten, .hak-tien-do-hs li.xong .ten { color: var(--chu-chinh, #1f2937); font-weight: 600; }
+  .hak-tien-do-hs .thieu { margin-top: 10px; font-size: 12.5px; color: var(--warn-chu, #92400e); background: var(--warn-bg, #fef3c7); border-radius: 8px; padding: 6px 10px; }
+  @media (max-width: 800px) { .hak-tien-do-hs ol { grid-template-columns: repeat(5, 1fr); } .hak-tien-do-hs .ten { display: none; } }
+  .wizard-buoc .cham { width: 28px; height: 28px; font-size: 12.5px; }
+  .wizard-buoc .cham.active { background: #2563eb; }
+  .wizard-buoc .cham.done { background: #16a34a; }
+  .wizard-buoc .duong { height: 4px; border-radius: 2px; }
+  .wizard-nhan { font-size: 12px; font-weight: 600; color: var(--chu-chinh, #374151); text-transform: none; letter-spacing: 0; }
 </style>
 <style>
   .khung-den { background: var(--sidebar-bg); color: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 16px; }
@@ -179,53 +198,7 @@
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
 <?!= include_('PhanQuyen_JS') ?>
 <?!= include_('DinhDangSo_JS') ?>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
-    <span class="icon">📊</span> Tổng quan hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
-    <span class="icon">🔍</span> Tra cứu hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
-    <span class="icon">🖼️</span> Tra cứu hình ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
+<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
 
   <div class="app-main">
     <div id="vungChinh"></div>
@@ -299,7 +272,7 @@
     trang = trang || 1;
     var el = document.getElementById('vungChinh');
     el.innerHTML =
-      '<div class="page-title">👤 Khách hàng</div>' +
+      '<div class="page-title">Khách hàng</div>' +
       '<div class="page-subtitle">1 khách hàng có thể có nhiều hợp đồng — bấm vào 1 khách hàng để xem danh sách hợp đồng đã ký.</div>' +
       '<div class="card"><div class="card-con-head">' +
       '<div class="row-search" style="margin-bottom:0"><input id="oTimKHRoot" placeholder="Tìm theo tên chủ rừng / mã khách hàng (CCCD)... — gõ là lọc ngay"></div>' +
@@ -607,13 +580,14 @@
       var dl = document.getElementById('dlNoiCapW'); list.forEach(function (nc) { var o = document.createElement('option'); o.value = nc; dl.appendChild(o); });
     }).withFailureHandler(function (err) { console.error('layGoiYNoiCap:', err); }).layGoiYNoiCap();
     themNutDocScan_('btnScanCccdChuRung', 'oScanCccdChuRung', 'cccd_chu_rung', function (truong) {
-      dienNeuTrongScan_('wTenChuRung', truong.tenChuRung);
-      dienNeuTrongScan_('wCccd', truong.cccdChuRung);
-      dienNeuTrongScan_('wDiaChiTT', truong.diaChiThuongTru);
-      if (truong.ngayCap) dienNeuTrongScan_('wNgayCap', truong.ngayCap);
-      dienNeuTrongScan_('wNoiCap', truong.noiCap);
-      document.getElementById('wCccd').dispatchEvent(new Event('input')); // kích hoạt lại tự điền MST theo CCCD (noiMSTTheoCccd_ đã gắn sẵn ở dưới)
-      thongBao_('✅ Đã đọc xong CCCD — kiểm tra lại thông tin trước khi bấm Tiếp tục (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      apDungOcr_('Kết quả đọc CCCD chủ rừng', [
+        { nhan: 'Họ tên chủ rừng', id: 'wTenChuRung', gt: truong.tenChuRung }, { nhan: 'Số CCCD', id: 'wCccd', gt: truong.cccdChuRung },
+        { nhan: 'Địa chỉ thường trú', id: 'wDiaChiTT', gt: truong.diaChiThuongTru }, { nhan: 'Ngày cấp', id: 'wNgayCap', gt: truong.ngayCap },
+        { nhan: 'Nơi cấp', id: 'wNoiCap', gt: truong.noiCap }
+      ], function (n) {
+        document.getElementById('wCccd').dispatchEvent(new Event('input')); // kích hoạt lại tự điền MST theo CCCD (noiMSTTheoCccd_ đã gắn sẵn ở dưới)
+        thongBao_(n === 0 ? 'Đã đọc CCCD — không áp dụng trường nào.' : '✅ Đã đọc xong CCCD — kiểm tra lại thông tin trước khi bấm Tiếp tục (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      });
     });
     document.getElementById('btnQuayLaiBuoc1').addEventListener('click', function () {
       // Lưu tạm những gì đã gõ trước khi quay lại Bước 1 (để nếu vào lại 1b sau đó vẫn còn)
@@ -670,6 +644,11 @@
   }
   /** Điền vào 1 ô CHỈ KHI đang trống — không ghi đè dữ liệu người dùng đã gõ tay trước đó */
   function dienNeuTrongScan_(id, giaTri) { var el = document.getElementById(id); if (el && giaTri && !el.value) el.value = giaTri; }
+  /** Giao diện mới: hiện bảng so khớp OCR (GiaoDien_Chung) cho người dùng chọn trường áp dụng; thiếu thì điền ô trống như cũ. */
+  function apDungOcr_(tieuDe, dong, sauKhi) {
+    if (typeof hakSoKhopOcr_ !== 'function') { dong.forEach(function (d) { dienNeuTrongScan_(d.id, d.gt); }); sauKhi(-1); return; }
+    hakSoKhopOcr_(dong, { tieuDe: tieuDe }).then(sauKhi);
+  }
 
   /** Gắn nút "Kiểm tra tên chủ TK" — đối chiếu tên chủ tài khoản thật với tên chủ rừng đã nhập */
   function themNutKiemTraChuTK_(idNutTrigger, idSoTK, idNganHang, idKetQua, tenChuRungThamChieu) {
@@ -768,15 +747,15 @@
     themNutKiemTraChuTK_('btnKiemTraChuTKW', 'wSoTK', 'wNganHang', 'ketQuaChuTKW', wz.tenChuRung);
     document.getElementById('wUyQuyenTT').addEventListener('change', function () { document.getElementById('vungUyQuyenW').style.display = this.value === 'Có' ? 'block' : 'none'; });
     themNutDocScan_('btnScanCccdUyQuyen', 'oScanCccdUyQuyen', 'cccd_uy_quyen', function (truong) {
-      dienNeuTrongScan_('wTenUyQuyen', truong.tenUyQuyen);
-      dienNeuTrongScan_('wCccdUyQuyen', truong.cccdUyQuyen);
-      dienNeuTrongScan_('wDiaChiUyQuyen', truong.diaChiUyQuyen);
-      thongBao_('✅ Đã đọc xong CCCD người ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục.');
+      apDungOcr_('Kết quả đọc CCCD người được ủy quyền', [
+        { nhan: 'Họ tên người ủy quyền', id: 'wTenUyQuyen', gt: truong.tenUyQuyen }, { nhan: 'CCCD người ủy quyền', id: 'wCccdUyQuyen', gt: truong.cccdUyQuyen },
+        { nhan: 'Địa chỉ người ủy quyền', id: 'wDiaChiUyQuyen', gt: truong.diaChiUyQuyen }
+      ], function (n) { thongBao_(n === 0 ? 'Đã đọc CCCD người ủy quyền — không áp dụng trường nào.' : '✅ Đã đọc xong CCCD người ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục.'); });
     });
     themNutDocScan_('btnScanGiayUyQuyen', 'oScanGiayUyQuyen', 'giay_uy_quyen', function (truong) {
-      dienNeuTrongScan_('wTenUyQuyen', truong.tenUyQuyen);
-      if (truong.cccdUyQuyen) dienNeuTrongScan_('wCccdUyQuyen', truong.cccdUyQuyen);
-      thongBao_('✅ Đã đọc xong Giấy ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục (giấy ủy quyền thường không có đủ SĐT/địa chỉ, cần bổ sung tay nếu thiếu).');
+      apDungOcr_('Kết quả đọc giấy ủy quyền', [
+        { nhan: 'Họ tên người được ủy quyền', id: 'wTenUyQuyen', gt: truong.tenUyQuyen }, { nhan: 'CCCD người được ủy quyền', id: 'wCccdUyQuyen', gt: truong.cccdUyQuyen }
+      ], function (n) { thongBao_(n === 0 ? 'Đã đọc giấy ủy quyền — không áp dụng trường nào.' : '✅ Đã đọc xong Giấy ủy quyền — kiểm tra lại thông tin trước khi bấm Tiếp tục (giấy ủy quyền thường không có đủ SĐT/địa chỉ, cần bổ sung tay nếu thiếu).'); });
     });
     function luuBuoc2VaoWz_() {
       wz.ngayKy = document.getElementById('wNgayKy').value;
@@ -868,7 +847,8 @@
   var ctxHD = { idHD: null, tab: 'thongtin' };
 
   function moChiTietHopDong(idHD) { ctxHD = { idHD: idHD, tab: 'thongtin' }; renderChiTietHopDong(); }
-  function chonTabHD(tab) { ctxHD.tab = tab; renderChiTietHopDong(); }
+  function chonTabHD(tab) { ctxHD.tab = tab; chiDoiTabHD_ = true; renderChiTietHopDong(); }
+  var chiDoiTabHD_ = false, tienDoHS_ = { id: null, td: null }; // chỉ đổi thẻ -> dùng lại tiến độ vừa tải, không gọi máy chủ lại
 
   function renderChiTietHopDong() {
     var el = document.getElementById('vungChinh');
@@ -889,6 +869,7 @@
         html += '<div class="header-hs"><div><span class="ten">' + escHtml_(h.tenChuRung) + '</span><span class="badge-ma">' + escHtml_(h.soHD) + '</span><span class="badge-tt">' + escHtml_(h.tinhTrang) + '</span>' +
           '<div class="phu">CCCD ' + escHtml_(h.cccdChuRung) + '</div></div><div>' + htmlNutDuyet +
           (coTheSua ? '<button class="btn btn-outline" id="btnSuaHD">✏️ Sửa hồ sơ</button>' : '<span class="hint">🔒 Đã qua "Đang thực hiện" — khóa sửa/bổ sung</span>') + '</div></div>';
+        html += '<nav class="hak-tien-do-hs" id="vungTienDoHS" aria-label="Tiến độ hồ sơ hợp đồng"></nav>';
         html += '<div class="tabbar2"><div class="tabitem ' + (ctxHD.tab === 'thongtin' ? 'active' : '') + '" data-tab="thongtin">👤 Thông tin hợp đồng</div>' +
           '<div class="tabitem ' + (ctxHD.tab === 'chitiet' ? 'active' : '') + '" data-tab="chitiet">📊 Chi tiết hợp đồng</div>' +
           '<div class="tabitem ' + (ctxHD.tab === 'rung' ? 'active' : '') + '" data-tab="rung">🌲 Lô rừng</div>' +
@@ -909,6 +890,7 @@
               .CAP_NHAT_HOP_DONG(h.soDong, { tinhTrang: ttMoi }, h.idHD);
           });
         });
+        veTienDoHoSo_(h);
         if (ctxHD.tab === 'thongtin') renderTabThongTin_(h);
         else if (ctxHD.tab === 'chitiet') renderTabChiTiet_(h);
         else if (ctxHD.tab === 'rung') renderTabRung_(h);
@@ -916,6 +898,35 @@
       })
       .withFailureHandler(function (err) { el.innerHTML = '<div class="empty-hint">❌ Lỗi: ' + escHtml_(err.message) + '</div>'; })
       .layHopDongTheoIdHD(ctxHD.idHD);
+  }
+
+  /** Giao diện mới: thanh tiến độ 5 bước — bấm bước để mở đúng thẻ; ✓ khi đủ (theo cache báo cáo, cập nhật sau mỗi lần lưu). */
+  function veTienDoHoSo_(h) {
+    var el = document.getElementById('vungTienDoHS');
+    if (!el) return;
+    var ve = function (td) {
+      td = td || {};
+      var buoc = [
+        { ten: 'Chủ rừng & hợp đồng', tab: 'thongtin', xong: !!h.cccdChuRung },
+        { ten: 'Tài khoản nhận tiền', tab: 'stk', xong: td.soTaiKhoan > 0 },
+        { ten: 'Lô rừng & hồ sơ pháp lý', tab: 'rung', xong: td.soLoRung > 0 && td.hoSoDu },
+        { ten: 'Tọa độ GPS', tab: 'rung', xong: td.soLoRung > 0 && td.daDoGPSDu },
+        { ten: 'Ảnh hiện trường', tab: 'rung', xong: td.soLoRung > 0 && td.coAnh }
+      ];
+      var dangMo = { thongtin: 0, chitiet: 0, stk: 1, rung: 2 }[ctxHD.tab];
+      el.innerHTML = '<ol>' + buoc.map(function (b, i) {
+        return '<li class="' + (b.xong ? 'xong' : '') + (i === dangMo ? ' dang' : '') + '"><button type="button" data-tab="' + b.tab + '"' + (i === dangMo ? ' aria-current="step"' : '') + '>' +
+          '<span class="so">' + (b.xong ? '✓' : (i + 1)) + '</span><span class="ten">' + escHtml_(b.ten) + '</span></button></li>';
+      }).join('') + '</ol>' +
+        (td.coDuLieu && td.thieuHoSoChiTiet ? '<div class="thieu">Còn thiếu: ' + escHtml_(td.thieuHoSoChiTiet) + '</div>' : '');
+      el.querySelectorAll('button[data-tab]').forEach(function (b) { b.addEventListener('click', function () { chonTabHD(b.getAttribute('data-tab')); }); });
+    };
+    var dungLai = chiDoiTabHD_ && tienDoHS_.id === h.idHD;
+    chiDoiTabHD_ = false;
+    if (dungLai) { ve(tienDoHS_.td); return; }
+    ve(null);
+    hakRun_().withSuccessHandler(function (td) { tienDoHS_ = { id: h.idHD, td: td }; ve(td); })
+      .withFailureHandler(function () { /* không có tiến độ vẫn dùng trang bình thường */ }).TIEN_DO_HO_SO_HD(h.idHD);
   }
 
   function renderTabThongTin_(h) {
@@ -1194,11 +1205,11 @@
     hakRun_().withSuccessHandler(function (list) { var dl = document.getElementById('dlHoSoMC'); list.forEach(function (v) { var o = document.createElement('option'); o.value = v; dl.appendChild(o); }); }).withFailureHandler(function (err) { console.error('layDanhSachLoaiHoSo:', err); }).layDanhSachLoaiHoSo();
     var urlDinhKemMoiDocDuoc_ = null; // ⚠️ MỚI: giữ lại link file OCR vừa tải lên, để lưu đúng vào dinhKemGiayTo (trước đây bị bỏ sót hoàn toàn)
     themNutDocScan_('btnScanHoSoRung', 'oScanHoSoRung', 'ho_so_rung', function (truong, ketQuaDayDu) {
-      dienNeuTrongScan_('mfHoSoNguonGoc', truong.hoSoNguonGoc);
-      dienNeuTrongScan_('mfSoGiayTo', truong.soGiayTo);
-      if (truong.dienTichM2) dienNeuTrongScan_('mfDienTich', dinhDangSoVN_(truong.dienTichM2));
-      if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc;
-      thongBao_('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).');
+      if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc; // file luôn được đính kèm, kể cả khi không áp dụng trường nào
+      apDungOcr_('Kết quả đọc giấy tờ nguồn gốc rừng', [
+        { nhan: 'Loại hồ sơ nguồn gốc', id: 'mfHoSoNguonGoc', gt: truong.hoSoNguonGoc }, { nhan: 'Số giấy tờ', id: 'mfSoGiayTo', gt: truong.soGiayTo },
+        { nhan: 'Diện tích (m²)', id: 'mfDienTich', gt: truong.dienTichM2 ? dinhDangSoVN_(truong.dienTichM2) : '' }
+      ], function () { thongBao_('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).'); });
     });
     ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong'); ganDinhDangSoKhiGo_('mfDinhMuc');
     document.getElementById('btnLuuRung').addEventListener('click', function () {

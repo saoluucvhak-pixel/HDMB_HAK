@@ -89,3 +89,15 @@ function moFormNhapLieu() {
 function include_(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+/**
+ * Giao diện mới (29/09): menu trái DÙNG CHUNG cho mọi trang — trước đây mỗi trang giữ 1 bản sao 45 dòng.
+ * Gọi trong trang: <?!= menuChung_(currentPage, baseUrl, tabTrang) ?> (dựng ở máy chủ, giá trị đã được escape).
+ */
+function menuChung_(trang, base, tab) {
+  const t = HtmlService.createTemplateFromFile('Menu_Chung');
+  t.trang = String(trang || '');
+  t.base = String(base || '');
+  t.tab = String(tab || '');
+  return t.evaluate().getContent();
+}
