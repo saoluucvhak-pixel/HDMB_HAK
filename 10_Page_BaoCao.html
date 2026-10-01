@@ -652,7 +652,7 @@
         if (!kq.thanhCong) { showMsg('msgDongBoMisa', '❌ ' + kq.loi, false); return; }
         var el = document.getElementById('msgDongBoMisa');
         el.style.display = 'block'; el.className = 'msg ok';
-        el.innerHTML = '✅ Đã đồng bộ — NCC: +' + escHtmlKH_(kq.ncc.soThem) + ' mới /' + escHtmlKH_(kq.ncc.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.ncc.soDongTrongDaDon) + ' dòng trống) — HĐMB: +' + escHtmlKH_(kq.hdmb.soThem) + ' mới /' + escHtmlKH_(kq.hdmb.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.hdmb.soDongTrongDaDon) + ' dòng trống).<br>👉 <a href="' + urlKH_(kq.masterUrl) + '" target="_blank">Mở Sheet Update_Hopdong_NCC_DN</a>';
+        el.innerHTML = '✅ Đã đồng bộ — NCC: +' + escHtmlKH_(kq.ncc.soThem) + ' mới /' + escHtmlKH_(kq.ncc.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.ncc.soDongTrongDaDon) + ' dòng trống, bỏ ' + escHtmlKH_(kq.ncc.soDongCuDaBo || 0) + ' dòng cũ) — HĐMB: +' + escHtmlKH_(kq.hdmb.soThem) + ' mới /' + escHtmlKH_(kq.hdmb.soCapNhat) + ' cập nhật (dọn ' + escHtmlKH_(kq.hdmb.soDongTrongDaDon) + ' dòng trống, bỏ ' + escHtmlKH_(kq.hdmb.soDongCuDaBo || 0) + ' dòng cũ của lô/hợp đồng đã xóa).<br>👉 <a href="' + urlKH_(kq.masterUrl) + '" target="_blank">Mở Sheet Update_Hopdong_NCC_DN</a>';
       })
       .withFailureHandler(function (err) { showMsg('msgDongBoMisa', '❌ Lỗi: ' + err.message, false); })
       .DONG_BO_VAO_MISA_MASTER();

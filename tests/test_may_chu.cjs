@@ -792,6 +792,40 @@ try {
       th.tongKhoiLuongThucHien === 50 && th.tongGiaTriThucHien === 500 && th.tongKhoiLuong === 150 && th.soHopDong === 2);
     kiem('GD2 API TIEN_DO_HO_SO_HD mở cho quyền Xem', t.run('_bangQuyenApi_()').TIEN_DO_HO_SO_HD !== undefined);
   });
+
+  // ---------- MISA tính DOUBLE: lô rỗng tự tạo + dòng cũ của lô/hợp đồng đã xóa ----------
+  chay(function () {
+    const t = moi();
+    const A = t.run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Mai Thanh', cccdChuRung: '049064018539', ngayKy: '2026-09-10', soTK: '1050001', nganHang: 'VCB' }) + ')');
+    const loA = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, soHD: A.soHD, diaChiRung: 'Thôn A', dienTichM2: 10000, khoiLuongDuKien: 120, donGia: 1000 }) + ')');
+    const B = t.tao('Tran B', '049000000002', '2222', 'B1');
+    const C = t.run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Le C', cccdChuRung: '049000000003', ngayKy: '2026-09-11' }) + ')');
+    const d = t.run('layDuLieuMisaHienTai_("","")');
+    const hdmbCua = (id) => d.rowsHDMB.filter(r => r[22] === id);
+    kiem('MISA-01 HĐ có lô rỗng tự tạo + lô thật -> chỉ xuất 1 dòng HDMB (lô thật)',
+      hdmbCua(A.idHD).length === 1 && hdmbCua(A.idHD)[0][15] === 120 && hdmbCua(A.idHD)[0][17] === 120000, J(hdmbCua(A.idHD)));
+    kiem('MISA-02 HĐ chỉ có 1 lô (kể cả lô rỗng) vẫn có đúng 1 dòng', hdmbCua(B.idHD).length === 1 && hdmbCua(C.idHD).length === 1);
+    t.m.props.set('MISA_MASTER_SHEET_ID', 'REPORT');
+    t.run('DONG_BO_VAO_MISA_MASTER_("","")');
+    const sh = () => t.run('SpreadsheetApp.openById("REPORT").getSheetByName("Update_HDMB").getDataRange().getValues().slice(1).filter(r => r.some(o => o !== ""))');
+    const tongKL = () => sh().reduce((s, r) => s + (Number(r[15]) || 0), 0);
+    kiem('MISA-03 đồng bộ lần đầu: 3 dòng HDMB, tổng KL 240', sh().length === 3 && tongKL() === 240, J(sh().map(r => [r[22], r[23], r[15]])));
+    // Xóa lô thật của A rồi thêm lại (ID_RUNG mới) + xóa hẳn HĐ B -> trước đây dòng cũ còn nằm lại => KL bị nhân đôi
+    // Lô thật của A bị xóa (chỉ còn lô rỗng _1) + xóa hẳn HĐ B -> trước đây dòng cũ còn nằm lại trong Sheet MISA
+    t.run('XOA_LO_RUNG_(' + J(loA.idRung) + ')');
+    t.run('XOA_VINH_VIEN_HOP_DONG_(' + J(B.idHD) + ', true)');
+    const kq = t.run('DONG_BO_VAO_MISA_MASTER_("","")');
+    kiem('MISA-04 đồng bộ lại: bỏ dòng cũ (lô đã xóa + HĐ đã xóa), không còn tính double',
+      kq.thanhCong && sh().length === 2 && tongKL() === 0 && kq.hdmb.soDongCuDaBo === 2 && sh().filter(r => r[22] === A.idHD).length === 1, J({ kq: kq.hdmb, rows: sh().map(r => [r[22], r[23], r[15]]) }));
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, soHD: A.soHD, diaChiRung: 'Thôn A', dienTichM2: 10000, khoiLuongDuKien: 120, donGia: 1000 }) + ')');
+    const kq1 = t.run('DONG_BO_VAO_MISA_MASTER_("","")');
+    kiem('MISA-04b thêm lại lô thật: dòng lô rỗng bị thay bằng lô thật, A vẫn 1 dòng', kq1.hdmb.soDongCuDaBo === 1 && sh().length === 2 && tongKL() === 120, J(kq1.hdmb));
+    kiem('MISA-05 sheet NCC bỏ dòng của HĐ đã xóa', kq.ncc.soDongCuDaBo === 1 &&
+      t.run('SpreadsheetApp.openById("REPORT").getSheetByName("Update_DM_NCC").getDataRange().getValues().slice(1).filter(r => r[26]).length') === 2);
+    // Đồng bộ theo khoảng ngày chỉ đụng tới HĐ trong khoảng — dòng HĐ ngoài khoảng giữ nguyên
+    const kq2 = t.run('DONG_BO_VAO_MISA_MASTER_("2026-09-11","2026-09-11")');
+    kiem('MISA-06 đồng bộ theo khoảng ngày không xóa dòng HĐ ngoài khoảng', kq2.hdmb.soDongCuDaBo === 0 && sh().length === 2 && tongKL() === 120, J(kq2.hdmb));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

@@ -2,6 +2,12 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 01/10/2026 — Báo cáo MISA bị tính DOUBLE
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt này) | 🐛✅ | **Báo cáo MISA bị tính double**: (1) tạo HĐ trên trang Hợp đồng tự sinh lô `_1` rỗng, người dùng thêm lô thật thành `_2` → mỗi HĐ ra 2 dòng HDMB; nay lô rỗng không xuất nếu HĐ còn lô có dữ liệu. (2) Sheet MISA cố định giữ mãi dòng của lô/HĐ đã xóa (khóa = ID_RUNG) → lô xóa rồi thêm lại hoặc HĐ xóa vẫn bị cộng; nay mỗi lần đồng bộ bỏ dòng của HĐ không còn trong HD_NCC và dòng lô không còn của HĐ đang đồng bộ (đồng bộ theo khoảng ngày chỉ đụng HĐ trong khoảng; dòng nhập tay không có ID_HD giữ nguyên). Màn hình báo số "dòng cũ đã bỏ". Test MISA-01…06 | 22_XuatBaoCaoMisa, 10_Page_BaoCao, tests/test_may_chu.cjs |
+
 ## 29/09/2026 — Kiểm thử lại `main` (sau đợt 6 + nâng cấp A1–A5)
 
 | Commit | Loại | Thay đổi | File |
