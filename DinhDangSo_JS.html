@@ -43,12 +43,28 @@
     if (el.type === 'number') el.type = 'text';
     el.setAttribute('inputmode', 'decimal');
     el.setAttribute('autocomplete', 'off');
-    el.addEventListener('beforeinput', function () { el._truocKhiGo = el.value; }, true);
+    // Bộ gõ tiếng Việt (Telex/VNI trên máy Mac, Laban Key...) và nhiều bàn phím điện thoại gõ theo CỤM ĐANG SOẠN:
+    // sửa ô trong lúc đang soạn làm cụm chữ bị chèn lại lẫn lộn (gõ 35000 ra 3,500354). Đang soạn -> để nguyên,
+    // soạn xong (compositionend) mới định dạng 1 lần.
+    var dangSoan = false;
+    el.addEventListener('compositionstart', function () { dangSoan = true; el._truocKhiGo = undefined; }, true);
+    el.addEventListener('compositionend', function () {
+      dangSoan = false;
+      el._truocKhiGo = undefined;
+      el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: null }));
+    }, true);
+    el.addEventListener('beforeinput', function (e) {
+      if (dangSoan || e.isComposing) return;
+      var caO = el.selectionStart === 0 && el.selectionEnd === el.value.length; // bôi đen cả ô rồi gõ/dán = thay cả ô
+      el._truocKhiGo = caO ? '' : el.value;
+    }, true);
     el.addEventListener('input', function (e) {
+      if (dangSoan || e.isComposing || e.inputType === 'insertCompositionText') { e.stopImmediatePropagation(); return; }
       var v = el.value, pos = el.selectionStart === null ? v.length : el.selectionStart;
-      // Dán / tự điền / bàn phím gợi ý chèn cả cụm "1,234.5" -> đọc lại cả ô như số dán vào
-      if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop' || e.inputType === 'insertReplacementText' ||
-          (e.data && e.data.length > 1)) {
+      // Dán / kéo thả số "1,234.5" vào ô TRỐNG (hoặc thay cả ô) -> đọc lại cả ô như số dán vào.
+      // Không áp dụng khi ô đã có số: ghép chuỗi đã định dạng "3.500" + "0" rồi đọc lại sẽ ra 3,5.
+      if ((e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop' || e.inputType === 'insertReplacementText' ||
+          (e.data && e.data.length > 1)) && !el._truocKhiGo) {
         el.value = dinhDangSoVN_(docSoVN_(v));
         return;
       }

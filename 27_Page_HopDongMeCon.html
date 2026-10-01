@@ -1239,7 +1239,7 @@
       if (ketQuaDayDu && ketQuaDayDu.urlFileGoc) urlDinhKemMoiDocDuoc_ = ketQuaDayDu.urlFileGoc; // file luôn được đính kèm, kể cả khi không áp dụng trường nào
       apDungOcr_('Kết quả đọc giấy tờ nguồn gốc rừng', [
         { nhan: 'Loại hồ sơ nguồn gốc', id: 'mfHoSoNguonGoc', gt: truong.hoSoNguonGoc }, { nhan: 'Số giấy tờ', id: 'mfSoGiayTo', gt: truong.soGiayTo },
-        { nhan: 'Diện tích (m²)', id: 'mfDienTich', gt: truong.dienTichM2 ? dinhDangSoVN_(truong.dienTichM2) : '' }
+        { nhan: 'Diện tích (m²)', id: 'mfDienTich', gt: truong.dienTichM2 ? dinhDangSoVN_(docSoVN_(truong.dienTichM2)) : '' }
       ], function () { thongBao_('✅ Đã đọc xong hồ sơ pháp lý và ĐÍNH KÈM file này vào lô rừng — kiểm tra lại "Loại hồ sơ" và "Số giấy tờ" trước khi Lưu (OCR có thể đọc sai ở ảnh mờ/nghiêng).'); });
     });
     ganDinhDangSoKhiGo_('mfDienTich'); ganDinhDangSoKhiGo_('mfDonGia'); ganDinhDangSoKhiGo_('mfKhoiLuong'); ganDinhDangSoKhiGo_('mfDinhMuc');
