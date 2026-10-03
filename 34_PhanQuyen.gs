@@ -463,8 +463,6 @@ function _bangQuyenApi_() {
     CAP_NHAT_TAI_KHOAN: r(CAP_NHAT_TAI_KHOAN_, N),
     XOA_TAI_KHOAN: r(XOA_TAI_KHOAN_, N),
     CAP_NHAT_GPS_RUNG: r(CAP_NHAT_GPS_RUNG_, N),
-    DINH_KEM_CCCD_HOP_DONG: r(DINH_KEM_CCCD_HOP_DONG_, N), // 37: đính kèm ảnh/scan CCCD chủ rừng
-    GHI_LINK_CCCD_HOP_DONG: r(GHI_LINK_CCCD_HOP_DONG_, N),
     KIEM_TRA_DU_HO_SO_HD: r(KIEM_TRA_DU_HO_SO_HD_, X), // 37: còn thiếu gì trước khi chuyển Đang thực hiện
     TRA_CUU_TEN_CHU_TK: r(TRA_CUU_TEN_CHU_TK_, N),
     TAO_DRAFT_MOI: r(TAO_DRAFT_MOI_, N),

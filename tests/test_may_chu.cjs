@@ -17,10 +17,9 @@ function moi() {
   m.props.set('REPORT_SPREADSHEET_ID', 'REPORT');
   const tao = (ten, cccd, soTK, soHD, ngay) => run('TAO_HOP_DONG_MOI_(' + JSON.stringify({ tenChuRung: ten, cccdChuRung: cccd, ngayKy: ngay || '2026-05-10', soTK: soTK, nganHang: 'VCB', soHD: soHD || '', diaChiRung: 'Thôn A', dienTichKy: 10000, slDuKien: 120, donGia: 1000 }) + ')');
   const stk = () => ss.getSheetByName('HD_STK').getDataRange().getValues().slice(1);
-  // Bổ sung đủ hồ sơ (37_KiemTraDuHoSo.gs) để được chuyển "Đang thực hiện": thông tin chủ rừng, CCCD đính kèm, hồ sơ + GPS (kèm ảnh) từng lô
+  // Bổ sung đủ hồ sơ (37_KiemTraDuHoSo.gs) để được chuyển "Đang thực hiện": MST + địa chỉ chủ rừng, hồ sơ pháp lý + GPS (kèm ảnh) từng lô
   const duHoSo = (idHD) => run('(function (id) { CAP_NHAT_HOP_DONG_(timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, id), ' +
-    '{ ngayCap: "2020-01-01", noiCap: "Cục CS QLHC", sdtChuRung: "0905000111", diaChiThuongTru: "Quế Phước" }, id);' +
-    'GHI_LINK_CCCD_HOP_DONG_(id, "https://drive.google.com/file/d/CCCD1/view");' +
+    '{ maSoThue: "8000000001", diaChiThuongTru: "Quế Phước" }, id);' +
     'layDanhSachRung_(id).forEach(function (lo) { CAP_NHAT_LO_RUNG_(lo.idRung, { diaChiRung: lo.diaChiRung || "Thôn A", dienTichM2: lo.dienTichM2 || 10000, donGia: lo.donGia || 1000,' +
     ' khoiLuongDuKien: lo.khoiLuongDuKien || 120, hoSoNguonGoc: "Giấy chứng nhận QSDĐ", soGiayTo: "CS 01", dinhKemGiayTo: "https://drive.google.com/file/d/HS1/view" });' +
     ' CAP_NHAT_GPS_RUNG_(lo.idRung, { lat: 15.5, lng: 108.1, anhUrl: "https://drive.google.com/file/d/ANH1/view" }, false); }); })(' + JSON.stringify(idHD) + ')');
@@ -847,9 +846,10 @@ try {
     kiem('DHS-01 tạo HĐ mới xin "Đang thực hiện" -> vẫn bắt đầu "Chờ thực hiện"', ttA() === 'Chờ thực hiện', ttA());
     const kq = t.run('CAP_NHAT_HOP_DONG_WEB_(2, {tinhTrang:"Đang thực hiện"}, ' + J(A.idHD) + ')');
     const th = (kq.thieuHoSo || []).join(' | ');
-    kiem('DHS-02 HĐ trống: không cho chuyển, liệt kê đủ mục thiếu (CCCD đính kèm, thông tin, TK, lô, tọa độ, ảnh)',
-      kq.thanhCong === false && /bổ sung đầy đủ hồ sơ/.test(kq.loi) && /đính kèm ảnh\/scan CCCD/.test(th) && /ngày cấp CCCD/.test(th) && /số điện thoại/.test(th) &&
-      /số tài khoản/.test(th) && /tọa độ GPS/.test(th) && /file hồ sơ rừng/.test(th) && /ảnh GPS hoặc ảnh hiện trường/.test(th) && ttA() === 'Chờ thực hiện', J(kq));
+    kiem('DHS-02 HĐ trống: không cho chuyển, liệt kê đúng mục thiếu (MST, địa chỉ, TK, địa chỉ rừng, file hồ sơ pháp lý, tọa độ, ảnh) — KHÔNG đòi CCCD đính kèm / ngày cấp / SĐT / diện tích',
+      kq.thanhCong === false && /bổ sung đầy đủ hồ sơ/.test(kq.loi) && /mã số thuế/.test(th) && /địa chỉ,/.test(th) && /số tài khoản \+ ngân hàng/.test(th) &&
+      /địa chỉ rừng/.test(th) && /file hồ sơ pháp lý đính kèm/.test(th) && /tọa độ GPS/.test(th) && /ảnh GPS hoặc ảnh hiện trường/.test(th) &&
+      !/CCCD chủ rừng|ngày cấp|điện thoại|diện tích|đơn giá|số giấy tờ/.test(th) && ttA() === 'Chờ thực hiện', J(kq));
     const xt = t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(A.idHD) + ')');
     kiem('DHS-03 API xem trước còn thiếu gì', xt.du === false && xt.thieu.length === kq.thieuHoSo.length);
     t.run('THEM_TAI_KHOAN_MOI_(' + J({ idHD: A.idHD, soTK: '1050001', nganHang: 'VCB' }) + ')');
@@ -861,9 +861,8 @@ try {
     t.run('ghiAnhVaoHDPicture_(' + J(A.idHD) + ', "Mai Thanh", "https://drive.google.com/file/d/HT1/view")');
     const kq3 = t.run('CAP_NHAT_HOP_DONG_WEB_(2, {tinhTrang:"Đang thực hiện"}, ' + J(A.idHD) + ')');
     kiem('DHS-05 có ảnh hiện trường (đã duyệt) -> chuyển "Đang thực hiện" được', kq3.thanhCong === true && ttA() === 'Đang thực hiện', J(kq3));
-    const hdr = t.ss.getSheetByName('HD_NCC').getRange(1, 34).getValue();
-    kiem('DHS-06 cột mở rộng "Đính kèm CCCD" (AH) có tiêu đề + link', hdr === 'Đính kèm CCCD' &&
-      t.run('layHopDongTheoSoDong_(2)').dinhKemCCCD === 'https://drive.google.com/file/d/CCCD1/view', hdr);
+    kiem('DHS-06 không còn cột / API đính kèm CCCD riêng', t.ss.getSheetByName('HD_NCC').getRange(1, 34).getValue() === '' &&
+      !t.run('_bangQuyenApi_()').hasOwnProperty('DINH_KEM_CCCD_HOP_DONG'));
   });
   chay(function () {
     const t = moi();
@@ -882,10 +881,13 @@ try {
     kiem('DHS-09 đủ hồ sơ rồi lưu lại -> chuyển "Đang thực hiện"', kqL2.thanhCong && !kqL2.canhBaoHoSo &&
       t.ss.getSheetByName('HD_NCC').getDataRange().getValues().find(r => r[29] === B.idHD)[30] === 'Đang thực hiện', J(kqL2));
     const q = t.run('_bangQuyenApi_()');
-    kiem('DHS-10 API đính kèm CCCD (Nhập liệu) + xem thiếu hồ sơ (Xem)', q.DINH_KEM_CCCD_HOP_DONG.quyen === t.run('QUYEN.NHAP_LIEU') &&
-      q.GHI_LINK_CCCD_HOP_DONG.quyen === t.run('QUYEN.NHAP_LIEU') && q.KIEM_TRA_DU_HO_SO_HD.quyen === t.run('QUYEN.XEM'));
-    const sai = t.run('GHI_LINK_CCCD_HOP_DONG_(' + J(A.idHD) + ', "https://evil.example/x")');
-    kiem('DHS-11 link CCCD không phải Google Drive bị từ chối', sai.thanhCong === false);
+    kiem('DHS-10 API xem thiếu hồ sơ mở cho quyền Xem', q.KIEM_TRA_DU_HO_SO_HD.quyen === t.run('QUYEN.XEM'));
+    // Lô chỉ có địa chỉ rừng + file hồ sơ pháp lý + tọa độ (không diện tích/đơn giá/loại hồ sơ/số giấy tờ) vẫn đủ
+    const C = t.run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Le C', cccdChuRung: '049000000003', ngayKy: '2026-09-11', soTK: '3333', nganHang: 'VCB', maSoThue: '049000000003', diaChiThuongTru: 'Quế Lâm' }) + ')');
+    const loC = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: C.idHD, diaChiRung: 'Thôn C', dinhKemGiayTo: 'https://drive.google.com/file/d/HSC/view' }) + ')');
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(loC.idRung) + ', {lat:15.5, lng:108.1, anhUrl:"https://drive.google.com/file/d/AC/view"}, false)');
+    const ktC = t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(C.idHD) + ')');
+    kiem('DHS-11 đủ: CCCD, MST, tên, địa chỉ, TK + lô có địa chỉ rừng, file hồ sơ pháp lý, tọa độ, ảnh (lô rỗng tự tạo bỏ qua)', ktC.du === true, J(ktC));
   });
   chay(function () {
     const t = moi();
@@ -915,13 +917,13 @@ try {
     // Lưu chính thức (Nhập liệu): HĐ mới chọn "Đang thực hiện" + GPS xa -> cảnh báo khoảng cách + cảnh báo thiếu hồ sơ, giữ "Chờ thực hiện"
     gaiMaps(t, () => ({ status: 'OK', results: [{ types: ['locality'], geometry: { location: { lat: 15.60, lng: 108.10 } } }] }));
     const du = { idHD: null, hopDong: { tenChuRung: 'Le C', cccdChuRung: '049000000003', ngayKy: '2026-09-12', ngayCap: '2020-01-01', noiCap: 'Cục CS', sdtChuRung: '0905',
-      diaChiThuongTru: 'Quế Phước', soTK: '333', nganHang: 'VCB', uyQuyenTT: 'Không', tinhTrang: 'Đang thực hiện', dinhKemCCCD: 'https://drive.google.com/file/d/C3/view' },
+      diaChiThuongTru: 'Quế Phước', soTK: '333', nganHang: 'VCB', uyQuyenTT: 'Không', tinhTrang: 'Đang thực hiện', maSoThue: '049000000003' },
       rung: [{ diaChiRung: 'Thôn C', dienTichM2: 10000, donGia: 1000, khoiLuongDuKien: 120, hoSoNguonGoc: 'GCN', soGiayTo: 'S1', gpsMoi: [{ lat: 15.9, lng: 108.1, anhUrl: 'https://drive.google.com/file/d/G/view' }] }], taiKhoan: [] };
     const kqCT = t.run('luuChinhThucThucThi_(' + J(du) + ', "NHAP_TEST1")');
     const ttC = t.ss.getSheetByName('HD_NCC').getDataRange().getValues().find(r => r[29] === kqCT.idHD)[30];
     const cb = (kqCT.canhBao || []).join(' | ');
     kiem('DHS-12 Lưu chính thức HĐ mới chọn "Đang thực hiện": kiểm tra sau khi ghi lô + GPS, thiếu file hồ sơ rừng -> giữ "Chờ thực hiện" + cảnh báo; GPS xa -> cảnh báo 5 km',
-      kqCT.thanhCong && ttC === 'Chờ thực hiện' && /file hồ sơ rừng đính kèm/.test(cb) && !/tọa độ GPS/.test(cb) && /trên 5 km/.test(cb), J(kqCT));
+      kqCT.thanhCong && ttC === 'Chờ thực hiện' && /file hồ sơ pháp lý đính kèm/.test(cb) && !/tọa độ GPS/.test(cb) && /trên 5 km/.test(cb), J(kqCT));
   });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 

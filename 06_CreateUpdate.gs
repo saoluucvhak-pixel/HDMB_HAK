@@ -533,7 +533,6 @@ function taoHopDongMoiThucThi_(d) {
     row[NCC_COL.ID_HD] = idHD;
     // Hợp đồng mới chưa có lô / GPS / ảnh -> chưa đủ hồ sơ "Đang thực hiện" (37_KiemTraDuHoSo.gs): luôn bắt đầu "Chờ thực hiện"
     row[NCC_COL.TINH_TRANG] = (d.tinhTrang && d.tinhTrang !== 'Đang thực hiện') ? d.tinhTrang : 'Chờ thực hiện';
-    if (d.dinhKemCCCD) { damBaoCotDinhKemCCCD_(); row[NCC_COL.DINH_KEM_CCCD] = giaTriAnToan_(String(d.dinhKemCCCD)); } // link file CCCD vừa quét
     // ⚠️ ĐÃ SỬA: trước đây ghi cứng "Đang thực hiện" ngay khi tạo — giờ LUÔN mặc định "Chờ thực hiện", chỉ chuyển sang "Đang thực hiện" sau khi ai đó duyệt tay (qua nút "✅ Duyệt" ở trang Thêm/Sửa hợp đồng)
 
     // ⚠️ MỚI: định dạng TEXT các cột định danh (CCCD/SĐT/Số TK/MST) TRƯỚC KHI
@@ -1216,10 +1215,8 @@ function CAP_NHAT_HOP_DONG_(soDong, patch, idHDMongDoi) {
     dienTichKy: NCC_COL.DIEN_TICH_KY, hoSoNguonGoc: NCC_COL.HO_SO_NGUON_GOC, soGiayTo: NCC_COL.SO_GIAY_TO,
     uyQuyenTT: NCC_COL.UY_QUYEN_TT, slDuKien: NCC_COL.SL_DU_KIEN, donGia: NCC_COL.DON_GIA,
     soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG, nhomKH: NCC_COL.NHOM_KH, maSoThue: NCC_COL.MA_SO_THUE,
-    ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD, // sửa Ngày ký/Số HĐ ở trang mẹ-con
-    dinhKemCCCD: NCC_COL.DINH_KEM_CCCD
+    ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD // sửa Ngày ký/Số HĐ ở trang mẹ-con
   };
-  if (patch.hasOwnProperty('dinhKemCCCD')) damBaoCotDinhKemCCCD_(); // cột mở rộng — thêm cột nếu sheet chưa đủ rộng
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
   const truong_ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
   // các cột định danh cần định dạng TEXT TRƯỚC khi setValue (xem TAO_HOP_DONG_MOI_) — tránh mất số 0 đầu khi SỬA
@@ -2281,7 +2278,6 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
     tinhTrang: r[NCC_COL.TINH_TRANG],
     nhomKH: r[NCC_COL.NHOM_KH], // ⚠️ BỔ SUNG: thiếu sót từ trước — khiến ô "Nhóm KH" luôn trống lại khi mở sửa hợp đồng có sẵn
     maSoThue: r[NCC_COL.MA_SO_THUE],
-    dinhKemCCCD: r[NCC_COL.DINH_KEM_CCCD] || '', // link ảnh/scan CCCD chủ rừng (37_KiemTraDuHoSo.gs)
     danhSachRung: layDanhSachRung_(idHD).map(function (r) { return Object.assign({}, r, { dinhKem: null }); }), // bỏ resolveDriveLink_ (gọi Drive) khỏi luồng chính -- nghi ngờ nguyên nhân lỗi khi chạy qua web
     danhSachTaiKhoan: layDanhSachTaiKhoan_(idHD),
     anh: [],
@@ -2543,7 +2539,6 @@ function luuHopDongDayDuThucThi_(payload) {
         // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
         // TAO_HOP_DONG_MOI_() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
         row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
-        if (d.dinhKemCCCD) { damBaoCotDinhKemCCCD_(); row[NCC_COL.DINH_KEM_CCCD] = String(d.dinhKemCCCD); }
         // ⚠️ ĐÃ SỬA: trước đây appendRow() -> CCCD/SĐT/Số TK/MST mất số 0 đầu (049... thành 49...)
         // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI_: định dạng TEXT trước rồi mới ghi.
         const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);

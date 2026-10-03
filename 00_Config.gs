@@ -66,8 +66,7 @@ const NCC_COL = {
   SO_GIAY_TO: 22, DIEN_TICH_GPS: 23, UY_QUYEN_TT: 24, SL_DU_KIEN: 25,
   DON_GIA: 26, NHOM_KH: 27, CHI_NHANH_NH: 28, ID_HD: 29, TINH_TRANG: 30,
   NGAY_CAP_UQ: 31, // CỘT MỞ RỘNG (không có sẵn trong file gốc) — "Ngày cấp CCCD người được ủy quyền"
-  MA_SO_THUE: 32, // CỘT MỞ RỘNG — Mã số thuế của khách hàng (nếu là tổ chức/doanh nghiệp; cá nhân thường để trống, dùng CCCD thay thế khi xuất MISA)
-  DINH_KEM_CCCD: 33 // CỘT MỞ RỘNG — link file ảnh/scan CCCD chủ rừng (bắt buộc trước khi chuyển "Đang thực hiện", xem 37_KiemTraDuHoSo.gs)
+  MA_SO_THUE: 32 // CỘT MỞ RỘNG — Mã số thuế của khách hàng (nếu là tổ chức/doanh nghiệp; cá nhân thường để trống, dùng CCCD thay thế khi xuất MISA)
 };
 
 // ---- HD_RUNG (con 1 - từng lô rừng của hợp đồng) ----

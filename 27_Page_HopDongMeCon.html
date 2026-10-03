@@ -615,8 +615,7 @@
     hakRun_().withSuccessHandler(function (list) {
       var dl = document.getElementById('dlNoiCapW'); list.forEach(function (nc) { var o = document.createElement('option'); o.value = nc; dl.appendChild(o); });
     }).withFailureHandler(function (err) { console.error('layGoiYNoiCap:', err); }).layGoiYNoiCap();
-    themNutDocScan_('btnScanCccdChuRung', 'oScanCccdChuRung', 'cccd_chu_rung', function (truong, kqDayDu) {
-      if (kqDayDu && kqDayDu.urlFileGoc) wz.dinhKemCCCD = kqDayDu.urlFileGoc; // file CCCD đã lưu Drive -> đính kèm khi tạo hợp đồng
+    themNutDocScan_('btnScanCccdChuRung', 'oScanCccdChuRung', 'cccd_chu_rung', function (truong) {
       apDungOcr_('Kết quả đọc CCCD chủ rừng', [
         { nhan: 'Họ tên chủ rừng', id: 'wTenChuRung', gt: truong.tenChuRung }, { nhan: 'Số CCCD', id: 'wCccd', gt: truong.cccdChuRung },
         { nhan: 'Địa chỉ thường trú', id: 'wDiaChiTT', gt: truong.diaChiThuongTru }, { nhan: 'Ngày cấp', id: 'wNgayCap', gt: truong.ngayCap },
@@ -846,7 +845,7 @@
       ngayCap: wz.ngayCap, noiCap: wz.noiCap, maSoThue: wz.maSoThue, nhomKH: wz.nhomKH,
       ngayKy: wz.ngayKy, soHD: wz.soHD, uyQuyenTT: wz.uyQuyenTT, tenUyQuyen: wz.tenUyQuyen,
       cccdUyQuyen: wz.cccdUyQuyen, sdtUyQuyen: wz.sdtUyQuyen, diaChiUyQuyen: wz.diaChiUyQuyen,
-      soTK: wz.soTK, nganHang: wz.nganHang, maThaoTac: maThaoTacTaoHD_, dinhKemCCCD: wz.dinhKemCCCD || ''
+      soTK: wz.soTK, nganHang: wz.nganHang, maThaoTac: maThaoTacTaoHD_
     };
     hakRun_()
       .withSuccessHandler(function (kq) {
@@ -993,29 +992,7 @@
       (coUyQuyen ? '<tr><th>CCCD người ủy quyền</th><td>' + escHtml_(h.cccdUyQuyen) + '</td></tr>' : '') +
       (coUyQuyen ? '<tr><th>SĐT người ủy quyền</th><td>' + escHtml_(h.sdtUyQuyen) + '</td></tr>' : '') +
       (coUyQuyen ? '<tr><th>Địa chỉ người ủy quyền</th><td>' + escHtml_(h.diaChiUyQuyen) + '</td></tr>' : '') +
-      '<tr><th>📎 CCCD đính kèm</th><td>' + (h.dinhKemCCCD ? '<a href="' + urlAnToan_(h.dinhKemCCCD) + '" target="_blank">✅ Xem file CCCD</a>' : '<span style="color:var(--err-chu, #dc2626)">⚠️ Chưa đính kèm (bắt buộc trước khi Duyệt)</span>') +
-      (coTheSuaHopDong_(h.tinhTrang) ? ' <input type="file" id="oFileCccdHD" accept="image/*,application/pdf" style="display:none"><button type="button" class="btn btn-outline" id="btnDinhKemCccdHD" style="margin-left:8px;padding:4px 10px;font-size:12px">' + (h.dinhKemCCCD ? '🔁 Thay file' : '📎 Đính kèm CCCD') + '</button><span id="msgCccdHD" class="hint" style="margin-left:6px"></span>' : '') + '</td></tr>' +
       '</tbody></table></div>';
-    var nutCccd = document.getElementById('btnDinhKemCccdHD'), fiCccd = document.getElementById('oFileCccdHD');
-    if (nutCccd && fiCccd) {
-      nutCccd.addEventListener('click', function () { fiCccd.click(); });
-      fiCccd.addEventListener('change', function () {
-        var f = fiCccd.files[0]; if (!f) return;
-        var msg = function (t) { var m = document.getElementById('msgCccdHD'); if (m) m.textContent = t; };
-        msg('⌛ Đang tải lên...'); nutCccd.disabled = true;
-        var L = hakBatDauLuu_('file CCCD');
-        var rd = new FileReader();
-        rd.onload = function (e) {
-          hakRun_().withSuccessHandler(function (kq) {
-            nutCccd.disabled = false; fiCccd.value = '';
-            if (!kq.thanhCong) { msg('❌ ' + kq.loi); L.loi(kq.loi); return; }
-            L.xong(); renderChiTietHopDong();
-          }).withFailureHandler(function (err) { nutCccd.disabled = false; msg('❌ Lỗi: ' + err.message); L.loi(err.message); })
-            .DINH_KEM_CCCD_HOP_DONG(h.idHD, e.target.result.split(',')[1], f.type, f.name);
-        };
-        rd.readAsDataURL(f);
-      });
-    }
   }
 
   // ============ TAB CHI TIẾT HỢP ĐỒNG (chỉ xem — tổng hợp từ các lô rừng, không sửa được) ============
