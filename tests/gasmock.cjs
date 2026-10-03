@@ -25,6 +25,8 @@ function taoMoiTruong(thuMuc, opts) {
       else if (typeof v === 'string' && /^[=+@]/.test(v)) v = '#CONG_THUC#' + v; // Sheets hiểu là công thức
       row[c - 1] = v instanceof Date ? new Date(v.getTime()) : v;
     }
+    getMaxColumns() { return Math.max(this.soCotToiDa || 0, this.getLastColumn()); }
+    insertColumnsAfter(sau, n) { this.soCotToiDa = Math.max(this.getMaxColumns(), sau + n); this.daThemCot = (this.daThemCot || 0) + n; return this; }
     getRange(r, c, nr, nc) { return new Range(this, r, c, nr || 1, nc || 1); }
     getDataRange() { return new Range(this, 1, 1, Math.max(1, this.getLastRow()), Math.max(1, this.getLastColumn())); }
     appendRow(arr) { const r = this.getLastRow() + 1; arr.forEach((v, i) => this._set(r, i + 1, v)); return this; }

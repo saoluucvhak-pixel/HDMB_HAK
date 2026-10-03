@@ -531,7 +531,10 @@ function taoHopDongMoiThucThi_(d) {
     row[NCC_COL.MA_SO_THUE] = d.maSoThue || '';
     row[NCC_COL.CHI_NHANH_NH] = d.chiNhanhNH || '';
     row[NCC_COL.ID_HD] = idHD;
-    row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện'; // ⚠️ ĐÃ SỬA: trước đây ghi cứng "Đang thực hiện" ngay khi tạo — giờ LUÔN mặc định "Chờ thực hiện", chỉ chuyển sang "Đang thực hiện" sau khi ai đó duyệt tay (qua nút "✅ Duyệt" ở trang Thêm/Sửa hợp đồng)
+    // Hợp đồng mới chưa có lô / GPS / ảnh -> chưa đủ hồ sơ "Đang thực hiện" (37_KiemTraDuHoSo.gs): luôn bắt đầu "Chờ thực hiện"
+    row[NCC_COL.TINH_TRANG] = (d.tinhTrang && d.tinhTrang !== 'Đang thực hiện') ? d.tinhTrang : 'Chờ thực hiện';
+    if (d.dinhKemCCCD) { damBaoCotDinhKemCCCD_(); row[NCC_COL.DINH_KEM_CCCD] = giaTriAnToan_(String(d.dinhKemCCCD)); } // link file CCCD vừa quét
+    // ⚠️ ĐÃ SỬA: trước đây ghi cứng "Đang thực hiện" ngay khi tạo — giờ LUÔN mặc định "Chờ thực hiện", chỉ chuyển sang "Đang thực hiện" sau khi ai đó duyệt tay (qua nút "✅ Duyệt" ở trang Thêm/Sửa hợp đồng)
 
     // ⚠️ MỚI: định dạng TEXT các cột định danh (CCCD/SĐT/Số TK/MST) TRƯỚC KHI
     // GHI giá trị — Google Sheets tự động cắt mất số 0 đầu ngay lúc ghi nếu ô
@@ -925,7 +928,10 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
   if (rungChoDraft_) CAP_NHAT_DRAFT_MOT_HOP_DONG_(rungChoDraft_[RUNG_COL.ID_KEY_HD]);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
   xoaCacheBanDo_(); // xóa cache Bản đồ GPS để thấy điểm mới ngay, không phải chờ hết 15 phút cache
-  return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien } };
+  // Điểm cách "Địa chỉ rừng" trên 5 km -> vẫn lưu, kèm cảnh báo (37_KiemTraDuHoSo.gs)
+  let canhBaoKhoangCach = '';
+  try { canhBaoKhoangCach = rungChoDraft_ ? canhBaoKhoangCachGps_(rungChoDraft_[RUNG_COL.DIA_CHI_RUNG], latChuan.gia_tri, lngChuan.gia_tri) : ''; } catch (e) { /* không định vị được -> bỏ qua */ }
+  return { thanhCong: true, dinhDangDaNhanDien: { lat: latChuan.dinh_dang_nhan_dien, lng: lngChuan.dinh_dang_nhan_dien }, canhBaoKhoangCach: canhBaoKhoangCach };
 }
 
 /**
@@ -1210,8 +1216,10 @@ function CAP_NHAT_HOP_DONG_(soDong, patch, idHDMongDoi) {
     dienTichKy: NCC_COL.DIEN_TICH_KY, hoSoNguonGoc: NCC_COL.HO_SO_NGUON_GOC, soGiayTo: NCC_COL.SO_GIAY_TO,
     uyQuyenTT: NCC_COL.UY_QUYEN_TT, slDuKien: NCC_COL.SL_DU_KIEN, donGia: NCC_COL.DON_GIA,
     soTK: NCC_COL.SO_TK, nganHang: NCC_COL.NGAN_HANG, tinhTrang: NCC_COL.TINH_TRANG, nhomKH: NCC_COL.NHOM_KH, maSoThue: NCC_COL.MA_SO_THUE,
-    ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD // sửa Ngày ký/Số HĐ ở trang mẹ-con
+    ngayKy: NCC_COL.NGAY_KY, soHD: NCC_COL.SO_HD, // sửa Ngày ký/Số HĐ ở trang mẹ-con
+    dinhKemCCCD: NCC_COL.DINH_KEM_CCCD
   };
+  if (patch.hasOwnProperty('dinhKemCCCD')) damBaoCotDinhKemCCCD_(); // cột mở rộng — thêm cột nếu sheet chưa đủ rộng
   const truong_so = ['dienTichKy', 'slDuKien', 'donGia'];
   const truong_ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
   // các cột định danh cần định dạng TEXT TRƯỚC khi setValue (xem TAO_HOP_DONG_MOI_) — tránh mất số 0 đầu khi SỬA
@@ -1365,6 +1373,10 @@ function CAP_NHAT_HOP_DONG_WEB_(soDong, patch, idHD) {
     const ttMoi = patch.tinhTrang.toString().trim();
     if ((BUOC_KE_TIEP_TRANG_THAI_[ttHienTai] || []).indexOf(ttMoi) === -1) {
       return { thanhCong: false, loi: 'Không thể chuyển hợp đồng từ "' + ttHienTai + '" sang "' + ttMoi + '".' };
+    }
+    if (ttMoi === 'Đang thực hiện') { // đủ hồ sơ mới cho thực hiện (37_KiemTraDuHoSo.gs)
+      const kt = kiemTraDuHoSoDeThucHien_(idHD);
+      if (!kt.du) return { thanhCong: false, loi: loiChuaDuHoSo_(kt.thieu), thieuHoSo: kt.thieu };
     }
   } else delete patch.tinhTrang;
   if (cacTruongKhac.length && ['Chờ thực hiện', 'Đang thực hiện'].indexOf(ttHienTai) === -1) {
@@ -1938,6 +1950,7 @@ function DUYET_ANH_RUNG_(soDong, idDraft) {
   const url = row[DRAFT_ANH_COL.DRIVE_URL];
   const lat = row[DRAFT_ANH_COL.GPS_LAT];
   const lng = row[DRAFT_ANH_COL.GPS_LNG];
+  let kqGpsAnh_ = null;
   try {
     const rungRows = readData_(SHEET_NAME.HD_RUNG);
     const rung = rungRows.find(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
@@ -1945,7 +1958,7 @@ function DUYET_ANH_RUNG_(soDong, idDraft) {
       datTrangThai('Chờ duyệt');
       return { thanhCong: false, loi: 'Hệ thống đang bận, chưa ghi được ảnh — vui lòng duyệt lại.' };
     }
-    if (lat && lng) CAP_NHAT_GPS_RUNG_(idRung, { lat: Number(lat), lng: Number(lng), heToaDo: 'DD' }, false);
+    if (lat && lng) kqGpsAnh_ = CAP_NHAT_GPS_RUNG_(idRung, { lat: Number(lat), lng: Number(lng), heToaDo: 'DD' }, false);
   } catch (e) {
     datTrangThai('Chờ duyệt');
     throw e;
@@ -1955,7 +1968,7 @@ function DUYET_ANH_RUNG_(soDong, idDraft) {
   // Luôn cập nhật Draft (ảnh KHÔNG có GPS cũng phải bật cờ "Có ảnh" trong báo cáo)
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
-  return { thanhCong: true };
+  return { thanhCong: true, canhBaoKhoangCach: (kqGpsAnh_ && kqGpsAnh_.canhBaoKhoangCach) || '' };
 }
 
 
@@ -2268,6 +2281,7 @@ function layHopDongTheoSoDong_ThucThi_(soDong) {
     tinhTrang: r[NCC_COL.TINH_TRANG],
     nhomKH: r[NCC_COL.NHOM_KH], // ⚠️ BỔ SUNG: thiếu sót từ trước — khiến ô "Nhóm KH" luôn trống lại khi mở sửa hợp đồng có sẵn
     maSoThue: r[NCC_COL.MA_SO_THUE],
+    dinhKemCCCD: r[NCC_COL.DINH_KEM_CCCD] || '', // link ảnh/scan CCCD chủ rừng (37_KiemTraDuHoSo.gs)
     danhSachRung: layDanhSachRung_(idHD).map(function (r) { return Object.assign({}, r, { dinhKem: null }); }), // bỏ resolveDriveLink_ (gọi Drive) khỏi luồng chính -- nghi ngờ nguyên nhân lỗi khi chạy qua web
     danhSachTaiKhoan: layDanhSachTaiKhoan_(idHD),
     anh: [],
@@ -2456,7 +2470,11 @@ function LUU_HOP_DONG_DAY_DU_(payload) {
   try { return luuHopDongDayDuThucThi_(payload); } finally { ketThucGomDraft_(gom); }
 }
 function luuHopDongDayDuThucThi_(payload) {
-  const d = payload.hopDong || {};
+  const d = Object.assign({}, payload.hopDong || {});
+  // Chuyển "Đang thực hiện" chỉ khi đủ hồ sơ (37_KiemTraDuHoSo.gs) — kiểm tra SAU khi đã ghi xong lô / tài khoản của
+  // lượt lưu này (Lưu chính thức: sau cả GPS — hoanChuyenThucHien), nên tạm giữ lại yêu cầu đổi trạng thái.
+  let muonThucHien = false;
+  if ((d.tinhTrang || '').toString().trim() === 'Đang thực hiện') { muonThucHien = true; delete d.tinhTrang; }
   let idHD = payload.idHD;
   let soHD;
   let soDongVuaTao; // số dòng thật của hợp đồng (mới tạo hoặc đang cập nhật) — trả về cho client để tránh phải tìm kiếm lại
@@ -2525,6 +2543,7 @@ function luuHopDongDayDuThucThi_(payload) {
         // "Chờ thực hiện", chỉ chuyển tiếp khi có người bấm "✅ Duyệt" tay. Đồng bộ với
         // TAO_HOP_DONG_MOI_() ở trên — người dùng vẫn có thể ghi đè bằng d.tinhTrang.
         row[NCC_COL.TINH_TRANG] = d.tinhTrang || 'Chờ thực hiện';
+        if (d.dinhKemCCCD) { damBaoCotDinhKemCCCD_(); row[NCC_COL.DINH_KEM_CCCD] = String(d.dinhKemCCCD); }
         // ⚠️ ĐÃ SỬA: trước đây appendRow() -> CCCD/SĐT/Số TK/MST mất số 0 đầu (049... thành 49...)
         // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI_: định dạng TEXT trước rồi mới ghi.
         const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
@@ -2565,6 +2584,7 @@ function luuHopDongDayDuThucThi_(payload) {
     // Các trạng thái khác (Chờ thực hiện...) thì vẫn cho phép client tự tính lại tổng hợp
     // từ danh sách rừng và ghi đè bình thường (client đã tự làm việc này trước khi gửi lên).
     const dCapNhat = Object.assign({}, d);
+    if (kqTim.tinhTrang === 'Đang thực hiện') muonThucHien = false; // đã ở "Đang thực hiện" -> không cần chuyển
     if (kqTim.tinhTrang === 'Đang thực hiện') {
       delete dCapNhat.slDuKien;
       delete dCapNhat.donGia;
@@ -2630,7 +2650,14 @@ function luuHopDongDayDuThucThi_(payload) {
   // cấp hợp đồng (trước đây tạo xong Z = 0, app Thanh toán thấy "không có khối lượng dự kiến").
   if (!payload.boQuaTongHopRung) dongBoTongHopRungVaoHdNcc_(idHD); // Lưu chính thức tự tổng hợp 1 lần ở cuối (P-10)
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD); // cập nhật Draft NGAY sau khi mọi thứ (hợp đồng + rừng + tài khoản) đã ghi xong
-  return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK, nhacDuyet: nhacDuyet };
+  let canhBaoHoSo = '', thieuHoSo = null;
+  if (muonThucHien && !payload.hoanChuyenThucHien) {
+    const kqChuyen = _thuChuyenDangThucHien_(idHD);
+    if (!kqChuyen.thanhCong) { canhBaoHoSo = kqChuyen.loi + '\nHợp đồng vẫn giữ trạng thái cũ — dữ liệu khác đã lưu.'; thieuHoSo = kqChuyen.thieuHoSo || null; }
+    else nhacDuyet = '';
+  }
+  return { thanhCong: true, idHD: idHD, soHD: soHD, soDong: soDongVuaTao, ketQuaRung: ketQuaRung, ketQuaTK: ketQuaTK, nhacDuyet: nhacDuyet,
+    muonThucHien: muonThucHien, canhBaoHoSo: canhBaoHoSo, thieuHoSo: thieuHoSo };
 }
 
 

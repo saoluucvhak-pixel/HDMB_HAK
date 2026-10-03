@@ -343,7 +343,7 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
   const loiChiTiet = [];
   const hd = _truongHopDongCanGhi_(du, loiChiTiet);
   // boQuaTongHopRung: cuối hàm này đã tổng hợp lô rừng 1 lần (sau khi ghi xong lô) — không làm 2 lần (P-10)
-  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac, boQuaTongHopRung: true });
+  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac, boQuaTongHopRung: true, hoanChuyenThucHien: true });
   if (!ketQuaHD.thanhCong) return ketQuaHD;
   const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
   if (!du.idHD) {
@@ -382,7 +382,8 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
     (rg.gpsMoi || []).forEach(function (p) {
       if (p.daGhi) return;
       const kqGps = CAP_NHAT_GPS_RUNG_(idRungThat, { lat: p.lat, lng: p.lng, anhUrl: p.anhUrl || '' }, false);
-      if (kqGps.thanhCong) { p.daGhi = true; coGpsMoi = true; } else loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
+      if (kqGps.thanhCong) { p.daGhi = true; coGpsMoi = true; if (kqGps.canhBaoKhoangCach) loiChiTiet.push(kqGps.canhBaoKhoangCach); }
+      else loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
     });
     if (coGpsMoi) ghiTienDo();
   });
@@ -422,5 +423,12 @@ function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
 
   dongBoTongHopRungVaoHdNcc_(idHD); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA
 
-  return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null, nhacDuyet: ketQuaHD.nhacDuyet || '' };
+  // Chọn "Đang thực hiện" ở form: chỉ chuyển khi đã đủ hồ sơ (kiểm tra sau khi lô / GPS / tài khoản đã ghi xong)
+  let nhacDuyet = ketQuaHD.nhacDuyet || '', thieuHoSo = null;
+  if (ketQuaHD.muonThucHien) {
+    const kqChuyen = _thuChuyenDangThucHien_(idHD);
+    if (kqChuyen.thanhCong) nhacDuyet = '';
+    else { loiChiTiet.push(kqChuyen.loi + '\nHợp đồng vẫn giữ trạng thái cũ — dữ liệu khác đã lưu.'); thieuHoSo = kqChuyen.thieuHoSo || null; }
+  }
+  return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null, nhacDuyet: nhacDuyet, thieuHoSo: thieuHoSo };
 }
