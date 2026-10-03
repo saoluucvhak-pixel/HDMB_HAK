@@ -2,7 +2,7 @@
  * ============================================================
  *  37_KiemTraDuHoSo.gs
  *  1) ĐIỀU KIỆN CHUYỂN "Đang thực hiện": hợp đồng có đủ số CCCD, MST, tên, địa chỉ chủ rừng, số tài khoản
- *     (+ ngân hàng); mỗi lô rừng có địa chỉ rừng, file hồ sơ pháp lý đính kèm (giấy tờ CCCD nằm trong hồ sơ
+ *     + ngân hàng (lấy ở HD_STK); mỗi lô rừng có địa chỉ rừng, file hồ sơ pháp lý đính kèm (giấy tờ CCCD nằm trong hồ sơ
  *     pháp lý — không đính kèm CCCD riêng) và tọa độ GPS; hợp đồng có ảnh GPS hoặc ảnh hiện trường (đã duyệt).
  *     Thiếu -> không chuyển, trả danh sách cần bổ sung (trang web hiện cảnh báo).
  *  2) CẢNH BÁO TỌA ĐỘ XA ĐỊA CHỈ RỪNG: lưu điểm GPS cách vị trí của "Địa chỉ rừng" (định vị qua Google Maps)
@@ -23,13 +23,14 @@ function kiemTraDuHoSoDeThucHien_(idHD) {
   const trong = function (v) { return v === null || v === undefined || String(v).trim() === ''; };
   const thieu = [];
 
-  // 1. Thông tin chủ rừng + tài khoản (tài khoản ở HD_STK cũng tính)
+  // 1. Thông tin chủ rừng (HD_NCC) + tài khoản nhận tiền (HD_STK)
   const thieuTT = [];
   if (trong(row[NCC_COL.TEN_CHU_RUNG])) thieuTT.push('họ tên');
   if (!laCCCDHopLe_(row[NCC_COL.CCCD_CHU_RUNG])) thieuTT.push('số CCCD (12 số)');
   if (trong(row[NCC_COL.MA_SO_THUE])) thieuTT.push('mã số thuế');
   if (trong(row[NCC_COL.DIA_CHI_TT])) thieuTT.push('địa chỉ');
-  const coTK = (!trong(row[NCC_COL.SO_TK]) && !trong(row[NCC_COL.NGAN_HANG])) || docDongTheoKhoa_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD])
+  // Số tài khoản + ngân hàng lấy ở HD_STK (bảng tài khoản nhận tiền), không lấy cột Số TK của HD_NCC
+  const coTK = docDongTheoKhoa_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD])
     .some(function (r) { return !trong(r[STK_COL.SO_TK]) && !trong(r[STK_COL.NGAN_HANG]); });
   if (!coTK) thieuTT.push('số tài khoản + ngân hàng');
   if (thieuTT.length) thieu.push('Thông tin chủ rừng còn thiếu: ' + thieuTT.join(', '));

@@ -852,6 +852,9 @@ try {
       !/CCCD chủ rừng|ngày cấp|điện thoại|diện tích|đơn giá|số giấy tờ/.test(th) && ttA() === 'Chờ thực hiện', J(kq));
     const xt = t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(A.idHD) + ')');
     kiem('DHS-03 API xem trước còn thiếu gì', xt.du === false && xt.thieu.length === kq.thieuHoSo.length);
+    // Số TK chỉ ghi ở HD_NCC (không có dòng HD_STK) -> chưa tính là có tài khoản
+    t.run('CAP_NHAT_HOP_DONG_(2, {soTK: "999888", nganHang: "VCB"}, ' + J(A.idHD) + ')');
+    kiem('DHS-03b số TK + ngân hàng lấy ở HD_STK, cột Số TK của HD_NCC không tính', /số tài khoản \+ ngân hàng/.test(t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(A.idHD) + ')').thieu.join('|')));
     t.run('THEM_TAI_KHOAN_MOI_(' + J({ idHD: A.idHD, soTK: '1050001', nganHang: 'VCB' }) + ')');
     t.duHoSo(A.idHD);
     // bỏ ảnh của điểm GPS -> chỉ còn thiếu ảnh
