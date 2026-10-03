@@ -232,6 +232,7 @@ function hakHopThoai_(noiDung, tuyChon, coONhap) {
     var nutOk = document.createElement('button');
     nutOk.type = 'button'; nutOk.textContent = tuyChon.nutDongY || 'Đồng ý';
     nutOk.style.cssText = 'padding:9px 16px;border-radius:8px;border:0;color:#fff;cursor:pointer;font-weight:600;min-height:40px;background:' + (tuyChon.nguyHiem ? '#dc2626' : '#16a34a');
+    if (tuyChon.chiDongY) nutHuy.style.display = 'none'; // hộp thông báo: chỉ nút "Đã hiểu"
     hang.appendChild(nutHuy); hang.appendChild(nutOk); hop.appendChild(hang);
     nen.appendChild(hop); document.body.appendChild(nen);
     var dong = function (kq) {

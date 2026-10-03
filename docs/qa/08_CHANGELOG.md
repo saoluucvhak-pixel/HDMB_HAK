@@ -2,6 +2,13 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 03/10/2026 — Đủ hồ sơ mới chuyển "Đang thực hiện" + cảnh báo tọa độ xa địa chỉ rừng
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt này) | ✨✅ | **Chặn chuyển "Đang thực hiện" khi thiếu hồ sơ**: cần CCCD chủ rừng đã đính kèm (cột mở rộng HD_NCC AH "Đính kèm CCCD"), thông tin chủ rừng đủ (họ tên, CCCD, ngày/nơi cấp, địa chỉ, SĐT, ngày ký), ủy quyền + tài khoản, mỗi lô đủ địa chỉ/diện tích/đơn giá/KL + loại hồ sơ, số giấy tờ, file hồ sơ rừng + tọa độ GPS thật, và hợp đồng có ảnh GPS hoặc ảnh hiện trường đã duyệt. Áp dụng nút Duyệt, duyệt hàng loạt, lưu hồ sơ / Lưu chính thức (Nhập liệu: dữ liệu khác vẫn lưu, trạng thái giữ nguyên + cảnh báo). Tạo HĐ mới luôn "Chờ thực hiện". Trang Hợp đồng: khung liệt kê mục còn thiếu, nút 📎 Đính kèm CCCD, CCCD quét lúc tạo HĐ tự đính kèm. | 37_KiemTraDuHoSo (mới), 00_Config, 06_CreateUpdate, 15_DraftHopDong, 34_PhanQuyen, 27_Page_HopDongMeCon, PhanQuyen_JS, NhapLieu_Chung_JS |
+| (đợt này) | ✨✅ | **Cảnh báo tọa độ cách địa chỉ rừng > 5 km** khi lưu điểm GPS (trang Hợp đồng, Lưu chính thức, duyệt ảnh có GPS): vẫn lưu, hiện cảnh báo kèm khoảng cách. Định vị địa chỉ qua Google Maps (nhớ 6 giờ), địa chỉ có ghi sẵn tọa độ thì so thẳng; chỉ định vị được mức tỉnh / Maps lỗi -> không cảnh báo. Test DHS-01…12, GPS-01…06 | 37_KiemTraDuHoSo, 06_CreateUpdate, 15_DraftHopDong, 27_Page_HopDongMeCon, tests/ |
+
 ## 01/10/2026 — Báo cáo MISA bị tính DOUBLE
 
 | Commit | Loại | Thay đổi | File |

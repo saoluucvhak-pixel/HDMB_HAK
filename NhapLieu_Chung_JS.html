@@ -251,7 +251,7 @@
         dangLuuChinhThuc_ = false;
         if (!kq.thanhCong) { showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }
         var thongBao = '✅ Đã lưu chính thức hợp đồng ' + kq.soHD + ' vào hệ thống.';
-        if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Một số mục gặp lỗi khi ghi:\n• ' + kq.canhBao.join('\n• ');
+        if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Cần lưu ý:\n• ' + kq.canhBao.join('\n• ');
         thongBao_(thongBao);
         if (kq.nhacDuyet) thongBao_('⚠️ ' + kq.nhacDuyet);
         veTrangDanhSach();
