@@ -418,13 +418,23 @@ function TIM_DONG_NGHI_TRUNG_() {
       cheDoXoa: !id || idHDDem[id] > 1 ? 'dong' : 'hopdong' // dòng thiếu ID không có dữ liệu con -> xóa đúng dòng
     };
   });
-  const nhomHD = _goiYGiuLai_(_gomNhomTrung_(dsHD, function (d) {
+  const khoaHD = function (d) {
     return [
       [d.idHD ? 'ID|' + d.idHD : '', 'Cùng ID_HD'],
       [d.soHD.trim() ? 'SO|' + _chuanChuBT_(d.soHD) : '', 'Cùng Số HĐ'],
       [d.cccd && d.ngayKy ? 'CC|' + d.cccd + '|' + d.ngayKy : '', 'Cùng CCCD chủ rừng + ngày ký']
     ];
-  }), function (d) { return d.soLo + d.soTK + d.soGps + d.soAnh; });
+  };
+  const diemHD = function (d) { return d.soLo + d.soTK + d.soGps + d.soAnh; };
+  const nhomHD = _gomNhomTrung_(dsHD, khoaHD);
+  // Gợi ý xóa CHỈ trong cụm trùng chắc chắn (cùng ID_HD / cùng Số HĐ). Dòng chỉ trùng "CCCD + ngày ký" có thể là hợp đồng
+  // thật thứ 2 (1 chủ rừng ký 2 HĐ cùng ngày, khác lô) -> canXem: vẫn liệt kê, KHÔNG tự chọn ở "Chọn theo gợi ý".
+  nhomHD.forEach(function (n) {
+    n.dong.forEach(function (d) { d.goiYGiu = false; d.canXem = true; });
+    _goiYGiuLai_(_gomNhomTrung_(n.dong, function (d) { return khoaHD(d).slice(0, 2); }), diemHD)
+      .forEach(function (cum) { cum.dong.forEach(function (d) { d.canXem = false; }); });
+  });
+  nhomHD.forEach(function (n, i) { n.ma = i + 1; n.dong.sort(function (a, b) { return a.dong - b.dong; }); });
 
   const dsLo = rung.map(function (r, i) {
     const id = (r[RUNG_COL.ID_RUNG] || '').toString().trim();

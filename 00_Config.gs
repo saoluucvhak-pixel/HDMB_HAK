@@ -1122,6 +1122,15 @@ function soTuO_(v) {
 }
 
 /**
+ * Lô RỖNG: chưa có địa chỉ rừng, diện tích, KL dự kiến, đơn giá — thường là lô _1 tự tạo khi tạo hợp đồng rồi người dùng
+ * thêm lô thật thành lô _2. Dùng chung cho xuất MISA (22) và điều kiện "Đang thực hiện" (37) để 2 nơi đếm lô giống nhau.
+ */
+function laLoRong_(r) {
+  return !(r[RUNG_COL.DIA_CHI_RUNG] || '').toString().trim() && !soTuO_(r[RUNG_COL.DIEN_TICH_M2]) &&
+    !soTuO_(r[RUNG_COL.KHOI_LUONG_DK]) && !soTuO_(r[RUNG_COL.DON_GIA]);
+}
+
+/**
  * Tốc độ: đọc CHỈ các dòng có cột khóa thuộc cacKhoa — đọc 1 cột khóa, rồi từng khối dòng liền nhau — thay vì cả sheet
  * (readData_). Dùng cho các việc chạy sau MỖI lần lưu (cache báo cáo, Hồ sơ rừng, tổng hợp lô rừng) vốn chỉ cần vài dòng
  * của 1 hợp đồng. Khớp như chỗ cũ: toString().trim() bằng nhau. Giữ đúng thứ tự dòng trên sheet.

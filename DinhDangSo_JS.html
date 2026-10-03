@@ -51,7 +51,9 @@
     el.addEventListener('compositionend', function () {
       dangSoan = false;
       el._truocKhiGo = undefined;
-      el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: null }));
+      // bubbles: lúc đang soạn các sự kiện input bị chặn ở ô -> sự kiện này phải nổi lên để phần tự lưu nháp
+      // (card.addEventListener('input', ...)) biết ô đã đổi; thiếu bubbles thì số gõ bằng bộ gõ không được lưu nháp.
+      el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: null, bubbles: true }));
     }, true);
     el.addEventListener('beforeinput', function (e) {
       if (dangSoan || e.isComposing) return;

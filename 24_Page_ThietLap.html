@@ -767,8 +767,11 @@
         : d.cheDoXoa === 'lo' ? '<span class="nt-cd nt-ca">Xóa cả lô + ' + d.soGps + ' GPS</span>'
         : '<span class="nt-cd nt-ca">Xóa cả hợp đồng + dữ liệu con</span>';
     };
-    var o = function (d) { return '<input type="checkbox" class="ntChon" data-bang="' + d.bang + '" data-dong="' + d.dong + '" data-dau="' + e(d.dau) + '" data-goi-y="' + (d.goiYGiu ? 1 : 0) + '" data-che-do="' + d.cheDoXoa + '" aria-label="Chọn xóa ' + d.bang + ' dòng ' + d.dong + '">'; };
-    var giu = function (d) { return d.goiYGiu ? '<span class="nt-giu">Gợi ý giữ</span>' : ''; };
+    var o = function (d) { return '<input type="checkbox" class="ntChon" data-bang="' + d.bang + '" data-dong="' + d.dong + '" data-dau="' + e(d.dau) + '" data-goi-y="' + (d.goiYGiu ? 1 : 0) + '" data-can-xem="' + (d.canXem ? 1 : 0) + '" data-che-do="' + d.cheDoXoa + '" aria-label="Chọn xóa ' + d.bang + ' dòng ' + d.dong + '">'; };
+    var giu = function (d) {
+      return d.goiYGiu ? '<span class="nt-giu">Gợi ý giữ</span>'
+        : d.canXem ? '<span class="nt-giu" style="background:var(--warn-bg, #fef3c7);color:var(--warn-chu, #b45309)" title="Chỉ trùng CCCD + ngày ký — có thể là hợp đồng khác của cùng chủ rừng. Xem số Lô / TK / GPS / Ảnh rồi tự chọn nếu đúng là tạo trùng.">Cần xem</span>' : '';
+    };
     var h = '<p style="margin:0 0 8px"><b>' + kq.hopDong.length + '</b> nhóm hợp đồng, <b>' + kq.loRung.length + '</b> nhóm lô rừng nghi trùng. '
       + '<button class="btn btn-outline" type="button" onclick="chonTheoGoiYNghiTrung_()">☑️ Chọn theo gợi ý</button> '
       + '<button class="btn btn-outline" type="button" onclick="boChonNghiTrung_()">Bỏ chọn hết</button></p>';
@@ -795,7 +798,8 @@
     var n = document.querySelectorAll('#ketQuaNghiTrung .ntChon:checked').length, b = document.getElementById('btnXoaNghiTrung');
     if (b) { b.disabled = !n; b.textContent = '🗑️ Xóa ' + n + ' dòng đã chọn'; }
   }
-  function chonTheoGoiYNghiTrung_() { document.querySelectorAll('#ketQuaNghiTrung .ntChon').forEach(function (c) { c.checked = c.dataset.goiY !== '1'; }); demChonNghiTrung_(); }
+  // Dòng "Cần xem" (chỉ trùng CCCD + ngày ký, có thể là hợp đồng thật khác) không tự chọn — Quản trị tự xem và chọn
+  function chonTheoGoiYNghiTrung_() { document.querySelectorAll('#ketQuaNghiTrung .ntChon').forEach(function (c) { c.checked = c.dataset.goiY !== '1' && c.dataset.canXem !== '1'; }); demChonNghiTrung_(); }
   function boChonNghiTrung_() { document.querySelectorAll('#ketQuaNghiTrung .ntChon').forEach(function (c) { c.checked = false; }); demChonNghiTrung_(); }
   async function xoaDongNghiTrungDaChon() {
     var chon = Array.prototype.slice.call(document.querySelectorAll('#ketQuaNghiTrung .ntChon:checked'));

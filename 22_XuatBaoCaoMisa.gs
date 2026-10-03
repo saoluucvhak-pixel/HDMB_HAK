@@ -137,13 +137,8 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   const nccByIdHD = {};
   nccRows.forEach(function (r) { nccByIdHD[(r[NCC_COL.ID_HD] || '').toString().trim()] = r; });
 
-  // Lô RỖNG (chưa có địa chỉ rừng, diện tích, KL, đơn giá — thường là lô _1 tự tạo khi tạo hợp đồng
-  // rồi người dùng thêm lô thật thành lô _2) KHÔNG xuất sang MISA nếu hợp đồng còn lô khác có dữ liệu,
+  // Lô RỖNG (laLoRong_, 00_Config.gs) KHÔNG xuất sang MISA nếu hợp đồng còn lô khác có dữ liệu,
   // tránh mỗi hợp đồng ra 2 dòng HDMB (1 dòng 0 đồng + 1 dòng thật).
-  const laLoRong_ = function (r) {
-    return !(r[RUNG_COL.DIA_CHI_RUNG] || '').toString().trim() && !soTuO_(r[RUNG_COL.DIEN_TICH_M2]) &&
-      !soTuO_(r[RUNG_COL.KHOI_LUONG_DK]) && !soTuO_(r[RUNG_COL.DON_GIA]);
-  };
   const hdCoLoThat = {};
   rungRows.forEach(function (r) { if (!laLoRong_(r)) hdCoLoThat[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()] = true; });
 

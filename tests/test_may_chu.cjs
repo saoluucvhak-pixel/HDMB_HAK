@@ -740,6 +740,9 @@ try {
     const nhomA = kq.hopDong.find(n => n.dong.some(d => d.idHD === A.idHD));
     kiem('BT-01 tìm được 1 nhóm hợp đồng nghi trùng gồm 3 dòng (2 dòng cùng ID + 1 HĐ cùng CCCD & ngày ký), lý do đủ',
       kq.hopDong.length === 1 && nhomA && nhomA.dong.length === 3 && nhomA.lyDo.indexOf('Cùng ID_HD') !== -1 && nhomA.lyDo.indexOf('Cùng CCCD chủ rừng + ngày ký') !== -1, J(kq.hopDong.map(n => [n.lyDo, n.dong.length])));
+    const dB = nhomA.dong.find(d => d.idHD === B.idHD), dA = nhomA.dong.filter(d => d.idHD === A.idHD);
+    kiem('BT-01b gợi ý chỉ trong cụm cùng ID: giữ 1 dòng A, gợi ý xóa dòng chép; HĐ B (chỉ trùng CCCD + ngày) = "Cần xem", không tự chọn',
+      dA.filter(d => d.goiYGiu).length === 1 && dA.every(d => !d.canXem) && dB && dB.canXem === true && dB.goiYGiu === false, J(nhomA.dong.map(d => [d.idHD === A.idHD ? 'A' : 'B', d.goiYGiu, d.canXem])));
     kiem('BT-02 tìm được lô rừng trùng cùng ID_RUNG, gợi ý giữ dòng trên', kq.loRung.length === 1 && kq.loRung[0].dong.length === 2 && kq.loRung[0].dong[0].goiYGiu === true && kq.loRung[0].dong[0].cheDoXoa === 'dong', J(kq.loRung));
     // Chọn xóa hết cả nhóm -> bị chặn
     const chan = t.run('XOA_DONG_NGHI_TRUNG_(' + J(nhomA.dong.map(d => ({ bang: d.bang, dong: d.dong, dau: d.dau }))) + ')');
@@ -761,6 +764,17 @@ try {
     const lt = t.run('LAY_DS_LUU_TRU_XOA_(20)');
     kiem('BT-06 các dòng bị xóa đều được lưu trữ (khôi phục được)', lt.some(d => /trùng ID ở HD_NCC|trùng ID/.test(d.hanhDong)) && lt.some(d => d.idHD === B.idHD), J(lt.map(d => d.hanhDong)));
     kiem('BT-07 quét lại không còn nhóm trùng', t.run('TIM_DONG_NGHI_TRUNG_()').soNhom === 0);
+  });
+
+  chay(function () {
+    // BT-13: 1 chủ rừng ký 2 hợp đồng THẬT cùng ngày (khác Số HĐ, khác lô) -> vẫn báo nghi trùng nhưng không gợi ý xóa dòng nào
+    const t = moi();
+    const H1 = t.tao('Le D', '049000000044', '4444', 'D1', '2026-06-01');
+    const H2 = t.tao('Le D', '049000000044', '5555', 'D2', '2026-06-01');
+    const kq = t.run('TIM_DONG_NGHI_TRUNG_()');
+    const n = kq.hopDong[0];
+    kiem('BT-13 2 HĐ thật cùng chủ rừng + ngày ký: cả 2 "Cần xem", không dòng nào bị gợi ý xóa',
+      kq.hopDong.length === 1 && n.dong.length === 2 && n.dong.every(d => d.canXem === true && d.goiYGiu === false) && [H1.idHD, H2.idHD].every(id => n.dong.some(d => d.idHD === id)), J(kq.hopDong));
   });
 
   chay(function () {
@@ -927,6 +941,32 @@ try {
     const cb = (kqCT.canhBao || []).join(' | ');
     kiem('DHS-12 Lưu chính thức HĐ mới chọn "Đang thực hiện": kiểm tra sau khi ghi lô + GPS, thiếu file hồ sơ rừng -> giữ "Chờ thực hiện" + cảnh báo; GPS xa -> cảnh báo 5 km',
       kqCT.thanhCong && ttC === 'Chờ thực hiện' && /file hồ sơ pháp lý đính kèm/.test(cb) && !/tọa độ GPS/.test(cb) && /trên 5 km/.test(cb), J(kqCT));
+  });
+
+  chay(function () {
+    // DHS-11: điểm GPS cũ lưu dạng độ-phút-giây (HE_TOA_DO = "DMS") vẫn tính là lô đã có tọa độ
+    const t = moi();
+    const A = t.tao('Pham E', '049000000055', '1111', 'E1');
+    t.duHoSo(A.idHD);
+    const gps = t.ss.getSheetByName('HD_GPS');
+    for (let r = 2; r <= gps.getLastRow(); r++) if (String(gps.getRange(r, 3).getValue()).trim()) {
+      gps.getRange(r, 3).setValue('15.44.02.3N'); gps.getRange(r, 4).setValue('108.12.30.5E'); gps.getRange(r, 10).setValue('DMS');
+    }
+    const kt = t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(A.idHD) + ')');
+    kiem('DHS-11 GPS dạng DMS (15.44.02.3N) được tính là có tọa độ — không báo thiếu', !/tọa độ GPS/.test(kt.thieu.join('|')), J(kt));
+    // DMS hỏng / trống vẫn bị báo thiếu
+    for (let r = 2; r <= gps.getLastRow(); r++) if (gps.getRange(r, 10).getValue() === 'DMS') { gps.getRange(r, 3).setValue('abc'); gps.getRange(r, 4).setValue('xyz'); }
+    kiem('DHS-11b tọa độ DMS không đọc được -> vẫn báo thiếu tọa độ GPS', /tọa độ GPS/.test(t.run('KIEM_TRA_DU_HO_SO_HD_(' + J(A.idHD) + ')').thieu.join('|')));
+  });
+
+  chay(function () {
+    // H-04b: cập nhật Draft hàng loạt (≤ 10 HĐ, đi đường từng HĐ) phải báo FALSE khi lỗi — đồng bộ thanh toán dựa vào đó
+    // để không ghi mốc "đã xử lý" (lượt sau thử lại). Trước đây luôn trả true.
+    const t = moi();
+    const A = t.tao('Vo F', '049000000066', '1111', 'F1');
+    kiem('H-04b Draft hàng loạt ≤ 10 HĐ: bình thường trả true', t.run('capNhatDraftHangLoat_([' + J(A.idHD) + '])') === true);
+    t.run('getOrCreateDraftBaoCaoSheet_ = function () { throw new Error("Sheet đang bị khóa"); }');
+    kiem('H-04b Draft hàng loạt ≤ 10 HĐ: ghi Draft lỗi -> trả false', t.run('capNhatDraftHangLoat_([' + J(A.idHD) + '])') === false);
   });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 

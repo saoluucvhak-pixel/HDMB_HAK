@@ -427,15 +427,16 @@ function ketThucGomDraft_(laNguoiGom) {
   if (g.rung.size) capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)); // P-10: 1 lần cho mọi lô
 }
 
+/** Trả true nếu cập nhật xong (hoặc đã đưa vào hàng gom), false nếu lỗi — lỗi chỉ ghi log, không ném ra. */
 function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
   idHD = (idHD || '').toString().trim();
-  if (!idHD) return;
+  if (!idHD) return true;
   xoaCacheTraCuu_(); // dữ liệu HĐ vừa đổi -> chỉ mục Tra cứu dựng lại ở lần tìm sau
-  if (_draftDangGom_) { _draftDangGom_.hd.add(idHD); return; } // H-12: cập nhật 1 lần cuối thao tác
+  if (_draftDangGom_) { _draftDangGom_.hd.add(idHD); return true; } // H-12: cập nhật 1 lần cuối thao tác
   try {
     // Tốc độ: chỉ đọc đúng các dòng của hợp đồng này (docDongTheoKhoa_) — trước đây đọc TOÀN BỘ 5 sheet sau MỖI lần lưu.
     const row = docDongTheoKhoa_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, [idHD])[0];
-    if (!row) { XOA_DRAFT_MOT_HOP_DONG_(idHD); return; } // hợp đồng đã bị xóa hẳn -> xóa luôn khỏi Draft
+    if (!row) { XOA_DRAFT_MOT_HOP_DONG_(idHD); return true; } // hợp đồng đã bị xóa hẳn -> xóa luôn khỏi Draft
 
     const rungRows = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD]);
     const stkRows = docDongTheoKhoa_(SHEET_NAME.HD_STK, STK_COL.ID_HD, [idHD]);
@@ -469,9 +470,11 @@ function CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD) {
       cacDong.slice(1).reverse().forEach(function (d) { sh.deleteRow(d); });
     }
     _draftDataCache = null; // xóa bộ nhớ đệm — nếu cùng lượt chạy có đọc lại Draft sau đây, phải thấy đúng dữ liệu vừa ghi
+    return true;
   } catch (e) {
     // Không để lỗi cập nhật Draft làm hỏng thao tác chính (tạo/sửa hợp đồng vẫn phải thành công) — chỉ ghi log
     ghiNhatKy_('LỖI cập nhật Draft báo cáo', idHD, e.message);
+    return false;
   }
 }
 
@@ -501,7 +504,8 @@ function capNhatDraftHangLoat_(idsHopDong) {
   xoaCacheTraCuu_();
   // Tốc độ: ít hợp đồng (lưu 1 hợp đồng, tạo mới...) -> từng HĐ đọc đúng dòng & ghi đúng dòng; trước đây đọc cả 5 sheet
   // và GHI LẠI CẢ sheet cache. Nhiều hợp đồng (đồng bộ thanh toán, bảo trì) -> đọc 1 lần như cũ.
-  if (idsHopDong.length <= 10) { idsHopDong.forEach(function (id) { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); }); return true; }
+  // Trả đúng kết quả (false nếu có HĐ lỗi): đồng bộ thanh toán dựa vào đây để KHÔNG ghi mốc "đã xử lý" khi lỗi (H-04).
+  if (idsHopDong.length <= 10) return idsHopDong.map(function (id) { return CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); }).every(Boolean);
   try {
     const nccRows = readData_(SHEET_NAME.HD_NCC);
     const nccTheoId = {};

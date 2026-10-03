@@ -2,6 +2,16 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 03/10/2026 — Rà soát main sau đợt giao diện mới + điều kiện "Đang thực hiện"
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (commit tiếp) | 🐛✅ | **GPS dạng độ-phút-giây bị tính là thiếu tọa độ**: điều kiện "Đang thực hiện" đọc tọa độ bằng `Number()` -> điểm cũ `HE_TOA_DO = "DMS"` (vd `15.44.02.3N`) ra NaN, lô bị báo "thiếu tọa độ GPS", không duyệt được. Nay đọc qua `getLatLngFromRow_` (như bản đồ / báo cáo). Test DHS-11/11b | 37_KiemTraDuHoSo |
+| (commit tiếp) | 🐛✅ | **"Chọn theo gợi ý" (dòng nghi trùng) có thể xóa nhầm hợp đồng thật**: nhóm "cùng CCCD + ngày ký" gợi ý xóa luôn HĐ khác ID / khác Số HĐ (1 chủ rừng ký 2 HĐ cùng ngày) -> xóa cả HĐ + dữ liệu con. Nay chỉ gợi ý giữ/xóa trong cụm cùng ID_HD / Số HĐ; dòng chỉ trùng CCCD + ngày = **"Cần xem"**, vẫn liệt kê, không tự chọn. Test BT-01b, BT-13 | 28_BaoTri_DongBo, 24_Page_ThietLap |
+| (commit tiếp) | 🐛✅ | **Gõ số bằng bộ gõ tiếng Việt / bàn phím điện thoại không tự lưu nháp**: sự kiện phát lại sau khi soạn xong thiếu `bubbles` -> phần tự lưu của thẻ form không nhận. Thêm `bubbles: true`. Test ui_dinh_dang_so | DinhDangSo_JS |
+| (commit tiếp) | 🐛✅ | **H-04 bị mở lại khi ≤ 10 hợp đồng**: `capNhatDraftHangLoat_` đi đường từng HĐ luôn trả true dù lỗi -> đồng bộ thanh toán vẫn ghi mốc "đã xử lý". `CAP_NHAT_DRAFT_MOT_HOP_DONG_` nay trả true/false, hàng loạt trả đúng kết quả. Test H-04b | 01_ContractManager |
+| (commit tiếp) | 🧹 | Quy tắc **lô rỗng** gộp về 1 hàm `laLoRong_` (00_Config) dùng chung cho xuất MISA và điều kiện "Đang thực hiện" | 00_Config, 22_XuatBaoCaoMisa, 37_KiemTraDuHoSo |
+
 ## 03/10/2026 — Đủ hồ sơ mới chuyển "Đang thực hiện" + cảnh báo tọa độ xa địa chỉ rừng
 
 | Commit | Loại | Thay đổi | File |

@@ -37,10 +37,7 @@ function kiemTraDuHoSoDeThucHien_(idHD) {
 
   // 2. Lô rừng: địa chỉ rừng + file hồ sơ pháp lý + tọa độ (bỏ lô rỗng tự tạo nếu đã có lô thật)
   const rung = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD]);
-  const laLoRong = function (r) {
-    return trong(r[RUNG_COL.DIA_CHI_RUNG]) && !soTuO_(r[RUNG_COL.DIEN_TICH_M2]) && !soTuO_(r[RUNG_COL.KHOI_LUONG_DK]) && !soTuO_(r[RUNG_COL.DON_GIA]);
-  };
-  const loThat = rung.filter(function (r) { return !laLoRong(r); });
+  const loThat = rung.filter(function (r) { return !laLoRong_(r); }); // laLoRong_: 00_Config.gs (dùng chung với xuất MISA)
   const dsLo = loThat.length ? loThat : rung;
   if (!rung.length) thieu.push('Chưa có lô rừng nào');
   const idRungs = dsLo.map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); });
@@ -49,7 +46,9 @@ function kiemTraDuHoSoDeThucHien_(idHD) {
   if (idRungs.length) {
     docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, idRungs).forEach(function (g) {
       const id = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
-      const lat = Number(g[GPS_COL.LAT]), lng = Number(g[GPS_COL.LNG]);
+      // getLatLngFromRow_ (Code.gs): đọc cả điểm cũ lưu dạng độ-phút-giây (HE_TOA_DO = "DMS"), trước đây Number() ra NaN
+      // -> lô có GPS vẫn bị báo "thiếu tọa độ GPS", không duyệt được.
+      const ll = getLatLngFromRow_(g), lat = Number(ll.lat), lng = Number(ll.lng);
       // Dòng GPS "khung" tạo sẵn khi tạo hợp đồng chưa có tọa độ -> không tính là đã đo
       if (!trong(g[GPS_COL.LAT]) && !trong(g[GPS_COL.LNG]) && isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0)) gpsTheoLo[id] = (gpsTheoLo[id] || 0) + 1;
       if (!trong(g[GPS_COL.HINH_ANH])) coAnhGps = true;

@@ -2,8 +2,10 @@
 // Lỗi cũ: gõ 35000 qua bộ gõ ra "3,500354" (đơn giá/diện tích ở Thêm hồ sơ rừng nhảy loạn).
 const { moTrinhDuyet, ghiTrangTam, docMa, inKetQua } = require('./ui_chung.cjs');
 (async () => {
-  const html = '<!doctype html><html><body><input id="a" type="text"><input id="kl" type="text">' + docMa('DinhDangSo_JS.html') +
-    '<script>window.__tinh=0; ganDinhDangSo_("a"); document.getElementById("a").addEventListener("input", function(){ window.__tinh++; document.getElementById("kl").value = docSoVN_(this.value) || ""; });</script></body></html>';
+  // #the: giống thẻ form thật — tự lưu nháp bằng card.addEventListener('input', ...) (sự kiện phải NỔI từ ô lên)
+  const html = '<!doctype html><html><body><div id="the"><input id="a" type="text"></div><input id="kl" type="text">' + docMa('DinhDangSo_JS.html') +
+    '<script>window.__nhap=null; document.getElementById("the").addEventListener("input", function(e){ window.__nhap = e.target.value; });' +
+    'window.__tinh=0; ganDinhDangSo_("a"); document.getElementById("a").addEventListener("input", function(){ window.__tinh++; document.getElementById("kl").value = docSoVN_(this.value) || ""; });</script></body></html>';
   const trang = ghiTrangTam('ui_dinh_dang_so.html', html);
   const b = await moTrinhDuyet();
   const p = await b.newPage();
@@ -27,6 +29,7 @@ const { moTrinhDuyet, ghiTrangTam, docMa, inKetQua } = require('./ui_chung.cjs')
   kq.push(['bộ gõ (cả cụm) 35000 -> 35.000', await goIME('35000') === '35.000']);
   kq.push(['bộ gõ (cả cụm) 1250000 -> 1.250.000', await goIME('1250000') === '1.250.000']);
   kq.push(['ô tự tính phía sau đọc đúng số sau khi soạn xong', await p.inputValue('#kl') === '1250000']);
+  kq.push(['gõ bằng bộ gõ: phần tự lưu nháp của thẻ nhận được số đã soạn xong', await p.evaluate(() => window.__nhap) === '1.250.000', await p.evaluate(() => window.__nhap)]);
   kq.push(['bàn phím điện thoại từng chữ số 35000 -> 35.000', await goIMETungSo('35000') === '35.000']);
   kq.push(['soạn tiếp vào ô đã có 35.000 thêm 0 -> 350.000', await goIME('0', true) === '350.000']);
   await p.fill('#a', ''); await p.type('#a', '35000');
