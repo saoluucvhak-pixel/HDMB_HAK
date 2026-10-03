@@ -2,6 +2,14 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 03/10/2026 — Thanh tiến độ = điều kiện Duyệt, cảnh báo khi xóa GPS/ảnh, duyệt hàng loạt nhanh hơn
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt 04) | 🐛✅ | **Thanh tiến độ 5 bước lệch điều kiện Duyệt**: thanh tiến độ đọc cache Draft (cách tính khác) -> ✓ đủ 5 bước mà bấm Duyệt vẫn "Chưa đủ hồ sơ". Nay `TIEN_DO_HO_SO_HD_` dùng đúng `kiemTraDuHoSoDeThucHien_` (trả thêm `buoc`: chủ rừng / tài khoản / lô rừng & hồ sơ / GPS / ảnh). Test TOC-DO-2, GD2 | 37_KiemTraDuHoSo, 01_ContractManager, 27_Page_HopDongMeCon, tests/ |
+| (đợt 04) | ✨✅ | **Xóa GPS / ảnh của HĐ "Đang thực hiện"** (phương án b theo yêu cầu): vẫn xóa, nếu hồ sơ không còn đủ thì hiện cảnh báo các mục cần bổ sung; HĐ "Chờ thực hiện" không cảnh báo. Test CB-01…03 | 37_KiemTraDuHoSo, 06_CreateUpdate, 27_Page_HopDongMeCon |
+| (đợt 04) | ⚡✅ | **Duyệt hàng loạt "Đang thực hiện" nhanh hơn**: nạp 5 sheet hồ sơ 1 lần cho cả lượt — đo trên giả lập ~15 -> ~6 lần đọc Sheet / HĐ (200 HĐ ~3.000 -> ~1.200). Chuyển "Đang thực hiện" không còn kiểm tra đủ hồ sơ 2 lần. Bảo trì "xóa dòng nghi trùng" / "xóa ngày trong ô số" cập nhật Draft gom 1 lần. Test HS-NHANH | 37_KiemTraDuHoSo, 06_CreateUpdate, 28_BaoTri_DongBo |
+
 ## 03/10/2026 — Rà soát main sau đợt giao diện mới + điều kiện "Đang thực hiện"
 
 | Commit | Loại | Thay đổi | File |

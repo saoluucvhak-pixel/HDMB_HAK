@@ -535,7 +535,8 @@ function XOA_DONG_NGHI_TRUNG_(ds) {
       else boQua.push({ bang: k.d.bang, dong: k.d.dong, lyDo: (r && r.loi) || 'Không xóa được' });
     });
   Object.keys(hdTongHop).forEach(function (id) { try { dongBoTongHopRungVaoHdNcc_(id); } catch (e) { /* hợp đồng có thể đã bị xóa ở (c) */ } });
-  Object.keys(hdCapNhat).forEach(function (id) { try { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); } catch (e) { /* như trên */ } });
+  // Gom 1 lần (capNhatDraftHangLoat_: > 10 HĐ đọc 5 sheet 1 lần) — trước đây cập nhật từng HĐ, nhiều HĐ dễ quá 6 phút
+  try { capNhatDraftHangLoat_(Object.keys(hdCapNhat)); } catch (e) { /* như trên */ }
   xoaCacheBanDo_();
   ghiNhatKy_('Bảo trì: xóa dòng nghi trùng', '', 'Đã xóa ' + daXoa + ' dòng/đối tượng, bỏ qua ' + boQua.length + (conLai ? ', còn ' + conLai + ' (hết giờ — bấm lại)' : '') + ' — dòng trùng cùng ID lưu trữ đợt ' + maDot + '; hợp đồng/lô xóa kèm dữ liệu con có đợt lưu trữ riêng (Thiết lập > Khôi phục).');
   return { thanhCong: true, daXoa: daXoa, boQua: boQua, conLai: conLai, maDot: cacDot };
@@ -657,7 +658,7 @@ function LAM_SACH_O_SO_LA_NGAY_() {
       });
     });
   } finally { lock.releaseLock(); }
-  Object.keys(hdCapNhat).forEach(function (id) { try { CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); } catch (e) { /* bỏ qua */ } });
+  try { capNhatDraftHangLoat_(Object.keys(hdCapNhat)); } catch (e) { /* bỏ qua */ } // gom 1 lần, không cập nhật từng HĐ
   Object.keys(rungCapNhat).forEach(function (id) { try { CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(id); } catch (e) { /* bỏ qua */ } });
   if (soO) ghiNhatKy_('Bảo trì: xóa ngày sai trong ô số', '', 'Đã xóa trống ' + soO + ' ô, cập nhật lại ' + Object.keys(hdCapNhat).length + ' hợp đồng (xem NhatKy_ChiTiet để biết giá trị cũ).');
   return { thanhCong: true, soO: soO, soHopDong: Object.keys(hdCapNhat).length };

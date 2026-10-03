@@ -1347,13 +1347,17 @@ function DOI_TINH_TRANG_HANG_LOAT_(ds, tinhTrangMoi) {
   const gom = batDauGomDraft_();
   const loi = [];
   let soXong = 0;
+  // Duyệt sang "Đang thực hiện": nạp 5 sheet hồ sơ 1 lần cho cả lượt (37_KiemTraDuHoSo.gs) — trước đây mỗi HĐ đọc lại
+  // ~10 lần (200 HĐ ~ 2.000 lần đọc, dễ quá 6 phút). Lượt này chỉ đổi cột Tình trạng nên dữ liệu nạp sẵn vẫn đúng.
+  const napSan = tinhTrangMoi === 'Đang thực hiện' && ds.length > 1;
+  if (napSan) _duLieuDuHoSoNapSan_ = napSanDuLieuDuHoSo_();
   try {
     ds.forEach(function (x) {
       let kq;
       try { kq = CAP_NHAT_HOP_DONG_WEB_(x && x.soDong, { tinhTrang: tinhTrangMoi }, x && x.idHD); } catch (e) { kq = { thanhCong: false, loi: e.message }; }
       if (kq.thanhCong) soXong++; else loi.push({ idHD: x && x.idHD, loi: kq.loi });
     });
-  } finally { ketThucGomDraft_(gom); }
+  } finally { if (napSan) _duLieuDuHoSoNapSan_ = null; ketThucGomDraft_(gom); }
   return { thanhCong: soXong > 0, soXong: soXong, tongSo: ds.length, loi: loi };
 }
 
@@ -2700,7 +2704,8 @@ function XOA_DIEM_GPS_(idRung, soDong, dau) {
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
   xoaCacheBanDo_();
-  return { thanhCong: true, maDot: maDot };
+  // HĐ "Đang thực hiện" mất điểm GPS cuối của lô -> vẫn xóa, kèm cảnh báo bổ sung (37_KiemTraDuHoSo.gs)
+  return Object.assign({ thanhCong: true, maDot: maDot }, canhBaoHoSoSauKhiSua_(idHD));
 }
 
 /**
@@ -2757,5 +2762,6 @@ function XOA_ANH_RUNG_(anh) {
   ghiNhatKy_('Xóa ảnh lô rừng', idHD, idRung + ' — ' + tenFile + ' (file trên Drive vẫn giữ; link cũ trong NhatKy_ChiTiet)');
   CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
   CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
-  return { thanhCong: true };
+  // HĐ "Đang thực hiện" mất ảnh cuối -> vẫn xóa, kèm cảnh báo bổ sung (37_KiemTraDuHoSo.gs)
+  return Object.assign({ thanhCong: true }, canhBaoHoSoSauKhiSua_(idHD));
 }

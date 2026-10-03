@@ -644,15 +644,15 @@ try {
     t.ss.getSheetByName('HD_Picture').appendRow([ds[2].lo, ds[2].idHD, 'KH', 'https://drive.google.com/file/d/A/view']); // ảnh lưu nhầm ID_RUNG
     const sai = [];
     ds.forEach(x => {
-      const moiTD = J(t.run('TIEN_DO_HO_SO_HD_(' + J(x.idHD) + ')'));
-      const cuTD = J(t.run('(function(){ _draftDataCache = null; var m = docToanBoDraftBaoCao_().filter(function(z){ return String(z.idHD).trim() === ' + J(x.idHD) + '; })[0]; _draftDataCache = null; return { coDuLieu: true, soTaiKhoan: Number(m.soTaiKhoan) || 0, soLoRung: Number(m.soLoRung) || 0, hoSoDu: !!m.hoSoDu, daDoGPSDu: !!m.daDoGPSDu, coAnh: !!m.coAnh, thieuHoSoChiTiet: String(m.thieuHoSoChiTiet || "") }; })()'));
-      if (moiTD !== cuTD) sai.push('tiến độ ' + x.idHD + ' ' + moiTD + ' / ' + cuTD);
+      // Thanh tiến độ = đúng điều kiện Duyệt "Đang thực hiện" (cùng kiemTraDuHoSoDeThucHien_)
+      const td = t.run('TIEN_DO_HO_SO_HD_(' + J(x.idHD) + ')'), kt = t.run('kiemTraDuHoSoDeThucHien_(' + J(x.idHD) + ')');
+      if (J(td.buoc) !== J(kt.buoc) || td.du !== kt.du || J(td.thieu) !== J(kt.thieu)) sai.push('tiến độ ' + x.idHD + ' ' + J(td) + ' / ' + J(kt));
       const tk = t.run('layDanhSachTaiKhoan_(' + J(x.idHD) + ')');
       const tkThat = t.stk().map((r, i) => ({ r, soDong: i + 2 })).filter(z => String(z.r[0]) === x.idHD).map(z => z.soDong + ':' + z.r[5]);
       if (J(tk.map(z => z.soDong + ':' + z.soTK)) !== J(tkThat)) sai.push('tài khoản ' + x.idHD);
     });
-    const coAnh2 = t.run('TIEN_DO_HO_SO_HD_(' + J(ds[2].idHD) + ')').coAnh;
-    kiem('TOC-DO-2 thanh tiến độ (đọc 1 HĐ) = đọc cả cache; số dòng tài khoản đúng; ảnh lưu nhầm ID_RUNG vẫn nhận', !sai.length && coAnh2 === true, J(sai));
+    const coAnh2 = t.run('TIEN_DO_HO_SO_HD_(' + J(ds[2].idHD) + ')').buoc.anh;
+    kiem('TOC-DO-2 thanh tiến độ = điều kiện Duyệt; số dòng tài khoản đúng; ảnh lưu nhầm ID_RUNG vẫn nhận', !sai.length && coAnh2 === true, J(sai));
   });
 
   // ---------- TC-NHANH: tra cứu dùng chỉ mục (cache), tự làm mới khi ghi, trả kèm chi tiết HĐ đầu ----------
@@ -808,8 +808,13 @@ try {
     kiem('GD2 Tổng quan: trả thêm khối lượng dự kiến / thực hiện / giá trị từng HĐ + tổng dự kiến',
       it.khoiLuongDuKien === 120 && it.khoiLuongThucHien === 0 && it.giaTriHopDong > 0 && tq.tongKhoiLuongDuKien === 120 && it.soHD === 'A1', J({ it: it, tong: tq.tongKhoiLuongDuKien }));
     const td = t.run('TIEN_DO_HO_SO_HD_(' + J(A.idHD) + ')');
-    kiem('GD2 Tiến độ hồ sơ: đọc đúng số TK / số lô / cờ đủ hồ sơ-GPS-ảnh từ cache báo cáo',
-      td.coDuLieu === true && td.soTaiKhoan === 1 && td.soLoRung === 1 && td.daDoGPSDu === false && td.coAnh === false, J(td));
+    kiem('GD2 Tiến độ hồ sơ: 5 bước theo điều kiện Duyệt (có TK; thiếu MST/địa chỉ, hồ sơ lô, GPS, ảnh)',
+      td.coDuLieu === true && td.du === false && J(td.buoc) === J({ chuRung: false, taiKhoan: true, loRung: false, gps: false, anh: false }) && /mã số thuế/.test(td.thieuHoSoChiTiet), J(td));
+    t.duHoSo(A.idHD);
+    const td2 = t.run('TIEN_DO_HO_SO_HD_(' + J(A.idHD) + ')');
+    const duyet = t.run('CAP_NHAT_HOP_DONG_WEB_(2, {tinhTrang:"Đang thực hiện"}, ' + J(A.idHD) + ')');
+    kiem('GD2 Tiến độ ✓ đủ 5 bước thì Duyệt "Đang thực hiện" được (không còn lệch thanh tiến độ / điều kiện Duyệt)',
+      td2.du === true && Object.values(td2.buoc).every(Boolean) && duyet.thanhCong === true, J([td2, duyet]));
     kiem('GD2 Tiến độ hồ sơ: ID không có -> coDuLieu=false', t.run('TIEN_DO_HO_SO_HD_("KHONG_CO")').coDuLieu === false);
     const th = t.run('_tongHopWebappTuDraft_([{soHD:"1",tinhTrang:"Đang thực hiện",khoiLuongDuKien:100,khoiLuongThucHien:40,giaTriHopDong:1000,giaTriThucHien:400},{soHD:"2",tinhTrang:"Chờ thực hiện",khoiLuongDuKien:50,khoiLuongThucHien:10,giaTriHopDong:500,giaTriThucHien:"100"},{soHD:"3",tinhTrang:"Đã hủy",khoiLuongDuKien:999,khoiLuongThucHien:999}], {}, 1, 20)');
     kiem('GD2 Báo cáo: tổng đã thực hiện (KL/giá trị) chỉ cộng HĐ đang/chờ thực hiện',
@@ -967,6 +972,52 @@ try {
     kiem('H-04b Draft hàng loạt ≤ 10 HĐ: bình thường trả true', t.run('capNhatDraftHangLoat_([' + J(A.idHD) + '])') === true);
     t.run('getOrCreateDraftBaoCaoSheet_ = function () { throw new Error("Sheet đang bị khóa"); }');
     kiem('H-04b Draft hàng loạt ≤ 10 HĐ: ghi Draft lỗi -> trả false', t.run('capNhatDraftHangLoat_([' + J(A.idHD) + '])') === false);
+  });
+
+  chay(function () {
+    // CB-01..03 (yêu cầu 03/10: phương án b): HĐ "Đang thực hiện" xóa mất điểm GPS / ảnh cuối -> VẪN xóa, kèm cảnh báo bổ sung
+    const t = moi();
+    const A = t.tao('Do G', '049000000077', '1111', 'G1');
+    t.duHoSo(A.idHD);
+    const duyet = t.run('CAP_NHAT_HOP_DONG_WEB_(2, {tinhTrang:"Đang thực hiện"}, ' + J(A.idHD) + ')');
+    const lo = t.run('layDanhSachRung_(' + J(A.idHD) + ')')[0];
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.6, lng: 108.2}, false)'); // điểm thứ 2
+    let ds = t.run('layGPSCuaRung_(' + J(lo.idRung) + ')');
+    const x1 = t.run('XOA_DIEM_GPS_(' + J(lo.idRung) + ',' + ds[1].soDong + ',' + J(ds[1].dau) + ')');
+    kiem('CB-01 xóa 1 điểm GPS, lô vẫn còn điểm -> không cảnh báo', duyet.thanhCong && x1.thanhCong && !x1.canhBaoHoSo, J([duyet, x1]));
+    ds = t.run('layGPSCuaRung_(' + J(lo.idRung) + ')');
+    const x2 = t.run('XOA_DIEM_GPS_(' + J(lo.idRung) + ',' + ds[0].soDong + ',' + J(ds[0].dau) + ')');
+    const tt = t.ss.getSheetByName('HD_NCC').getDataRange().getValues().find(r => r[29] === A.idHD)[30];
+    kiem('CB-02 xóa điểm GPS cuối của HĐ "Đang thực hiện": vẫn xóa, giữ trạng thái, cảnh báo thiếu tọa độ + ảnh GPS',
+      x2.thanhCong && tt === 'Đang thực hiện' && /không còn đủ/.test(x2.canhBaoHoSo) && /tọa độ GPS/.test(x2.thieuHoSo.join('|')), J(x2));
+    // HĐ "Chờ thực hiện" xóa GPS -> không cảnh báo (chưa cần đủ hồ sơ)
+    const B = t.tao('Do H', '049000000088', '2222', 'H1');
+    const loB = t.run('layDanhSachRung_(' + J(B.idHD) + ')')[0];
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(loB.idRung) + ', {lat: 15.7, lng: 108.3}, false)');
+    const dsB = t.run('layGPSCuaRung_(' + J(loB.idRung) + ')').filter(d => d.lat);
+    const x3 = t.run('XOA_DIEM_GPS_(' + J(loB.idRung) + ',' + dsB[0].soDong + ',' + J(dsB[0].dau) + ')');
+    kiem('CB-03 HĐ "Chờ thực hiện" xóa GPS -> không cảnh báo', x3.thanhCong && !x3.canhBaoHoSo, J(x3));
+  });
+
+  chay(function () {
+    // HS-NHANH: duyệt hàng loạt "Đang thực hiện" nạp hồ sơ 1 lần — so với cách cũ (mỗi HĐ tự đọc ~8 lần cho phần kiểm tra)
+    const dung = (napSan) => {
+      const t = moi();
+      if (!napSan) t.run('napSanDuLieuDuHoSo_ = function () { return null; }'); // như trước: không nạp sẵn
+      const ids = [];
+      for (let i = 0; i < 8; i++) { const x = t.tao('HN ' + i, '0490000001' + (10 + i), '7' + i, 'N' + i); t.duHoSo(x.idHD); ids.push(x.idHD); }
+      const ds = ids.map(id => ({ soDong: t.run('timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, ' + J(id) + ')'), idHD: id }));
+      t.m.demDoc.n = 0;
+      const kq = t.run('DOI_TINH_TRANG_HANG_LOAT_(' + J(ds) + ', "Đang thực hiện")');
+      return { t, ids, kq, doc: t.m.demDoc.n };
+    };
+    const moiCach = dung(true), cuCach = dung(false);
+    const t = moiCach.t;
+    const giong = t.run('(function (ids) { var rieng = ids.map(function (id) { return JSON.stringify(kiemTraDuHoSoDeThucHien_(id)); }); _duLieuDuHoSoNapSan_ = napSanDuLieuDuHoSo_(); var nap = ids.map(function (id) { return JSON.stringify(kiemTraDuHoSoDeThucHien_(id)); }); _duLieuDuHoSoNapSan_ = null; return JSON.stringify(rieng) === JSON.stringify(nap); })(' + J(moiCach.ids) + ')');
+    console.error('[HS-NHANH] đọc Sheet khi duyệt 8 HĐ: cách cũ ' + cuCach.doc + ', nạp sẵn ' + moiCach.doc);
+    kiem('HS-NHANH duyệt hàng loạt 8 HĐ: chuyển đủ 8 (cả 2 cách), kết quả kiểm tra nạp sẵn = đọc từng HĐ, bớt ≥ 40 lần đọc Sheet',
+      moiCach.kq.soXong === 8 && cuCach.kq.soXong === 8 && giong === true && cuCach.doc - moiCach.doc >= 40, J({ cu: cuCach.doc, moi: moiCach.doc, giong }));
+    kiem('HS-NHANH dữ liệu nạp sẵn được dọn sau lượt duyệt', t.run('_duLieuDuHoSoNapSan_') === null);
   });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 

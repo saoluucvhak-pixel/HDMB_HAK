@@ -85,18 +85,17 @@ function _tongHopWebappTuDraft_(tatCa, boLoc, trang, kichThuoc) {
  * giá trị/khối lượng tính trước) — KHÔNG tính lại từ HD_RUNG mỗi lần lọc.
  */
 /**
- * Giao diện mới: tiến độ hồ sơ 1 hợp đồng cho thanh 5 bước ở trang Nhập liệu (Chủ rừng → Tài khoản → Lô rừng & hồ sơ →
- * GPS → Ảnh). Đọc từ cache Draft_BaoCaoHopDong (đã tính sẵn), không đọc lại các sheet gốc.
+ * Giao diện mới: tiến độ hồ sơ 1 hợp đồng cho thanh 5 bước ở trang Hợp đồng (Chủ rừng → Tài khoản → Lô rừng & hồ sơ →
+ * GPS → Ảnh). Dùng ĐÚNG hàm của điều kiện chuyển "Đang thực hiện" (kiemTraDuHoSoDeThucHien_, 37_KiemTraDuHoSo.gs) —
+ * trước đây đọc cache Draft (cách tính khác) nên thanh tiến độ ✓ đủ 5 bước mà bấm Duyệt vẫn bị báo "Chưa đủ hồ sơ".
+ * Chỉ đọc các dòng của hợp đồng này.
  */
 function TIEN_DO_HO_SO_HD_(idHD) {
   _yeuCauQuyen_(QUYEN.XEM);
   idHD = (idHD || '').toString().trim();
-  const m = docDraftBaoCaoMotHD_(idHD); // tốc độ: chỉ đọc dòng của hợp đồng này
-  if (!m) return { coDuLieu: false };
-  return {
-    coDuLieu: true, soTaiKhoan: Number(m.soTaiKhoan) || 0, soLoRung: Number(m.soLoRung) || 0,
-    hoSoDu: !!m.hoSoDu, daDoGPSDu: !!m.daDoGPSDu, coAnh: !!m.coAnh, thieuHoSoChiTiet: String(m.thieuHoSoChiTiet || '')
-  };
+  const kt = kiemTraDuHoSoDeThucHien_(idHD);
+  if (kt.khongThay) return { coDuLieu: false };
+  return { coDuLieu: true, du: kt.du, buoc: kt.buoc, thieu: kt.thieu, thieuHoSoChiTiet: kt.thieu.join(' · ') };
 }
 
 function LAY_TONG_QUAN_HOP_DONG_(boLoc) {

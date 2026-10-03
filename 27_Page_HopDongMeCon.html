@@ -371,6 +371,13 @@
     if (typeof hakXacNhan_ === 'function') hakXacNhan_(loi, { tieuDe: '⚠️ Chưa đủ hồ sơ — chưa chuyển "Đang thực hiện"', nutDongY: 'Đã hiểu', chiDongY: true });
     else thongBao_('⚠️ ' + loi);
   }
+  /** Xóa GPS / ảnh của HĐ "Đang thực hiện" làm hồ sơ không còn đủ -> vẫn xóa, hiện cảnh báo cần bổ sung; thanh tiến độ tải lại. */
+  function canhBaoSauKhiXoa_(kq) {
+    tienDoHS_ = { id: null, td: null };
+    if (!kq || !kq.canhBaoHoSo) return;
+    if (typeof hakXacNhan_ === 'function') hakXacNhan_(kq.canhBaoHoSo, { tieuDe: '⚠️ Hồ sơ không còn đủ', nutDongY: 'Đã hiểu', chiDongY: true });
+    else thongBao_('⚠️ ' + kq.canhBaoHoSo);
+  }
   function coTheSuaHopDong_(tinhTrang) { return tinhTrang === 'Chờ thực hiện' || tinhTrang === 'Đang thực hiện'; }
   var dsHDCuaKHGoc_ = []; // giữ nguyên toàn bộ danh sách gốc — lọc theo tình trạng chỉ lọc lại TRÊN CLIENT, không gọi lại server
   var locTinhTrangHD_ = 'tat_ca';
@@ -946,18 +953,20 @@
       .layHopDongTheoIdHD(ctxHD.idHD);
   }
 
-  /** Giao diện mới: thanh tiến độ 5 bước — bấm bước để mở đúng thẻ; ✓ khi đủ (theo cache báo cáo, cập nhật sau mỗi lần lưu). */
+  /** Giao diện mới: thanh tiến độ 5 bước — bấm bước để mở đúng thẻ; ✓ khi đủ. Máy chủ tính bằng ĐÚNG điều kiện của nút
+   *  Duyệt "Đang thực hiện" (TIEN_DO_HO_SO_HD -> kiemTraDuHoSoDeThucHien_): đủ 5 bước ✓ = Duyệt được. */
   function veTienDoHoSo_(h) {
     var el = document.getElementById('vungTienDoHS');
     if (!el) return;
     var ve = function (td) {
       td = td || {};
+      var b = td.buoc || {};
       var buoc = [
-        { ten: 'Chủ rừng & hợp đồng', tab: 'thongtin', xong: !!h.cccdChuRung },
-        { ten: 'Tài khoản nhận tiền', tab: 'stk', xong: td.soTaiKhoan > 0 },
-        { ten: 'Lô rừng & hồ sơ pháp lý', tab: 'rung', xong: td.soLoRung > 0 && td.hoSoDu },
-        { ten: 'Tọa độ GPS', tab: 'rung', xong: td.soLoRung > 0 && td.daDoGPSDu },
-        { ten: 'Ảnh hiện trường', tab: 'rung', xong: td.soLoRung > 0 && td.coAnh }
+        { ten: 'Chủ rừng & hợp đồng', tab: 'thongtin', xong: !!b.chuRung },
+        { ten: 'Tài khoản nhận tiền', tab: 'stk', xong: !!b.taiKhoan },
+        { ten: 'Lô rừng & hồ sơ pháp lý', tab: 'rung', xong: !!b.loRung },
+        { ten: 'Tọa độ GPS', tab: 'rung', xong: !!b.gps },
+        { ten: 'Ảnh hiện trường', tab: 'rung', xong: !!b.anh }
       ];
       var dangMo = { thongtin: 0, chitiet: 0, stk: 1, rung: 2 }[ctxHD.tab];
       el.innerHTML = '<ol>' + buoc.map(function (b, i) {
@@ -1373,7 +1382,7 @@
           if (!(await hakXacNhan_('Xóa điểm ' + (Number(a.dataset.i) + 1) + ' (' + p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + ') của lô này? Điểm bị xóa được lưu trữ, khôi phục được ở Thiết lập.', { nguyHiem: true, nutDongY: 'Xóa' }))) return;
           a.textContent = '⌛';
           hakRun_().withSuccessHandler(function (kq) {
-            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else thongBao_('✅ Đã xóa điểm GPS.');
+            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else { thongBao_('✅ Đã xóa điểm GPS.'); canhBaoSauKhiXoa_(kq); }
             taiBangGPS_(idRung);
           }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); taiBangGPS_(idRung); }).XOA_DIEM_GPS(idRung, p.soDong, p.dau);
         });
@@ -1438,7 +1447,7 @@
           lnk.textContent = '⌛';
           var tt = a.nguon === 'cu' ? { idRung: idRung, soDongPic: a.soDongPic, cot: a.cot, giaTriGoc: a.giaTriGoc } : { idRung: idRung, idDraft: a.idDraft };
           hakRun_().withSuccessHandler(function (kq) {
-            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else thongBao_('✅ Đã xóa ảnh.');
+            if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); else { thongBao_('✅ Đã xóa ảnh.'); canhBaoSauKhiXoa_(kq); }
             taiBangAnhRung_(idHD, idRung);
           }).withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); taiBangAnhRung_(idHD, idRung); }).XOA_ANH_RUNG(tt);
         });

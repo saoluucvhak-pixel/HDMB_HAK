@@ -130,7 +130,7 @@ async function mo(b, file, trang, du, kichThuoc) {
     /loi/.test(r.sau.lop) && /Chưa lưu được lô rừng: Năm trồng/.test(r.sau.chu) && r.sau.mo && /Năm trồng/.test(r.sau.msg) ? true : JSON.stringify(r)]);
   // 3) Nhập liệu: thanh 5 bước + so khớp OCR
   p = await mo(b, '27_Page_HopDongMeCon', 'hopdongmc', { layHopDongTheoIdHD: { idHD: 'X1', soDong: 5, soHD: 'S1', tenChuRung: 'Chủ A', cccdChuRung: '049000000001', tinhTrang: 'Chờ thực hiện' },
-    TIEN_DO_HO_SO_HD: { coDuLieu: true, soTaiKhoan: 1, soLoRung: 2, hoSoDu: true, daDoGPSDu: false, coAnh: false, thieuHoSoChiTiet: 'Lô 2 thiếu GPS' } });
+    TIEN_DO_HO_SO_HD: { coDuLieu: true, du: false, buoc: { chuRung: true, taiKhoan: true, loRung: true, gps: false, anh: false }, thieuHoSoChiTiet: 'Lô 2 thiếu GPS' } });
   await p.evaluate(() => moChiTietHopDong('X1')); await p.waitForTimeout(400);
   r = await p.evaluate(() => ({ buoc: document.querySelectorAll('#vungTienDoHS li').length, xong: document.querySelectorAll('#vungTienDoHS li.xong').length, thieu: (document.querySelector('#vungTienDoHS .thieu') || {}).textContent }));
   kq.push(['Nhập liệu: thanh 5 bước, 3 bước xong, hiện "Còn thiếu"', r.buoc === 5 && r.xong === 3 && /Lô 2 thiếu GPS/.test(r.thieu || '') ? true : JSON.stringify(r)]);
