@@ -422,8 +422,21 @@ function ketThucGomDraft_(laNguoiGom) {
   if (!laNguoiGom || !_draftDangGom_) return;
   const g = _draftDangGom_;
   _draftDangGom_ = null;
-  if (g.hd.size) capNhatDraftHangLoat_(Array.from(g.hd));
-  if (g.rung.size) capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)); // P-10: 1 lần cho mọi lô
+  chayVoiBoNhoDoc_(function () { // 2 bước dùng chung dòng đã đọc (00_Config.gs) — chỉ ghi sheet Draft
+    if (g.hd.size) capNhatDraftHangLoat_(Array.from(g.hd));
+    if (g.rung.size) capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)); // P-10: 1 lần cho mọi lô
+  });
+}
+
+/**
+ * Cập nhật báo cáo sau khi sửa 1 hợp đồng / 1 lô: Draft_BaoCaoHopDong (idHD) + Draft_HoSoRung (idRung) dùng chung dòng đã
+ * đọc. Gọi SAU mọi lệnh ghi vào sheet gốc của thao tác (vd sau dongBoTongHopRungVaoHdNcc_).
+ */
+function capNhatBaoCaoSauKhiSua_(idHD, idRung) {
+  chayVoiBoNhoDoc_(function () {
+    if (idHD) CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
+    if (idRung) CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  });
 }
 
 /** Trả true nếu cập nhật xong (hoặc đã đưa vào hàng gom), false nếu lỗi — lỗi chỉ ghi log, không ném ra. */

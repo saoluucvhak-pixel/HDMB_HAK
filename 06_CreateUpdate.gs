@@ -735,9 +735,8 @@ function THEM_LO_RUNG_MOI_(d) {
     // Đồng bộ DM_DIACHI theo địa chỉ của lô rừng mới thêm
     if (d.diaChiRung) dongBoDiaChiTuRung_(d.idHD, { diaChiRung: d.diaChiRung });
 
-    CAP_NHAT_DRAFT_MOT_HOP_DONG_(d.idHD);
     dongBoTongHopRungVaoHdNcc_(d.idHD); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
-    CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+    capNhatBaoCaoSauKhiSua_(d.idHD, idRung); // Draft báo cáo + "Hồ sơ rừng" (16_DraftHoSoRung.gs), dùng chung dòng đã đọc
     xoaCacheBanDo_(); // lô rừng mới -> thêm dòng khung vào HD_GPS -> cache Bản đồ GPS cũ cần xóa (CACHE-001)
     return { thanhCong: true, idRung: idRung, maRung: maRung, stt: stt };
   } finally {
@@ -831,9 +830,8 @@ function CAP_NHAT_LO_RUNG_(idRung, patch) {
   if (patch.diaChiRung) {
     dongBoDiaChiTuRung_(idHDCuaRung, { diaChiRung: patch.diaChiRung });
   }
-  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHDCuaRung);
   dongBoTongHopRungVaoHdNcc_(idHDCuaRung); // tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA (14_CtHopDong_PhuLuc.gs)
-  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật cache báo cáo "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+  capNhatBaoCaoSauKhiSua_(idHDCuaRung, idRung); // Draft báo cáo + "Hồ sơ rừng" (16_DraftHoSoRung.gs), dùng chung dòng đã đọc
   xoaCacheBanDo_(); // thông tin lô rừng đổi (địa chỉ/diện tích...) có thể hiện trên popup bản đồ (CACHE-001)
 
   return { thanhCong: true, dong: soDong };
@@ -924,8 +922,8 @@ function CAP_NHAT_GPS_RUNG_(idRung, diemGPS, ghiDe) {
   } finally {
     if (lock) lock.releaseLock();
   }
-  if (rungChoDraft_) CAP_NHAT_DRAFT_MOT_HOP_DONG_(rungChoDraft_[RUNG_COL.ID_KEY_HD]);
-  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung); // cập nhật lại tọa độ trung bình trong cache "Hồ sơ rừng" (xem 16_DraftHoSoRung.gs)
+  // Draft báo cáo + tọa độ trung bình trong cache "Hồ sơ rừng" (16_DraftHoSoRung.gs), dùng chung dòng đã đọc
+  capNhatBaoCaoSauKhiSua_(rungChoDraft_ ? rungChoDraft_[RUNG_COL.ID_KEY_HD] : '', idRung);
   xoaCacheBanDo_(); // xóa cache Bản đồ GPS để thấy điểm mới ngay, không phải chờ hết 15 phút cache
   // Điểm cách "Địa chỉ rừng" trên 5 km -> vẫn lưu, kèm cảnh báo (37_KiemTraDuHoSo.gs)
   let canhBaoKhoangCach = '';
@@ -1661,6 +1659,7 @@ function ghiAnhVaoHDPicture_(idHD, tenChuRung, tenFile) {
     row[PICTURE_COL.TEN_CHU_RUNG] = tenChuRung || '';
     row[PICTURE_COL.PICTURE_START] = tenFile;
     sh.appendRow(row);
+    xoaCacheAnhGps_(); // có ảnh mới -> cờ "Có ảnh" của Tổng quan / Báo cáo đổi ngay
     return true;
   } finally {
     lock.releaseLock();
@@ -1967,8 +1966,7 @@ function DUYET_ANH_RUNG_(soDong, idDraft) {
   datTrangThai('Đã duyệt');
   ghiNhatKy_('Duyệt ảnh', idHD, 'Lô rừng ' + idRung + ' — file: ' + row[DRAFT_ANH_COL.TEN_FILE]);
   // Luôn cập nhật Draft (ảnh KHÔNG có GPS cũng phải bật cờ "Có ảnh" trong báo cáo)
-  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
-  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  capNhatBaoCaoSauKhiSua_(idHD, idRung);
   return { thanhCong: true, canhBaoKhoangCach: (kqGpsAnh_ && kqGpsAnh_.canhBaoKhoangCach) || '' };
 }
 
@@ -2701,8 +2699,7 @@ function XOA_DIEM_GPS_(idRung, soDong, dau) {
     sh.deleteRow(soDong);
   } finally { lock.releaseLock(); }
   ghiNhatKy_('Xóa điểm GPS', idHD, idRung + ': ' + r[GPS_COL.LAT] + ', ' + r[GPS_COL.LNG] + ' — lưu trữ đợt ' + maDot + ' (khôi phục được ở Thiết lập)');
-  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
-  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  capNhatBaoCaoSauKhiSua_(idHD, idRung);
   xoaCacheBanDo_();
   // HĐ "Đang thực hiện" mất điểm GPS cuối của lô -> vẫn xóa, kèm cảnh báo bổ sung (37_KiemTraDuHoSo.gs)
   return Object.assign({ thanhCong: true, maDot: maDot }, canhBaoHoSoSauKhiSua_(idHD));
@@ -2760,8 +2757,7 @@ function XOA_ANH_RUNG_(anh) {
     }
   } finally { lock.releaseLock(); }
   ghiNhatKy_('Xóa ảnh lô rừng', idHD, idRung + ' — ' + tenFile + ' (file trên Drive vẫn giữ; link cũ trong NhatKy_ChiTiet)');
-  CAP_NHAT_DRAFT_MOT_HOP_DONG_(idHD);
-  CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung);
+  capNhatBaoCaoSauKhiSua_(idHD, idRung);
   // HĐ "Đang thực hiện" mất ảnh cuối -> vẫn xóa, kèm cảnh báo bổ sung (37_KiemTraDuHoSo.gs)
   return Object.assign({ thanhCong: true }, canhBaoHoSoSauKhiSua_(idHD));
 }

@@ -700,6 +700,52 @@ function kiemTraFileTaiLen_(base64Data, mimeType) {
  */
 function xoaCacheBanDo_() {
   try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
+  xoaCacheAnhGps_(); // GPS đổi -> cờ "đủ GPS" / tọa độ trung bình của báo cáo cũng đổi
+}
+
+/**
+ * CACHE LỚN CHIA MẢNH (CacheService giới hạn 100 KB / khóa): chuỗi JSON cắt thành từng khúc 25.000 ký tự (< 100 KB kể cả
+ * chữ có dấu), khóa chính giữ { ma, n }. Xóa khóa chính = vô hiệu cả bộ (khúc cũ tự hết hạn). Lỗi / thiếu khúc -> null.
+ */
+function docCacheChiaManh_(khoa) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const meta = cache.get(khoa);
+    if (!meta) return null;
+    const m = JSON.parse(meta), cacKhoa = [];
+    for (let i = 0; i < m.n; i++) cacKhoa.push(khoa + '_' + m.ma + '_' + i);
+    const tat = cache.getAll(cacKhoa);
+    if (!cacKhoa.every(function (k) { return typeof tat[k] === 'string'; })) return null;
+    return JSON.parse(cacKhoa.map(function (k) { return tat[k]; }).join(''));
+  } catch (e) { return null; }
+}
+function luuCacheChiaManh_(khoa, giaTri, giay) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const s = JSON.stringify(giaTri), ma = Utilities.getUuid().slice(0, 8), KHUC = 25000, o = {};
+    let n = 0;
+    for (let i = 0; i < s.length; i += KHUC) o[khoa + '_' + ma + '_' + (n++)] = s.slice(i, i + KHUC);
+    cache.putAll(o, giay);
+    cache.put(khoa, JSON.stringify({ ma: ma, n: n }), giay);
+  } catch (e) { /* quá lớn / lỗi cache -> lần sau tính lại, kết quả vẫn đúng */ }
+}
+
+/**
+ * Tốc độ (Tổng quan, Báo cáo): ảnh / GPS đọc thẳng (layCoAnhVaGpsTrucTiep_) — đọc CẢ HD_RUNG + HD_GPS + HD_Picture
+ * (1.000 HĐ ~ 90.000 ô) mỗi lần mở / lọc. Nay nhớ 5 phút; mọi thay đổi qua webapp (cập nhật Draft, GPS) xóa ngay
+ * (xoaCacheTraCuu_ / xoaCacheBanDo_). Dữ liệu nhập THẲNG vào sheet (không qua webapp, không bật bẫy nhật ký) hiện chậm tối đa 5 phút.
+ */
+const KHOA_ANH_GPS_TT_ = 'ANH_GPS_TRUC_TIEP_V1';
+const GIAY_CACHE_ANH_GPS_ = 300;
+function layCoAnhVaGpsTrucTiepCoCache_() {
+  const daNho = docCacheChiaManh_(KHOA_ANH_GPS_TT_);
+  if (daNho) return daNho;
+  const kq = layCoAnhVaGpsTrucTiep_();
+  luuCacheChiaManh_(KHOA_ANH_GPS_TT_, kq, GIAY_CACHE_ANH_GPS_);
+  return kq;
+}
+function xoaCacheAnhGps_() {
+  try { CacheService.getScriptCache().remove(KHOA_ANH_GPS_TT_); } catch (e) { /* không có cache -> bỏ qua */ }
 }
 
 /**
@@ -1057,7 +1103,8 @@ function docToanBoDraftBaoCao_() {
 
 function _ghiDeAnhGpsTrucTiep_(ds, chiCacHD) {
   try {
-    const truc = layCoAnhVaGpsTrucTiep_(chiCacHD);
+    // Cả bảng -> dùng bản nhớ 5 phút; 1 vài HĐ (chiCacHD) -> đọc thẳng đúng dòng (đã rẻ)
+    const truc = Array.isArray(chiCacHD) ? layCoAnhVaGpsTrucTiep_(chiCacHD) : layCoAnhVaGpsTrucTiepCoCache_();
     ds.forEach(function (m) {
       const tt = truc.theoIdHD[(m.idHD || '').toString().trim()];
       if (tt) { m.coAnh = tt.coAnh; m.daDoGPSDu = tt.daDoGPSDu; m.toaDoTrungBinh = tt.toaDoTrungBinh; }
@@ -1139,11 +1186,28 @@ function laLoRong_(r) {
 function docDongTheoKhoa_(sheetName, colIndex0, cacKhoa) {
   return docDongTheoKhoaKemSo_(sheetName, colIndex0, cacKhoa).map(function (x) { return x.r; });
 }
+/**
+ * BỘ NHỚ ĐỌC TẠM cho bước cập nhật báo cáo (Draft_BaoCaoHopDong + Draft_HoSoRung) sau mỗi lần lưu: 2 bước đó đọc lại
+ * cùng các dòng HD_NCC / HD_RUNG / HD_STK / HD_GPS / HD_Picture (đo 1.000 HĐ: thêm lô ~31 lượt đọc, ~8 lượt là đọc lặp).
+ * Trong chayVoiBoNhoDoc_(fn), docDongTheoKhoa_ trên 5 sheet gốc đọc cột khóa + mỗi dòng ĐÚNG 1 lần rồi dùng lại.
+ * CHỈ dùng cho đoạn KHÔNG ghi vào 5 sheet gốc (cập nhật báo cáo chỉ ghi sheet Draft) — ghi sheet gốc bên trong sẽ đọc dữ liệu cũ.
+ */
+let _boNhoDocTam_ = null;
+function chayVoiBoNhoDoc_(fn) {
+  if (_boNhoDocTam_) return fn(); // đã có ở ngoài -> dùng chung
+  _boNhoDocTam_ = {};
+  try { return fn(); } finally { _boNhoDocTam_ = null; }
+}
+function _sheetGocDocTam_(ten) {
+  return [SHEET_NAME.HD_NCC, SHEET_NAME.HD_RUNG, SHEET_NAME.HD_STK, SHEET_NAME.HD_GPS, SHEET_NAME.HD_PICTURE].indexOf(ten) !== -1;
+}
+
 /** Như docDongTheoKhoa_ nhưng trả [{ r: dòng, soDong: số dòng thật trên sheet }]. sheetName: tên sheet chính HOẶC đối tượng Sheet. */
 function docDongTheoKhoaKemSo_(sheetName, colIndex0, cacKhoa) {
   const can = {};
   (cacKhoa || []).forEach(function (k) { k = (k === null || k === undefined ? '' : k).toString().trim(); if (k) can[k] = true; });
   if (!Object.keys(can).length) return [];
+  if (_boNhoDocTam_ && typeof sheetName === 'string' && _sheetGocDocTam_(sheetName)) return _docDongTheoKhoaTuBoNho_(sheetName, colIndex0, can);
   const sh = typeof sheetName === 'string' ? getSheet_(sheetName) : sheetName;
   if (!sh) return [];
   const last = sh.getLastRow();
@@ -1159,6 +1223,32 @@ function docDongTheoKhoaKemSo_(sheetName, colIndex0, cacKhoa) {
   const kq = [];
   khoi.forEach(function (k) { sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, soCot).getValues().forEach(function (r, j) { kq.push({ r: r, soDong: k[0] + j + 2 }); }); });
   return kq;
+}
+
+/** docDongTheoKhoaKemSo_ khi đang bật bộ nhớ đọc tạm: cột khóa đọc 1 lần / cột, dòng đọc 1 lần / dòng; trả bản sao từng dòng. */
+function _docDongTheoKhoaTuBoNho_(ten, colIndex0, can) {
+  let bo = _boNhoDocTam_[ten];
+  if (!bo) {
+    const sh = getSheet_(ten);
+    bo = _boNhoDocTam_[ten] = { sh: sh, last: sh ? sh.getLastRow() : 0, soCot: 0, cot: {}, dong: {} };
+    if (sh && bo.last >= 2) bo.soCot = sh.getLastColumn();
+  }
+  if (!bo.sh || bo.last < 2) return [];
+  if (!bo.cot[colIndex0]) {
+    bo.cot[colIndex0] = bo.sh.getRange(2, colIndex0 + 1, bo.last - 1, 1).getValues().map(function (r) {
+      return (r[0] === null || r[0] === undefined ? '' : r[0]).toString().trim();
+    });
+  }
+  const dong = [];
+  bo.cot[colIndex0].forEach(function (k, i) { if (can[k]) dong.push(i); });
+  const thieu = dong.filter(function (i) { return !bo.dong.hasOwnProperty(i); });
+  if (thieu.length) {
+    const khoi = [];
+    thieu.forEach(function (i) { const k = khoi[khoi.length - 1]; if (k && i === k[1] + 1) k[1] = i; else khoi.push([i, i]); });
+    if (khoi.length > 25) bo.sh.getRange(2, 1, bo.last - 1, bo.soCot).getValues().forEach(function (r, i) { bo.dong[i] = r; });
+    else khoi.forEach(function (k) { bo.sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, bo.soCot).getValues().forEach(function (r, j) { bo.dong[k[0] + j] = r; }); });
+  }
+  return dong.map(function (i) { return { r: bo.dong[i].slice(), soDong: i + 2 }; });
 }
 
 function readData_(sheetName) {

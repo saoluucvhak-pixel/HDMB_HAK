@@ -180,7 +180,7 @@ function layBaoCaoHoSoRung_() {
   // được nhập thẳng vào sheet bằng tay, hoặc 1 hàm ghi nào đó quên gọi cập
   // nhật cache này).
   let theoIdRung = {};
-  try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* lỗi thì dùng tạm dữ liệu cache cũ bên dưới */ }
+  try { theoIdRung = layCoAnhVaGpsTrucTiepCoCache_().theoIdRung; } catch (e) { /* lỗi thì dùng tạm dữ liệu cache cũ bên dưới */ }
 
   return data.map(function (r) {
     const idRung = (r[c.ID_RUNG] || '').toString().trim();

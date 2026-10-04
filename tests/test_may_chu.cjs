@@ -1019,6 +1019,48 @@ try {
       moiCach.kq.soXong === 8 && cuCach.kq.soXong === 8 && giong === true && cuCach.doc - moiCach.doc >= 40, J({ cu: cuCach.doc, moi: moiCach.doc, giong }));
     kiem('HS-NHANH dữ liệu nạp sẵn được dọn sau lượt duyệt', t.run('_duLieuDuHoSoNapSan_') === null);
   });
+
+  chay(function () {
+    // HS-DOC: bộ nhớ đọc tạm của bước cập nhật báo cáo — cùng kết quả, đọc ít hơn, không rò thay đổi giữa các lần dùng
+    const t = moi();
+    const ids = [];
+    for (let i = 0; i < 4; i++) { const x = t.tao('BN ' + i, '0490000002' + (10 + i), '8' + i, 'B' + i); t.duHoSo(x.idHD); ids.push(x.idHD); }
+    const docThuong = J(t.run('docDongTheoKhoaKemSo_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ' + J([ids[0], ids[2]]) + ')'));
+    t.m.demDoc.n = 0;
+    const trongBoNho = t.run('chayVoiBoNhoDoc_(function () { var a = docDongTheoKhoaKemSo_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ' + J([ids[0], ids[2]]) + ');' +
+      ' a[0].r[0] = "DA_SUA"; var b = docDongTheoKhoaKemSo_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ' + J([ids[2], ids[0]]) + ');' +
+      ' var c = docDongTheoKhoaKemSo_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ' + J([ids[1]]) + '); return { b: JSON.stringify(b), c: c.length, conBat: !!_boNhoDocTam_ }; })');
+    const soDoc = t.m.demDoc.n;
+    kiem('HS-DOC bộ nhớ đọc tạm: cùng kết quả & thứ tự dòng như đọc thường, sửa bản trả về không ảnh hưởng lần sau',
+      trongBoNho.b === docThuong && trongBoNho.c > 0 && trongBoNho.conBat === true, J({ trongBoNho, docThuong }));
+    kiem('HS-DOC 3 lần đọc trong bộ nhớ = 1 cột khóa + dòng còn thiếu (≤ 6 lượt), tắt sau khi xong', soDoc <= 6 && t.run('_boNhoDocTam_') === null, String(soDoc));
+    // Thêm lô qua webapp: Draft báo cáo + Draft hồ sơ rừng vẫn đúng như dựng lại từ đầu
+    const lo = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: ids[3], diaChiRung: 'Lo moi', dienTichM2: 2000, donGia: 1500, khoiLuongDuKien: 24 }) + ')');
+    const draft = J(t.run('(function(){ _draftDataCache = null; return docToanBoDraftBaoCao_().filter(function (m) { return m.idHD === ' + J(ids[3]) + '; }).map(function (m) { return [m.soLoRung, m.khoiLuongDuKien, m.giaTriHopDong]; }); })()'));
+    const hsr = t.run('layBaoCaoHoSoRung_().filter(function (x) { return x.idRung === ' + J(lo.idRung) + '; }).length');
+    t.run('_draftDataCache = null; XAY_DUNG_LAI_TOAN_BO_DRAFT()');
+    const dungLai = J(t.run('(function(){ _draftDataCache = null; return docToanBoDraftBaoCao_().filter(function (m) { return m.idHD === ' + J(ids[3]) + '; }).map(function (m) { return [m.soLoRung, m.khoiLuongDuKien, m.giaTriHopDong]; }); })()'));
+    kiem('HS-DOC thêm lô: Draft báo cáo = dựng lại từ đầu, Draft hồ sơ rừng có lô mới', draft === dungLai && hsr === 1, J({ draft, dungLai, hsr }));
+  });
+
+  chay(function () {
+    // HS-TQ: Tổng quan nhớ ảnh / GPS 5 phút — lần 2 không đọc lại HD_RUNG / HD_GPS / HD_Picture; thêm GPS / ảnh -> thấy ngay
+    const t = moi();
+    const A = t.tao('TQ A', '049000000301', '1111', 'T1');
+    const tq = () => { t.run('_draftDataCache = null'); t.m.demDoc.n = 0; t.m.demDoc.theo = {}; const r = t.run('LAY_TONG_QUAN_HOP_DONG_({})'); return { r, theo: Object.keys(t.m.demDoc.theo || {}) }; };
+    tq();
+    const lan2 = tq();
+    kiem('HS-TQ mở Tổng quan lần 2 không đọc lại HD_RUNG / HD_GPS / HD_Picture', !lan2.theo.some(k => /^HD_(RUNG|GPS|Picture)/.test(k)), J(lan2.theo));
+    const lo = t.run('layDanhSachRung_(' + J(A.idHD) + ')')[0];
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.5, lng: 108.2}, false)');
+    t.run('ghiAnhVaoHDPicture_(' + J(A.idHD) + ', "TQ A", "https://drive.google.com/file/d/ANHTQ/view")');
+    tq();
+    const m3 = t.run('(function(){ _draftDataCache = null; return docToanBoDraftBaoCao_().filter(function (m) { return m.idHD === ' + J(A.idHD) + '; })[0]; })()');
+    kiem('HS-TQ thêm GPS + ảnh qua webapp -> báo cáo / Tổng quan thấy ngay (đủ GPS, có ảnh)', m3.daDoGPSDu === true && m3.coAnh === true, J(m3));
+    // cache chia mảnh: chuỗi > 25.000 ký tự đọc lại nguyên vẹn
+    const lon = t.run('(function () { var o = { s: new Array(60001).join("ạ") }; luuCacheChiaManh_("THU_LON", o, 60); var d = docCacheChiaManh_("THU_LON"); return !!d && d.s.length === 60000 && JSON.parse(CacheService.getScriptCache().get("THU_LON")).n === 3; })()');
+    kiem('HS-TQ cache chia mảnh: 60.000 ký tự -> 3 khúc, đọc lại đúng', lon === true);
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

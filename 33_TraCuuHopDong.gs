@@ -65,6 +65,7 @@ const TRUONG_SO_TC_ = [['CCCD chủ rừng', 'CCCD_CHU_RUNG'], ['CCCD ủy quy�
 
 function xoaCacheTraCuu_() {
   try { CacheService.getScriptCache().remove(KHOA_CHI_MUC_TC_); } catch (e) { /* không có cache -> bỏ qua */ }
+  xoaCacheAnhGps_(); // dữ liệu HĐ đổi -> bản nhớ ảnh / GPS của Tổng quan cũng bỏ (00_Config.gs)
 }
 
 function _dungChiMucTraCuu_() {
@@ -91,29 +92,10 @@ function _dungChiMucTraCuu_() {
 }
 
 function _layChiMucTraCuu_() {
-  let cache = null;
-  try { cache = CacheService.getScriptCache(); } catch (e) { /* không có cache */ }
-  if (cache) {
-    try {
-      const meta = cache.get(KHOA_CHI_MUC_TC_);
-      if (meta) {
-        const m = JSON.parse(meta), khoa = [];
-        for (let i = 0; i < m.n; i++) khoa.push(KHOA_CHI_MUC_TC_ + '_' + m.ma + '_' + i);
-        const tat = cache.getAll(khoa);
-        if (khoa.every(function (k) { return typeof tat[k] === 'string'; })) return JSON.parse(khoa.map(function (k) { return tat[k]; }).join(''));
-      }
-    } catch (e) { /* hỏng -> dựng lại */ }
-  }
+  const daNho = docCacheChiaManh_(KHOA_CHI_MUC_TC_); // cache chia mảnh dùng chung (00_Config.gs)
+  if (daNho) return daNho;
   const ds = _dungChiMucTraCuu_();
-  if (cache) {
-    try {
-      const s = JSON.stringify(ds), ma = Utilities.getUuid().slice(0, 8), KHUC = 25000, o = {}; // 25k ký tự ≈ < 100KB kể cả chữ có dấu
-      let n = 0;
-      for (let i = 0; i < s.length; i += KHUC) o[KHOA_CHI_MUC_TC_ + '_' + ma + '_' + (n++)] = s.slice(i, i + KHUC);
-      cache.putAll(o, 900);
-      cache.put(KHOA_CHI_MUC_TC_, JSON.stringify({ ma: ma, n: n }), 900);
-    } catch (e) { /* quá lớn / lỗi cache -> lần sau dựng lại, kết quả vẫn đúng */ }
-  }
+  luuCacheChiaManh_(KHOA_CHI_MUC_TC_, ds, 900);
   return ds;
 }
 

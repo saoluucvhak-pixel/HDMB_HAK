@@ -2,6 +2,13 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 04/10/2026 — Tối ưu hiệu suất: bước cập nhật báo cáo + Tổng quan
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt 05) | ⚡✅ | **Bước cập nhật báo cáo sau mỗi lần lưu dùng lại dòng đã đọc** (`chayVoiBoNhoDoc_`, `capNhatBaoCaoSauKhiSua_`): Draft báo cáo + Draft hồ sơ rừng trước đây đọc lại cùng dòng HD_NCC / HD_RUNG / HD_GPS. Đo 1.000 HĐ: tạo HĐ 32 -> 27, thêm lô 31 -> 26, sửa lô 29 -> 23, thêm GPS 22 -> 16 lượt đọc. Thêm/sửa lô: tổng hợp lô (HD_NCC Z/T/AA) ghi trước, báo cáo cập nhật sau (báo cáo không dùng Z/T/AA). Test HS-DOC | 00_Config, 01_ContractManager, 06_CreateUpdate |
+| (đợt 05) | ⚡✅ | **Tổng quan / Báo cáo nhớ cờ ảnh – GPS 5 phút** (`layCoAnhVaGpsTrucTiepCoCache_`): trước đây mỗi lần mở / lọc đọc cả HD_RUNG + HD_GPS + HD_Picture. Mở lại / đổi bộ lọc: 3 lượt / 121.000 ô -> 1 lượt / 31.000 ô (1.000 HĐ). Thay đổi qua webapp xóa bản nhớ ngay; sửa tay thẳng trên sheet hiện chậm tối đa 5 phút. Xuất MISA vẫn đọc thẳng. Cache chia mảnh tách thành hàm chung `docCacheChiaManh_` / `luuCacheChiaManh_` (Tra cứu dùng lại). Test HS-TQ | 00_Config, 06_CreateUpdate, 16_DraftHoSoRung, 33_TraCuuHopDong, 13_HuongDan, tests/do_hieu_suat |
+
 ## 03/10/2026 — Thanh tiến độ = điều kiện Duyệt, cảnh báo khi xóa GPS/ảnh, duyệt hàng loạt nhanh hơn
 
 | Commit | Loại | Thay đổi | File |

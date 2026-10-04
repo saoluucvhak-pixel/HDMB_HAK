@@ -265,6 +265,7 @@
 
 <h2>4. Cơ chế "Làm mới" & luồng dữ liệu báo cáo</h2>
 <p><b>Vấn đề giải quyết:</b> nếu mỗi lần mở báo cáo đều tính lại từ đầu → rất chậm, dễ timeout. Giải pháp: tính sẵn, lưu lại, chỉ cập nhật phần thay đổi.</p>
+<p>⚡ Cờ <b>"Có ảnh" / "Đủ GPS"</b> và tọa độ trung bình ở Tổng quan / Báo cáo được hệ thống nhớ 5 phút để mở và lọc nhanh. Thêm/xóa GPS, ảnh qua webapp thì cập nhật <b>ngay</b>; sửa tay thẳng trên sheet HD_GPS / HD_Picture (khi chưa bật bẫy tự động) thì hiện chậm tối đa 5 phút.</p>
 <pre>DỮ LIỆU GỐC (HD_NCC, HD_RUNG, HD_STK, HD_GPS, HD_Picture)
         │  Tạo/Sửa/Xóa (webapp hoặc sửa tay trên Sheet)
         ▼
