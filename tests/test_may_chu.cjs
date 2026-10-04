@@ -1110,6 +1110,38 @@ try {
     kiem('LCT-05 lỗi giữa chừng: lô đã ghi vẫn được tổng hợp (AA = bình quân 4000/3200), không kẹt gom',
       /GPS hỏng/.test(loi) && Number(ncc()[26]) === 3600 && t.run('_tongHopRungDangGom_') === null, J({ loi, aa: ncc()[26] }));
   });
+
+  chay(function () {
+    // GHI-GOM: định dạng nhiều ô 1 lệnh (RangeList) — vẫn giữ số 0 đầu, năm trồng là số, Z/T/AA đúng định dạng + giá trị
+    const t = moi();
+    kiem('GHI-GOM tenCotA1_: 1->A, 26->Z, 27->AA, 30->AD, 52->AZ, 53->BA, 703->AAA',
+      J([1, 26, 27, 30, 52, 53, 703].map(n => t.run('tenCotA1_(' + n + ')'))) === J(['A', 'Z', 'AA', 'AD', 'AZ', 'BA', 'AAA']));
+    t.m.demGhiRangeList.n = 0;
+    const A = t.run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Gom A', cccdChuRung: '049000000501', sdtChuRung: '0905123456', maSoThue: '0401234567', ngayKy: '2026-05-10', soTK: '0011223344', nganHang: 'VCB', diaChiRung: 'Thôn A', dienTichKy: 10000, slDuKien: 120, donGia: 1000 }) + ')');
+    const shN = t.ss.getSheetByName('HD_NCC'), dongN = shN.getDataRange().getValues().findIndex(r => r[29] === A.idHD) + 1;
+    const cot = (k) => t.run('NCC_COL.' + k);
+    const rowN = shN.getDataRange().getValues()[dongN - 1];
+    kiem('GHI-GOM tạo HĐ: CCCD / SĐT / MST / Số TK giữ số 0 đầu, ô định dạng chữ, đặt bằng RangeList',
+      rowN[cot('CCCD_CHU_RUNG')] === '049000000501' && rowN[cot('SDT_CHU_RUNG')] === '0905123456' && rowN[cot('MA_SO_THUE')] === '0401234567' &&
+      ['CCCD_CHU_RUNG', 'SDT_CHU_RUNG', 'SO_TK', 'MA_SO_THUE'].every(k => shN.fmt[dongN + ',' + (cot(k) + 1)] === '@') && t.m.demGhiRangeList.n >= 3,
+      J({ rowN: [rowN[cot('CCCD_CHU_RUNG')], rowN[cot('SDT_CHU_RUNG')], rowN[cot('MA_SO_THUE')]], rl: t.m.demGhiRangeList.n }));
+    const lo = t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo 2', dienTichM2: 2000, donGia: 1500, khoiLuongDuKien: 20, namTrong: 2019 }) + ')');
+    const shR = t.ss.getSheetByName('HD_RUNG'), dongR = shR.getDataRange().getValues().findIndex(r => r[t.run('RUNG_COL.ID_RUNG')] === lo.idRung) + 1;
+    const rc = (k) => t.run('RUNG_COL.' + k) + 1;
+    kiem('GHI-GOM thêm lô: CCCD / Số HĐ / ID là chữ, năm trồng định dạng số "0"',
+      shR.fmt[dongR + ',' + rc('CCCD')] === '@' && shR.fmt[dongR + ',' + rc('ID_RUNG')] === '@' && shR.fmt[dongR + ',' + rc('NAM_TRONG')] === '0' &&
+      String(shR.getRange(dongR, rc('CCCD')).getValue()) === '049000000501', J([shR.fmt[dongR + ',' + rc('CCCD')], shR.fmt[dongR + ',' + rc('NAM_TRONG')]]));
+    // Z / T / AA: định dạng số chuẩn + đúng giá trị (Z + AA liền nhau ghi 1 lệnh)
+    const zr = shN.getDataRange().getValues()[dongN - 1];
+    kiem('GHI-GOM tổng hợp lô: Z = tổng KL, T = tổng diện tích, AA = đơn giá bình quân, định dạng số chuẩn',
+      Number(zr[cot('SL_DU_KIEN')]) > 0 && Number(zr[cot('DIEN_TICH_KY')]) > 0 && Number(zr[cot('DON_GIA')]) > 0 &&
+      ['SL_DU_KIEN', 'DIEN_TICH_KY', 'DON_GIA'].every(k => shN.fmt[dongN + ',' + (cot(k) + 1)] === t.run('MAU_SO_CHUAN_')),
+      J([zr[cot('SL_DU_KIEN')], zr[cot('DIEN_TICH_KY')], zr[cot('DON_GIA')]]));
+    // Không có RangeList (môi trường khác) -> từng ô như cũ, kết quả giống hệt
+    t.run('(function () { var sh = getSheet_(SHEET_NAME.HD_STK); sh.getRangeList = undefined; })()');
+    t.run('THEM_TAI_KHOAN_MOI_(' + J({ idHD: A.idHD, soTK: '0099887766', nganHang: 'ACB' }) + ')');
+    kiem('GHI-GOM không có RangeList: vẫn định dạng từng ô, Số TK giữ số 0 đầu', t.stk().some(r => String(r[t.run('STK_COL.SO_TK')]) === '0099887766'));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

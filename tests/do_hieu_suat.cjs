@@ -34,10 +34,10 @@ const tk = () => run('layDanhSachTaiKhoan_(' + J(X.idHD) + ')')[0];
 
 const kq = [];
 const doMot = (nhom, ten, code) => {
-  m.demDoc.n = 0; m.demDoc.o = 0; demGhi.n = 0; const t = Date.now();
+  m.demDoc.n = 0; m.demDoc.o = 0; demGhi.n = 0; m.demGhiRangeList.n = 0; const t = Date.now();
   let loi = '';
   try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; } catch (e) { loi = e.message; }
-  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
+  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
   m.demDoc.theo = {}; docLon = {};
 };
 // ---- TRA CỨU ----

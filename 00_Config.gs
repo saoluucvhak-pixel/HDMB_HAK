@@ -1169,6 +1169,27 @@ function soTuO_(v) {
 }
 
 /**
+ * Đặt CÙNG 1 định dạng số cho nhiều ô (cột rời nhau) trên 1 dòng bằng 1 lệnh (RangeList) — trước đây mỗi ô 1 lệnh
+ * ghi (tạo HĐ ~14 lệnh chỉ để đặt định dạng chữ). cacCot0: chỉ số cột tính từ 0. Không có RangeList -> từng ô như cũ.
+ */
+function datDinhDangCacO_(sh, soDong, cacCot0, mau) {
+  const cot = (cacCot0 || []).filter(function (c, i, a) { return c >= 0 && a.indexOf(c) === i; });
+  if (!cot.length) return;
+  if (typeof sh.getRangeList === 'function') sh.getRangeList(cot.map(function (c) { return tenCotA1_(c + 1) + soDong; })).setNumberFormat(mau);
+  else cot.forEach(function (c) { sh.getRange(soDong, c + 1).setNumberFormat(mau); });
+}
+/** Số cột (từ 1) -> chữ cột A1: 1 -> A, 27 -> AA. */
+function tenCotA1_(soCot) {
+  let s = '';
+  for (let n = soCot; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  return s;
+}
+/** Cột HD_NCC phải là CHỮ trước khi ghi dòng mới (giữ số 0 đầu CCCD / SĐT / Số TK / MST). */
+function cotChuHdNcc_() {
+  return [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE];
+}
+
+/**
  * Lô RỖNG: chưa có địa chỉ rừng, diện tích, KL dự kiến, đơn giá — thường là lô _1 tự tạo khi tạo hợp đồng rồi người dùng
  * thêm lô thật thành lô _2. Dùng chung cho xuất MISA (22) và điều kiện "Đang thực hiện" (37) để 2 nơi đếm lô giống nhau.
  */
@@ -1422,7 +1443,8 @@ function KHOI_PHUC_DU_LIEU_DA_XOA_(maDot) {
         });
         if (cotKhoa !== -1 && khoaDaCo[String(dong[cotKhoa]).trim()]) { boQua.push(ten + ': ' + dong[cotKhoa] + ' đã tồn tại lại'); return; }
         const soDong = sh.getLastRow() + 1;
-        dong.forEach(function (v, c) { if (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim())) sh.getRange(soDong, c + 1).setNumberFormat('@'); }); // ô gốc là CHỮ số (Số TK, CCCD...) -> giữ dạng chữ, không mất số 0 đầu
+        // ô gốc là CHỮ số (Số TK, CCCD...) -> giữ dạng chữ, không mất số 0 đầu (1 lệnh cho mọi ô)
+        datDinhDangCacO_(sh, soDong, dong.map(function (v, c) { return typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()) ? c : -1; }), '@');
         sh.getRange(soDong, 1, 1, dong.length).setValues([dongAnToan_(dong)]);
         shLT.getRange(x.i + 2, LTX_COL.DA_KHOI_PHUC + 1).setValue(new Date());
         soKhoiPhuc++;

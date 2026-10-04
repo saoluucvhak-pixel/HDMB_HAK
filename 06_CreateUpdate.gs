@@ -542,8 +542,7 @@ function taoHopDongMoiThucThi_(d) {
     // định dạng được TRƯỚC khi ghi (appendRow không cho làm việc này).
     const shNCC = getSheet_(SHEET_NAME.HD_NCC);
     const soDongMoiNCC = shNCC.getLastRow() + 1;
-    [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
-      .forEach(function (c) { shNCC.getRange(soDongMoiNCC, c + 1).setNumberFormat('@'); });
+    datDinhDangCacO_(shNCC, soDongMoiNCC, cotChuHdNcc_(), '@'); // 1 lệnh cho cả 6 ô
     shNCC.getRange(soDongMoiNCC, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
     _ghiNhoMaThaoTac_(d.maThaoTac, idHD, soHD);
   } finally {
@@ -722,8 +721,7 @@ function THEM_LO_RUNG_MOI_(d) {
     const shRungGhi = getSheet_(SHEET_NAME.HD_RUNG);
     const soDongMoiRung = shRungGhi.getLastRow() + 1;
     for (let k = 0; k < row.length; k++) if (row[k] === undefined) row[k] = '';
-    [RUNG_COL.CCCD, RUNG_COL.SO_HD, RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG, RUNG_COL.MA_RUNG]
-      .forEach(function (c) { shRungGhi.getRange(soDongMoiRung, c + 1).setNumberFormat('@'); });
+    datDinhDangCacO_(shRungGhi, soDongMoiRung, [RUNG_COL.CCCD, RUNG_COL.SO_HD, RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG, RUNG_COL.MA_RUNG], '@'); // 1 lệnh
     shRungGhi.getRange(soDongMoiRung, RUNG_COL.NAM_TRONG + 1).setNumberFormat('0'); // năm là SỐ — ô định dạng ngày sẽ biến 2019 thành ngày
     shRungGhi.getRange(soDongMoiRung, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
 
@@ -776,7 +774,7 @@ function THEM_TAI_KHOAN_MOI_(d) {
   try {
     // ⚠️ MỚI: định dạng TEXT TRƯỚC khi ghi (xem giải thích ở TAO_HOP_DONG_MOI_) — tránh mất số 0 đầu ở Số TK/CCCD
     soDongMoiSTK = shTK.getLastRow() + 1;
-    [STK_COL.SO_TK, STK_COL.CCCD].forEach(function (c) { shTK.getRange(soDongMoiSTK, c + 1).setNumberFormat('@'); });
+    datDinhDangCacO_(shTK, soDongMoiSTK, [STK_COL.SO_TK, STK_COL.CCCD], '@'); // 1 lệnh
     shTK.getRange(soDongMoiSTK, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18
   } finally {
     lock.releaseLock();
@@ -2545,8 +2543,7 @@ function luuHopDongDayDuThucThi_(payload) {
         // vì ô mới ở định dạng Automatic. Cùng cách đã vá ở TAO_HOP_DONG_MOI_: định dạng TEXT trước rồi mới ghi.
         const shTaoMoi = getSheet_(SHEET_NAME.HD_NCC);
         soDongVuaTao = shTaoMoi.getLastRow() + 1;
-        [NCC_COL.CCCD_CHU_RUNG, NCC_COL.SDT_CHU_RUNG, NCC_COL.CCCD_UY_QUYEN, NCC_COL.SDT_UQ, NCC_COL.SO_TK, NCC_COL.MA_SO_THUE]
-          .forEach(function (c) { shTaoMoi.getRange(soDongVuaTao, c + 1).setNumberFormat('@'); });
+        datDinhDangCacO_(shTaoMoi, soDongVuaTao, cotChuHdNcc_(), '@'); // 1 lệnh cho cả 6 ô
         const soCotNCC = Math.max(row.length, shTaoMoi.getLastColumn());
         for (let k = 0; k < soCotNCC; k++) if (row[k] === undefined) row[k] = '';
         shTaoMoi.getRange(soDongVuaTao, 1, 1, row.length).setValues([dongAnToan_(row)]); // M-18

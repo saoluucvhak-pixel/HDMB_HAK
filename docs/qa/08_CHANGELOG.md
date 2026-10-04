@@ -2,6 +2,12 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 04/10/2026 — Tối ưu hiệu suất: gộp lệnh ghi (phương án 4)
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt 07) | ⚡✅ | **Định dạng nhiều ô 1 lệnh** (`datDinhDangCacO_`, RangeList): trước đây đặt định dạng chữ `@` (giữ số 0 đầu CCCD / SĐT / Số TK / MST) từng ô một — tạo HĐ ~14 lệnh chỉ để định dạng. Áp dụng tạo HĐ (2 đường), thêm lô, thêm tài khoản, khôi phục dữ liệu đã xóa; danh sách cột chữ HD_NCC gộp 1 chỗ (`cotChuHdNcc_`). Ghi Z/T/AA: định dạng 1 lệnh + ghi theo khúc cột liền nhau (Z + AA 1 lệnh). Đo 1.000 HĐ: tạo HĐ 23 -> 13, thêm lô 19 -> 12, thêm TK 4 -> 3 lượt ghi. Không có RangeList -> từng ô như cũ. Bộ giả lập thêm `getRangeList`. Test GHI-GOM | 00_Config, 06_CreateUpdate, 14_CtHopDong_PhuLuc, tests/ |
+
 ## 04/10/2026 — Tối ưu hiệu suất: Lưu chính thức (phương án 3)
 
 | Commit | Loại | Thay đổi | File |

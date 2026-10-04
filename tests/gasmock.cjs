@@ -8,6 +8,7 @@ function taoMoiTruong(thuMuc, opts) {
   const EMAIL = opts.email || 'owner@test.vn';
   let khoaLong = 0, khoaMax = 0;
   const demDoc = { n: 0, o: 0 };
+  const demGhiRangeList = { n: 0 };
 
   class Sheet {
     constructor(ss, name) { this.ss = ss; this.name = name; this.data = []; this.fmt = {}; this.id = Math.floor(Math.random() * 1e9); }
@@ -33,6 +34,13 @@ function taoMoiTruong(thuMuc, opts) {
     deleteRows(r, n) { for (let i = 0; i < n; i++) this.deleteRow(r); return this; }
     deleteRow(r) { this.data.splice(r - 1, 1); const nf = {}; Object.keys(this.fmt).forEach(k => { const [rr, cc] = k.split(',').map(Number); if (rr < r) nf[k] = this.fmt[k]; else if (rr > r) nf[(rr - 1) + ',' + cc] = this.fmt[k]; }); this.fmt = nf; }
     setFrozenRows() { return this; } autoResizeColumns() { return this; } setColumnWidth() { return this; }
+    // RangeList (nhiều ô rời nhau, 1 lệnh): nhận "A5", "AD12", "B2:C3"; đếm 1 lượt ghi qua demGhiRangeList
+    getRangeList(a1s) {
+      const sh = this, cot = (t) => t.split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+      const ranges = a1s.map(a => { const [a1, a2] = a.split(':'); const p = s => { const m = /^([A-Z]+)(\d+)$/.exec(s); return [Number(m[2]), cot(m[1])]; };
+        const [r1, c1] = p(a1), [r2, c2] = a2 ? p(a2) : [r1, c1]; return new Range(sh, r1, c1, r2 - r1 + 1, c2 - c1 + 1); });
+      return { getRanges: () => ranges, setNumberFormat(f) { demGhiRangeList.n++; ranges.forEach(r => { for (let i = 0; i < r.nr; i++) for (let j = 0; j < r.nc; j++) sh.fmt[(r.r + i) + ',' + (r.c + j)] = f; }); return this; } };
+    }
   }
   class Range {
     constructor(sh, r, c, nr, nc) { Object.assign(this, { sh, r, c, nr, nc }); }
@@ -100,6 +108,6 @@ function taoMoiTruong(thuMuc, opts) {
   const files = fs.readdirSync(thuMuc).filter(f => f.endsWith('.gs')).sort();
   const src = files.map(f => fs.readFileSync(path.join(thuMuc, f), 'utf8')).join('\n;\n');
   vm.runInContext(src, ctx, { filename: 'all.gs' });
-  return { demDoc, ctx, ssChinh, ssBaoCao, cache, props, lockInfo: () => ({ dangGiu: khoaLong, max: khoaMax }), resetLockMax: () => { khoaMax = 0; } };
+  return { demDoc, demGhiRangeList, ctx, ssChinh, ssBaoCao, cache, props, lockInfo: () => ({ dangGiu: khoaLong, max: khoaMax }), resetLockMax: () => { khoaMax = 0; } };
 }
 module.exports = { taoMoiTruong };

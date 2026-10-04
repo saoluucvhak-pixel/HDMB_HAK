@@ -159,9 +159,15 @@ function tinhThayDoiHdNccTuLoRung_(rowNcc, th, chiDienTrong) {
 /** Ghi các thay đổi Z/T/AA vào dòng soDong của HD_NCC (ghi SỐ, định dạng số chuẩn) + nhật ký cũ -> mới. */
 function ghiThayDoiHdNcc_(sh, soDong, idHD, thayDoi, lyDo) {
   if (!thayDoi.length) return;
-  thayDoi.forEach(function (t) {
-    sh.getRange(soDong, t.cot + 1).setNumberFormat(MAU_SO_CHUAN_).setValue(t.moi);
-  });
+  // Định dạng số chuẩn cho mọi ô 1 lệnh; ghi giá trị theo từng khúc cột liền nhau (Z + AA = 1 lệnh) — trước đây 2 lệnh / ô
+  datDinhDangCacO_(sh, soDong, thayDoi.map(function (t) { return t.cot; }), MAU_SO_CHUAN_);
+  const theoCot = thayDoi.slice().sort(function (a, b) { return a.cot - b.cot; });
+  for (let i = 0; i < theoCot.length;) {
+    let j = i;
+    while (j + 1 < theoCot.length && theoCot[j + 1].cot === theoCot[j].cot + 1) j++;
+    sh.getRange(soDong, theoCot[i].cot + 1, 1, j - i + 1).setValues([theoCot.slice(i, j + 1).map(function (t) { return t.moi; })]);
+    i = j + 1;
+  }
   ghiNhatKy_(lyDo, idHD, thayDoi.map(function (t) { return t.ten + ': ' + (t.cu === '' ? '(trống)' : t.cu) + ' → ' + t.moi; }).join('; '));
 }
 
