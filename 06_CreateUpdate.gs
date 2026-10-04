@@ -2564,8 +2564,10 @@ function luuHopDongDayDuThucThi_(payload) {
     // C-02 (rà soát 28/09): LUÔN tìm theo ID_HD. Trước đây ưu tiên payload.soDong rồi GÁN LẠI idHD theo
     // hợp đồng đang nằm ở dòng đó -> dòng đã dịch thì ghi toàn bộ dữ liệu sang HỢP ĐỒNG KHÁC. Tìm theo khóa
     // cũng tránh timHopDongTheoId_() (tải ảnh/hồ sơ qua Drive — không cần khi lưu).
-    const soDongTheoId = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
-    const kqTim = soDongTheoId === -1 ? null : layHopDongTheoSoDong_(soDongTheoId);
+    // Tốc độ: chỉ cần ID / Số HĐ / tình trạng / số dòng — đọc đúng dòng HD_NCC của hợp đồng (trước đây
+    // layHopDongTheoSoDong_ tải kèm cả danh sách lô rừng + tài khoản: thêm 4 lượt đọc mỗi lần lưu).
+    const timHD = docDongTheoKhoaKemSo_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, [idHD])[0];
+    const kqTim = timHD ? { soDong: timHD.soDong, idHD: (timHD.r[NCC_COL.ID_HD] || '').toString().trim(), soHD: timHD.r[NCC_COL.SO_HD], tinhTrang: timHD.r[NCC_COL.TINH_TRANG] } : null;
     if (!kqTim || kqTim.khongTimThay || String(kqTim.idHD).trim() !== String(idHD).trim()) {
       return { thanhCong: false, loi: 'Không tìm thấy hợp đồng: ' + idHD + ' (có thể đã bị xóa).' + (kqTim && kqTim.chanDoan ? ' — ' + kqTim.chanDoan : '') };
     }

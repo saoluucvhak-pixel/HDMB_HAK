@@ -192,9 +192,27 @@ function layChiTietHopDong_(idHD) {
  * Gọi ở MỌI chỗ thêm/sửa/xóa lô rừng. Không ném lỗi — lưu lô rừng vẫn phải thành công dù
  * việc tổng hợp có trục trặc (ghi log để kiểm tra). Trả { thayDoi } (mảng rỗng nếu không đổi).
  */
+/**
+ * GOM tổng hợp lô rừng trong 1 thao tác nhiều lô (Lưu chính thức): mỗi lần thêm / sửa / xóa lô chỉ ghi nhận hợp đồng,
+ * tổng hợp 1 lần khi xả (trước đây N lô đổi = N + 1 lần tổng hợp, mỗi lần ~5 lượt đọc + ghi ct_hopdong / HD_NCC).
+ */
+let _tongHopRungDangGom_ = null;
+function batDauGomTongHopRung_() {
+  if (_tongHopRungDangGom_) return false; // đã có nơi gom ở ngoài -> nơi đó xả
+  _tongHopRungDangGom_ = new Set();
+  return true;
+}
+function ketThucGomTongHopRung_(laNguoiGom) {
+  if (!laNguoiGom || !_tongHopRungDangGom_) return;
+  const g = _tongHopRungDangGom_;
+  _tongHopRungDangGom_ = null;
+  g.forEach(function (id) { dongBoTongHopRungVaoHdNcc_(id); });
+}
+
 function dongBoTongHopRungVaoHdNcc_(idHD) {
   if (!idHD) return { thayDoi: [] };
   idHD = idHD.toString().trim();
+  if (_tongHopRungDangGom_) { _tongHopRungDangGom_.add(idHD); return { thayDoi: [], daGom: true }; }
   let th;
   try {
     th = tinhTongHopLoRung_(docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD])); // chỉ đọc lô của HĐ này

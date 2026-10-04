@@ -1061,6 +1061,55 @@ try {
     const lon = t.run('(function () { var o = { s: new Array(60001).join("ạ") }; luuCacheChiaManh_("THU_LON", o, 60); var d = docCacheChiaManh_("THU_LON"); return !!d && d.s.length === 60000 && JSON.parse(CacheService.getScriptCache().get("THU_LON")).n === 3; })()');
     kiem('HS-TQ cache chia mảnh: 60.000 ký tự -> 3 khúc, đọc lại đúng', lon === true);
   });
+
+  chay(function () {
+    // LCT-NHANH: Lưu chính thức bỏ qua lô / tài khoản không đổi, lô chỉ ghi trường đã đổi, tổng hợp lô 1 lần
+    const t = moi();
+    const A = t.tao('LC A', '049000000401', '1111', 'L1');
+    t.run('THEM_LO_RUNG_MOI_(' + J({ idHD: A.idHD, diaChiRung: 'Lo 2', dienTichM2: 2000, donGia: 1500, khoiLuongDuKien: 20 }) + ')');
+    const rung = () => t.ss.getSheetByName('HD_RUNG').getDataRange().getValues().filter(r => r[0] === A.idHD);
+    const ncc = () => t.ss.getSheetByName('HD_NCC').getDataRange().getValues().find(r => r[29] === A.idHD);
+    const moNhap = () => t.run('(function(){ var n = LAY_DRAFT_THEO_ID_HD_(' + J(A.idHD) + '); return n; })()');
+    let n = moNhap();
+    kiem('LCT-01 nháp mở từ HĐ có ảnh chụp gốc cho từng lô / tài khoản', n.du.rung.every(r => r.goc && 'donGia' in r.goc) && n.du.taiKhoan.every(x => x.goc && 'soTK' in x.goc), J(n.du.rung[0]));
+    // Người khác sửa địa chỉ lô 2 + ngân hàng TK trong lúc nháp còn mở; nháp chỉ đổi SĐT -> giữ nguyên thay đổi của người khác
+    const loRow = t.ss.getSheetByName('HD_RUNG').getDataRange().getValues().findIndex(r => r[0] === A.idHD && r[t.run('RUNG_COL.DIA_CHI_RUNG')] === 'Lo 2') + 1;
+    t.ss.getSheetByName('HD_RUNG').getRange(loRow, t.run('RUNG_COL.DIA_CHI_RUNG') + 1).setValue('Lo 2 (người khác sửa)');
+    const tkRow = t.stk().findIndex(r => String(r[0]) === A.idHD) + 2;
+    t.ss.getSheetByName('HD_STK').getRange(tkRow, t.run('STK_COL.NGAN_HANG') + 1).setValue('ACB (người khác sửa)');
+    n.du.hopDong.sdtChuRung = '0905000111';
+    t.run('LUU_DRAFT_(' + J(n.idDraft) + ',' + J(J(n.du)) + ')');
+    const kq1 = t.run('LUU_CHINH_THUC_(' + J(n.idDraft) + ')');
+    kiem('LCT-02 nháp chỉ đổi SĐT: lô / tài khoản không bị ghi lại -> giữ thay đổi người khác vừa làm',
+      kq1.thanhCong && String(ncc()[9]) === '0905000111' && rung().some(r => r[t.run('RUNG_COL.DIA_CHI_RUNG')] === 'Lo 2 (người khác sửa)') &&
+      String(t.stk()[tkRow - 2][t.run('STK_COL.NGAN_HANG')]) === 'ACB (người khác sửa)', J(kq1));
+    // Nháp đổi đơn giá 2 lô, người khác đổi địa chỉ 1 lô -> chỉ ghi đơn giá; tổng hợp lô chạy 1 lần, Z/AA đúng
+    n = moNhap();
+    t.ss.getSheetByName('HD_RUNG').getRange(loRow, t.run('RUNG_COL.DIA_CHI_RUNG') + 1).setValue('Lo 2 (sửa lần 2)');
+    n.du.rung.forEach(r => { r.donGia = 3000; });
+    t.run('LUU_DRAFT_(' + J(n.idDraft) + ',' + J(J(n.du)) + ')');
+    t.run('var __soTH = 0; (function () { var g = dongBoTongHopRungVaoHdNcc_; dongBoTongHopRungVaoHdNcc_ = function (id) { if (!_tongHopRungDangGom_) __soTH++; return g.apply(this, arguments); }; })()');
+    const kq2 = t.run('LUU_CHINH_THUC_(' + J(n.idDraft) + ')');
+    const soTH = t.run('__soTH');
+    kiem('LCT-03 đổi đơn giá 2 lô: chỉ ghi đơn giá (giữ địa chỉ người khác sửa), tổng hợp lô đúng 1 lần, AA = 3000',
+      kq2.thanhCong && rung().every(r => Number(r[t.run('RUNG_COL.DON_GIA')]) === 3000) && rung().some(r => r[t.run('RUNG_COL.DIA_CHI_RUNG')] === 'Lo 2 (sửa lần 2)') &&
+      soTH === 1 && Number(ncc()[26]) === 3000 && t.run('_tongHopRungDangGom_') === null, J({ kq2, soTH, aa: ncc()[26] }));
+    // Nháp cũ (không có ảnh chụp gốc) -> ghi như trước
+    n = moNhap();
+    n.du.rung.forEach(r => { delete r.goc; r.donGia = 3200; });
+    n.du.taiKhoan.forEach(x => { delete x.goc; });
+    t.run('LUU_DRAFT_(' + J(n.idDraft) + ',' + J(J(n.du)) + ')');
+    const kq3 = t.run('LUU_CHINH_THUC_(' + J(n.idDraft) + ')');
+    kiem('LCT-04 nháp cũ không có ảnh chụp gốc: vẫn ghi lô như trước', kq3.thanhCong && rung().every(r => Number(r[t.run('RUNG_COL.DON_GIA')]) === 3200), J(kq3));
+    // Lỗi giữa chừng (thêm GPS hỏng) -> lô đã ghi vẫn được tổng hợp, không kẹt trạng thái gom
+    n = moNhap();
+    n.du.rung[0].donGia = 4000; n.du.rung[0].gpsMoi = [{ lat: 15.1, lng: 108.1 }];
+    t.run('LUU_DRAFT_(' + J(n.idDraft) + ',' + J(J(n.du)) + ')');
+    t.run('CAP_NHAT_GPS_RUNG_ = function () { throw new Error("GPS hỏng"); }');
+    let loi = ''; try { t.run('LUU_CHINH_THUC_(' + J(n.idDraft) + ')'); } catch (e) { loi = e.message; }
+    kiem('LCT-05 lỗi giữa chừng: lô đã ghi vẫn được tổng hợp (AA = bình quân 4000/3200), không kẹt gom',
+      /GPS hỏng/.test(loi) && Number(ncc()[26]) === 3600 && t.run('_tongHopRungDangGom_') === null, J({ loi, aa: ncc()[26] }));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

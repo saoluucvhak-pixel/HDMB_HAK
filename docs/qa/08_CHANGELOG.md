@@ -2,6 +2,13 @@
 
 Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
 
+## 04/10/2026 — Tối ưu hiệu suất: Lưu chính thức (phương án 3)
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| (đợt 06) | ⚡🐛✅ | **Lưu chính thức chỉ ghi phần đã đổi**: nháp mở từ HĐ có sẵn lưu ảnh chụp gốc (`goc`) cho từng lô / tài khoản / phụ lục; Lưu chính thức bỏ qua mục không đổi, lô chỉ ghi đúng trường đã đổi. Đồng thời **sửa lỗi ghi đè**: trước đây lưu nháp (dù chỉ sửa SĐT) ghi lại mọi lô / tài khoản bằng giá trị lúc mở nháp -> mất thay đổi người khác vừa làm. Nháp cũ (không có `goc`) ghi như trước. Test LCT-01…04 (mã cũ trượt LCT-01/02) | 15_DraftHopDong |
+| (đợt 06) | ⚡✅ | **Tổng hợp lô rừng gom 1 lần / lượt Lưu chính thức** (`batDauGomTongHopRung_`): trước đây N lô đổi = N + 1 lần tổng hợp; xả trước khi chuyển "Đang thực hiện" (giữ đúng quy tắc theo tình trạng), lỗi giữa chừng vẫn tổng hợp các lô đã ghi; lô không đổi thì không tổng hợp. Lưu hợp đồng có sẵn đọc đúng dòng HD_NCC (không tải kèm danh sách lô + TK). Đo: 300 HĐ sửa SĐT 34 -> 18, sửa 1 lô 44 -> 28 lượt đọc; 1.000 HĐ (công cụ đo) 45 -> 21 lượt đọc, 17 -> 6 lượt ghi. Test LCT-03/05 | 14_CtHopDong_PhuLuc, 15_DraftHopDong, 06_CreateUpdate |
+
 ## 04/10/2026 — Tối ưu hiệu suất: bước cập nhật báo cáo + Tổng quan
 
 | Commit | Loại | Thay đổi | File |
