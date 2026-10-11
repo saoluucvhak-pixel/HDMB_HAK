@@ -699,7 +699,7 @@ function kiemTraFileTaiLen_(base64Data, mimeType) {
  * dữ liệu cũ tới 15 phút sau khi đổi (CACHE-001).
  */
 function xoaCacheBanDo_() {
-  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
+  xoaCacheChiaManh_('MAP_DATA_CACHE');
   xoaCacheAnhGps_(); // GPS đổi -> cờ "đủ GPS" / tọa độ trung bình của báo cáo cũng đổi
 }
 
@@ -707,9 +707,22 @@ function xoaCacheBanDo_() {
  * CACHE LỚN CHIA MẢNH (CacheService giới hạn 100 KB / khóa): chuỗi JSON cắt thành từng khúc 25.000 ký tự (< 100 KB kể cả
  * chữ có dấu), khóa chính giữ { ma, n }. Xóa khóa chính = vô hiệu cả bộ (khúc cũ tự hết hạn). Lỗi / thiếu khúc -> null.
  */
+/**
+ * Bộ nhớ đệm cho DỮ LIỆU LỚN (chỉ mục, danh sách, bản đồ): DocumentCache của file dữ liệu nếu có, không thì ScriptCache.
+ * Cùng lý do H-07: ScriptCache còn giữ phiên đăng nhập — nhồi dữ liệu lớn vào đó làm Google đẩy phiên ra sớm (đăng xuất ngẫu nhiên).
+ */
+function _cacheDuLieuLon_() {
+  try { const c = CacheService.getDocumentCache(); if (c) return c; } catch (e) { /* script không gắn file -> dùng ScriptCache */ }
+  return CacheService.getScriptCache();
+}
+function xoaCacheChiaManh_(khoa) {
+  try { _cacheDuLieuLon_().remove(khoa); } catch (e) { /* không có cache -> bỏ qua */ }
+  // Bản cũ (trước nâng cấp 10/2026) nằm ở ScriptCache — xóa luôn để không ai đọc lại bản cũ
+  try { CacheService.getScriptCache().remove(khoa); } catch (e) { /* bỏ qua */ }
+}
 function docCacheChiaManh_(khoa) {
   try {
-    const cache = CacheService.getScriptCache();
+    const cache = _cacheDuLieuLon_();
     const meta = cache.get(khoa);
     if (!meta) return null;
     const m = JSON.parse(meta), cacKhoa = [];
@@ -721,7 +734,7 @@ function docCacheChiaManh_(khoa) {
 }
 function luuCacheChiaManh_(khoa, giaTri, giay) {
   try {
-    const cache = CacheService.getScriptCache();
+    const cache = _cacheDuLieuLon_();
     const s = JSON.stringify(giaTri), ma = Utilities.getUuid().slice(0, 8), KHUC = 25000, o = {};
     let n = 0;
     for (let i = 0; i < s.length; i += KHUC) o[khoa + '_' + ma + '_' + (n++)] = s.slice(i, i + KHUC);
@@ -745,7 +758,7 @@ function layCoAnhVaGpsTrucTiepCoCache_() {
   return kq;
 }
 function xoaCacheAnhGps_() {
-  try { CacheService.getScriptCache().remove(KHOA_ANH_GPS_TT_); } catch (e) { /* không có cache -> bỏ qua */ }
+  xoaCacheChiaManh_(KHOA_ANH_GPS_TT_);
 }
 
 /**

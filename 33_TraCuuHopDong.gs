@@ -64,7 +64,7 @@ const TRUONG_CHU_TC_ = [['Số HĐ', 'SO_HD'], ['ID', 'ID_HD'], ['Chủ rừng',
 const TRUONG_SO_TC_ = [['CCCD chủ rừng', 'CCCD_CHU_RUNG'], ['CCCD ủy quyền', 'CCCD_UY_QUYEN'], ['SĐT chủ rừng', 'SDT_CHU_RUNG'], ['SĐT ủy quyền', 'SDT_UQ'], ['Số tài khoản', 'SO_TK']];
 
 function xoaCacheTraCuu_() {
-  try { const c = CacheService.getScriptCache(); c.remove(KHOA_CHI_MUC_TC_); c.remove(KHOA_DS_KHACH_HANG_); } catch (e) { /* không có cache -> bỏ qua */ }
+  xoaCacheChiaManh_(KHOA_CHI_MUC_TC_); xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_);
   xoaCacheAnhGps_(); // dữ liệu HĐ đổi -> bản nhớ ảnh / GPS của Tổng quan cũng bỏ (00_Config.gs)
 }
 

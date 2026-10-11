@@ -74,6 +74,20 @@ try {
     kiem('P1-BD2 thêm điểm GPS -> bản đồ có ngay điểm mới (cache được xóa)', (b3[lo0.idRung].coords || []).some(c => c.lat === 16.5), J((b3[lo0.idRung] || {}).coords && b3[lo0.idRung].coords.length));
   });
 
+  chay(function () {
+    // Dữ liệu lớn (chỉ mục, danh sách KH, bản đồ) nằm ở DocumentCache khi có — ScriptCache chỉ còn phiên đăng nhập / khóa chống trùng
+    const t = moi(30);
+    const docCache = new Map();
+    t.m.ctx.CacheService.getDocumentCache = () => ({ get: k => docCache.has(k) ? docCache.get(k) : null, put: (k, v) => docCache.set(k, String(v)), remove: k => docCache.delete(k),
+      getAll: ks => { const o = {}; ks.forEach(k => { if (docCache.has(k)) o[k] = docCache.get(k); }); return o; }, putAll: o => Object.keys(o).forEach(k => docCache.set(k, o[k])) });
+    t.m.cache.clear();
+    t.run('layDanhSachKhachHang_(1, 20, "")'); t.run('TRA_CUU_HOP_DONG_("Khach 1", "", "")'); t.run('getMapData_()');
+    const khoaScript = Array.from(t.m.cache.keys());
+    kiem('P1-CA1 cache dữ liệu lớn ghi vào DocumentCache, không ghi vào ScriptCache (giữ chỗ cho phiên đăng nhập)', docCache.size >= 3 && !khoaScript.some(k => /DS_KHACH_HANG|CHI_MUC|MAP_DATA/.test(k)), J({ doc: Array.from(docCache.keys()).slice(0, 6), script: khoaScript }));
+    t.tao(500, '049055555555');
+    kiem('P1-CA2 tạo hợp đồng -> xóa đúng cache ở DocumentCache (khách mới hiện ngay)', t.run('layDanhSachKhachHang_(1, 20, "049055555555")').tongSo === 1);
+  });
+
   // ======================= Đồng bộ thanh toán tăng dần =======================
   chay(function () {
     const t = moi(0);
