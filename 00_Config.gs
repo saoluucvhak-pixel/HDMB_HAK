@@ -877,7 +877,8 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
       rows.push([tenCache, i === 0 ? new Date().toISOString() : '', json.substr(i * CACHE_CHUNK_SIZE, CACHE_CHUNK_SIZE)]);
     }
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
-  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); }
+    return true;
+  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); return false; }
 }
 
 /**
@@ -908,7 +909,9 @@ function docCacheBaoCao_ChiDocThat_(tenCache, hamTinhNeuChuaCo) {
     }
   } catch (e) { /* rơi xuống tính mới bên dưới */ }
   const ketQua = hamTinhNeuChuaCo();
-  luuCacheBaoCao_(tenCache, ketQua);
+  // P0 (nâng cấp 10/2026): KHÔNG lưu kết quả lỗi (vd đọc DNTT thất bại tạm thời) — nếu lưu, mọi lần sau dùng mãi bản lỗi
+  // (khối lượng thực hiện về 0) cho tới khi đồng bộ thanh toán chạy lại. Không lưu thì lần đọc sau thử tính lại.
+  if (!(ketQua && ketQua.thanhCong === false)) luuCacheBaoCao_(tenCache, ketQua);
   return ketQua;
 }
 

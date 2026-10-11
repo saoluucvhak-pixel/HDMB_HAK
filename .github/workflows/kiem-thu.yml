@@ -27,6 +27,8 @@ jobs:
         run: node kiem_tra_cu_phap.cjs
       - name: Máy chủ (giả lập Apps Script)
         run: node test_may_chu.cjs
+      - name: Máy chủ P0 (đồng bộ Draft / thanh toán, chống tạo trùng)
+        run: node test_p0_dong_bo.cjs
       - name: Giao diện (Playwright)
         run: |
           node ui_khoa_nut.cjs

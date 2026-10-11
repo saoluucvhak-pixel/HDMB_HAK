@@ -422,10 +422,12 @@ function nhacDuyetHopDongMoi_(tinhTrang) {
 function _hdDaTaoTheoMaThaoTac_(maThaoTac) {
   maThaoTac = (maThaoTac || '').toString();
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return null;
-  let v = null;
-  try { v = CacheService.getScriptCache().get('HD_TAO_' + maThaoTac); } catch (e) { return null; }
-  if (!v) return null;
-  const kq = JSON.parse(v);
+  let kq = null;
+  try { const v = CacheService.getScriptCache().get('HD_TAO_' + maThaoTac); if (v) kq = JSON.parse(v); } catch (e) { /* đọc bản lưu bền bên dưới */ }
+  // P0.2 (nâng cấp 10/2026): CacheService có thể bị Google xóa trước hạn -> trước đây gửi lại = tạo hợp đồng THỨ 2.
+  // Nay luôn có bản lưu bền ở Script Properties (danh sách các lượt tạo gần đây).
+  if (!kq) kq = _dsMaThaoTacGanDay_().filter(function (x) { return x.m === maThaoTac; }).map(function (x) { return { idHD: x.i, soHD: x.s }; })[0] || null;
+  if (!kq) return null;
   // Hợp đồng đã bị xóa sau đó -> coi như chưa tạo
   const sh = getSheet_(SHEET_NAME.HD_NCC);
   const lastRow = sh.getLastRow();
@@ -440,6 +442,19 @@ function _ghiNhoMaThaoTac_(maThaoTac, idHD, soHD) {
   maThaoTac = (maThaoTac || '').toString();
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return;
   try { CacheService.getScriptCache().put('HD_TAO_' + maThaoTac, JSON.stringify({ idHD: String(idHD), soHD: String(soHD) }), 21600); } catch (e) { /* bỏ qua */ }
+  // Bản lưu bền (gọi trong ScriptLock của hàm tạo hợp đồng): giữ tối đa 60 lượt trong 6 giờ, ~5 KB < giới hạn 9 KB/giá trị
+  try {
+    const moc = Date.now() - 6 * 3600 * 1000;
+    const ds = _dsMaThaoTacGanDay_().filter(function (x) { return x.t > moc && x.m !== maThaoTac; });
+    ds.push({ m: maThaoTac, i: String(idHD), s: String(soHD), t: Date.now() });
+    PropertiesService.getScriptProperties().setProperty('HD_TAO_GAN_DAY', JSON.stringify(ds.slice(-60)));
+  } catch (e) { log_('WARNING', '_ghiNhoMaThaoTac_', 'Không lưu được mã chống tạo trùng ' + maThaoTac, e); }
+}
+function _dsMaThaoTacGanDay_() {
+  try {
+    const ds = JSON.parse(PropertiesService.getScriptProperties().getProperty('HD_TAO_GAN_DAY') || '[]');
+    return Array.isArray(ds) ? ds : [];
+  } catch (e) { return []; }
 }
 
 /**
