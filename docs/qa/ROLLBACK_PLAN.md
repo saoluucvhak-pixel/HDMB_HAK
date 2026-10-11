@@ -9,7 +9,7 @@ Lỗi chặn công việc (không mở được trang, không lưu được hợ
 1. Apps Script → *Deploy → Manage deployments → Edit (cây bút)* → ô **Version** chọn lại **số phiên bản cũ** đã ghi ở
    `DEPLOYMENT_CHECKLIST.md` mục 1 → *Deploy*. URL webapp giữ nguyên, người dùng tải lại trang là dùng bản cũ.
 2. Trigger (đồng bộ thanh toán 30 phút, onEdit, Telegram) chạy theo **mã đang lưu trong dự án** (HEAD), không theo phiên bản
-   triển khai. Để trigger cũng chạy mã cũ: chép lại 13 file từ `main` (`8d4bd25`) vào dự án — bằng công cụ đồng bộ GitHub
+   triển khai. Để trigger cũng chạy mã cũ: chép lại 14 file (danh sách ở `DEPLOYMENT_CHECKLIST.md` mục 2) từ `main` (`8d4bd25`) vào dự án — bằng công cụ đồng bộ GitHub
    (Pull nhánh `main`) hoặc chép tay.
 3. Không cần xóa gì thêm. Dữ liệu và khóa mà bản mới tạo (xem `DEPLOYMENT_CHECKLIST.md` mục 6) **không ảnh hưởng** bản cũ:
    - Script Properties mới: bản cũ không đọc → bỏ qua. Có thể xóa cho gọn.

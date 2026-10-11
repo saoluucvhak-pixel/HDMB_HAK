@@ -10,11 +10,11 @@ dưới đây do chủ dự án làm.
 - [ ] Sao lưu nhanh: *File → Make a copy* file dữ liệu chính và file báo cáo (hoặc ít nhất ghi nhận thời điểm để dùng
       *Version history* của Google Sheets nếu cần).
 
-## 2. Chép mã (13 file mã nguồn, không có file mới, không có file cần xóa)
+## 2. Chép mã (14 file mã nguồn, không có file mới, không có file cần xóa)
 
-`.gs`: `00_Config`, `01_ContractManager`, `06_CreateUpdate`, `15_DraftHopDong`, `16_DraftHoSoRung`, `17_ChanDoanTocDo`,
-`33_TraCuuHopDong`, `34_PhanQuyen`, `Code`, `Webhook_dntt`.
-`.html`: `10_Page_BaoCao`, `27_Page_HopDongMeCon`, `NhapLieu_Chung_JS`.
+`.gs` (11): `00_Config`, `01_ContractManager`, `06_CreateUpdate`, `15_DraftHopDong`, `16_DraftHoSoRung`, `17_ChanDoanTocDo`,
+`32_TraCuuNganHang`, `33_TraCuuHopDong`, `34_PhanQuyen`, `Code`, `Webhook_dntt`.
+`.html` (3): `10_Page_BaoCao`, `27_Page_HopDongMeCon`, `NhapLieu_Chung_JS`.
 
 (`tests/`, `.github/`, `docs/` không đưa lên Apps Script.) Thiếu 1 file `.gs` trong nhóm trên → có thể báo lỗi "is not
 defined" vì các file gọi lẫn nhau (vd `docCacCot_`, `xoaCacheChiaManh_`, `ghiHieuNangNeuCham_`) — chép đủ cả nhóm.
