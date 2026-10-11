@@ -13,10 +13,12 @@
  * ============================================================
  */
 
-/** Danh sách ngân hàng VN — API công khai VietQR, cache 24h (danh sách hiếm khi đổi) */
+/** Danh sách ngân hàng VN — API công khai VietQR, cache 6 giờ (danh sách hiếm khi đổi; CacheService tối đa 21.600 giây —
+ *  trước đây đặt 86.400 giây nên lệnh lưu có thể lỗi và bị bỏ qua, mỗi lần mở lại tải từ VietQR). Cache dữ liệu lớn
+ *  (_cacheDuLieuLon_, DocumentCache) — không tranh chỗ phiên đăng nhập. */
 function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const cache = CacheService.getScriptCache();
+  const cache = _cacheDuLieuLon_();
   const daCache = cache.get('DS_NGAN_HANG_VIETQR');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tải lại */ } }
 
@@ -24,7 +26,7 @@ function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
   const json = JSON.parse(resp.getContentText());
   if (json.code !== '00') throw new Error('Không tải được danh sách ngân hàng: ' + (json.desc || 'lỗi không rõ'));
   const list = (json.data || []).map(function (b) { return { code: b.code, bin: b.bin, ten: b.shortName, tenDayDu: b.name }; });
-  try { cache.put('DS_NGAN_HANG_VIETQR', JSON.stringify(list), 86400); } catch (e) { /* danh sách hơi lớn, nếu không cache vừa thì thôi, vẫn trả kết quả bình thường */ }
+  try { cache.put('DS_NGAN_HANG_VIETQR', JSON.stringify(list), 21600); } catch (e) { /* danh sách hơi lớn, nếu không cache vừa thì thôi, vẫn trả kết quả bình thường */ }
   return list;
 }
 

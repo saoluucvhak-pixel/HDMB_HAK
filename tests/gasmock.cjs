@@ -86,8 +86,11 @@ function taoMoiTruong(thuMuc, opts) {
       openByUrl: (u) => { if (u.indexOf('1G_SUfAY') !== -1) return ssBaoCao; throw new Error('openByUrl mock: không có quyền ' + u); },
       create: (n) => new Spreadsheet(n), flush() {}, getUi: () => { throw new Error('no ui'); }
     },
-    CacheService: { getDocumentCache: () => null, getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, String(v)), remove: k => cache.delete(k),
-      getAll: ks => { const o = {}; ks.forEach(k => { if (cache.has(k)) o[k] = cache.get(k); }); return o; }, putAll: o => Object.keys(o).forEach(k => cache.set(k, o[k])) }) },
+    // Như CacheService thật: thời hạn tối đa 21.600 giây (6 giờ) — vượt là lỗi
+    CacheService: { getDocumentCache: () => null, getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null,
+      put: (k, v, ttl) => { if (ttl > 21600) throw new Error('Cache: thời hạn tối đa 21600 giây'); cache.set(k, String(v)); }, remove: k => cache.delete(k),
+      getAll: ks => { const o = {}; ks.forEach(k => { if (cache.has(k)) o[k] = cache.get(k); }); return o; },
+      putAll: (o, ttl) => { if (ttl > 21600) throw new Error('Cache: thời hạn tối đa 21600 giây'); Object.keys(o).forEach(k => cache.set(k, o[k])); } }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.has(k) ? props.get(k) : null, setProperty: (k, v) => props.set(k, String(v)), deleteProperty: k => props.delete(k) }) },
     LockService: { getScriptLock: lock },
     Session: { getActiveUser: () => ({ getEmail: () => EMAIL }), getEffectiveUser: () => ({ getEmail: () => 'owner@test.vn' }), getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },

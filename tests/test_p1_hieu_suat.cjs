@@ -106,6 +106,15 @@ try {
     kiem('P1-GS5 thống kê p50/p95 theo chức năng (Quản trị)', tk.chucNang.some(x => x.chucNang === 'TRA_CUU_HOP_DONG' && x.soLan >= 1 && x.p95 >= x.p50) && t.run('_bangQuyenApi_().LAY_THONG_KE_HIEU_NANG.quyen === QUYEN.QUAN_TRI'), J(tk));
   });
 
+  chay(function () {
+    // Danh sách ngân hàng VietQR: cache được (thời hạn ≤ 6 giờ), lần 2 không gọi mạng
+    const t = moi(0);
+    let soLanGoi = 0;
+    t.m.ctx.UrlFetchApp = { fetch: () => { soLanGoi++; return { getContentText: () => JSON.stringify({ code: '00', data: [{ code: 'VCB', bin: '970436', shortName: 'Vietcombank', name: 'NH TMCP Ngoại thương' }] }) }; } };
+    const a = t.run('LAY_DANH_SACH_NGAN_HANG_VIETQR_()'); const b = t.run('LAY_DANH_SACH_NGAN_HANG_VIETQR_()');
+    kiem('P1-NH1 danh sách ngân hàng VietQR được cache (lần 2 không gọi mạng)', soLanGoi === 1 && J(a) === J(b) && a[0].code === 'VCB', 'số lần gọi ' + soLanGoi);
+  });
+
   // ======================= Đồng bộ thanh toán tăng dần =======================
   chay(function () {
     const t = moi(0);
