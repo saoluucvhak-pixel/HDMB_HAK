@@ -15,7 +15,8 @@ const buoc = [
   ['Giao diện mới: trang thật, menu chung, bản đồ', 'ui_trang_that.cjs', true],
   ['Giao diện mới đợt 2: Tổng quan, Tra cứu 2 cột, tiến độ 5 bước, so khớp OCR', 'ui_giao_dien_dot2.cjs', true],
   ['Giao diện: nhúng trong Portal — chuyển trang trong khung', 'ui_nhung_portal.cjs', true],
-  ['Giao diện: ô nhập số khi gõ bằng bộ gõ tiếng Việt / điện thoại', 'ui_dinh_dang_so.cjs', true]
+  ['Giao diện: ô nhập số khi gõ bằng bộ gõ tiếng Việt / điện thoại', 'ui_dinh_dang_so.cjs', true],
+  ['Giao diện: phản hồi tìm kiếm cũ không ghi đè kết quả mới', 'ui_phan_hoi_cu.cjs', true]
 ];
 let hong = 0;
 buoc.forEach(function (b) {

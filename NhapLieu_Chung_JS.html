@@ -177,10 +177,13 @@
   // ============ DANH SÁCH / TÌM / PHÂN TRANG HỢP ĐỒNG ============
   function debounceTimKiemHD() { clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
 
+  var luotTaiDSHD_ = 0; // phản hồi của lượt tìm CŨ về sau lượt mới (gõ nhanh / mạng chậm) không được ghi đè bảng
   function taiDanhSachHD(trang) {
+    var luot = ++luotTaiDSHD_;
     hakRun_()
-      .withFailureHandler(function (err) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
+      .withFailureHandler(function (err) { if (luot !== luotTaiDSHD_) return; document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
       .withSuccessHandler(function (kq) {
+        if (luot !== luotTaiDSHD_) return;
         try {
           if (kq && kq.loi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ ' + escAT_(kq.loi) + '</td></tr>'; return; }
           trangHDHienTai = kq.trang;

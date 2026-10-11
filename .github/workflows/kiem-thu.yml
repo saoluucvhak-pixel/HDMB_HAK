@@ -41,3 +41,5 @@ jobs:
           node ui_trang_that.cjs
           node ui_giao_dien_dot2.cjs
           node ui_nhung_portal.cjs
+          node ui_dinh_dang_so.cjs
+          node ui_phan_hoi_cu.cjs

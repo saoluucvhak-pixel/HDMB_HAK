@@ -314,11 +314,14 @@
     });
     taiBangKhachHang_(trang);
   }
+  var luotTaiKH_ = 0; // phản hồi của lượt tìm CŨ về sau lượt mới (gõ nhanh / mạng chậm) không được ghi đè bảng
   function taiBangKhachHang_(trang) {
     var tuKhoa = document.getElementById('oTimKHRoot').value;
     var elBang = document.getElementById('vungBangKH');
+    var luot = ++luotTaiKH_;
     hakRun_()
       .withSuccessHandler(function (kq) {
+        if (luot !== luotTaiKH_) return;
         if (!kq.items || !kq.items.length) { elBang.innerHTML = '<div class="empty-hint">Không có khách hàng nào khớp.</div>'; document.getElementById('phanTrangKH').innerHTML = ''; return; }
         var table = document.createElement('table'); table.className = 'mecon-table';
         table.innerHTML = '<thead><tr><th>Tên chủ rừng</th><th>Số CCCD</th><th>SĐT</th><th>Nhóm KH</th><th>Số hợp đồng</th><th></th></tr></thead>';
