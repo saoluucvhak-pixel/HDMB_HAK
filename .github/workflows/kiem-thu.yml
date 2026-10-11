@@ -25,6 +25,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Cú pháp .gs / .html
         run: node kiem_tra_cu_phap.cjs
+      - name: Phân quyền tĩnh (hàm ghi, trigger, chặn nhầm)
+        run: node test_phan_quyen_tinh.cjs
       - name: Máy chủ (giả lập Apps Script)
         run: node test_may_chu.cjs
       - name: Máy chủ P0 (đồng bộ Draft / thanh toán, chống tạo trùng)

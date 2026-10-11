@@ -5,6 +5,7 @@ const path = require('path');
 const env = Object.assign({}, process.env, { TZ: 'Asia/Ho_Chi_Minh' });
 const buoc = [
   ['Cú pháp', 'kiem_tra_cu_phap.cjs'],
+  ['Phân quyền tĩnh: hàm ghi, trigger, chặn nhầm', 'test_phan_quyen_tinh.cjs'],
   ['Máy chủ (giả lập Apps Script)', 'test_may_chu.cjs'],
   ['Máy chủ P0: đồng bộ Draft / thanh toán, chống tạo trùng', 'test_p0_dong_bo.cjs'],
   ['Máy chủ P1: tối ưu đọc Sheet + cache', 'test_p1_hieu_suat.cjs'],
