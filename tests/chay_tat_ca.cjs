@@ -7,6 +7,7 @@ const buoc = [
   ['Cú pháp', 'kiem_tra_cu_phap.cjs'],
   ['Máy chủ (giả lập Apps Script)', 'test_may_chu.cjs'],
   ['Máy chủ P0: đồng bộ Draft / thanh toán, chống tạo trùng', 'test_p0_dong_bo.cjs'],
+  ['Máy chủ P1: tối ưu đọc Sheet + cache', 'test_p1_hieu_suat.cjs'],
   ['Giao diện: khóa nút khi đang gửi (A1)', 'ui_khoa_nut.cjs', true],
   ['Giao diện: hộp thoại + nhớ bộ lọc (A3/A4)', 'ui_hop_thoai_bo_loc.cjs', true],
   ['Giao diện: chế độ tối + hỗ trợ truy cập (A5)', 'ui_giao_dien.cjs', true],

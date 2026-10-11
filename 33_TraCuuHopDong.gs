@@ -64,19 +64,22 @@ const TRUONG_CHU_TC_ = [['Số HĐ', 'SO_HD'], ['ID', 'ID_HD'], ['Chủ rừng',
 const TRUONG_SO_TC_ = [['CCCD chủ rừng', 'CCCD_CHU_RUNG'], ['CCCD ủy quyền', 'CCCD_UY_QUYEN'], ['SĐT chủ rừng', 'SDT_CHU_RUNG'], ['SĐT ủy quyền', 'SDT_UQ'], ['Số tài khoản', 'SO_TK']];
 
 function xoaCacheTraCuu_() {
-  try { CacheService.getScriptCache().remove(KHOA_CHI_MUC_TC_); } catch (e) { /* không có cache -> bỏ qua */ }
+  try { const c = CacheService.getScriptCache(); c.remove(KHOA_CHI_MUC_TC_); c.remove(KHOA_DS_KHACH_HANG_); } catch (e) { /* không có cache -> bỏ qua */ }
   xoaCacheAnhGps_(); // dữ liệu HĐ đổi -> bản nhớ ảnh / GPS của Tổng quan cũng bỏ (00_Config.gs)
 }
 
 function _dungChiMucTraCuu_() {
   const stkTheoHD = {};
-  readData_(SHEET_NAME.HD_STK).forEach(function (r) {
+  // P1.3: chỉ đọc đúng các cột dùng cho chỉ mục (trước đây đọc cả HD_STK + 33 cột HD_NCC)
+  docCacCot_(SHEET_NAME.HD_STK, [STK_COL.ID_HD, STK_COL.SO_TK]).forEach(function (r) {
     const id = (r[STK_COL.ID_HD] || '').toString().trim();
     const so = _chiLaySo_(r[STK_COL.SO_TK]);
     if (so) (stkTheoHD[id] = stkTheoHD[id] || []).push(so);
   });
   const ds = [];
-  readData_(SHEET_NAME.HD_NCC).forEach(function (r) {
+  const cotNcc = [NCC_COL.ID_HD, NCC_COL.SO_HD, NCC_COL.NGAY_KY, NCC_COL.TEN_CHU_RUNG, NCC_COL.TEN_UY_QUYEN, NCC_COL.CCCD_CHU_RUNG,
+    NCC_COL.DIA_CHI_RUNG, NCC_COL.TINH_TRANG].concat(TRUONG_CHU_TC_.concat(TRUONG_SO_TC_).map(function (t) { return NCC_COL[t[1]]; }));
+  docCacCot_(SHEET_NAME.HD_NCC, cotNcc).forEach(function (r) {
     const idHD = (r[NCC_COL.ID_HD] || '').toString().trim();
     if (!idHD && !r[NCC_COL.SO_HD]) return;
     ds.push([

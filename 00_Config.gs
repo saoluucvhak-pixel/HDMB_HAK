@@ -1307,6 +1307,29 @@ function _docDongTheoKhoaTuBoNho_(ten, colIndex0, can) {
   return dong.map(function (i) { return { r: bo.dong[i].slice(), soDong: i + 2 }; });
 }
 
+/**
+ * P1.5 (nâng cấp 10/2026): đọc CHỈ các cột cần (0-based) của 1 sheet, gom cột liền nhau (cách ≤ 3 cột thì đọc gộp) thành
+ * ít lệnh nhất. Trả mảng dòng giống readData_ (r[NCC_COL.X] dùng được như cũ), các cột không đọc = ''. Cột vượt quá số cột
+ * hiện có của sheet = ''. Dùng cho chỉ mục / danh sách chỉ cần vài cột — readData_ đọc cả bảng (HD_NCC 33 cột).
+ */
+function docCacCot_(sheetName, cacCot0) {
+  const sh = typeof sheetName === 'string' ? getSheet_(sheetName) : sheetName;
+  if (!sh) return [];
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const n = last - 1, soCotSheet = sh.getLastColumn();
+  const cot = Array.from(new Set(cacCot0)).filter(function (c) { return c >= 0 && c < soCotSheet; }).sort(function (a, b) { return a - b; });
+  const rows = [];
+  for (let i = 0; i < n; i++) rows.push(new Array(soCotSheet).fill(''));
+  const khoi = [];
+  cot.forEach(function (c) { const k = khoi[khoi.length - 1]; if (k && c - k[1] <= 4) k[1] = c; else khoi.push([c, c]); });
+  khoi.forEach(function (k) {
+    const v = sh.getRange(2, k[0] + 1, n, k[1] - k[0] + 1).getValues();
+    for (let i = 0; i < n; i++) for (let j = 0; j < v[i].length; j++) rows[i][k[0] + j] = v[i][j];
+  });
+  return rows;
+}
+
 function readData_(sheetName) {
   const sh = getSheet_(sheetName);
   const lastRow = sh.getLastRow();

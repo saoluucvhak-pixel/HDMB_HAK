@@ -29,6 +29,8 @@ jobs:
         run: node test_may_chu.cjs
       - name: Máy chủ P0 (đồng bộ Draft / thanh toán, chống tạo trùng)
         run: node test_p0_dong_bo.cjs
+      - name: Máy chủ P1 (tối ưu đọc Sheet + cache)
+        run: node test_p1_hieu_suat.cjs
       - name: Giao diện (Playwright)
         run: |
           node ui_khoa_nut.cjs
