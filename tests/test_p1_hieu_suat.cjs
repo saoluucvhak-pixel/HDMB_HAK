@@ -88,6 +88,24 @@ try {
     kiem('P1-CA2 tạo hợp đồng -> xóa đúng cache ở DocumentCache (khách mới hiện ngay)', t.run('layDanhSachKhachHang_(1, 20, "049055555555")').tongSo === 1);
   });
 
+  chay(function () {
+    // Giám sát hiệu năng ở cửa api(): chỉ ghi lời gọi chậm / lỗi, không ghi tham số người dùng
+    const t = moi(5);
+    const sheet = () => t.m.ssBaoCao.getSheetByName('NhatKy_HieuNang');
+    t.run('api("", "TRA_CUU_HOP_DONG", ["Khach BI_MAT_123", "", ""])');
+    kiem('P1-GS1 lời gọi nhanh (dưới ngưỡng 5 giây) -> không ghi sổ', !sheet());
+    t.m.props.set('HIEU_NANG_NGUONG_MS', '0'); t.run('_nguongHieuNangMs_ = null');
+    t.run('api("", "TRA_CUU_HOP_DONG", ["Khach BI_MAT_123", "", ""])');
+    let loi = ''; try { t.run('api("", "CHI_TIET_TRA_CUU_HOP_DONG", [{ toString: function () { throw new Error("Lỗi giả lập CCCD 049012345678"); } }])'); } catch (e) { loi = e.message; }
+    const dong = sheet() ? sheet().getDataRange().getValues().slice(1) : [];
+    kiem('P1-GS2 vượt ngưỡng -> ghi tên chức năng, thời gian, kết quả; lỗi được ghi "LỖI"', dong.length >= 1 && dong[0][1] === 'TRA_CUU_HOP_DONG' && typeof dong[0][2] === 'number' && dong.some(r => r[3] === 'LỖI'), J(dong));
+    kiem('P1-GS3 sổ hiệu năng KHÔNG chứa tham số / dữ liệu người dùng; số CCCD trong thông báo lỗi bị che', !J(dong).includes('BI_MAT_123') && !J(dong).includes('049012345678') && J(dong).includes('Lỗi giả lập'), J(dong));
+    let loiQ = ''; try { t.run('api("phien-sai", "TRA_CUU_HOP_DONG", ["x", "", ""])'); } catch (e) { loiQ = e.message; }
+    kiem('P1-GS4 lỗi đăng nhập / thiếu quyền không ghi sổ hiệu năng', !!loiQ && sheet().getLastRow() - 1 === dong.length, loiQ);
+    const tk = t.run('LAY_THONG_KE_HIEU_NANG_(7)');
+    kiem('P1-GS5 thống kê p50/p95 theo chức năng (Quản trị)', tk.chucNang.some(x => x.chucNang === 'TRA_CUU_HOP_DONG' && x.soLan >= 1 && x.p95 >= x.p50) && t.run('_bangQuyenApi_().LAY_THONG_KE_HIEU_NANG.quyen === QUYEN.QUAN_TRI'), J(tk));
+  });
+
   // ======================= Đồng bộ thanh toán tăng dần =======================
   chay(function () {
     const t = moi(0);

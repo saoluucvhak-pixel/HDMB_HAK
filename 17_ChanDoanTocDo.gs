@@ -88,3 +88,65 @@ function CHAY_CHAN_DOAN_TOC_DO_VA_HIEN_KQ() {
   const ketQua = CHAY_CHAN_DOAN_TOC_DO_();
   SpreadsheetApp.getUi().alert('⏱️ Kết quả đo thời gian (từng bước):\n\n' + ketQua);
 }
+
+/**
+ * ============================================================
+ *  GIÁM SÁT HIỆU NĂNG KHI VẬN HÀNH (nâng cấp 10/2026)
+ * ============================================================
+ * Cửa api() (34_PhanQuyen.gs) đo thời gian MỌI lời gọi từ trang web nhưng CHỈ GHI SỔ lời gọi chậm hơn ngưỡng (mặc định
+ * 5.000 ms; đổi bằng Script Properties "HIEU_NANG_NGUONG_MS") hoặc bị lỗi -> lời gọi bình thường không tốn thêm lệnh nào.
+ * Sổ: sheet NhatKy_HieuNang trong file báo cáo (Thời gian, Chức năng, ms, Kết quả, Lỗi, Vai trò). KHÔNG ghi tham số / dữ liệu
+ * người dùng / email. Tối đa 5.000 dòng (tự cắt dòng cũ). Chỉ số đọc/ghi Sheet theo từng bước không đo được đáng tin cậy
+ * trên Apps Script thật nên không ghi (dùng tests/do_hieu_suat.cjs trên bộ giả lập để so sánh).
+ */
+const HIEU_NANG_SHEET_ = 'NhatKy_HieuNang';
+const HIEU_NANG_TOI_DA_DONG_ = 5000;
+let _nguongHieuNangMs_ = null;
+function _nguongHieuNang_() {
+  if (_nguongHieuNangMs_ !== null) return _nguongHieuNangMs_;
+  let p = null;
+  try { p = PropertiesService.getScriptProperties().getProperty('HIEU_NANG_NGUONG_MS'); } catch (e) { /* mặc định */ }
+  const v = p === null || p === '' ? NaN : Number(p);
+  _nguongHieuNangMs_ = isFinite(v) && v >= 0 ? v : 5000;
+  return _nguongHieuNangMs_;
+}
+
+/** Gọi từ api() sau mỗi lời gọi. Không bao giờ ném lỗi (giám sát không được làm hỏng thao tác chính). */
+function ghiHieuNangNeuCham_(tenHam, ms, loi, vaiTro) {
+  try {
+    if (!loi && ms < _nguongHieuNang_()) return;
+    const ss = getReportSS_();
+    let sh = ss.getSheetByName(HIEU_NANG_SHEET_);
+    if (!sh) {
+      sh = ss.insertSheet(HIEU_NANG_SHEET_);
+      sh.getRange(1, 1, 1, 6).setValues([['Thời gian', 'Chức năng', 'Thời gian xử lý (ms)', 'Kết quả', 'Lỗi', 'Vai trò']]);
+    }
+    // Che dãy số dài (CCCD / SĐT / số tài khoản có thể lọt vào thông báo lỗi)
+    const thongDiep = loi ? String(loi.message || loi).replace(/\d{9,}/g, '…').replace(/\s+/g, ' ').slice(0, 200) : '';
+    sh.appendRow([new Date(), String(tenHam).slice(0, 80), ms, loi ? 'LỖI' : (ms >= _nguongHieuNang_() ? 'CHẬM' : 'OK'), thongDiep, vaiTro || '']);
+    const last = sh.getLastRow();
+    if (last > HIEU_NANG_TOI_DA_DONG_ + 500) sh.deleteRows(2, last - 1 - HIEU_NANG_TOI_DA_DONG_);
+  } catch (e) { /* bỏ qua */ }
+}
+
+/** Thống kê sổ hiệu năng theo chức năng: số lần chậm / lỗi, p50, p95, lớn nhất (ms). Chỉ Quản trị (qua api). */
+function LAY_THONG_KE_HIEU_NANG_(soNgay) {
+  _yeuCauQuyen_(QUYEN.QUAN_TRI);
+  const sh = getReportSS_().getSheetByName(HIEU_NANG_SHEET_);
+  if (!sh || sh.getLastRow() < 2) return { nguongMs: _nguongHieuNang_(), chucNang: [] };
+  const tu = Date.now() - (Number(soNgay) > 0 ? Number(soNgay) : 7) * 86400000;
+  const theoHam = {};
+  sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(function (r) {
+    if (!(r[0] instanceof Date) || r[0].getTime() < tu) return;
+    const k = String(r[1]);
+    const g = theoHam[k] = theoHam[k] || { chucNang: k, ms: [], soLoi: 0 };
+    g.ms.push(Number(r[2]) || 0);
+    if (r[3] === 'LỖI') g.soLoi++;
+  });
+  const pv = function (a, p) { return a.length ? a[Math.min(a.length - 1, Math.ceil(p * a.length) - 1)] : 0; };
+  const ds = Object.keys(theoHam).map(function (k) {
+    const g = theoHam[k]; g.ms.sort(function (a, b) { return a - b; });
+    return { chucNang: k, soLan: g.ms.length, soLoi: g.soLoi, p50: pv(g.ms, 0.5), p95: pv(g.ms, 0.95), lonNhat: g.ms[g.ms.length - 1] };
+  }).sort(function (a, b) { return b.p95 - a.p95; });
+  return { nguongMs: _nguongHieuNang_(), chucNang: ds };
+}

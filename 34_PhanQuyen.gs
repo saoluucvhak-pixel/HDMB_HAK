@@ -356,6 +356,8 @@ function api(phien, tenHam, thamSo) {
   const route = Object.prototype.hasOwnProperty.call(bang, tenHam) ? bang[tenHam] : null;
   if (!route) throw new Error('Chức năng không tồn tại: ' + tenHam);
   _nguoiDungHienTai_ = null;
+  const batDau = Date.now(); // giám sát hiệu năng (17_ChanDoanTocDo.gs): chỉ ghi sổ khi chậm hơn ngưỡng hoặc lỗi nghiệp vụ
+  let loiGoi = null, daQuaQuyen = false;
   try {
     if (phien) {
       const email = _docPhien_(phien);
@@ -363,8 +365,14 @@ function api(phien, tenHam, thamSo) {
       _nguoiDungHienTai_ = { email: email, vaiTro: _vaiTroCua_(email) };
     }
     _yeuCauQuyen_(route.quyen);
+    daQuaQuyen = true;
     return _anToanChoTrinhDuyet_(route.fn.apply(null, Array.isArray(thamSo) ? thamSo : []), 0);
+  } catch (e) {
+    loiGoi = e;
+    throw e;
   } finally {
+    // Lỗi đăng nhập / thiếu quyền không ghi sổ hiệu năng (không phải lỗi hệ thống)
+    if (daQuaQuyen) ghiHieuNangNeuCham_(tenHam, Date.now() - batDau, loiGoi, _nguoiDungHienTai_ ? _nguoiDungHienTai_.vaiTro : '');
     _nguoiDungHienTai_ = null;
   }
 }
@@ -438,6 +446,7 @@ function _bangQuyenApi_() {
     LAY_ANH_TRA_CUU: r(LAY_ANH_TRA_CUU_, X),
     LAY_DU_LIEU_ANH: r(LAY_DU_LIEU_ANH_, X),
     XUAT_PDF_ANH: r(XUAT_PDF_ANH_, X),
+    LAY_THONG_KE_HIEU_NANG: r(LAY_THONG_KE_HIEU_NANG_, Q),       // giám sát hiệu năng (17_ChanDoanTocDo.gs)
     BAO_CAO_HOP_DONG_PDF: r(BAO_CAO_HOP_DONG_PDF_, X),
     LAY_FILE_HO_SO: r(LAY_FILE_HO_SO_, N),
     XEM_FILE_DRIVE: r(XEM_FILE_DRIVE_, X),
