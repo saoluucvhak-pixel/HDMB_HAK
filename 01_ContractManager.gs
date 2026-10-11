@@ -661,12 +661,12 @@ function _ghiDraftTheoId_(sh, soCot, canGhi, canXoa, idsXet) {
  * P0.1 (nâng cấp 10/2026) — trước đây mốc "đã làm mới" luôn được ghi kể cả khi cập nhật lỗi -> thay đổi bị bỏ sót vĩnh viễn:
  *  - Chỉ ghi mốc khi mọi HĐ cập nhật xong; HĐ lỗi được giữ lại (Script Properties DRAFT_LAM_MOI_CHO_LAI) và làm lại ở lượt sau.
  *    Không lưu được danh sách chờ -> KHÔNG ghi mốc.
- *  - Xét chồng lấn 10 phút trước mốc: dòng nhật ký có giờ sớm hơn lúc được ghi vào Sheet (ghi đến chậm, cùng mili giây với
- *    mốc) không bị bỏ sót. Cập nhật lại 1 HĐ nhiều lần cho kết quả như nhau nên chồng lấn không gây sai.
+ *  - Mốc theo DÒNG CUỐI đã đọc của nhật ký: chỉ đọc dòng mới, không bỏ sót dòng ghi đến chậm (giờ sớm hơn mốc). Nhật ký bị
+ *    xóa / sắp xếp lại -> lọc theo giờ, xét chồng lấn 10 phút trước mốc (cập nhật lại 1 HĐ nhiều lần cho kết quả như nhau).
  *  - Cờ "đang chạy" (đặt dưới khóa ngắn): 2 lượt làm mới cùng lúc không xử lý chồng nhau; cờ quá 10 phút = lượt cũ bị ngắt.
  *  - Trả { thanhCong, soHopDongCapNhat, soLoi, hopDongLoi, ghiChu } (dangBan: true nếu lượt khác đang chạy).
  */
-const DRAFT_LAM_MOI_CHONG_LAN_MS_ = 10 * 60 * 1000;
+const DRAFT_LAM_MOI_CHONG_LAN_MS_ = 10 * 60 * 1000; // chỉ dùng khi không còn mốc theo dòng (nhật ký bị xóa / sắp xếp lại)
 const DRAFT_LAM_MOI_CO_HET_HAN_MS_ = 10 * 60 * 1000;
 const DRAFT_LAM_MOI_CHO_LAI_TOI_DA_ = 400;
 
@@ -696,7 +696,19 @@ function lamMoiDraftThucThi_(props) {
   let choLai = [];
   try { choLai = JSON.parse(props.getProperty('DRAFT_LAM_MOI_CHO_LAI') || '[]'); } catch (e) { choLai = []; }
   const idsCanCapNhat = new Set(Array.isArray(choLai) ? choLai : []); // Set() chống trùng — HĐ đổi 5 lần chỉ cập nhật 1 lần
-  _idHopDongTrongNhatKySau_(getOrCreateNhatKySheet_(), tuThoiGian).forEach(function (id) { idsCanCapNhat.add(id); });
+  // Nhật ký chỉ ghi thêm ở cuối -> mốc chính là DÒNG CUỐI đã đọc lần trước (kèm giờ của dòng đó để nhận ra nhật ký bị xóa /
+  // sắp xếp lại): chỉ đọc các dòng mới, kể cả dòng có giờ sớm hơn mốc nhưng ghi vào Sheet chậm. Không khớp -> lọc theo giờ
+  // với khoảng chồng lấn (như trên).
+  const shNK = getOrCreateNhatKySheet_();
+  const lastNK = shNK.getLastRow();
+  let mocDong = null;
+  try { mocDong = JSON.parse(props.getProperty('DRAFT_LAM_MOI_DONG_CUOI') || 'null'); } catch (e) { mocDong = null; }
+  if (mocDong && mocDong.dong >= 1 && mocDong.dong <= lastNK && _dauGioNhatKy_(shNK.getRange(mocDong.dong, 1).getValue()) === mocDong.gio) {
+    if (lastNK > mocDong.dong) shNK.getRange(mocDong.dong + 1, 4, lastNK - mocDong.dong, 1).getValues()
+      .forEach(function (r) { const id = (r[0] || '').toString().trim(); if (id) idsCanCapNhat.add(id); });
+  } else {
+    _idHopDongTrongNhatKySau_(shNK, tuThoiGian, lastNK).forEach(function (id) { idsCanCapNhat.add(id); });
+  }
 
   const ids = Array.from(idsCanCapNhat);
   const loi = new Set();
@@ -715,7 +727,10 @@ function lamMoiDraftThucThi_(props) {
     else if (hopDongLoi.length <= DRAFT_LAM_MOI_CHO_LAI_TOI_DA_) props.setProperty('DRAFT_LAM_MOI_CHO_LAI', JSON.stringify(hopDongLoi));
     else ghiMoc = false; // quá nhiều HĐ lỗi -> không lưu danh sách, giữ mốc cũ để lần sau xét lại từ đầu khoảng thời gian
   } catch (e) { ghiMoc = false; }
-  if (ghiMoc) props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
+  if (ghiMoc) {
+    props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
+    props.setProperty('DRAFT_LAM_MOI_DONG_CUOI', JSON.stringify({ dong: lastNK, gio: lastNK >= 1 ? _dauGioNhatKy_(shNK.getRange(lastNK, 1).getValue()) : '' }));
+  }
   if (hopDongLoi.length) ghiNhatKy_('LỖI làm mới Draft báo cáo', '', hopDongLoi.length + ' HĐ chưa cập nhật được, sẽ làm lại ở lần sau: ' + hopDongLoi.slice(0, 20).join(', '));
 
   const soXong = ids.length - hopDongLoi.length;
@@ -734,9 +749,11 @@ function lamMoiDraftThucThi_(props) {
  * dòng (2 cột Thời gian + ID_HD) và dừng khi cả khối đã cũ hơn mốc — trước đây đọc toàn bộ nhật ký (lớn dần mãi) mỗi lần bấm
  * "Làm mới". Nếu thấy thứ tự thời gian bị đảo (ai đó sắp xếp lại sheet) thì đọc tiếp tới hết, không dừng sớm.
  */
-function _idHopDongTrongNhatKySau_(sh, tuThoiGian) {
+function _dauGioNhatKy_(v) { return v instanceof Date ? 'D' + v.getTime() : String(v === null || v === undefined ? '' : v); }
+
+function _idHopDongTrongNhatKySau_(sh, tuThoiGian, denDong) {
   const ids = new Set();
-  const last = sh.getLastRow();
+  const last = denDong || sh.getLastRow();
   if (last < 2) return ids;
   const moc = tuThoiGian.getTime();
   const KHOI = 2000;

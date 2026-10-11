@@ -151,6 +151,22 @@ try {
     kiem('P0-C9 HĐ đã bị xóa -> bỏ dòng Draft, lượt làm mới vẫn thành công', t.draftCua(A.idHD).length === 0 && kq3.thanhCong !== false, J(kq3));
   });
 
+  chay(function () {
+    // Mốc theo dòng nhật ký: bấm làm mới liên tiếp không xử lý lại; nhật ký bị xóa bớt dòng -> vẫn không bỏ sót
+    const t = moi();
+    const ds = []; for (let i = 0; i < 5; i++) ds.push(t.tao('Moc ' + i, '0490000002' + String(10 + i), 'M' + i));
+    ds.forEach(h => t.run('ghiNhatKy_("Sửa tay trên Sheet", ' + J(h.idHD) + ', "")'));
+    const k1 = t.run('LAM_MOI_DRAFT_THEO_THAY_DOI_()');
+    const k2 = t.run('LAM_MOI_DRAFT_THEO_THAY_DOI_()');
+    kiem('P0-C10 bấm "Làm mới" 2 lần liền -> lần 2 không xử lý lại hợp đồng nào', k1.soHopDongCapNhat === 5 && k2.soHopDongCapNhat === 0, J([k1, k2]));
+    const shNK = t.ss.getSheetByName('NhatKy_SuaDoi');
+    shNK.deleteRow(2); shNK.deleteRow(2); // ai đó dọn bớt nhật ký cũ -> mốc theo dòng không còn khớp
+    const shN = t.ss.getSheetByName('HD_NCC'); const r = shN.getDataRange().getValues().findIndex(x => x[t.run('NCC_COL.ID_HD')] === ds[4].idHD) + 1;
+    shN.getRange(r, t.run('NCC_COL.TEN_CHU_RUNG') + 1).setValue('Moc 4 sua'); t.run('ghiNhatKy_("Sửa tay", ' + J(ds[4].idHD) + ', "")');
+    t.run('LAM_MOI_DRAFT_THEO_THAY_DOI_()');
+    kiem('P0-C11 nhật ký bị xóa bớt dòng -> chuyển sang lọc theo giờ, vẫn cập nhật thay đổi mới', (t.draftCua(ds[4].idHD)[0] || [])[t.col('TEN_CHU_RUNG')] === 'Moc 4 sua');
+  });
+
   // ======================= P0-D: chống tạo trùng khi gửi lại, cache bị xóa =======================
   chay(function () {
     const t = moi();
