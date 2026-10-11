@@ -16,6 +16,15 @@ function dung(thuMuc) {
     const k = Math.floor(rnd() * 60);
     run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: ten[k % ten.length] + (k > 30 ? ' ' + k : ''), cccdChuRung: '0490000' + String(10000 + k), ngayKy: '2026-0' + (1 + Math.floor(rnd() * 9)) + '-1' + Math.floor(rnd() * 9), soTK: '1' + i, nganHang: 'VCB', diaChiRung: 'X', dienTichKy: 1, slDuKien: 1, donGia: 1, sdtChuRung: '090' + k, nhomKH: k % 3 ? 'A' : '', maSoThue: k % 4 ? '' : '04' + k }) + ')');
   }
+  // Lô rừng, GPS (thập phân + DMS), ảnh cho 1/3 số hợp đồng
+  const dsHD = run('layDanhSachHopDong_(1, 200, "", "")').items;
+  dsHD.forEach(function (h, i) {
+    if (i % 3) return;
+    const lo = run('THEM_LO_RUNG_MOI_(' + J({ idHD: h.idHD, diaChiRung: 'Lo ' + i, dienTichM2: 1000 + i, donGia: 1000, khoiLuongDuKien: 10 + i }) + ')');
+    run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.' + (100 + i) + ', lng: 108.' + (200 + i) + '}, false)');
+    if (i % 2 === 0) run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', ' + J({ lat: '15°30\'10.5"N', lng: '108°12\'30.2"E' }) + ', false)');
+    if (i % 4 === 0) ss.getSheetByName('HD_Picture').appendRow([i % 8 === 0 ? h.idHD : lo.idRung, 'P' + i, 'x', 'https://drive.google.com/file/d/ANH' + i + '/view']);
+  });
   const sh = ss.getSheetByName('HD_NCC'); sh.getRange(5, 7).setValue(''); sh.getRange(9, 7).setValue(49000010003); sh.getRange(12, 7).setValue(' 049000010005 ');
   const out = {};
   for (const tk of ['', 'an', 'nguyễn', '0490000100', 'xyz']) for (const tr of [1, 2, 3, 9]) out['KH ' + tk + '|' + tr] = run('layDanhSachKhachHang_(' + tr + ', 20, ' + J(tk) + ')');
@@ -23,6 +32,19 @@ function dung(thuMuc) {
   out['HĐ theo KH (số)'] = run('layHopDongTheoKhachHang_("49000010003")');
   for (const tk of ['an', 'Nguyễn', 'nguyen van', '0490000100', '090', '049000010003', '1 2', 'X', '2026', 'Đỗ'])
     for (const ng of [['', ''], ['2026-03-01', '2026-06-30']]) out['TC ' + tk + ng] = run('TRA_CUU_HOP_DONG_(' + J(tk) + ',' + J(ng[0]) + ',' + J(ng[1]) + ')');
+  out['Cờ ảnh/GPS toàn bộ'] = run('layCoAnhVaGpsTrucTiep_()');
+  out['Tổng quan'] = run('LAY_TONG_QUAN_HOP_DONG_({})');
+  out['Tổng quan lọc'] = run('_draftDataCache = null; LAY_TONG_QUAN_HOP_DONG_({ tinhTrangLoc: "Chờ thực hiện", trang: 2 })');
+  // Draft sau khi cập nhật hàng loạt (> 10 HĐ) và sau khi xây dựng lại toàn bộ (bỏ cột "Cập nhật lúc"; 2 cột CCCD so theo
+  // chuỗi 12 số vì bản mới CỐ Ý giữ số 0 đầu — mã cũ để Sheets đổi thành số)
+  const draft = () => { const c = run('DRAFT_BAOCAO_COL.CAP_NHAT_LUC'); return m.ssBaoCao.getSheetByName('Draft_BaoCaoHopDong').getDataRange().getValues().slice(1)
+    .map(r => r.map((x, i) => i === c ? '' : (x instanceof Date ? x.getTime() : (i === 5 || i === 9) ? (typeof x === 'number' ? ('000' + x).slice(-12) : String(x).trim()) : x))).sort((a, b) => String(a[0]) < String(b[0]) ? -1 : 1); };
+  const ids15 = dsHD.slice(0, 15).map(h => h.idHD);
+  ids15.forEach((id, i) => { const r = sh.getDataRange().getValues().findIndex(x => x[29] === id) + 1; sh.getRange(r, 5).setValue('Sửa tay ' + i); });
+  run('capNhatDraftHangLoat_(' + J(ids15) + ')');
+  out['Draft sau cập nhật hàng loạt'] = draft();
+  run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
+  out['Draft sau xây dựng lại'] = draft();
   out['TC chi tiết'] = run('CHI_TIET_TRA_CUU_HOP_DONG_(' + J(run('layDanhSachHopDong_(1,5,"","")').items[0].idHD) + ')');
   return out;
 }

@@ -1034,8 +1034,9 @@ function layCoAnhVaGpsTrucTiep_(chiCacHD) {
     gpsRows = docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, idRungs);
     pictureRows = docDongTheoKhoa_(SHEET_NAME.HD_PICTURE, PICTURE_COL.ID_HD, chiCacHD.concat(idRungs)); // cột ID_HD có thể lỡ chứa ID_RUNG
   } else {
-    rungRows = readData_(SHEET_NAME.HD_RUNG);
-    gpsRows = readData_(SHEET_NAME.HD_GPS);
+    // P1 (nâng cấp 10/2026): chỉ đọc cột dùng tới (HD_RUNG 2/20 cột, HD_GPS 4/10 cột) — trước đây đọc cả 3 bảng
+    rungRows = docCacCot_(SHEET_NAME.HD_RUNG, [RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG]);
+    gpsRows = docCacCot_(SHEET_NAME.HD_GPS, [GPS_COL.ID_KEY_GPS, GPS_COL.LAT, GPS_COL.LNG, GPS_COL.HE_TOA_DO]);
     pictureRows = readData_(SHEET_NAME.HD_PICTURE);
   }
 
