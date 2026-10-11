@@ -1026,6 +1026,8 @@ function CHAY_DONG_BO_THANH_TOAN_NGAY() {
   } else if (!capNhatDraftHangLoat_(idsHopDong)) { // PERF-001: 1 lần đọc-group-ghi cho toàn bộ
     thongBao = '❌ Đã đọc DNTT nhưng chưa ghi được báo cáo (Draft) — thử lại sau ít phút; trigger 30 phút cũng sẽ tự làm lại.';
   } else {
+    luuCacheBaoCao_('dnttDaApDung', _banThanhToanDaApDung_(tt, null));
+    props.setProperty('DNTT_TINH_LAI_TOAN_BO_LUC', String(Date.now()));
     props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDong.toString());
     if (thoiGianSua !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSua.toString());
     thongBao = '✅ Đã đồng bộ lại "Khối lượng/Giá trị thực hiện" cho ' + idsHopDong.length + ' hợp đồng từ DNTT_GK_DN_CT mới nhất.' + (tt.canhBao ? ' ⚠️ ' + tt.canhBao : '');
@@ -1043,14 +1045,44 @@ function CHAY_DONG_BO_THANH_TOAN_NGAY() {
  * Trả { dnttOk, loi, canhBao }.
  */
 function _lamMoiCacheThanhToan_() {
+  _bangDNTTTrongLuot_ = null; // đọc DNTT MỚI cho lượt đồng bộ này (2 hàm dưới dùng chung 1 lần đọc)
+  try { return _lamMoiCacheThanhToanThucThi_(); } finally { _bangDNTTTrongLuot_ = null; }
+}
+function _lamMoiCacheThanhToanThucThi_() {
   const dntt = layDuLieuThucHienTuDNTT_();
   if (!dntt || dntt.thanhCong !== true) return { dnttOk: false, loi: 'Không đọc được DNTT_GK_DN_CT — ' + ((dntt && dntt.loi) || 'không rõ lý do') + '.' };
   if (luuCacheBaoCao_('duLieuThucHienDNTT', dntt) === false) return { dnttOk: false, loi: 'Không lưu được cache thanh toán (sheet Cache_BaoCao).' };
   let canhBao = '';
-  const ngayCan = layNgayCanMinMaxTheoHopDong_KhongCache_();
+  let ngayCan = layNgayCanMinMaxTheoHopDong_KhongCache_();
   if (ngayCan && ngayCan.thanhCong === true) { if (luuCacheBaoCao_('ngayCanMinMax', ngayCan) === false) canhBao = 'Chưa lưu được ngày cân mới.'; }
-  else canhBao = 'Không đọc được phiếu cân (' + ((ngayCan && ngayCan.loi) || 'không rõ') + ') — giữ ngày thực hiện cũ.';
-  return { dnttOk: true, loi: '', canhBao: canhBao };
+  else { canhBao = 'Không đọc được phiếu cân (' + ((ngayCan && ngayCan.loi) || 'không rõ') + ') — giữ ngày thực hiện cũ.'; ngayCan = null; }
+  return { dnttOk: true, loi: '', canhBao: canhBao, dntt: dntt, ngayCan: ngayCan };
+}
+
+/**
+ * P1 (nâng cấp 10/2026) — đồng bộ TĂNG DẦN: trước đây mỗi lần file DNTT có sửa (Drive "lastUpdated" của CẢ file, kể cả sửa
+ * tab khác) là tính lại Draft cho MỌI hợp đồng. Nay so tổng hợp theo Số HĐ (khối lượng, giá trị, ngày cân, số CT) với bản ĐÃ
+ * ÁP DỤNG THÀNH CÔNG vào Draft lần trước ('dnttDaApDung' trong Cache_BaoCao) -> chỉ tính lại HĐ có Số HĐ đổi (gồm dòng DNTT
+ * mới / bị sửa / bị xóa). Không có bản đã áp dụng, hoặc đã quá 24 giờ kể từ lần tính lại toàn bộ -> tính lại toàn bộ.
+ * Bản đã áp dụng chỉ được ghi SAU khi cập nhật Draft thành công -> lượt lỗi không làm mất thay đổi.
+ */
+const DNTT_TINH_LAI_TOAN_BO_SAU_MS_ = 24 * 3600 * 1000;
+function _soHDThanhToanDoi_(cu, moi) {
+  const doi = {};
+  const a = cu || {}, b = moi || {};
+  Object.keys(a).concat(Object.keys(b)).forEach(function (k) { if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) doi[k.toString().trim()] = true; });
+  return doi;
+}
+function _banThanhToanDaApDung_(tt, cu) {
+  // JSON hóa giống hệt cách lưu cache (Date -> chuỗi ISO) để lần sau so đúng
+  return JSON.parse(JSON.stringify({ d: tt.dntt.theoSoHD, n: tt.ngayCan ? tt.ngayCan.theoSoHD : ((cu && cu.n) || {}) }));
+}
+function _docCacheBaoCaoNeuCo_(tenCache) {
+  try {
+    const data = getOrCreateCacheSheet_().getDataRange().getValues();
+    const dong = data.filter(function (r) { return r[0] === tenCache; });
+    return dong.length ? JSON.parse(dong.map(function (r) { return r[2]; }).join('')) : null;
+  } catch (e) { return null; }
 }
 
 function dongBoThanhToanNeuCoThayDoi_() {
@@ -1081,14 +1113,29 @@ function dongBoThanhToanNeuCoThayDoi_() {
 
     // Làm mới 2 cache liên quan đến thanh toán TRƯỚC (tính 1 LẦN DUY NHẤT ở đây, không phải để mỗi hợp đồng tự đọc lại
     // DNTT_GK_DN_CT/PhieuCan_DN riêng lẻ). P0: đọc lỗi -> giữ cache + Draft cũ, KHÔNG ghi mốc (lượt 30 phút sau thử lại).
+    const daApDung = _docCacheBaoCaoNeuCo_('dnttDaApDung'); // đọc TRƯỚC khi lưu cache mới
     const tt = _lamMoiCacheThanhToan_();
     if (!tt.dnttOk) throw new Error(tt.loi + ' Giữ nguyên số liệu thực hiện cũ, lượt sau thử lại.');
     if (tt.canhBao) ghiNhatKy_('CẢNH BÁO đồng bộ thanh toán định kỳ', '', tt.canhBao);
+    const banMoi = _banThanhToanDaApDung_(tt, daApDung);
+    const lanToanBo = Number(props.getProperty('DNTT_TINH_LAI_TOAN_BO_LUC') || 0);
+    const tangDan = !!(daApDung && daApDung.d && Date.now() - lanToanBo < DNTT_TINH_LAI_TOAN_BO_SAU_MS_);
 
     // Sau khi cache đã mới, cập nhật lại phần "đã thực hiện" cho TẤT CẢ hợp đồng —
     // lúc này CAP_NHAT_DRAFT_MOT_HOP_DONG_ chỉ ĐỌC cache vừa làm mới, không đọc lại sheet ngoài
-    const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    let idsHopDong;
+    if (tangDan) {
+      const doi = _soHDThanhToanDoi_(daApDung.d, banMoi.d);
+      Object.keys(_soHDThanhToanDoi_(daApDung.n, banMoi.n)).forEach(function (k) { doi[k] = true; });
+      idsHopDong = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.SO_HD, NCC_COL.ID_HD])
+        .filter(function (r) { return doi[(r[NCC_COL.SO_HD] || '').toString().trim()]; })
+        .map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    } else {
+      idsHopDong = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.ID_HD]).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    }
     if (!capNhatDraftHangLoat_(idsHopDong)) throw new Error('Cập nhật Draft báo cáo hàng loạt thất bại — lượt sau sẽ thử lại.'); // PERF-001
+    if (luuCacheBaoCao_('dnttDaApDung', banMoi) === false) throw new Error('Không lưu được mốc thanh toán đã áp dụng — lượt sau tính lại.');
+    if (!tangDan) props.setProperty('DNTT_TINH_LAI_TOAN_BO_LUC', String(Date.now()));
     props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDongHienTai.toString());
     if (thoiGianSuaGanNhat !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSuaGanNhat.toString());
   } catch (e) {

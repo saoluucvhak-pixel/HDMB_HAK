@@ -59,6 +59,51 @@ try {
     const g = t.run('readData_(SHEET_NAME.HD_NCC)');
     kiem('P1-DC1 docCacCot_ trả đúng giá trị các cột được chọn như readData_', r.length === 3 && r.every((x, i) => x[t.run('NCC_COL.SO_HD')] === g[i][t.run('NCC_COL.SO_HD')] && x[t.run('NCC_COL.ID_HD')] === g[i][t.run('NCC_COL.ID_HD')] && x[40] === undefined), J(r.map(x => [x[2], x[29]])));
   });
+  // ======================= Đồng bộ thanh toán tăng dần =======================
+  chay(function () {
+    const t = moi(0);
+    const SS = t.m.ssChinh.constructor;
+    const ssD = new SS('DNTT'), ssP = new SS('PC');
+    const shD = ssD.insertSheet('DNTT_GK_DN_CT'); const h = Array(20).fill('x'); h[0] = 'Ngày'; h[6] = 'Người nhận'; h[11] = 'Số CT'; h[12] = 'Khối lượng'; h[16] = 'Thành tiền'; h[19] = 'Số HĐ'; shD.appendRow(h);
+    const shP = ssP.insertSheet('PhieuCan_DN'); const hp = Array(28).fill('x'); hp[1] = 'Ngày cân 1'; hp[22] = 'So_CT'; shP.appendRow(hp);
+    const tt = { sua: 1 };
+    const goc = t.m.ctx.SpreadsheetApp.openByUrl;
+    t.m.ctx.SpreadsheetApp.openByUrl = (u) => u.indexOf('1oUm87') !== -1 ? ssD : u.indexOf('1vqMVx') !== -1 ? ssP : goc(u);
+    t.m.ctx.DriveApp.getFileById = () => ({ getLastUpdated: () => new Date(tt.sua) });
+    const ds = [];
+    for (let i = 0; i < 15; i++) ds.push(t.run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'K' + i, cccdChuRung: '0490' + String(20000000 + i), ngayKy: '2026-05-10', soTK: '1', nganHang: 'VCB', soHD: 'T' + i, diaChiRung: 'X', dienTichKy: 1, slDuKien: 100, donGia: 1000 }) + ')'));
+    const dong = (soHD, kl, ct, ngay) => { const r = Array(20).fill(''); r[11] = ct; r[12] = kl; r[16] = kl * 1000; r[19] = soHD; shD.appendRow(r); const p = Array(28).fill(''); p[1] = new Date(ngay); p[22] = ct; shP.appendRow(p); };
+    dong('T0', 10, 'C0', '2026-06-01T08:00:00+07:00'); dong('T1', 20, 'C1', '2026-06-02T08:00:00+07:00'); dong('T2', 30, 'C2', '2026-06-03T08:00:00+07:00');
+    const kl = (i) => { const sh = t.m.ssBaoCao.getSheetByName('Draft_BaoCaoHopDong'); const c = t.run('DRAFT_BAOCAO_COL'); const r = sh.getDataRange().getValues().find(x => x[c.ID_HD] === ds[i].idHD); return r ? r[c.KHOI_LUONG_THUC_HIEN] : null; };
+    // Gián điệp: ghi lại danh sách HĐ được tính lại mỗi lượt
+    t.run('var __goiDraft = []; var __gocHL = capNhatDraftHangLoat_; capNhatDraftHangLoat_ = function (ids) { __goiDraft.push(ids.slice()); return __gocHL(ids); }');
+    const luot = () => { t.run('__goiDraft = []'); t.run('dongBoThanhToanNeuCoThayDoi_()'); return t.run('__goiDraft'); };
+    tt.sua = 2; let g = luot();
+    kiem('P1-TT1 lần đầu (chưa có bản đã áp dụng) -> tính lại toàn bộ 15 HĐ, KL đúng', g.length === 1 && g[0].length === 15 && kl(0) === 10 && kl(1) === 20 && kl(2) === 30, J({ g: g.map(x => x.length), kl: [kl(0), kl(1), kl(2)] }));
+    // Sửa khối lượng 1 dòng có sẵn (số dòng không đổi, chỉ thời điểm sửa file đổi)
+    shD.getRange(3, 13).setValue(25); tt.sua = 3; g = luot();
+    kiem('P1-TT2 sửa KL dòng có sẵn của T1 -> chỉ tính lại đúng 1 HĐ (T1), KL = 25', g.length === 1 && J(g[0]) === J([ds[1].idHD]) && kl(1) === 25 && kl(0) === 10, J({ g, kl1: kl(1) }));
+    // File có sửa nhưng dữ liệu thanh toán không đổi (sửa tab khác)
+    tt.sua = 4; g = luot();
+    kiem('P1-TT3 file đổi nhưng số liệu thanh toán không đổi -> không tính lại HĐ nào', g.length === 1 && g[0].length === 0, J(g));
+    // Xóa dòng DNTT của T2
+    shD.deleteRow(4); tt.sua = 5; g = luot();
+    kiem('P1-TT4 xóa dòng DNTT của T2 -> tính lại T2, KL về theo lô (0)', J(g[0]) === J([ds[2].idHD]) && kl(2) === 0, J({ g, kl2: kl(2) }));
+    // Ghi Draft lỗi giữa chừng -> lượt sau vẫn tính lại HĐ đổi
+    dong('T3', 40, 'C3', '2026-06-05T08:00:00+07:00'); tt.sua = 6;
+    t.run('var __gocDr = getOrCreateDraftBaoCaoSheet_; getOrCreateDraftBaoCaoSheet_ = function () { throw new Error("Sheets lỗi tạm"); }');
+    luot();
+    t.run('getOrCreateDraftBaoCaoSheet_ = __gocDr');
+    g = luot();
+    kiem('P1-TT5 lượt trước ghi Draft lỗi -> lượt sau vẫn tính lại T3 (không mất thay đổi)', g.length === 1 && g[0].indexOf(ds[3].idHD) !== -1 && kl(3) === 40, J({ g, kl3: kl(3) }));
+    // Quá 24 giờ kể từ lần tính lại toàn bộ -> toàn bộ
+    t.m.props.set('DNTT_TINH_LAI_TOAN_BO_LUC', String(Date.now() - 25 * 3600 * 1000)); tt.sua = 7; g = luot();
+    kiem('P1-TT6 quá 24 giờ -> tính lại toàn bộ để tự sửa sai lệch', g.length === 1 && g[0].length === 15, J(g.map(x => x.length)));
+    // Kết quả tăng dần khớp hoàn toàn với xây dựng lại toàn bộ
+    const chup = () => { const c = t.run('DRAFT_BAOCAO_COL.CAP_NHAT_LUC'); return J(t.m.ssBaoCao.getSheetByName('Draft_BaoCaoHopDong').getDataRange().getValues().slice(1).map(r => r.map((x, i) => i === c ? '' : x instanceof Date ? x.getTime() : x)).sort()); };
+    const a = chup(); t.run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
+    kiem('P1-TT7 Draft sau các lượt tăng dần GIỐNG HỆT xây dựng lại toàn bộ', a === chup());
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));

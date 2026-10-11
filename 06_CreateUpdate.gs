@@ -79,9 +79,7 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
     };
     const COT_SO_CT = 11; // cột L trong DNTT_GK_DN_CT
 
-    const ssDNTT = SpreadsheetApp.openByUrl(DNTT_URL);
-    const shDNTT = ssDNTT.getSheetByName(DNTT_SHEET_NAME) || ssDNTT.getSheets()[0];
-    const dataDNTT = shDNTT.getDataRange().getValues();
+    const dataDNTT = _docBangDNTT_(); // P1 (nâng cấp 10/2026): dùng chung bản đọc trong lượt chạy với layDuLieuThucHienTuDNTT_
     if (dataDNTT.length < 2) return { thanhCong: false, loi: 'DNTT_GK_DN_CT chưa có dữ liệu.', theoSoHD: {} };
 
     let colSoHD = -1, dongHeaderDNTT = 0;
@@ -109,7 +107,11 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
     const COT_SO_CT_PHIEUCAN = 22; // cột W
     const ssPC = SpreadsheetApp.openByUrl(PHIEUCAN_URL);
     const shPC = ssPC.getSheetByName(PHIEUCAN_SHEET_NAME) || ssPC.getSheets()[0];
-    const dataPC = shPC.getDataRange().getValues();
+    // P1: chỉ đọc 2 cột dùng tới (B Ngày cân 1, W So_CT) — trước đây đọc cả 28 cột PhieuCan_DN
+    const lastPC = shPC.getLastRow();
+    const cotNgayPC = lastPC >= 1 ? shPC.getRange(1, COT_NGAY_CAN_1 + 1, lastPC, 1).getValues() : [];
+    const cotSoCTPC = lastPC >= 1 && shPC.getLastColumn() > COT_SO_CT_PHIEUCAN ? shPC.getRange(1, COT_SO_CT_PHIEUCAN + 1, lastPC, 1).getValues() : cotNgayPC.map(function () { return ['']; });
+    const dataPC = cotNgayPC.map(function (r, i) { const d = []; d[COT_NGAY_CAN_1] = r[0]; d[COT_SO_CT_PHIEUCAN] = cotSoCTPC[i][0]; return d; });
 
     const ngayCanTheoSoCT = {};
     for (let i = 1; i < dataPC.length; i++) {
@@ -141,11 +143,22 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
   }
 }
 
+/**
+ * Bảng DNTT_GK_DN_CT đọc 1 lần cho cả lượt chạy (layDuLieuThucHienTuDNTT_ + layNgayCanMinMaxTheoHopDong_KhongCache_ trước
+ * đây mỗi hàm tự mở file và đọc lại toàn bộ). Lỗi đọc -> ném ra cho hàm gọi bắt như trước.
+ */
+let _bangDNTTTrongLuot_ = null;
+function _docBangDNTT_() {
+  if (_bangDNTTTrongLuot_) return _bangDNTTTrongLuot_;
+  const ss = SpreadsheetApp.openByUrl(DNTT_URL);
+  const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
+  _bangDNTTTrongLuot_ = sh.getDataRange().getValues();
+  return _bangDNTTTrongLuot_;
+}
+
 function layDuLieuThucHienTuDNTT_() {
   try {
-    const ss = SpreadsheetApp.openByUrl(DNTT_URL);
-    const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
-    const data = sh.getDataRange().getValues();
+    const data = _docBangDNTT_();
     if (data.length < 2) return { thanhCong: false, loi: 'Sheet DNTT_GK_DN_CT chưa có dữ liệu.', theoSoHD: {} };
 
     const boDauTV = function (s) {
