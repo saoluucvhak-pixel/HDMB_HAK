@@ -945,7 +945,39 @@ function getOrCreateDraftBaoCaoSheet_() {
     ];
     sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
   }
+  _dinhDangChuCccdDraftBC_(sh);
   return sh;
+}
+
+/**
+ * P0 (nâng cấp 10/2026): 2 cột CCCD của Draft_BaoCaoHopDong để định dạng mặc định -> Sheets đổi "049..." thành số 49...
+ * (mất số 0 đầu) — trang Báo cáo tổng hợp và file Excel xuất ra hiện CCCD sai. Định dạng chữ ('@') cho 2 cột, tới quá số
+ * dòng hiện có 1.000 dòng; kiểm tra 1 lần mỗi lượt chạy, làm lại khi dữ liệu sắp vượt vùng đã định dạng.
+ */
+let _daDinhDangCccdDraftBC_ = false;
+function _dinhDangChuCccdDraftBC_(sh) {
+  if (_daDinhDangCccdDraftBC_) return;
+  _daDinhDangCccdDraftBC_ = true;
+  try {
+    const p = PropertiesService.getScriptProperties();
+    const khoa = 'DRAFT_BC_CCCD_CHU_DEN_DONG';
+    const daDen = Number(p.getProperty(khoa) || 0);
+    const last = sh.getLastRow();
+    if (daDen && last + 200 < daDen) return;
+    const den = Math.max(typeof sh.getMaxRows === 'function' ? sh.getMaxRows() : 0, last + 1000);
+    [DRAFT_BAOCAO_COL.CCCD_CHU_RUNG, DRAFT_BAOCAO_COL.CCCD_UY_QUYEN].forEach(function (c) { sh.getRange(2, c + 1, den - 1, 1).setNumberFormat('@'); });
+    p.setProperty(khoa, String(den));
+  } catch (e) { log_('WARNING', '_dinhDangChuCccdDraftBC_', 'Không định dạng chữ được cột CCCD của Draft', e); }
+}
+
+/** CCCD/CMND đọc từ Draft: ô cũ đã bị Sheets đổi thành số (mất số 0 đầu) -> trả lại chuỗi đủ chữ số (CCCD 12, CMND 9). */
+function _chuoiCccdDraft_(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v !== 'number' || !isFinite(v)) return String(v);
+  const s = String(Math.round(v));
+  if (s.length === 10 || s.length === 11) return ('000' + s).slice(-12);
+  if (s.length === 8) return '0' + s;
+  return s;
 }
 
 /** Tìm số dòng thật của 1 hợp đồng trong sheet Draft theo ID_HD, -1 nếu chưa có */
@@ -1138,8 +1170,8 @@ function _dongDraftBaoCaoThanhDoiTuong_(r) {
     const c = DRAFT_BAOCAO_COL;
     return {
       idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
-      diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
-      ngayCap: ngayToISO_(r[c.NGAY_CAP]), noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: r[c.CCCD_UY_QUYEN],
+      diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: _chuoiCccdDraft_(r[c.CCCD_CHU_RUNG]),
+      ngayCap: ngayToISO_(r[c.NGAY_CAP]), noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: _chuoiCccdDraft_(r[c.CCCD_UY_QUYEN]),
       khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], donGiaDuKien: r[c.DON_GIA_DU_KIEN], giaTriHopDong: r[c.GIA_TRI_HOP_DONG],
       khoiLuongThucHien: r[c.KHOI_LUONG_THUC_HIEN], donGiaThucHien: r[c.DON_GIA_THUC_HIEN], giaTriThucHien: r[c.GIA_TRI_THUC_HIEN],
       khoiLuongConLai: r[c.KHOI_LUONG_CON_LAI], giaTriConLai: r[c.GIA_TRI_CON_LAI],

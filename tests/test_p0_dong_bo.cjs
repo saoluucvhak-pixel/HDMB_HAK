@@ -182,6 +182,18 @@ try {
     const moMat = t.run('MO_DRAFT_THEO_SO_DONG_(' + itA.soDong + ',' + J(A.idHD) + ')');
     kiem('P0-E3 HĐ đã bị xóa hẳn -> không mở hợp đồng khác (trả rỗng)', moMat === null, J(moMat && moMat.du && moMat.du.idHD));
   });
+  // ======================= P0-F: CCCD trong Draft báo cáo giữ số 0 đầu =======================
+  chay(function () {
+    const t = moi();
+    const A = t.tao('Ho F', '049000000013', 'F1');
+    const cot = t.col('CCCD_CHU_RUNG');
+    kiem('P0-F1 Draft báo cáo lưu CCCD dạng chữ đủ số 0 đầu', (t.draftCua(A.idHD)[0] || [])[cot] === '049000000013', J((t.draftCua(A.idHD)[0] || [])[cot]));
+    // Dòng Draft cũ (trước bản sửa) đã bị Sheets đổi thành số -> đọc ra vẫn đúng
+    const sh = t.m.ssBaoCao.getSheetByName('Draft_BaoCaoHopDong'); const r = sh.getDataRange().getValues().findIndex(x => x[t.col('ID_HD')] === A.idHD) + 1;
+    sh.data[r - 1][cot] = 49000000013;
+    const m = t.run('docToanBoDraftBaoCao_()').find(x => x.idHD === A.idHD);
+    kiem('P0-F2 dòng Draft cũ đã mất số 0 -> trang Báo cáo / Excel vẫn hiện "049000000013"', m && m.cccdChuRung === '049000000013', J(m && m.cccdChuRung));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));
