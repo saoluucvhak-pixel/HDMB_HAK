@@ -188,11 +188,11 @@
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
             var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
-            var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
+            var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong, r.idHD); };
             tr.innerHTML = '<td>' + escAT_(r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
               '<td>' + escAT_(r.tenChuRung || '') + '</td><td>' + escAT_(r.diaChiRung || '') + '</td>' +
               '<td><span class="badge-status ' + badge + '">' + escAT_(r.tinhTrang || '') + '</span></td>' +
-              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + escAT_(r.soDong) + ')">Xem →</button></td>';
+              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + escAT_(r.soDong) + ', \'' + escAT_(r.idHD || '') + '\')">Xem →</button></td>';
             tbody.appendChild(tr);
           });
           var pgEl = document.getElementById('phanTrangHD');
@@ -206,7 +206,7 @@
   function veTrangDanhSach() { hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
 
   /** Bấm 1 dòng trong danh sách -> mở/tạo NHÁP cho hợp đồng đó (không đụng bảng gốc cho tới khi Lưu chính thức) */
-  function moTrangXemHopDong(soDong) {
+  function moTrangXemHopDong(soDong, idHD) {
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang mở nháp...' }]);
     hakRun_()
@@ -220,7 +220,7 @@
         apDungCheDoChiXem(kq.tinhTrangGoc === 'Đã thanh lý');
         capNhatBreadcrumbHopDong();
       })
-      .MO_DRAFT_THEO_SO_DONG(soDong);
+      .MO_DRAFT_THEO_SO_DONG(soDong, idHD || '');
   }
 
   function capNhatBreadcrumbHopDong() {

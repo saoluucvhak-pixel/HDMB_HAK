@@ -163,6 +163,25 @@ try {
     const k3 = t.tao('Vo E', '049000000005', '', ma + 'x');
     kiem('P0-D2 mã thao tác khác -> vẫn tạo được hợp đồng mới (không chặn nhầm)', k3.thanhCong && k3.idHD !== k1.idHD, J(k3));
   });
+  // ======================= P0-E: mở hợp đồng theo số dòng cũ (danh sách tải trước khi HĐ phía trên bị xóa) =======================
+  chay(function () {
+    const t = moi();
+    const X = t.tao('Bi Xoa', '049000000010', 'X1');
+    const A = t.tao('Nguyen Mo', '049000000011', 'M1');
+    const B = t.tao('Tran Khac', '049000000012', 'M2');
+    const ds = t.run('layDanhSachHopDong_(1, 20, "", "")').items;
+    const itA = ds.find(x => x.idHD === A.idHD);
+    // Người khác xóa hợp đồng X (nằm phía trên) -> dòng của A dịch lên, dòng cũ của A giờ là B
+    const shN = t.ss.getSheetByName('HD_NCC'); const r = shN.getDataRange().getValues().findIndex(x => x[t.run('NCC_COL.ID_HD')] === X.idHD) + 1;
+    shN.deleteRow(r);
+    const mo = t.run('MO_DRAFT_THEO_SO_DONG_(' + itA.soDong + ',' + J(A.idHD) + ')');
+    kiem('P0-E1 mở HĐ theo dòng đã dịch + kèm ID_HD -> mở ĐÚNG hợp đồng đã bấm', mo && mo.du && mo.du.idHD === A.idHD, J(mo && mo.du && mo.du.idHD));
+    const moCu = t.run('MO_DRAFT_THEO_SO_DONG_(' + itA.soDong + ')');
+    kiem('P0-E2 gọi kiểu cũ (không kèm ID) vẫn chạy như trước (tương thích ngược)', moCu && moCu.du && !!moCu.du.idHD);
+    shN.deleteRow(shN.getDataRange().getValues().findIndex(x => x[t.run('NCC_COL.ID_HD')] === A.idHD) + 1);
+    const moMat = t.run('MO_DRAFT_THEO_SO_DONG_(' + itA.soDong + ',' + J(A.idHD) + ')');
+    kiem('P0-E3 HĐ đã bị xóa hẳn -> không mở hợp đồng khác (trả rỗng)', moMat === null, J(moMat && moMat.du && moMat.du.idHD));
+  });
 } catch (e) { truot++; ketQua.push('LỖI ' + e.stack); }
 
 console.log(ketQua.join('\n'));
