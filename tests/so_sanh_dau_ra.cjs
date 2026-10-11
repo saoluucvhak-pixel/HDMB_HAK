@@ -44,6 +44,15 @@ function dung(thuMuc) {
   ids15.forEach((id, i) => { const r = sh.getDataRange().getValues().findIndex(x => x[29] === id) + 1; sh.getRange(r, 5).setValue('Sửa tay ' + i); });
   run('capNhatDraftHangLoat_(' + J(ids15) + ')');
   out['Draft sau cập nhật hàng loạt'] = draft();
+  // Làm mới theo nhật ký (sửa tay 15 HĐ + đổi lô) -> Draft_BaoCaoHopDong + Draft_HoSoRung
+  const shR = ss.getSheetByName('HD_RUNG');
+  for (let r = 2; r <= shR.getLastRow(); r += 2) shR.getRange(r, 11).setValue(1500 + r); // đổi đơn giá vài lô
+  dsHD.forEach(h => run('ghiNhatKy_("Sửa tay", ' + J(h.idHD) + ', "")'));
+  run('LAM_MOI_DRAFT_THEO_THAY_DOI_()');
+  out['Draft sau làm mới'] = draft();
+  const cHsr = run('DRAFT_HSR_COL.CAP_NHAT_LUC');
+  out['Hồ sơ rừng sau làm mới'] = m.ssBaoCao.getSheetByName('Draft_HoSoRung').getDataRange().getValues().slice(1)
+    .map(r => r.map((x, i) => i === cHsr ? '' : (x instanceof Date ? x.getTime() : x))).sort((a, b) => String(a[0]) < String(b[0]) ? -1 : 1);
   run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
   out['Draft sau xây dựng lại'] = draft();
   out['TC chi tiết'] = run('CHI_TIET_TRA_CUU_HOP_DONG_(' + J(run('layDanhSachHopDong_(1,5,"","")').items[0].idHD) + ')');

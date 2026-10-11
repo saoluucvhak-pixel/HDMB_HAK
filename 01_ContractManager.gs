@@ -714,9 +714,13 @@ function lamMoiDraftThucThi_(props) {
   const loi = new Set();
   if (ids.length) {
     capNhatDraftHangLoatChiTiet_(ids).loi.forEach(function (id) { loi.add(id); }); // PERF-001: 1 lần đọc-group-ghi
-    const gomHSR = batDauGomDraft_(); // P-10: gom lô rừng của mọi HĐ đổi, cập nhật cache "Hồ sơ rừng" 1 lần
+    // Cache "Hồ sơ rừng": lô của MỌI HĐ đổi đọc 1 lần (trước đây đọc cột HD_RUNG lại cho TỪNG hợp đồng — 1.000 HĐ = 2.000 lượt đọc)
     let hsrOk = true;
-    try { ids.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); }); } finally { hsrOk = ketThucGomDraft_(gomHSR) !== false; }
+    try {
+      const idRungs = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ids)
+        .map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); }).filter(Boolean);
+      if (idRungs.length) hsrOk = capNhatDraftHoSoRungHangLoat_(idRungs) !== false;
+    } catch (e) { hsrOk = false; log_('WARNING', 'LAM_MOI_DRAFT_THEO_THAY_DOI_', 'Không cập nhật được cache Hồ sơ rừng', e); }
     if (!hsrOk) ids.forEach(function (id) { loi.add(id); });
   }
 
