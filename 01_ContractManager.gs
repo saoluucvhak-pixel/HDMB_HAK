@@ -853,7 +853,12 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
     tatCaDong.push(arr);
     daXong[idHD] = true;
   }
-  if (tatCaDong.length) shTam.getRange(shTam.getLastRow() + 1, 1, tatCaDong.length, soCot).setValues(tatCaDong);
+  if (tatCaDong.length) {
+    const dongDau = shTam.getLastRow() + 1;
+    // CCCD dạng chữ ở sheet tạm (giữ số 0 đầu khi chép sang Draft thật) — xem _dinhDangChuCccdDraftBC_
+    [DRAFT_BAOCAO_COL.CCCD_CHU_RUNG, DRAFT_BAOCAO_COL.CCCD_UY_QUYEN].forEach(function (c) { shTam.getRange(dongDau, c + 1, tatCaDong.length, 1).setNumberFormat('@'); });
+    shTam.getRange(dongDau, 1, tatCaDong.length, soCot).setValues(tatCaDong);
+  }
   soDaXong += tatCaDong.length;
 
   if (dungGiuaChung) {
