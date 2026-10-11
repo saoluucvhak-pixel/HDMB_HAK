@@ -59,6 +59,21 @@ try {
     const g = t.run('readData_(SHEET_NAME.HD_NCC)');
     kiem('P1-DC1 docCacCot_ trả đúng giá trị các cột được chọn như readData_', r.length === 3 && r.every((x, i) => x[t.run('NCC_COL.SO_HD')] === g[i][t.run('NCC_COL.SO_HD')] && x[t.run('NCC_COL.ID_HD')] === g[i][t.run('NCC_COL.ID_HD')] && x[40] === undefined), J(r.map(x => [x[2], x[29]])));
   });
+  // ======================= Bản đồ GPS: cache chia mảnh =======================
+  chay(function () {
+    const t = moi(150);
+    const ds = t.run('layDanhSachHopDong_(1, 200, "", "")').items;
+    ds.forEach((h, i) => { const lo = t.run('layDanhSachRung_(' + J(h.idHD) + ')')[0]; for (let g = 0; g < 8; g++) t.run('CAP_NHAT_GPS_RUNG_(' + J(lo.idRung) + ', {lat: 15.' + (1000 + i * 8 + g) + ', lng: 108.' + (2000 + g) + ', diaChi: "Thôn số ' + i + ', xã Quế Phong, huyện Quế Sơn"}, false)'); });
+    const b1 = t.doDoc('getMapData_()');
+    const kichThuoc = JSON.stringify(b1.kq).length;
+    const b2 = t.doDoc('getMapData_()');
+    kiem('P1-BD1 bản đồ ' + kichThuoc.toLocaleString('vi') + ' ký tự (> 95.000) vẫn được cache: lần mở thứ 2 không đọc Sheet', kichThuoc > 95000 && b2.n === 0 && JSON.stringify(b2.kq) === JSON.stringify(b1.kq), J({ kichThuoc, n2: b2.n }));
+    const lo0 = t.run('layDanhSachRung_(' + J(ds[0].idHD) + ')')[0];
+    t.run('CAP_NHAT_GPS_RUNG_(' + J(lo0.idRung) + ', {lat: 16.5, lng: 107.5}, false)');
+    const b3 = t.run('getMapData_()');
+    kiem('P1-BD2 thêm điểm GPS -> bản đồ có ngay điểm mới (cache được xóa)', (b3[lo0.idRung].coords || []).some(c => c.lat === 16.5), J((b3[lo0.idRung] || {}).coords && b3[lo0.idRung].coords.length));
+  });
+
   // ======================= Đồng bộ thanh toán tăng dần =======================
   chay(function () {
     const t = moi(0);

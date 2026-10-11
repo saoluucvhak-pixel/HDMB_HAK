@@ -33,6 +33,7 @@ function dung(thuMuc) {
   for (const tk of ['an', 'Nguyễn', 'nguyen van', '0490000100', '090', '049000010003', '1 2', 'X', '2026', 'Đỗ'])
     for (const ng of [['', ''], ['2026-03-01', '2026-06-30']]) out['TC ' + tk + ng] = run('TRA_CUU_HOP_DONG_(' + J(tk) + ',' + J(ng[0]) + ',' + J(ng[1]) + ')');
   out['Cờ ảnh/GPS toàn bộ'] = run('layCoAnhVaGpsTrucTiep_()');
+  out['Bản đồ GPS'] = run('getMapData_ThucThi_()');
   out['Tổng quan'] = run('LAY_TONG_QUAN_HOP_DONG_({})');
   out['Tổng quan lọc'] = run('_draftDataCache = null; LAY_TONG_QUAN_HOP_DONG_({ tinhTrangLoc: "Chờ thực hiện", trang: 2 })');
   // Draft sau khi cập nhật hàng loạt (> 10 HĐ) và sau khi xây dựng lại toàn bộ (bỏ cột "Cập nhật lúc"; 2 cột CCCD so theo

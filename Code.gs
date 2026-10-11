@@ -247,15 +247,12 @@ function layThoiGianCapNhatBanDo_() {
  */
 function getMapData_() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const cache = CacheService.getScriptCache();
-  const daCache = cache.get('MAP_DATA_CACHE');
-  if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }
-
+  // P1 (nâng cấp 10/2026): cache CHIA MẢNH (00_Config.gs) — trước đây chỉ cache khi JSON < 95.000 ký tự, vài nghìn điểm GPS là
+  // vượt -> mỗi lần mở bản đồ đều đọc lại 3 bảng. Cùng khóa 'MAP_DATA_CACHE': xoaCacheBanDo_ xóa khóa chính = bỏ cả bộ.
+  const daCache = docCacheChiaManh_('MAP_DATA_CACHE');
+  if (daCache && typeof daCache === 'object') return daCache;
   const ketQua = getMapData_ThucThi_();
-  try {
-    const chuoi = JSON.stringify(ketQua);
-    if (chuoi.length < 95000) cache.put('MAP_DATA_CACHE', chuoi, 900); // 900s = 15 phút; CacheService giới hạn ~100KB/key nên bỏ qua an toàn nếu dữ liệu vượt ngưỡng, không cache được thì vẫn trả kết quả bình thường, chỉ là lần sau phải tính lại
-  } catch (e) { /* không cache được thì thôi, không ảnh hưởng kết quả trả về */ }
+  luuCacheChiaManh_('MAP_DATA_CACHE', ketQua, 900); // 15 phút; lỗi / quá lớn -> lần sau tính lại, kết quả vẫn đúng
   return ketQua;
 }
 
@@ -266,13 +263,15 @@ function getMapData_ThucThi_() {
   const nccSh = ss.getSheetByName("HD_NCC");
   if (!rungSh || !gpsSh) throw new Error("Thiếu Sheet HD_GPS hoặc HD_RUNG, vui lòng kiểm tra lại tên sheet.");
 
-  const rungData = rungSh.getDataRange().getValues();
+  // P1: HD_RUNG / HD_NCC chỉ đọc cột dùng tới (thêm 1 dòng trống ở đầu để giữ nguyên chỉ số vòng lặp bên dưới)
+  const rungData = [[]].concat(docCacCot_(rungSh, [RUNG_COL.ID_RUNG, RUNG_COL.ID_KEY_HD, RUNG_COL.SO_HD, RUNG_COL.TEN_CHU_RUNG,
+    RUNG_COL.DIEN_TICH_M2, RUNG_COL.DIEN_TICH_GPS, RUNG_COL.DIA_CHI_RUNG]));
   const gpsData = gpsSh.getDataRange().getValues();
 
   // Tra trạng thái hợp đồng theo ID_KEY_HD (HD_NCC.ID_HD) để tô màu marker/đa giác theo trạng thái
   let tinhTrangByIdHD = {};
   if (nccSh) {
-    const nccData = nccSh.getDataRange().getValues();
+    const nccData = [[]].concat(docCacCot_(nccSh, [NCC_COL.ID_HD, NCC_COL.TINH_TRANG]));
     for (let k = 1; k < nccData.length; k++) {
       const idHD = nccData[k][NCC_COL.ID_HD] ? nccData[k][NCC_COL.ID_HD].toString().trim() : "";
       if (idHD) tinhTrangByIdHD[idHD] = nccData[k][NCC_COL.TINH_TRANG] || "Đang thực hiện";
