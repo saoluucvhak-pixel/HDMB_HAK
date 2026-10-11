@@ -1,6 +1,28 @@
 # 08 — Nhật ký thay đổi (Changelog)
 
-Nhánh: `claude/test-code-bug-project-nywz0r`. Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit.
+Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit. Đợt 11/10/2026 nằm ở nhánh `feature/hdmb-performance-optimization` (chưa gộp `main`); các đợt trước ở `main`.
+
+## 11/10/2026 — Nâng cấp toàn vẹn dữ liệu & hiệu năng (nhánh `feature/hdmb-performance-optimization`, từ `main` `8d4bd25`)
+
+Chi tiết lỗi / bằng chứng: `DATA_INTEGRITY_TEST.md`; số đo trước / sau: `PERFORMANCE_COMPARISON.md`; triển khai:
+`DEPLOYMENT_CHECKLIST.md`; quay lại: `ROLLBACK_PLAN.md`; bảo mật: `SECURITY_ACTIONS.md`.
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `8495368` | 🐛🔴 P0 | **Đồng bộ thanh toán**: đọc DNTT lỗi không còn lưu đè cache tốt (trước: khối lượng thực hiện mọi HĐ về 0, không tự sửa); không ghi mốc khi lỗi; "Đồng bộ NGAY" ghi mốc sau khi xong, báo ❌ khi lỗi. **Làm mới Draft**: chỉ ghi mốc khi xong, HĐ lỗi giữ lại làm lượt sau, cờ chống chạy chồng, trả kết quả thật. **Cập nhật Draft hàng loạt**: chỉ ghi dòng đổi, tìm lại dòng theo ID_HD (trước: ghi đè cả vùng bằng bản đọc cũ). **Chống tạo trùng HĐ** lưu bền ở Script Properties. Test P0-A..D | 00, 01, 06, 16, tests/ |
+| `6530c89` | 🐛🔴 P0 | Nhập liệu: mở hợp đồng xác minh ID_HD (trước: dòng đã dịch → mở nhầm HĐ khác). Test P0-E | 15, NhapLieu_Chung_JS |
+| `1c55d5d`, `16e5758` | 🐛 | `Draft_BaoCaoHopDong` giữ số 0 đầu CCCD (Báo cáo tổng hợp, file Excel); dòng cũ đọc ra vẫn đúng. Test P0-F | 00, 01 |
+| `cf7edae` | ⚡ | `docCacCot_` đọc đúng cột cần; danh sách khách hàng 8/33 cột + nhớ 5 phút; HĐ theo khách hàng chỉ đọc cột CCCD + dòng khớp; chỉ mục Tra cứu 19/33 + 2/10 cột. `so_sanh_dau_ra.cjs` | 00, 06, 33, tests/ |
+| `8d15c8c` | ⚡ | Tổng quan: cờ ảnh/GPS đọc 2/20 cột HD_RUNG, 4/10 cột HD_GPS | 00 |
+| `4661559` | ⚡ | **Đồng bộ thanh toán tăng dần** (chỉ HĐ có số liệu đổi, 24 giờ tính lại toàn bộ 1 lần); DNTT đọc 1 lần/lượt; PhieuCan_DN 2/28 cột. Test P1-TT1..7 | 01, 06 |
+| `e484eca` | ⚡ | Bản đồ GPS: cache chia mảnh (trước: > 95.000 ký tự là không cache), HD_RUNG 7/20, HD_NCC 2/33 cột. Test P1-BD | Code |
+| `8febb8b` | 🔒⚡ | Cache dữ liệu lớn → DocumentCache (không tranh chỗ phiên đăng nhập). Test P1-CA | 00, 33 |
+| `4e26fff`, `26516cd` | ⚡ | Làm mới Draft: mốc theo dòng nhật ký (không xử lý lại thay đổi cũ); lô rừng của mọi HĐ đổi đọc 1 lần. 5.000 HĐ: 10.014 → 24 lượt đọc. Test P0-C10, C11 | 01, tests/ |
+| `58e89e0` | 🔒 | Webhook DNTT đọc mã bí mật từ Script Properties (giá trị cũ chỉ còn dự phòng); `test_phan_quyen_tinh.cjs` (hàm ghi / trigger / chặn nhầm) vào CI | Webhook_dntt, tests/ |
+| `2b4f285` | 🐛 UI | Phản hồi tìm kiếm / lọc cũ không ghi đè kết quả mới (Nhập liệu, Thêm/Sửa HĐ, Báo cáo). `ui_phan_hoi_cu.cjs` | NhapLieu_Chung_JS, 27, 10 |
+| `96973d4` | 📈 | Giám sát hiệu năng ở `api()`: ghi sổ `NhatKy_HieuNang` khi chậm > ngưỡng / lỗi; `LAY_THONG_KE_HIEU_NANG` (p50/p95). Test P1-GS | 17, 34 |
+| `d08b9a0` | 🐛 | Danh sách ngân hàng VietQR: thời hạn cache 86.400 s (vượt tối đa 21.600 s) → không bao giờ lưu được; nay 21.600 s ở cache dữ liệu lớn. Bộ giả lập ném lỗi khi thời hạn > 21.600 s như thật. Test P1-NH1 | 32, tests/gasmock |
+| (commit này) | 📄 | Tài liệu: DATA_INTEGRITY_TEST, PERFORMANCE_BASELINE, PERFORMANCE_COMPARISON, DEPLOYMENT_CHECKLIST, ROLLBACK_PLAN, SECURITY_ACTIONS; cập nhật 03/04/05/06/07/09/10 | docs/qa |
 
 ## 04/10/2026 — Tối ưu hiệu suất: gộp lệnh ghi (phương án 4)
 

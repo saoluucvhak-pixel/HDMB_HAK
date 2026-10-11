@@ -1,5 +1,26 @@
 # 07 — Kết quả kiểm thử (Test Result)
 
+## 0. Đợt 11/10/2026 — nhánh `feature/hdmb-performance-optimization`
+
+Chạy `node tests/chay_tat_ca.cjs` (TZ=Asia/Ho_Chi_Minh, Chromium có sẵn). **Môi trường: bộ giả lập Apps Script + Playwright —
+không phải Apps Script thật.**
+
+| Nhóm | `main` `8d4bd25` (gốc) | Nhánh nâng cấp |
+|---|---:|---:|
+| Cú pháp `.gs` + `<script>` trong `.html` | 50 khối, 0 lỗi | 50 khối, 0 lỗi |
+| Phân quyền tĩnh (mới) | — | 4/4 |
+| Máy chủ (hồi quy cũ) | 170/170 | 170/170 |
+| Máy chủ P0 (mới) | 8 đạt / 17 trượt + 1 lỗi | **27/27** |
+| Máy chủ P1 (mới) | 11 đạt / 13 trượt + 2 lỗi | **26/26** |
+| Giao diện (7 nhóm cũ) | 101/101 | 101/101 |
+| Giao diện: phản hồi cũ (mới) | 0/3 | **3/3** (+1 mục không lỗi JS) |
+| **Tổng PASS trong `chay_tat_ca`** | **271** (chưa có các nhóm mới) | **332, 0 FAIL** |
+| So đầu ra cũ / mới (`so_sanh_dau_ra.cjs`) | — | **110/110 giống** |
+
+Các nhóm mới đều được chạy trên mã cũ để chứng minh **bắt được lỗi** (trượt trên `main`, đạt trên nhánh). Chi tiết từng lỗi:
+`DATA_INTEGRITY_TEST.md`. Số đo hiệu năng: `PERFORMANCE_COMPARISON.md`. Mục **không chứng minh được bằng bộ giả lập**
+(khóa dưới tải thật, DocumentCache thật, thời gian thật, quota): `DATA_INTEGRITY_TEST.md` mục 5.
+
 ## 1. Cách kiểm thử
 
 Không có quyền vào project Apps Script / Google Sheet thật, nên xây 3 lớp kiểm thử chạy được và lặp lại được:
