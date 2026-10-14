@@ -748,10 +748,12 @@
     return { soHD: document.getElementById('ttLocSoHD').value, tenChuRung: document.getElementById('ttLocTenChuRung').value };
   }
   function locBangChiTiet() { clearTimeout(henGioLocTT_); henGioLocTT_ = setTimeout(function () { taiTongHop_(1); }, 350); }
+  var luotTaiTongHop_ = 0; // phản hồi của lượt lọc CŨ về sau lượt mới không được ghi đè bảng
   function taiTongHop_(trang, forceLamMoi) {
+    var luot = ++luotTaiTongHop_;
     hakRun_()
-      .withSuccessHandler(function (kq) { renderTongHopWebapp(kq, forceLamMoi); })
-      .withFailureHandler(function (err) { showMsg('msg', '❌ Lỗi: ' + err.message, false); })
+      .withSuccessHandler(function (kq) { if (luot !== luotTaiTongHop_) return; renderTongHopWebapp(kq, forceLamMoi); })
+      .withFailureHandler(function (err) { if (luot !== luotTaiTongHop_) return; showMsg('msg', '❌ Lỗi: ' + err.message, false); })
       .layTongHopChoWebapp(!!forceLamMoi, layBoLocTongHop_(), trang || 1, 20);
   }
   function veBangChiTiet_(kq) {
