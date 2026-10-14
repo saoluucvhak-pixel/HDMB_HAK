@@ -57,9 +57,16 @@ function TAO_DRAFT_MOI_() {
 }
 
 /** Tiện ích cho front-end: bấm 1 dòng trong danh sách -> mở/tạo nháp luôn trong 1 lượt gọi */
-function MO_DRAFT_THEO_SO_DONG_(soDong) {
+function MO_DRAFT_THEO_SO_DONG_(soDong, idHDMongDoi) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
-  const hd = layHopDongTheoSoDong_(soDong);
+  // P0.2 (nâng cấp 10/2026): danh sách gửi số dòng lúc tải trang; người khác xóa 1 HĐ phía trên thì dòng đã dịch -> trước
+  // đây MỞ NHẦM hợp đồng khác (người dùng dễ sửa nhầm Số TK / thông tin). Có ID_HD thì xác minh, lệch thì tìm lại theo ID.
+  idHDMongDoi = (idHDMongDoi || '').toString().trim();
+  let hd = layHopDongTheoSoDong_(soDong);
+  if (idHDMongDoi && (!hd || hd.khongTimThay || String(hd.idHD).trim() !== idHDMongDoi)) {
+    const dong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHDMongDoi);
+    hd = dong === -1 ? null : layHopDongTheoSoDong_(dong);
+  }
   if (!hd || hd.khongTimThay) return null;
   const ketQua = LAY_DRAFT_THEO_ID_HD_(hd.idHD);
   if (ketQua) ketQua.tinhTrangGoc = hd.tinhTrang;

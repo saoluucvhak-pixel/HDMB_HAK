@@ -94,7 +94,7 @@ function capNhatDraftHoSoRungHangLoat_(idsRung) {
   try {
     const can = {};
     (idsRung || []).forEach(function (id) { id = (id || '').toString().trim(); if (id) can[id] = true; });
-    if (!Object.keys(can).length) return;
+    if (!Object.keys(can).length) return true;
     // Tốc độ: chỉ đọc đúng các dòng liên quan (docDongTheoKhoa_) thay vì cả HD_RUNG / HD_NCC / HD_GPS
     const rungTheoId = {};
     docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, Object.keys(can)).forEach(function (r) { const id = (r[RUNG_COL.ID_RUNG] || '').toString().trim(); if (can[id]) rungTheoId[id] = r; });
@@ -132,7 +132,7 @@ function capNhatDraftHoSoRungHangLoat_(idsRung) {
           else themMoi.push(dong.slice(0, soCot));
         });
         if (themMoi.length) sh.getRange(Math.max(last, 1) + 1, 1, themMoi.length, soCot).setValues(themMoi);
-        return;
+        return true;
       }
     }
     const bang = last >= 2 ? sh.getRange(2, 1, last - 1, soCot).getValues() : [];
@@ -149,8 +149,10 @@ function capNhatDraftHoSoRungHangLoat_(idsRung) {
     const soDongGhi = Math.max(last - 1, moi.length);
     while (moi.length < soDongGhi) moi.push(new Array(soCot).fill(''));
     if (soDongGhi) sh.getRange(2, 1, soDongGhi, soCot).setValues(moi);
+    return true;
   } catch (e) {
     try { ghiNhatKy_('LỖI cập nhật Draft_HoSoRung', '', e.message); } catch (e2) { /* bỏ qua */ }
+    return false; // P0.1: làm mới Draft dựa vào đây để giữ HĐ lại cho lượt sau
   }
 }
 

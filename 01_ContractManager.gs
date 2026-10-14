@@ -419,13 +419,15 @@ function batDauGomDraft_() {
   return true;
 }
 function ketThucGomDraft_(laNguoiGom) {
-  if (!laNguoiGom || !_draftDangGom_) return;
+  if (!laNguoiGom || !_draftDangGom_) return true;
   const g = _draftDangGom_;
   _draftDangGom_ = null;
+  let ok = true;
   chayVoiBoNhoDoc_(function () { // 2 bước dùng chung dòng đã đọc (00_Config.gs) — chỉ ghi sheet Draft
-    if (g.hd.size) capNhatDraftHangLoat_(Array.from(g.hd));
-    if (g.rung.size) capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)); // P-10: 1 lần cho mọi lô
+    if (g.hd.size && !capNhatDraftHangLoat_(Array.from(g.hd))) ok = false;
+    if (g.rung.size && capNhatDraftHoSoRungHangLoat_(Array.from(g.rung)) === false) ok = false; // P-10: 1 lần cho mọi lô
   });
+  return ok; // false = có phần Draft chưa cập nhật được (đã ghi nhật ký lỗi)
 }
 
 /**
@@ -511,13 +513,26 @@ function XOA_DRAFT_MOT_HOP_DONG_(idHD) {
  * sạch và ghi lại toàn bộ).
  */
 function capNhatDraftHangLoat_(idsHopDong) {
+  return capNhatDraftHangLoatChiTiet_(idsHopDong).loi.length === 0;
+}
+
+/**
+ * Như capNhatDraftHangLoat_ nhưng trả CHI TIẾT { loi: [idHD cập nhật không được], soDongGhi } — LAM_MOI_DRAFT_THEO_THAY_DOI_
+ * dùng để giữ lại đúng các HĐ lỗi cho lượt sau (P0.1, nâng cấp 10/2026).
+ * Nhiều HĐ: chỉ ghi các dòng THẬT SỰ ĐỔI (so từng ô, bỏ cột "Cập nhật lúc"), gom dòng liền nhau thành 1 lệnh, vị trí dòng
+ * được xác định lại theo ID_HD ngay trước khi ghi/xóa. Trước đây ghi đè CẢ vùng Draft bằng bản đọc từ đầu lượt chạy ->
+ * dòng của HĐ khác vừa được người dùng cập nhật trong lúc đó bị ghi đè bằng dữ liệu cũ.
+ */
+function capNhatDraftHangLoatChiTiet_(idsHopDong) {
   idsHopDong = Array.from(new Set((idsHopDong || []).map(function (id) { return (id || '').toString().trim(); }).filter(Boolean)));
-  if (!idsHopDong.length) return true;
+  if (!idsHopDong.length) return { loi: [], soDongGhi: 0 };
   xoaCacheTraCuu_();
-  // Tốc độ: ít hợp đồng (lưu 1 hợp đồng, tạo mới...) -> từng HĐ đọc đúng dòng & ghi đúng dòng; trước đây đọc cả 5 sheet
-  // và GHI LẠI CẢ sheet cache. Nhiều hợp đồng (đồng bộ thanh toán, bảo trì) -> đọc 1 lần như cũ.
-  // Trả đúng kết quả (false nếu có HĐ lỗi): đồng bộ thanh toán dựa vào đây để KHÔNG ghi mốc "đã xử lý" khi lỗi (H-04).
-  if (idsHopDong.length <= 10) return idsHopDong.map(function (id) { return CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); }).every(Boolean);
+  // Tốc độ: ít hợp đồng (lưu 1 hợp đồng, tạo mới...) -> từng HĐ đọc đúng dòng & ghi đúng dòng.
+  // Trả đúng kết quả (HĐ lỗi): đồng bộ thanh toán / làm mới dựa vào đây để KHÔNG ghi mốc "đã xử lý" khi lỗi (H-04, P0.1).
+  if (idsHopDong.length <= 10) {
+    const loiIt = idsHopDong.filter(function (id) { return !CAP_NHAT_DRAFT_MOT_HOP_DONG_(id); });
+    return { loi: loiIt, soDongGhi: idsHopDong.length - loiIt.length };
+  }
   try {
     const nccRows = readData_(SHEET_NAME.HD_NCC);
     const nccTheoId = {};
@@ -556,42 +571,80 @@ function capNhatDraftHangLoat_(idsHopDong) {
     const soCot = Object.keys(DRAFT_BAOCAO_COL).length;
     const lastRow = sh.getLastRow();
     const duLieuHienTai = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, soCot).getValues() : [];
-    const chiSoTheoId = {}; // idHD -> chỉ số trong duLieuHienTai
-    duLieuHienTai.forEach(function (r, idx) {
+    const dongCuTheoId = {}; // idHD -> dòng Draft đầu tiên đang có (để so có đổi không)
+    duLieuHienTai.forEach(function (r) {
       const id = (r[DRAFT_BAOCAO_COL.ID_HD] || '').toString().trim();
-      if (id) chiSoTheoId[id] = idx;
+      if (id && !dongCuTheoId.hasOwnProperty(id)) dongCuTheoId[id] = r;
     });
 
+    const canGhi = {};   // idHD -> dòng mới (chỉ HĐ có thay đổi)
+    const canXoa = {};   // idHD -> true: HĐ đã bị xóa hẳn
     idsHopDong.forEach(function (idHD) {
       const row = nccTheoId[idHD];
-      if (!row) {
-        // Hợp đồng đã bị xóa hẳn -> đánh dấu xóa khỏi Draft
-        if (chiSoTheoId.hasOwnProperty(idHD)) duLieuHienTai[chiSoTheoId[idHD]] = null;
-        return;
-      }
+      if (!row) { if (dongCuTheoId.hasOwnProperty(idHD)) canXoa[idHD] = true; return; }
       const dong = tinhDongDraftChoHopDong_(idHD, row, rungByHD[idHD] || [], stkByHD[idHD] || [], gpsByIdRung, !!coAnhByHD[idHD], dntt, ngayCan);
       const arr = [];
       for (let k = 0; k < soCot; k++) arr[k] = (dong[k] === undefined ? '' : dong[k]);
-      if (chiSoTheoId.hasOwnProperty(idHD)) {
-        duLieuHienTai[chiSoTheoId[idHD]] = arr;
-      } else {
-        chiSoTheoId[idHD] = duLieuHienTai.length;
-        duLieuHienTai.push(arr);
-      }
+      if (!dongCuTheoId.hasOwnProperty(idHD) || _dongDraftKhacNhau_(dongCuTheoId[idHD], arr)) canGhi[idHD] = arr;
     });
-
-    const duLieuCuoiCung = duLieuHienTai.filter(function (r) { return r !== null; });
-    // H-04: ghi đè cả vùng bằng 1 lệnh (đệm dòng trống nếu ít dòng hơn) — trước đây clearContent() rồi mới
-    // setValues(): lỗi giữa 2 lệnh là Draft TRỐNG, mọi báo cáo trống.
-    const soDongGhi = Math.max(lastRow - 1, duLieuCuoiCung.length);
-    while (duLieuCuoiCung.length < soDongGhi) duLieuCuoiCung.push(new Array(soCot).fill(''));
-    if (soDongGhi) sh.getRange(2, 1, soDongGhi, soCot).setValues(duLieuCuoiCung);
+    const soDongGhi = _ghiDraftTheoId_(sh, soCot, canGhi, canXoa, idsHopDong);
     _draftDataCache = null;
-    return true;
+    return { loi: [], soDongGhi: soDongGhi };
   } catch (e) {
-    ghiNhatKy_('LỖI cập nhật Draft báo cáo hàng loạt', '', e.message);
-    return false;
+    ghiNhatKy_('LỖI cập nhật Draft báo cáo hàng loạt', '', idsHopDong.length + ' HĐ: ' + e.message);
+    return { loi: idsHopDong, soDongGhi: 0 };
   }
+}
+
+/** So 2 dòng Draft (bỏ cột "Cập nhật lúc"): ngày so theo thời điểm, còn lại so chuỗi. */
+function _dongDraftKhacNhau_(cu, moi) {
+  const chuan = function (v) {
+    if (v instanceof Date) return 'D' + v.getTime();
+    if (v === null || v === undefined) return '';
+    return String(v);
+  };
+  for (let k = 0; k < moi.length; k++) {
+    if (k === DRAFT_BAOCAO_COL.CAP_NHAT_LUC) continue;
+    if (chuan(cu[k]) !== chuan(moi[k])) return true;
+  }
+  return false;
+}
+
+/**
+ * Ghi các dòng Draft đã tính theo ID_HD: đọc lại cột ID ngay trước khi ghi (dòng có thể đã dịch do người khác thêm/xóa),
+ * ghi đè dòng đầu tiên của mỗi HĐ (gom dòng liền nhau 1 lệnh), xóa dòng thừa trùng ID và dòng của HĐ đã xóa hẳn (từ dưới
+ * lên), thêm dòng mới ở cuối 1 lệnh. Trả số dòng đã ghi/xóa.
+ */
+function _ghiDraftTheoId_(sh, soCot, canGhi, canXoa, idsXet) {
+  const xet = {};
+  idsXet.forEach(function (id) { xet[id] = true; });
+  const viTriDau = {}, dongThua = [];
+  const last = sh.getLastRow();
+  const cotId = last >= 2 ? sh.getRange(2, DRAFT_BAOCAO_COL.ID_HD + 1, last - 1, 1).getValues() : [];
+  cotId.forEach(function (r, i) {
+    const id = (r[0] || '').toString().trim();
+    if (!id || !xet[id]) return;
+    if (canXoa[id] || viTriDau.hasOwnProperty(id)) dongThua.push(i + 2); // HĐ đã xóa / dòng trùng ID (H-05)
+    else viTriDau[id] = i + 2;
+  });
+  let soGhi = 0;
+  // 1) Ghi đè tại chỗ, gom các dòng liền nhau thành 1 lệnh
+  const dsGhi = Object.keys(canGhi).filter(function (id) { return viTriDau.hasOwnProperty(id); })
+    .map(function (id) { return { dong: viTriDau[id], v: canGhi[id] }; })
+    .sort(function (a, b) { return a.dong - b.dong; });
+  for (let i = 0; i < dsGhi.length;) {
+    let j = i;
+    while (j + 1 < dsGhi.length && dsGhi[j + 1].dong === dsGhi[j].dong + 1) j++;
+    sh.getRange(dsGhi[i].dong, 1, j - i + 1, soCot).setValues(dsGhi.slice(i, j + 1).map(function (x) { return x.v; }));
+    soGhi += j - i + 1;
+    i = j + 1;
+  }
+  // 2) Xóa dòng thừa từ dưới lên (không làm lệch dòng phía trên)
+  dongThua.sort(function (a, b) { return b - a; }).forEach(function (d) { sh.deleteRow(d); soGhi++; });
+  // 3) HĐ chưa có dòng -> thêm ở cuối 1 lệnh
+  const themMoi = Object.keys(canGhi).filter(function (id) { return !viTriDau.hasOwnProperty(id); }).map(function (id) { return canGhi[id]; });
+  if (themMoi.length) { sh.getRange(Math.max(sh.getLastRow(), 1) + 1, 1, themMoi.length, soCot).setValues(themMoi); soGhi += themMoi.length; }
+  return soGhi;
 }
 
 /**
@@ -602,45 +655,137 @@ function capNhatDraftHangLoat_(idsHopDong) {
  */
 /**
  * LÀM MỚI THEO THAY ĐỔI THẬT — dùng cho nút "🔄 Làm mới dữ liệu" trên webapp.
- * KHÔNG tính lại toàn bộ từ đầu (khác hẳn XAY_DUNG_LAI_TOAN_BO_DRAFT_, hàm đó chỉ
- * dùng 1 lần lúc cài đặt) — chỉ đọc nhật ký (NhatKy_SuaDoi) kể từ lần làm mới
- * trước, lấy ra đúng danh sách ID_HD đã thay đổi (chống trùng bằng Set), rồi
- * CHỈ cập nhật lại Draft cho ĐÚNG những hợp đồng đó. Nếu không có gì thay đổi
- * kể từ lần trước, không tính toán gì cả — trả về ngay.
+ * KHÔNG tính lại toàn bộ từ đầu (khác hẳn XAY_DUNG_LAI_TOAN_BO_DRAFT_) — chỉ đọc nhật ký (NhatKy_SuaDoi) kể từ lần làm
+ * mới trước, lấy ra đúng danh sách ID_HD đã thay đổi rồi CHỈ cập nhật lại Draft cho những hợp đồng đó.
+ *
+ * P0.1 (nâng cấp 10/2026) — trước đây mốc "đã làm mới" luôn được ghi kể cả khi cập nhật lỗi -> thay đổi bị bỏ sót vĩnh viễn:
+ *  - Chỉ ghi mốc khi mọi HĐ cập nhật xong; HĐ lỗi được giữ lại (Script Properties DRAFT_LAM_MOI_CHO_LAI) và làm lại ở lượt sau.
+ *    Không lưu được danh sách chờ -> KHÔNG ghi mốc.
+ *  - Mốc theo DÒNG CUỐI đã đọc của nhật ký: chỉ đọc dòng mới, không bỏ sót dòng ghi đến chậm (giờ sớm hơn mốc). Nhật ký bị
+ *    xóa / sắp xếp lại -> lọc theo giờ, xét chồng lấn 10 phút trước mốc (cập nhật lại 1 HĐ nhiều lần cho kết quả như nhau).
+ *  - Cờ "đang chạy" (đặt dưới khóa ngắn): 2 lượt làm mới cùng lúc không xử lý chồng nhau; cờ quá 10 phút = lượt cũ bị ngắt.
+ *  - Trả { thanhCong, soHopDongCapNhat, soLoi, hopDongLoi, ghiChu } (dangBan: true nếu lượt khác đang chạy).
  */
+const DRAFT_LAM_MOI_CHONG_LAN_MS_ = 10 * 60 * 1000; // chỉ dùng khi không còn mốc theo dòng (nhật ký bị xóa / sắp xếp lại)
+const DRAFT_LAM_MOI_CO_HET_HAN_MS_ = 10 * 60 * 1000;
+const DRAFT_LAM_MOI_CHO_LAI_TOI_DA_ = 400;
+
 function LAM_MOI_DRAFT_THEO_THAY_DOI_() {
   const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { thanhCong: false, dangBan: true, soHopDongCapNhat: 0, ghiChu: 'Hệ thống đang bận — dữ liệu sẽ được làm mới ở lần sau.' };
+  try {
+    const dangChay = Number(props.getProperty('DRAFT_LAM_MOI_DANG_CHAY') || 0);
+    if (dangChay && Date.now() - dangChay < DRAFT_LAM_MOI_CO_HET_HAN_MS_) {
+      return { thanhCong: false, dangBan: true, soHopDongCapNhat: 0, ghiChu: 'Đang có lượt làm mới khác chạy — thử lại sau ít phút.' };
+    }
+    props.setProperty('DRAFT_LAM_MOI_DANG_CHAY', String(Date.now()));
+  } finally { lock.releaseLock(); }
+  try {
+    return lamMoiDraftThucThi_(props);
+  } finally {
+    try { props.deleteProperty('DRAFT_LAM_MOI_DANG_CHAY'); } catch (e) { /* cờ tự hết hạn sau 10 phút */ }
+  }
+}
+
+function lamMoiDraftThucThi_(props) {
   const moocThoiGianTruoc = props.getProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC');
-  const tuThoiGian = moocThoiGianTruoc ? new Date(moocThoiGianTruoc) : new Date(0);
+  const tuThoiGian = moocThoiGianTruoc ? new Date(new Date(moocThoiGianTruoc).getTime() - DRAFT_LAM_MOI_CHONG_LAN_MS_) : new Date(0);
+  const moocMoi = new Date(); // mốc cho lần sau = lúc BẮT ĐẦU lượt này (thay đổi trong lúc chạy sẽ được lượt sau xét)
 
-  const shNhatKy = getOrCreateNhatKySheet_();
-  const lastRow = shNhatKy.getLastRow();
-  const moocMoi = new Date(); // ghi lại NGAY BÂY GIỜ làm mốc cho lần làm mới tiếp theo
-
-  if (lastRow < 2) {
-    props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
-    return { soHopDongCapNhat: 0, ghiChu: 'Chưa có nhật ký thay đổi nào.' };
+  let choLai = [];
+  try { choLai = JSON.parse(props.getProperty('DRAFT_LAM_MOI_CHO_LAI') || '[]'); } catch (e) { choLai = []; }
+  const idsCanCapNhat = new Set(Array.isArray(choLai) ? choLai : []); // Set() chống trùng — HĐ đổi 5 lần chỉ cập nhật 1 lần
+  // Nhật ký chỉ ghi thêm ở cuối -> mốc chính là DÒNG CUỐI đã đọc lần trước (kèm giờ của dòng đó để nhận ra nhật ký bị xóa /
+  // sắp xếp lại): chỉ đọc các dòng mới, kể cả dòng có giờ sớm hơn mốc nhưng ghi vào Sheet chậm. Không khớp -> lọc theo giờ
+  // với khoảng chồng lấn (như trên).
+  const shNK = getOrCreateNhatKySheet_();
+  const lastNK = shNK.getLastRow();
+  let mocDong = null;
+  try { mocDong = JSON.parse(props.getProperty('DRAFT_LAM_MOI_DONG_CUOI') || 'null'); } catch (e) { mocDong = null; }
+  if (mocDong && mocDong.dong >= 1 && mocDong.dong <= lastNK && _dauGioNhatKy_(shNK.getRange(mocDong.dong, 1).getValue()) === mocDong.gio) {
+    if (lastNK > mocDong.dong) shNK.getRange(mocDong.dong + 1, 4, lastNK - mocDong.dong, 1).getValues()
+      .forEach(function (r) { const id = (r[0] || '').toString().trim(); if (id) idsCanCapNhat.add(id); });
+  } else {
+    _idHopDongTrongNhatKySau_(shNK, tuThoiGian, lastNK).forEach(function (id) { idsCanCapNhat.add(id); });
   }
 
-  const data = shNhatKy.getRange(2, 1, lastRow - 1, 4).getValues(); // Thời gian, Người TH, Hành động, ID_HD
-  const idsCanCapNhat = new Set(); // Set() tự chống trùng — 1 hợp đồng đổi 5 lần chỉ cập nhật 1 lần
-  data.forEach(function (r) {
-    const thoiGian = new Date(r[0]);
-    if (thoiGian > tuThoiGian) {
-      const idHD = (r[3] || '').toString().trim();
-      if (idHD) idsCanCapNhat.add(idHD);
-    }
-  });
+  const ids = Array.from(idsCanCapNhat);
+  const loi = new Set();
+  if (ids.length) {
+    capNhatDraftHangLoatChiTiet_(ids).loi.forEach(function (id) { loi.add(id); }); // PERF-001: 1 lần đọc-group-ghi
+    // Cache "Hồ sơ rừng": lô của MỌI HĐ đổi đọc 1 lần (trước đây đọc cột HD_RUNG lại cho TỪNG hợp đồng — 1.000 HĐ = 2.000 lượt đọc)
+    let hsrOk = true;
+    try {
+      const idRungs = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, ids)
+        .map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); }).filter(Boolean);
+      if (idRungs.length) hsrOk = capNhatDraftHoSoRungHangLoat_(idRungs) !== false;
+    } catch (e) { hsrOk = false; log_('WARNING', 'LAM_MOI_DRAFT_THEO_THAY_DOI_', 'Không cập nhật được cache Hồ sơ rừng', e); }
+    if (!hsrOk) ids.forEach(function (id) { loi.add(id); });
+  }
 
-  capNhatDraftHangLoat_(Array.from(idsCanCapNhat)); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG_
-  const gomHSR = batDauGomDraft_(); // P-10: gom lô rừng của mọi HĐ đổi, cập nhật cache "Hồ sơ rừng" 1 lần
-  try { idsCanCapNhat.forEach(function (idHD) { CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD); }); } finally { ketThucGomDraft_(gomHSR); }
-  props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
+  const hopDongLoi = Array.from(loi);
+  let ghiMoc = true;
+  try {
+    if (!hopDongLoi.length) props.deleteProperty('DRAFT_LAM_MOI_CHO_LAI');
+    else if (hopDongLoi.length <= DRAFT_LAM_MOI_CHO_LAI_TOI_DA_) props.setProperty('DRAFT_LAM_MOI_CHO_LAI', JSON.stringify(hopDongLoi));
+    else ghiMoc = false; // quá nhiều HĐ lỗi -> không lưu danh sách, giữ mốc cũ để lần sau xét lại từ đầu khoảng thời gian
+  } catch (e) { ghiMoc = false; }
+  if (ghiMoc) {
+    props.setProperty('DRAFT_MOOC_LAM_MOI_LAN_TRUOC', moocMoi.toISOString());
+    props.setProperty('DRAFT_LAM_MOI_DONG_CUOI', JSON.stringify({ dong: lastNK, gio: lastNK >= 1 ? _dauGioNhatKy_(shNK.getRange(lastNK, 1).getValue()) : '' }));
+  }
+  if (hopDongLoi.length) ghiNhatKy_('LỖI làm mới Draft báo cáo', '', hopDongLoi.length + ' HĐ chưa cập nhật được, sẽ làm lại ở lần sau: ' + hopDongLoi.slice(0, 20).join(', '));
 
+  const soXong = ids.length - hopDongLoi.length;
   return {
-    soHopDongCapNhat: idsCanCapNhat.size,
-    ghiChu: idsCanCapNhat.size ? 'Đã cập nhật ' + idsCanCapNhat.size + ' hợp đồng có thay đổi.' : 'Không có thay đổi gì kể từ lần làm mới trước.'
+    thanhCong: hopDongLoi.length === 0,
+    soHopDongCapNhat: soXong,
+    soLoi: hopDongLoi.length,
+    hopDongLoi: hopDongLoi.slice(0, 50),
+    ghiChu: hopDongLoi.length ? ('⚠️ ' + hopDongLoi.length + ' hợp đồng chưa cập nhật được (sẽ tự làm lại ở lần làm mới sau)' + (soXong ? '; đã cập nhật ' + soXong + ' hợp đồng.' : '.'))
+      : (ids.length ? 'Đã cập nhật ' + ids.length + ' hợp đồng có thay đổi.' : 'Không có thay đổi gì kể từ lần làm mới trước.')
   };
+}
+
+/**
+ * ID_HD có dòng nhật ký với thời gian > tuThoiGian. Nhật ký chỉ ghi thêm ở cuối nên đọc NGƯỢC từ cuối theo từng khối 2.000
+ * dòng (2 cột Thời gian + ID_HD) và dừng khi cả khối đã cũ hơn mốc — trước đây đọc toàn bộ nhật ký (lớn dần mãi) mỗi lần bấm
+ * "Làm mới". Nếu thấy thứ tự thời gian bị đảo (ai đó sắp xếp lại sheet) thì đọc tiếp tới hết, không dừng sớm.
+ */
+function _dauGioNhatKy_(v) { return v instanceof Date ? 'D' + v.getTime() : String(v === null || v === undefined ? '' : v); }
+
+function _idHopDongTrongNhatKySau_(sh, tuThoiGian, denDong) {
+  const ids = new Set();
+  const last = denDong || sh.getLastRow();
+  if (last < 2) return ids;
+  const moc = tuThoiGian.getTime();
+  const KHOI = 2000;
+  let daoThuTu = false, dauKhoiSau = Infinity; // thời gian dòng đầu của khối phía dưới (đã đọc trước)
+  for (let cuoi = last; cuoi >= 2;) {
+    const dau = Math.max(2, cuoi - KHOI + 1);
+    const n = cuoi - dau + 1;
+    const tg = sh.getRange(dau, 1, n, 1).getValues();
+    const id = sh.getRange(dau, 4, n, 1).getValues();
+    let tatCaCu = true, truoc = -Infinity, dauKhoi = Infinity;
+    for (let i = 0; i < n; i++) {
+      const t = tg[i][0] ? new Date(tg[i][0]).getTime() : NaN;
+      if (isNaN(t)) continue;
+      if (t < truoc) daoThuTu = true;
+      if (dauKhoi === Infinity) dauKhoi = t;
+      truoc = t;
+      if (t > moc) {
+        tatCaCu = false;
+        const ma = (id[i][0] || '').toString().trim();
+        if (ma) ids.add(ma);
+      }
+    }
+    if (truoc > dauKhoiSau) daoThuTu = true; // dòng cuối khối này mới hơn dòng đầu khối dưới
+    if (dauKhoi !== Infinity) dauKhoiSau = dauKhoi;
+    if (tatCaCu && !daoThuTu) break;
+    cuoi = dau - 1;
+  }
+  return ids;
 }
 
 /** Menu Sheet (webapp gọi XAY_DUNG_LAI_TOAN_BO_DRAFT_ qua api()). */
@@ -729,7 +874,12 @@ function XAY_DUNG_LAI_TOAN_BO_DRAFT_() {
     tatCaDong.push(arr);
     daXong[idHD] = true;
   }
-  if (tatCaDong.length) shTam.getRange(shTam.getLastRow() + 1, 1, tatCaDong.length, soCot).setValues(tatCaDong);
+  if (tatCaDong.length) {
+    const dongDau = shTam.getLastRow() + 1;
+    // CCCD dạng chữ ở sheet tạm (giữ số 0 đầu khi chép sang Draft thật) — xem _dinhDangChuCccdDraftBC_
+    [DRAFT_BAOCAO_COL.CCCD_CHU_RUNG, DRAFT_BAOCAO_COL.CCCD_UY_QUYEN].forEach(function (c) { shTam.getRange(dongDau, c + 1, tatCaDong.length, 1).setNumberFormat('@'); });
+    shTam.getRange(dongDau, 1, tatCaDong.length, soCot).setValues(tatCaDong);
+  }
   soDaXong += tatCaDong.length;
 
   if (dungGiuaChung) {
@@ -883,18 +1033,77 @@ function CHAY_DONG_BO_THANH_TOAN_NGAY() {
   const ss = SpreadsheetApp.openByUrl(DNTT_URL);
   const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
   const props = PropertiesService.getScriptProperties();
-  props.setProperty('DNTT_SO_DONG_LAN_TRUOC', sh.getLastRow().toString());
-  try { props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', DriveApp.getFileById(ss.getId()).getLastUpdated().getTime().toString()); } catch (e) { /* bỏ qua nếu không lấy được */ }
+  // P0 (nâng cấp 10/2026): lấy mốc TRƯỚC khi đọc nhưng chỉ GHI mốc sau khi xử lý xong — trước đây ghi mốc ngay đầu hàm,
+  // lỗi giữa chừng thì trigger 30 phút tưởng "không có gì mới" và không làm lại.
+  const soDong = sh.getLastRow();
+  let thoiGianSua = null;
+  try { thoiGianSua = DriveApp.getFileById(ss.getId()).getLastUpdated().getTime(); } catch (e) { /* bỏ qua nếu không lấy được */ }
 
-  luuCacheBaoCao_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_());
-  luuCacheBaoCao_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_());
-
+  let thongBao;
+  const tt = _lamMoiCacheThanhToan_();
   const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
-  capNhatDraftHangLoat_(idsHopDong); // PERF-001: 1 lần đọc-group-ghi cho toàn bộ thay vì N lần CAP_NHAT_DRAFT_MOT_HOP_DONG_
-
-  const thongBao = '✅ Đã đồng bộ lại "Khối lượng/Giá trị thực hiện" cho ' + idsHopDong.length + ' hợp đồng từ DNTT_GK_DN_CT mới nhất.';
+  if (!tt.dnttOk) {
+    thongBao = '❌ Chưa đồng bộ: ' + tt.loi + ' Số liệu thực hiện cũ được giữ nguyên.';
+  } else if (!capNhatDraftHangLoat_(idsHopDong)) { // PERF-001: 1 lần đọc-group-ghi cho toàn bộ
+    thongBao = '❌ Đã đọc DNTT nhưng chưa ghi được báo cáo (Draft) — thử lại sau ít phút; trigger 30 phút cũng sẽ tự làm lại.';
+  } else {
+    luuCacheBaoCao_('dnttDaApDung', _banThanhToanDaApDung_(tt, null));
+    props.setProperty('DNTT_TINH_LAI_TOAN_BO_LUC', String(Date.now()));
+    props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDong.toString());
+    if (thoiGianSua !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSua.toString());
+    thongBao = '✅ Đã đồng bộ lại "Khối lượng/Giá trị thực hiện" cho ' + idsHopDong.length + ' hợp đồng từ DNTT_GK_DN_CT mới nhất.' + (tt.canhBao ? ' ⚠️ ' + tt.canhBao : '');
+  }
+  if (/^❌/.test(thongBao)) ghiNhatKy_('LỖI đồng bộ thanh toán (chạy ngay)', '', thongBao);
   try { SpreadsheetApp.getUi().alert(thongBao); } catch (e) { /* chạy từ editor thì bỏ qua UI */ }
   return thongBao;
+}
+
+/**
+ * Đọc lại DNTT_GK_DN_CT + PhieuCan_DN và lưu cache — CHỈ lưu khi đọc thành công (P0, nâng cấp 10/2026). Trước đây kết quả
+ * lỗi (vd đổi tiêu đề cột, file tạm không phản hồi) được lưu đè lên cache tốt -> Draft của MỌI hợp đồng tính lại với khối
+ * lượng thực hiện sai (lấy theo lô, thường = 0) và mốc vẫn bị ghi -> sai mãi cho tới khi DNTT được sửa lần nữa.
+ * Phiếu cân lỗi: giữ cache ngày cân cũ, không chặn cập nhật khối lượng (không liên quan tiền), chỉ cảnh báo.
+ * Trả { dnttOk, loi, canhBao }.
+ */
+function _lamMoiCacheThanhToan_() {
+  _bangDNTTTrongLuot_ = null; // đọc DNTT MỚI cho lượt đồng bộ này (2 hàm dưới dùng chung 1 lần đọc)
+  try { return _lamMoiCacheThanhToanThucThi_(); } finally { _bangDNTTTrongLuot_ = null; }
+}
+function _lamMoiCacheThanhToanThucThi_() {
+  const dntt = layDuLieuThucHienTuDNTT_();
+  if (!dntt || dntt.thanhCong !== true) return { dnttOk: false, loi: 'Không đọc được DNTT_GK_DN_CT — ' + ((dntt && dntt.loi) || 'không rõ lý do') + '.' };
+  if (luuCacheBaoCao_('duLieuThucHienDNTT', dntt) === false) return { dnttOk: false, loi: 'Không lưu được cache thanh toán (sheet Cache_BaoCao).' };
+  let canhBao = '';
+  let ngayCan = layNgayCanMinMaxTheoHopDong_KhongCache_();
+  if (ngayCan && ngayCan.thanhCong === true) { if (luuCacheBaoCao_('ngayCanMinMax', ngayCan) === false) canhBao = 'Chưa lưu được ngày cân mới.'; }
+  else { canhBao = 'Không đọc được phiếu cân (' + ((ngayCan && ngayCan.loi) || 'không rõ') + ') — giữ ngày thực hiện cũ.'; ngayCan = null; }
+  return { dnttOk: true, loi: '', canhBao: canhBao, dntt: dntt, ngayCan: ngayCan };
+}
+
+/**
+ * P1 (nâng cấp 10/2026) — đồng bộ TĂNG DẦN: trước đây mỗi lần file DNTT có sửa (Drive "lastUpdated" của CẢ file, kể cả sửa
+ * tab khác) là tính lại Draft cho MỌI hợp đồng. Nay so tổng hợp theo Số HĐ (khối lượng, giá trị, ngày cân, số CT) với bản ĐÃ
+ * ÁP DỤNG THÀNH CÔNG vào Draft lần trước ('dnttDaApDung' trong Cache_BaoCao) -> chỉ tính lại HĐ có Số HĐ đổi (gồm dòng DNTT
+ * mới / bị sửa / bị xóa). Không có bản đã áp dụng, hoặc đã quá 24 giờ kể từ lần tính lại toàn bộ -> tính lại toàn bộ.
+ * Bản đã áp dụng chỉ được ghi SAU khi cập nhật Draft thành công -> lượt lỗi không làm mất thay đổi.
+ */
+const DNTT_TINH_LAI_TOAN_BO_SAU_MS_ = 24 * 3600 * 1000;
+function _soHDThanhToanDoi_(cu, moi) {
+  const doi = {};
+  const a = cu || {}, b = moi || {};
+  Object.keys(a).concat(Object.keys(b)).forEach(function (k) { if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) doi[k.toString().trim()] = true; });
+  return doi;
+}
+function _banThanhToanDaApDung_(tt, cu) {
+  // JSON hóa giống hệt cách lưu cache (Date -> chuỗi ISO) để lần sau so đúng
+  return JSON.parse(JSON.stringify({ d: tt.dntt.theoSoHD, n: tt.ngayCan ? tt.ngayCan.theoSoHD : ((cu && cu.n) || {}) }));
+}
+function _docCacheBaoCaoNeuCo_(tenCache) {
+  try {
+    const data = getOrCreateCacheSheet_().getDataRange().getValues();
+    const dong = data.filter(function (r) { return r[0] === tenCache; });
+    return dong.length ? JSON.parse(dong.map(function (r) { return r[2]; }).join('')) : null;
+  } catch (e) { return null; }
 }
 
 function dongBoThanhToanNeuCoThayDoi_() {
@@ -923,15 +1132,31 @@ function dongBoThanhToanNeuCoThayDoi_() {
     // H-04 (rà soát 28/09): mốc "đã xử lý" chỉ ghi SAU KHI làm xong (cuối hàm). Trước đây ghi ở đây, lượt chạy
     // lỗi / bị ngắt ở phút 6 thì lần sau tưởng "không có gì mới" -> khối lượng thực hiện cũ mãi.
 
-    // Làm mới 2 cache liên quan đến thanh toán TRƯỚC (tính 1 LẦN DUY NHẤT ở đây,
-    // không phải để mỗi hợp đồng tự đọc lại DNTT_GK_DN_CT/PhieuCan_DN riêng lẻ)
-    luuCacheBaoCao_('duLieuThucHienDNTT', layDuLieuThucHienTuDNTT_());
-    luuCacheBaoCao_('ngayCanMinMax', layNgayCanMinMaxTheoHopDong_KhongCache_());
+    // Làm mới 2 cache liên quan đến thanh toán TRƯỚC (tính 1 LẦN DUY NHẤT ở đây, không phải để mỗi hợp đồng tự đọc lại
+    // DNTT_GK_DN_CT/PhieuCan_DN riêng lẻ). P0: đọc lỗi -> giữ cache + Draft cũ, KHÔNG ghi mốc (lượt 30 phút sau thử lại).
+    const daApDung = _docCacheBaoCaoNeuCo_('dnttDaApDung'); // đọc TRƯỚC khi lưu cache mới
+    const tt = _lamMoiCacheThanhToan_();
+    if (!tt.dnttOk) throw new Error(tt.loi + ' Giữ nguyên số liệu thực hiện cũ, lượt sau thử lại.');
+    if (tt.canhBao) ghiNhatKy_('CẢNH BÁO đồng bộ thanh toán định kỳ', '', tt.canhBao);
+    const banMoi = _banThanhToanDaApDung_(tt, daApDung);
+    const lanToanBo = Number(props.getProperty('DNTT_TINH_LAI_TOAN_BO_LUC') || 0);
+    const tangDan = !!(daApDung && daApDung.d && Date.now() - lanToanBo < DNTT_TINH_LAI_TOAN_BO_SAU_MS_);
 
     // Sau khi cache đã mới, cập nhật lại phần "đã thực hiện" cho TẤT CẢ hợp đồng —
     // lúc này CAP_NHAT_DRAFT_MOT_HOP_DONG_ chỉ ĐỌC cache vừa làm mới, không đọc lại sheet ngoài
-    const idsHopDong = readData_(SHEET_NAME.HD_NCC).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    let idsHopDong;
+    if (tangDan) {
+      const doi = _soHDThanhToanDoi_(daApDung.d, banMoi.d);
+      Object.keys(_soHDThanhToanDoi_(daApDung.n, banMoi.n)).forEach(function (k) { doi[k] = true; });
+      idsHopDong = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.SO_HD, NCC_COL.ID_HD])
+        .filter(function (r) { return doi[(r[NCC_COL.SO_HD] || '').toString().trim()]; })
+        .map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    } else {
+      idsHopDong = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.ID_HD]).map(function (r) { return (r[NCC_COL.ID_HD] || '').toString().trim(); }).filter(Boolean);
+    }
     if (!capNhatDraftHangLoat_(idsHopDong)) throw new Error('Cập nhật Draft báo cáo hàng loạt thất bại — lượt sau sẽ thử lại.'); // PERF-001
+    if (luuCacheBaoCao_('dnttDaApDung', banMoi) === false) throw new Error('Không lưu được mốc thanh toán đã áp dụng — lượt sau tính lại.');
+    if (!tangDan) props.setProperty('DNTT_TINH_LAI_TOAN_BO_LUC', String(Date.now()));
     props.setProperty('DNTT_SO_DONG_LAN_TRUOC', soDongHienTai.toString());
     if (thoiGianSuaGanNhat !== null) props.setProperty('DNTT_THOI_GIAN_SUA_LAN_TRUOC', thoiGianSuaGanNhat.toString());
   } catch (e) {

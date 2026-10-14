@@ -699,7 +699,7 @@ function kiemTraFileTaiLen_(base64Data, mimeType) {
  * dữ liệu cũ tới 15 phút sau khi đổi (CACHE-001).
  */
 function xoaCacheBanDo_() {
-  try { CacheService.getScriptCache().remove('MAP_DATA_CACHE'); } catch (e) { /* không ảnh hưởng thao tác chính nếu lỗi */ }
+  xoaCacheChiaManh_('MAP_DATA_CACHE');
   xoaCacheAnhGps_(); // GPS đổi -> cờ "đủ GPS" / tọa độ trung bình của báo cáo cũng đổi
 }
 
@@ -707,9 +707,22 @@ function xoaCacheBanDo_() {
  * CACHE LỚN CHIA MẢNH (CacheService giới hạn 100 KB / khóa): chuỗi JSON cắt thành từng khúc 25.000 ký tự (< 100 KB kể cả
  * chữ có dấu), khóa chính giữ { ma, n }. Xóa khóa chính = vô hiệu cả bộ (khúc cũ tự hết hạn). Lỗi / thiếu khúc -> null.
  */
+/**
+ * Bộ nhớ đệm cho DỮ LIỆU LỚN (chỉ mục, danh sách, bản đồ): DocumentCache của file dữ liệu nếu có, không thì ScriptCache.
+ * Cùng lý do H-07: ScriptCache còn giữ phiên đăng nhập — nhồi dữ liệu lớn vào đó làm Google đẩy phiên ra sớm (đăng xuất ngẫu nhiên).
+ */
+function _cacheDuLieuLon_() {
+  try { const c = CacheService.getDocumentCache(); if (c) return c; } catch (e) { /* script không gắn file -> dùng ScriptCache */ }
+  return CacheService.getScriptCache();
+}
+function xoaCacheChiaManh_(khoa) {
+  try { _cacheDuLieuLon_().remove(khoa); } catch (e) { /* không có cache -> bỏ qua */ }
+  // Bản cũ (trước nâng cấp 10/2026) nằm ở ScriptCache — xóa luôn để không ai đọc lại bản cũ
+  try { CacheService.getScriptCache().remove(khoa); } catch (e) { /* bỏ qua */ }
+}
 function docCacheChiaManh_(khoa) {
   try {
-    const cache = CacheService.getScriptCache();
+    const cache = _cacheDuLieuLon_();
     const meta = cache.get(khoa);
     if (!meta) return null;
     const m = JSON.parse(meta), cacKhoa = [];
@@ -721,7 +734,7 @@ function docCacheChiaManh_(khoa) {
 }
 function luuCacheChiaManh_(khoa, giaTri, giay) {
   try {
-    const cache = CacheService.getScriptCache();
+    const cache = _cacheDuLieuLon_();
     const s = JSON.stringify(giaTri), ma = Utilities.getUuid().slice(0, 8), KHUC = 25000, o = {};
     let n = 0;
     for (let i = 0; i < s.length; i += KHUC) o[khoa + '_' + ma + '_' + (n++)] = s.slice(i, i + KHUC);
@@ -745,7 +758,7 @@ function layCoAnhVaGpsTrucTiepCoCache_() {
   return kq;
 }
 function xoaCacheAnhGps_() {
-  try { CacheService.getScriptCache().remove(KHOA_ANH_GPS_TT_); } catch (e) { /* không có cache -> bỏ qua */ }
+  xoaCacheChiaManh_(KHOA_ANH_GPS_TT_);
 }
 
 /**
@@ -877,7 +890,8 @@ function luuCacheBaoCao_(tenCache, duLieuObj) {
       rows.push([tenCache, i === 0 ? new Date().toISOString() : '', json.substr(i * CACHE_CHUNK_SIZE, CACHE_CHUNK_SIZE)]);
     }
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
-  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); }
+    return true;
+  } catch (e) { log_('WARNING', 'luuCacheBaoCao_', 'Không lưu được cache ' + tenCache + ' — lần sau sẽ tính lại từ đầu (chậm hơn)', e); return false; }
 }
 
 /**
@@ -908,7 +922,9 @@ function docCacheBaoCao_ChiDocThat_(tenCache, hamTinhNeuChuaCo) {
     }
   } catch (e) { /* rơi xuống tính mới bên dưới */ }
   const ketQua = hamTinhNeuChuaCo();
-  luuCacheBaoCao_(tenCache, ketQua);
+  // P0 (nâng cấp 10/2026): KHÔNG lưu kết quả lỗi (vd đọc DNTT thất bại tạm thời) — nếu lưu, mọi lần sau dùng mãi bản lỗi
+  // (khối lượng thực hiện về 0) cho tới khi đồng bộ thanh toán chạy lại. Không lưu thì lần đọc sau thử tính lại.
+  if (!(ketQua && ketQua.thanhCong === false)) luuCacheBaoCao_(tenCache, ketQua);
   return ketQua;
 }
 
@@ -942,7 +958,39 @@ function getOrCreateDraftBaoCaoSheet_() {
     ];
     sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#34495e').setFontColor('#ffffff');
   }
+  _dinhDangChuCccdDraftBC_(sh);
   return sh;
+}
+
+/**
+ * P0 (nâng cấp 10/2026): 2 cột CCCD của Draft_BaoCaoHopDong để định dạng mặc định -> Sheets đổi "049..." thành số 49...
+ * (mất số 0 đầu) — trang Báo cáo tổng hợp và file Excel xuất ra hiện CCCD sai. Định dạng chữ ('@') cho 2 cột, tới quá số
+ * dòng hiện có 1.000 dòng; kiểm tra 1 lần mỗi lượt chạy, làm lại khi dữ liệu sắp vượt vùng đã định dạng.
+ */
+let _daDinhDangCccdDraftBC_ = false;
+function _dinhDangChuCccdDraftBC_(sh) {
+  if (_daDinhDangCccdDraftBC_) return;
+  _daDinhDangCccdDraftBC_ = true;
+  try {
+    const p = PropertiesService.getScriptProperties();
+    const khoa = 'DRAFT_BC_CCCD_CHU_DEN_DONG';
+    const daDen = Number(p.getProperty(khoa) || 0);
+    const last = sh.getLastRow();
+    if (daDen && last + 200 < daDen) return;
+    const den = Math.max(typeof sh.getMaxRows === 'function' ? sh.getMaxRows() : 0, last + 1000);
+    [DRAFT_BAOCAO_COL.CCCD_CHU_RUNG, DRAFT_BAOCAO_COL.CCCD_UY_QUYEN].forEach(function (c) { sh.getRange(2, c + 1, den - 1, 1).setNumberFormat('@'); });
+    p.setProperty(khoa, String(den));
+  } catch (e) { log_('WARNING', '_dinhDangChuCccdDraftBC_', 'Không định dạng chữ được cột CCCD của Draft', e); }
+}
+
+/** CCCD/CMND đọc từ Draft: ô cũ đã bị Sheets đổi thành số (mất số 0 đầu) -> trả lại chuỗi đủ chữ số (CCCD 12, CMND 9). */
+function _chuoiCccdDraft_(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v !== 'number' || !isFinite(v)) return String(v);
+  const s = String(Math.round(v));
+  if (s.length === 10 || s.length === 11) return ('000' + s).slice(-12);
+  if (s.length === 8) return '0' + s;
+  return s;
 }
 
 /** Tìm số dòng thật của 1 hợp đồng trong sheet Draft theo ID_HD, -1 nếu chưa có */
@@ -999,8 +1047,9 @@ function layCoAnhVaGpsTrucTiep_(chiCacHD) {
     gpsRows = docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, idRungs);
     pictureRows = docDongTheoKhoa_(SHEET_NAME.HD_PICTURE, PICTURE_COL.ID_HD, chiCacHD.concat(idRungs)); // cột ID_HD có thể lỡ chứa ID_RUNG
   } else {
-    rungRows = readData_(SHEET_NAME.HD_RUNG);
-    gpsRows = readData_(SHEET_NAME.HD_GPS);
+    // P1 (nâng cấp 10/2026): chỉ đọc cột dùng tới (HD_RUNG 2/20 cột, HD_GPS 4/10 cột) — trước đây đọc cả 3 bảng
+    rungRows = docCacCot_(SHEET_NAME.HD_RUNG, [RUNG_COL.ID_KEY_HD, RUNG_COL.ID_RUNG]);
+    gpsRows = docCacCot_(SHEET_NAME.HD_GPS, [GPS_COL.ID_KEY_GPS, GPS_COL.LAT, GPS_COL.LNG, GPS_COL.HE_TOA_DO]);
     pictureRows = readData_(SHEET_NAME.HD_PICTURE);
   }
 
@@ -1135,8 +1184,8 @@ function _dongDraftBaoCaoThanhDoiTuong_(r) {
     const c = DRAFT_BAOCAO_COL;
     return {
       idHD: r[c.ID_HD], soHD: r[c.SO_HD], ngayKy: ngayToISO_(r[c.NGAY_KY]), tenChuRung: r[c.TEN_CHU_RUNG],
-      diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: r[c.CCCD_CHU_RUNG],
-      ngayCap: ngayToISO_(r[c.NGAY_CAP]), noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: r[c.CCCD_UY_QUYEN],
+      diaChiThuongTru: r[c.DIA_CHI_THUONG_TRU], cccdChuRung: _chuoiCccdDraft_(r[c.CCCD_CHU_RUNG]),
+      ngayCap: ngayToISO_(r[c.NGAY_CAP]), noiCap: r[c.NOI_CAP], tenUyQuyen: r[c.TEN_UY_QUYEN], cccdUyQuyen: _chuoiCccdDraft_(r[c.CCCD_UY_QUYEN]),
       khoiLuongDuKien: r[c.KHOI_LUONG_DU_KIEN], donGiaDuKien: r[c.DON_GIA_DU_KIEN], giaTriHopDong: r[c.GIA_TRI_HOP_DONG],
       khoiLuongThucHien: r[c.KHOI_LUONG_THUC_HIEN], donGiaThucHien: r[c.DON_GIA_THUC_HIEN], giaTriThucHien: r[c.GIA_TRI_THUC_HIEN],
       khoiLuongConLai: r[c.KHOI_LUONG_CON_LAI], giaTriConLai: r[c.GIA_TRI_CON_LAI],
@@ -1270,6 +1319,29 @@ function _docDongTheoKhoaTuBoNho_(ten, colIndex0, can) {
     else khoi.forEach(function (k) { bo.sh.getRange(k[0] + 2, 1, k[1] - k[0] + 1, bo.soCot).getValues().forEach(function (r, j) { bo.dong[k[0] + j] = r; }); });
   }
   return dong.map(function (i) { return { r: bo.dong[i].slice(), soDong: i + 2 }; });
+}
+
+/**
+ * P1.5 (nâng cấp 10/2026): đọc CHỈ các cột cần (0-based) của 1 sheet, gom cột liền nhau (cách ≤ 3 cột thì đọc gộp) thành
+ * ít lệnh nhất. Trả mảng dòng giống readData_ (r[NCC_COL.X] dùng được như cũ), các cột không đọc = ''. Cột vượt quá số cột
+ * hiện có của sheet = ''. Dùng cho chỉ mục / danh sách chỉ cần vài cột — readData_ đọc cả bảng (HD_NCC 33 cột).
+ */
+function docCacCot_(sheetName, cacCot0) {
+  const sh = typeof sheetName === 'string' ? getSheet_(sheetName) : sheetName;
+  if (!sh) return [];
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const n = last - 1, soCotSheet = sh.getLastColumn();
+  const cot = Array.from(new Set(cacCot0)).filter(function (c) { return c >= 0 && c < soCotSheet; }).sort(function (a, b) { return a - b; });
+  const rows = [];
+  for (let i = 0; i < n; i++) rows.push(new Array(soCotSheet).fill(''));
+  const khoi = [];
+  cot.forEach(function (c) { const k = khoi[khoi.length - 1]; if (k && c - k[1] <= 4) k[1] = c; else khoi.push([c, c]); });
+  khoi.forEach(function (k) {
+    const v = sh.getRange(2, k[0] + 1, n, k[1] - k[0] + 1).getValues();
+    for (let i = 0; i < n; i++) for (let j = 0; j < v[i].length; j++) rows[i][k[0] + j] = v[i][j];
+  });
+  return rows;
 }
 
 function readData_(sheetName) {

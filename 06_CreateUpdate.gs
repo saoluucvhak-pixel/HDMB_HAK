@@ -79,9 +79,7 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
     };
     const COT_SO_CT = 11; // cột L trong DNTT_GK_DN_CT
 
-    const ssDNTT = SpreadsheetApp.openByUrl(DNTT_URL);
-    const shDNTT = ssDNTT.getSheetByName(DNTT_SHEET_NAME) || ssDNTT.getSheets()[0];
-    const dataDNTT = shDNTT.getDataRange().getValues();
+    const dataDNTT = _docBangDNTT_(); // P1 (nâng cấp 10/2026): dùng chung bản đọc trong lượt chạy với layDuLieuThucHienTuDNTT_
     if (dataDNTT.length < 2) return { thanhCong: false, loi: 'DNTT_GK_DN_CT chưa có dữ liệu.', theoSoHD: {} };
 
     let colSoHD = -1, dongHeaderDNTT = 0;
@@ -109,7 +107,11 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
     const COT_SO_CT_PHIEUCAN = 22; // cột W
     const ssPC = SpreadsheetApp.openByUrl(PHIEUCAN_URL);
     const shPC = ssPC.getSheetByName(PHIEUCAN_SHEET_NAME) || ssPC.getSheets()[0];
-    const dataPC = shPC.getDataRange().getValues();
+    // P1: chỉ đọc 2 cột dùng tới (B Ngày cân 1, W So_CT) — trước đây đọc cả 28 cột PhieuCan_DN
+    const lastPC = shPC.getLastRow();
+    const cotNgayPC = lastPC >= 1 ? shPC.getRange(1, COT_NGAY_CAN_1 + 1, lastPC, 1).getValues() : [];
+    const cotSoCTPC = lastPC >= 1 && shPC.getLastColumn() > COT_SO_CT_PHIEUCAN ? shPC.getRange(1, COT_SO_CT_PHIEUCAN + 1, lastPC, 1).getValues() : cotNgayPC.map(function () { return ['']; });
+    const dataPC = cotNgayPC.map(function (r, i) { const d = []; d[COT_NGAY_CAN_1] = r[0]; d[COT_SO_CT_PHIEUCAN] = cotSoCTPC[i][0]; return d; });
 
     const ngayCanTheoSoCT = {};
     for (let i = 1; i < dataPC.length; i++) {
@@ -141,11 +143,22 @@ function layNgayCanMinMaxTheoHopDong_KhongCache_() {
   }
 }
 
+/**
+ * Bảng DNTT_GK_DN_CT đọc 1 lần cho cả lượt chạy (layDuLieuThucHienTuDNTT_ + layNgayCanMinMaxTheoHopDong_KhongCache_ trước
+ * đây mỗi hàm tự mở file và đọc lại toàn bộ). Lỗi đọc -> ném ra cho hàm gọi bắt như trước.
+ */
+let _bangDNTTTrongLuot_ = null;
+function _docBangDNTT_() {
+  if (_bangDNTTTrongLuot_) return _bangDNTTTrongLuot_;
+  const ss = SpreadsheetApp.openByUrl(DNTT_URL);
+  const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
+  _bangDNTTTrongLuot_ = sh.getDataRange().getValues();
+  return _bangDNTTTrongLuot_;
+}
+
 function layDuLieuThucHienTuDNTT_() {
   try {
-    const ss = SpreadsheetApp.openByUrl(DNTT_URL);
-    const sh = ss.getSheetByName(DNTT_SHEET_NAME) || ss.getSheets()[0];
-    const data = sh.getDataRange().getValues();
+    const data = _docBangDNTT_();
     if (data.length < 2) return { thanhCong: false, loi: 'Sheet DNTT_GK_DN_CT chưa có dữ liệu.', theoSoHD: {} };
 
     const boDauTV = function (s) {
@@ -422,10 +435,12 @@ function nhacDuyetHopDongMoi_(tinhTrang) {
 function _hdDaTaoTheoMaThaoTac_(maThaoTac) {
   maThaoTac = (maThaoTac || '').toString();
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return null;
-  let v = null;
-  try { v = CacheService.getScriptCache().get('HD_TAO_' + maThaoTac); } catch (e) { return null; }
-  if (!v) return null;
-  const kq = JSON.parse(v);
+  let kq = null;
+  try { const v = CacheService.getScriptCache().get('HD_TAO_' + maThaoTac); if (v) kq = JSON.parse(v); } catch (e) { /* đọc bản lưu bền bên dưới */ }
+  // P0.2 (nâng cấp 10/2026): CacheService có thể bị Google xóa trước hạn -> trước đây gửi lại = tạo hợp đồng THỨ 2.
+  // Nay luôn có bản lưu bền ở Script Properties (danh sách các lượt tạo gần đây).
+  if (!kq) kq = _dsMaThaoTacGanDay_().filter(function (x) { return x.m === maThaoTac; }).map(function (x) { return { idHD: x.i, soHD: x.s }; })[0] || null;
+  if (!kq) return null;
   // Hợp đồng đã bị xóa sau đó -> coi như chưa tạo
   const sh = getSheet_(SHEET_NAME.HD_NCC);
   const lastRow = sh.getLastRow();
@@ -440,6 +455,19 @@ function _ghiNhoMaThaoTac_(maThaoTac, idHD, soHD) {
   maThaoTac = (maThaoTac || '').toString();
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(maThaoTac)) return;
   try { CacheService.getScriptCache().put('HD_TAO_' + maThaoTac, JSON.stringify({ idHD: String(idHD), soHD: String(soHD) }), 21600); } catch (e) { /* bỏ qua */ }
+  // Bản lưu bền (gọi trong ScriptLock của hàm tạo hợp đồng): giữ tối đa 60 lượt trong 6 giờ, ~5 KB < giới hạn 9 KB/giá trị
+  try {
+    const moc = Date.now() - 6 * 3600 * 1000;
+    const ds = _dsMaThaoTacGanDay_().filter(function (x) { return x.t > moc && x.m !== maThaoTac; });
+    ds.push({ m: maThaoTac, i: String(idHD), s: String(soHD), t: Date.now() });
+    PropertiesService.getScriptProperties().setProperty('HD_TAO_GAN_DAY', JSON.stringify(ds.slice(-60)));
+  } catch (e) { log_('WARNING', '_ghiNhoMaThaoTac_', 'Không lưu được mã chống tạo trùng ' + maThaoTac, e); }
+}
+function _dsMaThaoTacGanDay_() {
+  try {
+    const ds = JSON.parse(PropertiesService.getScriptProperties().getProperty('HD_TAO_GAN_DAY') || '[]');
+    return Array.isArray(ds) ? ds : [];
+  } catch (e) { return []; }
 }
 
 /**
@@ -999,30 +1027,20 @@ function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
   _yeuCauQuyen_(QUYEN.XEM);
   trang = trang || 1;
   kichThuoc = kichThuoc || 20;
-  const rows = readData_(SHEET_NAME.HD_NCC);
   const tk = (tuKhoa || '').toString().trim().toLowerCase();
 
-  const theoCccd = {};
-  rows.forEach(function (r) {
-    const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
-    if (!cccd) return; // không có CCCD -> không nhóm được, bỏ qua (hợp đồng đó vẫn xem được bình thường qua tab "Hợp đồng" trực tiếp)
-    if (!theoCccd[cccd]) {
-      theoCccd[cccd] = {
-        cccd: cccd, tenChuRung: r[NCC_COL.TEN_CHU_RUNG], sdt: r[NCC_COL.SDT_CHU_RUNG],
-        thuongTru: r[NCC_COL.DIA_CHI_TT], ngayCap: ngayToISO_(r[NCC_COL.NGAY_CAP]),
-        noiCap: r[NCC_COL.NOI_CAP], nhomKH: r[NCC_COL.NHOM_KH], maSoThue: r[NCC_COL.MA_SO_THUE], soLuongHopDong: 0
-      };
-    }
-    theoCccd[cccd].soLuongHopDong++;
-  });
-
-  let ds = Object.values(theoCccd);
+  // P1.2 (nâng cấp 10/2026): danh sách khách hàng đã nhóm theo CCCD nhớ 5 phút (đổi trang / tìm kiếm không đọc lại Sheet);
+  // mọi thay đổi hợp đồng qua webapp xóa ngay (xoaCacheTraCuu_). Dựng lại chỉ đọc 8 cột cần thiết (trước đây cả 33 cột).
+  let ds = docCacheChiaManh_(KHOA_DS_KHACH_HANG_);
+  if (!Array.isArray(ds)) {
+    ds = _dungDanhSachKhachHang_();
+    luuCacheChiaManh_(KHOA_DS_KHACH_HANG_, ds, 300);
+  }
   if (tk) {
     ds = ds.filter(function (kh) {
       return (kh.tenChuRung || '').toLowerCase().indexOf(tk) !== -1 || (kh.cccd || '').toLowerCase().indexOf(tk) !== -1;
     });
   }
-  ds.sort(function (a, b) { return (a.tenChuRung || '').localeCompare(b.tenChuRung || '', 'vi'); });
 
   const tongSo = ds.length;
   const tongTrang = Math.max(1, Math.ceil(tongSo / kichThuoc));
@@ -1032,16 +1050,39 @@ function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
   return { items: ds.slice(batDau, batDau + kichThuoc), trang: trang, tongTrang: tongTrang, tongSo: tongSo };
 }
 
+const KHOA_DS_KHACH_HANG_ = 'DS_KHACH_HANG_V1';
+
+/** Nhóm HD_NCC theo CCCD chủ rừng (giữ thông tin của hợp đồng ĐẦU TIÊN trên sheet), sắp xếp theo tên — như trước đây. */
+function _dungDanhSachKhachHang_() {
+  const rows = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.TEN_CHU_RUNG, NCC_COL.DIA_CHI_TT, NCC_COL.CCCD_CHU_RUNG, NCC_COL.NGAY_CAP,
+    NCC_COL.NOI_CAP, NCC_COL.SDT_CHU_RUNG, NCC_COL.NHOM_KH, NCC_COL.MA_SO_THUE]);
+  const theoCccd = {}, thuTu = [];
+  rows.forEach(function (r) {
+    const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
+    if (!cccd) return; // không có CCCD -> không nhóm được, bỏ qua (hợp đồng đó vẫn xem được bình thường qua tab "Hợp đồng")
+    if (!theoCccd[cccd]) {
+      theoCccd[cccd] = {
+        cccd: cccd, tenChuRung: r[NCC_COL.TEN_CHU_RUNG], sdt: r[NCC_COL.SDT_CHU_RUNG],
+        thuongTru: r[NCC_COL.DIA_CHI_TT], ngayCap: ngayToISO_(r[NCC_COL.NGAY_CAP]),
+        noiCap: r[NCC_COL.NOI_CAP], nhomKH: r[NCC_COL.NHOM_KH], maSoThue: r[NCC_COL.MA_SO_THUE], soLuongHopDong: 0
+      };
+      thuTu.push(cccd);
+    }
+    theoCccd[cccd].soLuongHopDong++;
+  });
+  const ds = thuTu.map(function (k) { return theoCccd[k]; });
+  ds.sort(function (a, b) { return (a.tenChuRung || '').localeCompare(b.tenChuRung || '', 'vi'); });
+  return ds;
+}
+
 /** Danh sách hợp đồng của ĐÚNG 1 khách hàng (lọc theo CCCD) — dùng khi đào sâu từ Khách hàng xuống Hợp đồng */
 function layHopDongTheoKhachHang_(cccd) {
   // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
   cccd = (cccd || '').toString().trim();
   if (!cccd) return [];
-  const rows = readData_(SHEET_NAME.HD_NCC);
-  return rows
-    .map(function (r, idx) { return { r: r, soDong: idx + 2 }; }) // lấy soDong TRƯỚC khi lọc, để không bị lệch chỉ số
-    .filter(function (x) { return (x.r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim() === cccd; })
+  // P1.2: chỉ đọc cột CCCD + đúng các dòng khớp (trước đây đọc cả 33 cột HD_NCC)
+  return docDongTheoKhoaKemSo_(SHEET_NAME.HD_NCC, NCC_COL.CCCD_CHU_RUNG, [cccd])
     .map(function (x) {
       const r = x.r;
       return {
