@@ -123,3 +123,31 @@ Cách xử lý: 67 hàm chung của 07/11 → `NhapLieu_Chung_JS.html`; widget c
 | Kiểm tra cấu trúc cột khi đọc/ghi (MAP-001) | ✅ `kiemTraCauTrucCot_` |
 | Tách `06_CreateUpdate.gs` | ⏸️ Hoãn — rủi ro đồng bộ thủ công (06_REFACTOR_PLAN R6) |
 | Xóa 26, 08, 09 | ✅ |
+
+## 11. Danh mục bộ nhớ đệm (cập nhật 11/10/2026)
+
+Nguyên tắc: cache chỉ để **nhanh hơn** — mất cache thì tính lại, kết quả vẫn đúng; không cache nào là nguồn dữ liệu nghiệp vụ duy
+nhất. Dữ liệu lớn nằm ở **DocumentCache** (`_cacheDuLieuLon_`, 00_Config) để không đẩy phiên đăng nhập / khóa chống trùng
+(ScriptCache) ra sớm (H-07). Thời hạn tối đa của CacheService: 21.600 giây.
+
+| Khóa | Nơi | Nguồn | Thời hạn | Xóa khi | Ghi chú |
+|---|---|---|---|---|---|
+| `TC_CHI_MUC_V1` (`KHOA_CHI_MUC_TC_`) | Document (chia mảnh) | HD_NCC 19 cột + HD_STK 2 cột | 900 s | `xoaCacheTraCuu_` (mọi cập nhật Draft / HĐ qua webapp) | Tra cứu hợp đồng |
+| `DS_KHACH_HANG_V1` | Document (chia mảnh) | HD_NCC 8 cột | 300 s | `xoaCacheTraCuu_` | Danh sách khách hàng (mới) |
+| `MAP_DATA_CACHE` | Document (chia mảnh) | HD_RUNG 7 cột, HD_GPS, HD_NCC 2 cột | 900 s | `xoaCacheBanDo_` (mọi ghi HD_GPS / HD_RUNG) | Trước 10/2026: 1 khóa, bỏ qua nếu > 95.000 ký tự |
+| `ANH_GPS_TRUC_TIEP_V1` | Document (chia mảnh) | HD_RUNG 2 cột, HD_GPS 4 cột, HD_Picture | 300 s | `xoaCacheAnhGps_` (gọi từ 2 hàm trên) | Cờ ảnh / GPS của Tổng quan, Báo cáo |
+| `DS_NGAN_HANG_VIETQR` | Document | API VietQR | 21.600 s | — | Trước 10/2026 đặt 86.400 s → không lưu được |
+| `anhtc_*`, `tenfile_*`, `danhMucFileDrive` | Document | Drive | 300–21.600 s | — | Ảnh thu nhỏ, tên file (đã có từ H-07) |
+| `phien_*`, `sso_n_*`, `dn_yc_*`, `sys_nguoi_dung_v1` | Script | Đăng nhập | 21.600 / 900 / 600 / 60 s | Đăng xuất / sửa người dùng | Phiên tối đa 6 giờ (giới hạn CacheService) |
+| `HD_TAO_*` | Script | Tạo hợp đồng | 21.600 s | — | Lớp nhanh; **bản bền ở Script Properties `HD_TAO_GAN_DAY`** (10/2026) |
+| `LUU_CHINH_THUC_*` | Script | Lưu chính thức | 600 s | Xong lượt lưu | Cờ đang lưu; lớp bền: tiến độ trong bản nháp + mã thao tác |
+| `CAU_TRUC_OK_*` | Script | Tiêu đề cột 6 sheet | 60 s | Xác nhận cấu trúc | MAP-001 |
+| `anhck_*`, `GEO_*`, `TG_POLL_DANG_CHAY` | Script | Ảnh công khai, địa chỉ → tọa độ, Telegram | 600 / 21.600 / 300 s | — | Nhỏ |
+| `Cache_BaoCao`: `duLieuThucHienDNTT`, `ngayCanMinMax`, `dnttDaApDung` | Sheet (file báo cáo) | DNTT_GK_DN_CT, PhieuCan_DN | Đến lần đồng bộ sau | Trigger 30 phút / Đồng bộ NGAY | Chỉ lưu khi đọc thành công (10/2026); `dnttDaApDung` = bản đã áp dụng vào Draft |
+| `Draft_BaoCaoHopDong`, `Draft_HoSoRung` | Sheet (file báo cáo) | 5 sheet gốc + Cache_BaoCao | Cập nhật theo từng thao tác | Mỗi lần ghi + Làm mới theo nhật ký | Dữ liệu dẫn xuất — xây dựng lại được bất kỳ lúc nào |
+
+**Nguồn ghi dữ liệu và cách cache biết dữ liệu đổi:**
+- Qua webapp / menu: mọi hàm ghi gọi cập nhật Draft (`CAP_NHAT_DRAFT_*`) → `xoaCacheTraCuu_` / `xoaCacheBanDo_`.
+- Trigger: đồng bộ thanh toán 30 phút (Cache_BaoCao + Draft của HĐ có thanh toán đổi); onEdit (nếu bật) ghi nhật ký + cập nhật Draft.
+- Sửa tay trên Sheet khi **không** bật trigger onEdit: cache tự hết hạn (tối đa 5–15 phút); Draft cập nhật khi bấm "Làm mới" (nhật ký)
+  hoặc "Xây dựng lại Draft".

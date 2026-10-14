@@ -2,6 +2,20 @@
 
 **Dự án:** HDMB_HAK — quản lý hợp đồng mua bán gỗ keo (Google Apps Script) · **Ngày:** 27/09/2026 · **Nhánh:** `claude/test-code-bug-project-nywz0r`
 
+## 0. Đợt 11/10/2026 — nâng cấp toàn vẹn dữ liệu & hiệu năng
+
+- **Nhánh:** `feature/hdmb-performance-optimization` từ `main` `8d4bd25` (đúng commit đã rà soát; `main` chưa bị sửa).
+- **Lỗi P0 tìm ra và sửa: 6** — đồng bộ thanh toán lưu kết quả lỗi đè cache tốt (khối lượng thực hiện mọi HĐ về 0, không tự
+  sửa); 2 chỗ ghi mốc "đã xử lý" khi chưa xử lý xong (thay đổi bị bỏ sót vĩnh viễn trên báo cáo); chống tạo trùng chỉ dựa vào
+  CacheService; mở nhầm hợp đồng khi dòng đã dịch; CCCD trên Báo cáo / Excel mất số 0 đầu. Kèm: cập nhật Draft hàng loạt ghi
+  đè dòng của HĐ khác; cache danh sách ngân hàng không bao giờ lưu được; phản hồi tìm kiếm cũ ghi đè kết quả mới.
+- **Hiệu năng (bộ giả lập, 5.000 HĐ):** Làm mới Draft 10.014 → 24 lượt đọc; mở lại bản đồ 615.063 → 0 ô; danh sách khách hàng
+  165.000 → 40.000 ô (đổi trang 0); HĐ của 1 khách hàng 165.000 → 5.033 ô; Tổng quan 605.000 → 310.000 ô; đồng bộ thanh toán
+  chỉ tính lại HĐ có thanh toán đổi. **Chưa đo thời gian thật** trên Apps Script — sau triển khai xem `NhatKy_HieuNang`.
+- **Kiểm thử:** 332 PASS / 0 FAIL; đầu ra 110/110 giống mã cũ.
+- **Việc của chủ dự án:** xem Pull Request → `DEPLOYMENT_CHECKLIST.md`; xoay mã webhook DNTT (`SECURITY_ACTIONS.md`).
+  Quay lại: `ROLLBACK_PLAN.md`.
+
 ## 1. Kết luận ngắn
 
 - Đợt 2 tìm ra và **sửa 10 lỗi thật + 4 lỗ hổng bảo mật**, trong đó 4 lỗi làm **sai/mất dữ liệu hợp đồng** mà người dùng khó tự phát hiện (ngày lùi dần, mất MST/Nhóm KH, mất số 0 đầu CCCD, tạo hợp đồng trùng). Mỗi bản sửa đều có test tự động **thất bại trên mã cũ, đạt trên mã mới**.

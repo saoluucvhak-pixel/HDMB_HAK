@@ -84,3 +84,15 @@
 - [x] ✅ Bảo trì: tìm & xóa dòng HD_NCC / HD_RUNG nghi trùng, xóa dòng mồ côi (có lưu trữ, khôi phục được)
 - [ ] Nhập liệu 5 bước tuần tự thật (cần đổi luồng lưu — chờ đồng ý)
 - [ ] Chờ quyết định: B1, B4, B5
+
+## G. Nâng cấp 11/10/2026 (nhánh `feature/hdmb-performance-optimization`)
+
+- [x] ✅ P0: đồng bộ thanh toán / làm mới Draft không ghi mốc khi chưa xong; không lưu kết quả DNTT lỗi; chống tạo trùng bền; mở HĐ theo ID; CCCD Draft giữ số 0 đầu
+- [x] ✅ P1: đọc theo cột, cache danh sách khách hàng, bản đồ chia mảnh, đồng bộ thanh toán tăng dần, làm mới Draft O(1) lượt đọc, DocumentCache
+- [x] ✅ Giám sát hiệu năng (`NhatKy_HieuNang`), kiểm tra phân quyền tĩnh, chống phản hồi cũ trên giao diện
+- [ ] **Chủ dự án:** xem Pull Request, chạy `DEPLOYMENT_CHECKLIST.md` (ghi số phiên bản cũ trước khi deploy)
+- [ ] **Chủ dự án:** xoay mã webhook DNTT — `SECURITY_ACTIONS.md` S-1; cân nhắc chuyển repo Private (S-2)
+- [ ] Đo trên Apps Script thật sau triển khai: xem `NhatKy_HieuNang` / `LAY_THONG_KE_HIEU_NANG` sau 1 tuần (p50/p95 theo chức năng) — số đo hiện có chỉ là số lượt/ô đọc trên bộ giả lập
+- [ ] (Chưa làm, cần quyết định) Màn hình Thiết lập hiển thị thống kê hiệu năng — hiện chỉ có API cho Quản trị
+- [ ] (Chưa làm) Cờ "đang lưu" của Lưu chính thức vẫn ở ScriptCache (lớp 2 — lớp bền là tiến độ trong bản nháp + mã thao tác tạo HĐ đã lưu bền)
+- [ ] (Không làm, theo đánh giá) Tra cứu theo vùng bản đồ / phân trang GPS: 20.000 điểm GPS (5.000 HĐ) bản đồ đọc 390.010 ô lần đầu rồi dùng cache 15 phút — chưa cần
