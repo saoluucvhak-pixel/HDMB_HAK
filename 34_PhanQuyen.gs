@@ -227,11 +227,20 @@ function _xacMinhSso_(token) {
   }
   if (!payload || typeof payload.exp !== 'number' || payload.exp < Date.now()) throw new Error('Link đăng nhập đã hết hạn - vui lòng đăng nhập lại.');
   const nonce = String(payload.n || '');
-  const cache = CacheService.getScriptCache();
-  if (!nonce || cache.get(AUTH_CFG.TIEN_TO_NONCE + nonce)) throw new Error('Link đăng nhập đã được dùng - vui lòng đăng nhập lại.');
-  cache.put(AUTH_CFG.TIEN_TO_NONCE + nonce, '1', AUTH_CFG.SSO_NONCE_TTL_GIAY);
   const email = _chuanHoaEmail_(payload.email);
   if (!MAU_EMAIL.test(email)) throw new Error('Mã đăng nhập không có email hợp lệ.');
+  if (!nonce || nonce.length > 128) throw new Error('Mã đăng nhập không hợp lệ.');
+  // Lock serializes the check-and-consume operation across concurrent executions.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Hệ thống đăng nhập đang bận - vui lòng thử lại.');
+  try {
+    const cache = CacheService.getScriptCache();
+    const key = AUTH_CFG.TIEN_TO_NONCE + nonce;
+    if (cache.get(key)) throw new Error('Link đăng nhập đã được dùng - vui lòng đăng nhập lại.');
+    cache.put(key, '1', AUTH_CFG.SSO_NONCE_TTL_GIAY);
+  } finally {
+    lock.releaseLock();
+  }
   return { email: email, yeuCau: MAU_MA_YEU_CAU.test(String(payload.yc || '')) ? payload.yc : '' };
 }
 
