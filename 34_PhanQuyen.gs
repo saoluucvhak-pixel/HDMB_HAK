@@ -86,8 +86,17 @@ function _getNguoiDungSheet_() {
 function _docDanhSachNguoiDung_() {
   const cache = CacheService.getScriptCache();
   const raw = cache.get(AUTH_CFG.CACHE_KEY_NGUOI_DUNG);
-  if (raw) return JSON.parse(raw);
+  if (raw) {
+    try {
+      const cached = JSON.parse(raw);
+      if (Array.isArray(cached)) return cached;
+    } catch (e) {
+      // Corrupt cache must not prevent authorization checks.
+    }
+    cache.remove(AUTH_CFG.CACHE_KEY_NGUOI_DUNG);
+  }
   let list = [];
+  let docThanhCong = false;
   try {
     const sh = getSS_().getSheetByName(NGUOI_DUNG_SHEET);
     if (sh && sh.getLastRow() > 1) {
@@ -103,8 +112,12 @@ function _docDanhSachNguoiDung_() {
         })
         .filter(function (x) { return x.email; });
     }
+    docThanhCong = true;
   } catch (e) { log_('ERROR', '_docDanhSachNguoiDung_', 'Không đọc được ' + NGUOI_DUNG_SHEET, e); }
-  try { cache.put(AUTH_CFG.CACHE_KEY_NGUOI_DUNG, JSON.stringify(list), AUTH_CFG.CACHE_NGUOI_DUNG_GIAY); } catch (e) { /* danh sách quá lớn cho cache -> lần sau đọc lại */ }
+  // Do not cache an empty list caused by a transient Sheets failure.
+  if (docThanhCong) {
+    try { cache.put(AUTH_CFG.CACHE_KEY_NGUOI_DUNG, JSON.stringify(list), AUTH_CFG.CACHE_NGUOI_DUNG_GIAY); } catch (e) { /* cache size limit */ }
+  }
   return list;
 }
 
