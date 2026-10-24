@@ -22,9 +22,8 @@ function layBlobTheoTen_(duongDan) {
     try { return DriveApp.getFileById(matchId[1]).getBlob(); } catch (e) { /* rơi xuống thử tìm theo tên */ }
   }
   const tenFile = duongDan.split('/').pop();
-  const it = DriveApp.getFilesByName(tenFile);
-  if (!it.hasNext()) return null;
-  return it.next().getBlob();
+  const f = timFileTheoTenTrongThuMucHeThong_(tenFile); // M-12
+  return f ? f.getBlob() : null;
 }
 
 /**
@@ -226,8 +225,8 @@ function kiemTraMotAnh_(duongDanFile, latRungKyVong, lngRungKyVong) {
       const matchId = duongDanFile.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || duongDanFile.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
       let fileId = matchId ? matchId[1] : null;
       if (!fileId) {
-        const it = DriveApp.getFilesByName(duongDanFile.split('/').pop());
-        if (it.hasNext()) fileId = it.next().getId();
+        const f = timFileTheoTenTrongThuMucHeThong_(duongDanFile.split('/').pop()); // M-12
+        if (f) fileId = f.getId();
       }
       if (fileId) {
         const ocrKq = docToaDoTuChuTrenAnh_(fileId);

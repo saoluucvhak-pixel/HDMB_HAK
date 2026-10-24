@@ -38,6 +38,27 @@ function doGet(e) {
     }
   }
 
+  // Link ảnh công khai trong mã QR của báo cáo PDF — không cần đăng nhập, tự kiểm tra chữ ký (35_TraCuuHinhAnh.gs)
+  if (action === 'anh') return trangAnhCongKhai_(e.parameter.hd, e.parameter.k);
+
+  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
+  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
+  var phien = '', loiDangNhap = '';
+  if (e.parameter.sso) {
+    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
+    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
+    phien = dangNhap.phien;
+    loiDangNhap = dangNhap.loi;
+  }
+  var trang = _dungTrangWebapp_(page, phien, loiDangNhap, e.parameter.sso ? '' : e.parameter.ph, e.parameter.tab);
+  return trang.tmpl.evaluate()
+    .setTitle(trang.cauHinh.title)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** Dựng template 1 trang webapp (?page=...) — dùng chung cho doGet và trangTrongKhung (chuyển trang khi nhúng). */
+function _dungTrangWebapp_(page, phien, loiDangNhap, ph, tab) {
   // Mở webapp KHÔNG kèm ?page= (hoặc page lạ) -> mặc định vào "Tổng quan hợp đồng" (dashboard).
   // hasOwnProperty: ?page=constructor / __proto__ không được lọt vào thuộc tính kế thừa của object.
   var tenTrang = Object.prototype.hasOwnProperty.call(TRANG_WEBAPP_, page) ? page : 'tongquan';
@@ -45,24 +66,25 @@ function doGet(e) {
   var tmpl = HtmlService.createTemplateFromFile(cauHinh.file);
   tmpl.baseUrl = ScriptApp.getService().getUrl();
   tmpl.currentPage = cauHinh.currentPage || tenTrang;
-  // Đăng nhập (34_PhanQuyen.gs): Cổng đăng nhập chuyển về đây kèm ?sso=... -> cấp phiên cho trình duyệt.
-  // Trang luôn hiển thị; dữ liệu chỉ tải được qua api() khi đã có phiên hợp lệ.
-  tmpl.phien = '';
-  tmpl.loiDangNhap = '';
-  if (e.parameter.sso) {
-    var dangNhap = _xuLyDangNhapSso_(e.parameter.sso);
-    if (dangNhap.yeuCau) return _trangDangNhapNhung_(dangNhap.yeuCau, dangNhap.phien, dangNhap.loi);
-    tmpl.phien = dangNhap.phien;
-    tmpl.loiDangNhap = dangNhap.loi;
-  } else if (e.parameter.ph && _docPhien_(e.parameter.ph)) {
+  tmpl.tabTrang = /^(hoso|anh|ocr)$/.test(String(tab || '')) ? String(tab) : ''; // thẻ con trang Kiểm tra (menu chung)
+  tmpl.phien = phien || '';
+  tmpl.loiDangNhap = loiDangNhap || '';
+  if (!tmpl.phien && ph && _docPhien_(ph)) {
     // Trình duyệt chặn bộ nhớ của trang nhúng (chặn cookie bên thứ ba): trang trước chuyển mã phiên
     // qua link (?ph=...) để không phải đăng nhập lại mỗi lần chuyển trang. Chỉ nhận mã phiên còn hiệu lực.
-    tmpl.phien = e.parameter.ph;
+    tmpl.phien = ph;
   }
-  return tmpl.evaluate()
-    .setTitle(cauHinh.title)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return { tmpl: tmpl, cauHinh: cauHinh };
+}
+
+/**
+ * CÔNG KHAI (như doGet — trang không chứa dữ liệu, dữ liệu vẫn đi qua api()): HTML của 1 trang để chuyển trang
+ * NGAY TRONG KHUNG khi webapp bị nhúng trong trang khác (GiaoDien_Chung.html). Không nhận ?sso (đăng nhập chỉ qua doGet).
+ */
+function trangTrongKhung(thamSo) {
+  var p = thamSo || {};
+  var trang = _dungTrangWebapp_(String(p.page || ''), '', '', p.ph ? String(p.ph) : '', p.tab ? String(p.tab) : '');
+  return { html: trang.tmpl.evaluate().getContent(), tieuDe: trang.cauHinh.title };
 }
 
 /**
@@ -225,15 +247,12 @@ function layThoiGianCapNhatBanDo_() {
  */
 function getMapData_() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const cache = CacheService.getScriptCache();
-  const daCache = cache.get('MAP_DATA_CACHE');
-  if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tính lại như bình thường */ } }
-
+  // P1 (nâng cấp 10/2026): cache CHIA MẢNH (00_Config.gs) — trước đây chỉ cache khi JSON < 95.000 ký tự, vài nghìn điểm GPS là
+  // vượt -> mỗi lần mở bản đồ đều đọc lại 3 bảng. Cùng khóa 'MAP_DATA_CACHE': xoaCacheBanDo_ xóa khóa chính = bỏ cả bộ.
+  const daCache = docCacheChiaManh_('MAP_DATA_CACHE');
+  if (daCache && typeof daCache === 'object') return daCache;
   const ketQua = getMapData_ThucThi_();
-  try {
-    const chuoi = JSON.stringify(ketQua);
-    if (chuoi.length < 95000) cache.put('MAP_DATA_CACHE', chuoi, 900); // 900s = 15 phút; CacheService giới hạn ~100KB/key nên bỏ qua an toàn nếu dữ liệu vượt ngưỡng, không cache được thì vẫn trả kết quả bình thường, chỉ là lần sau phải tính lại
-  } catch (e) { /* không cache được thì thôi, không ảnh hưởng kết quả trả về */ }
+  luuCacheChiaManh_('MAP_DATA_CACHE', ketQua, 900); // 15 phút; lỗi / quá lớn -> lần sau tính lại, kết quả vẫn đúng
   return ketQua;
 }
 
@@ -244,13 +263,15 @@ function getMapData_ThucThi_() {
   const nccSh = ss.getSheetByName("HD_NCC");
   if (!rungSh || !gpsSh) throw new Error("Thiếu Sheet HD_GPS hoặc HD_RUNG, vui lòng kiểm tra lại tên sheet.");
 
-  const rungData = rungSh.getDataRange().getValues();
+  // P1: HD_RUNG / HD_NCC chỉ đọc cột dùng tới (thêm 1 dòng trống ở đầu để giữ nguyên chỉ số vòng lặp bên dưới)
+  const rungData = [[]].concat(docCacCot_(rungSh, [RUNG_COL.ID_RUNG, RUNG_COL.ID_KEY_HD, RUNG_COL.SO_HD, RUNG_COL.TEN_CHU_RUNG,
+    RUNG_COL.DIEN_TICH_M2, RUNG_COL.DIEN_TICH_GPS, RUNG_COL.DIA_CHI_RUNG]));
   const gpsData = gpsSh.getDataRange().getValues();
 
   // Tra trạng thái hợp đồng theo ID_KEY_HD (HD_NCC.ID_HD) để tô màu marker/đa giác theo trạng thái
   let tinhTrangByIdHD = {};
   if (nccSh) {
-    const nccData = nccSh.getDataRange().getValues();
+    const nccData = [[]].concat(docCacCot_(nccSh, [NCC_COL.ID_HD, NCC_COL.TINH_TRANG]));
     for (let k = 1; k < nccData.length; k++) {
       const idHD = nccData[k][NCC_COL.ID_HD] ? nccData[k][NCC_COL.ID_HD].toString().trim() : "";
       if (idHD) tinhTrangByIdHD[idHD] = nccData[k][NCC_COL.TINH_TRANG] || "Đang thực hiện";
@@ -268,7 +289,9 @@ function getMapData_ThucThi_() {
       ten: rungData[j][RUNG_COL.TEN_CHU_RUNG],
       dtKyHD: rungData[j][RUNG_COL.DIEN_TICH_M2],
       dtGPS: rungData[j][RUNG_COL.DIEN_TICH_GPS],
-      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện"
+      tinhTrang: tinhTrangByIdHD[idKeyHD] || "Đang thực hiện",
+      idHD: idKeyHD, // giao diện mới: nút "Xem ảnh" mở thẳng thư viện ảnh của hợp đồng
+      diaChi: rungData[j][RUNG_COL.DIA_CHI_RUNG] || ""
     };
   }
 

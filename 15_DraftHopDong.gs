@@ -57,9 +57,16 @@ function TAO_DRAFT_MOI_() {
 }
 
 /** Tiện ích cho front-end: bấm 1 dòng trong danh sách -> mở/tạo nháp luôn trong 1 lượt gọi */
-function MO_DRAFT_THEO_SO_DONG_(soDong) {
+function MO_DRAFT_THEO_SO_DONG_(soDong, idHDMongDoi) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
-  const hd = layHopDongTheoSoDong_(soDong);
+  // P0.2 (nâng cấp 10/2026): danh sách gửi số dòng lúc tải trang; người khác xóa 1 HĐ phía trên thì dòng đã dịch -> trước
+  // đây MỞ NHẦM hợp đồng khác (người dùng dễ sửa nhầm Số TK / thông tin). Có ID_HD thì xác minh, lệch thì tìm lại theo ID.
+  idHDMongDoi = (idHDMongDoi || '').toString().trim();
+  let hd = layHopDongTheoSoDong_(soDong);
+  if (idHDMongDoi && (!hd || hd.khongTimThay || String(hd.idHD).trim() !== idHDMongDoi)) {
+    const dong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHDMongDoi);
+    hd = dong === -1 ? null : layHopDongTheoSoDong_(dong);
+  }
   if (!hd || hd.khongTimThay) return null;
   const ketQua = LAY_DRAFT_THEO_ID_HD_(hd.idHD);
   if (ketQua) ketQua.tinhTrangGoc = hd.tinhTrang;
@@ -141,12 +148,21 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
         khoiLuongDuKien: r.khoiLuongDuKien, hoSoNguonGoc: r.hoSoNguonGoc, soGiayTo: r.soGiayTo, xoa: false, gpsMoi: [] };
     }),
     taiKhoan: (hd.danhSachTaiKhoan || []).map(function (t) {
-      return { soDong: t.soDong, tempId: null, soTK: t.soTK, nganHang: t.nganHang, uyQuyenTT: t.uyQuyenTT, tenUyQuyen: t.tenUyQuyen, xoa: false };
+      // soTKGoc: Số TK lúc mở nháp — để Lưu chính thức xác minh đúng tài khoản dù số dòng đã dịch (C-01)
+      return { soDong: t.soDong, tempId: null, soTK: t.soTK, soTKGoc: String(t.soTK === null || t.soTK === undefined ? '' : t.soTK), nganHang: t.nganHang, uyQuyenTT: t.uyQuyenTT, tenUyQuyen: t.tenUyQuyen, xoa: false };
     }),
     phuLuc: layDanhSachPhuLuc_(idHD).map(function (p) {
-      return { soDong: p.soDong, tempId: null, donGia: p.donGia, khoiLuong: p.khoiLuong, ghiChu: p.ghiChu, xoa: false };
+      return { soDong: p.soDong, idPhuLuc: p.idPhuLuc, tempId: null, donGia: p.donGia, khoiLuong: p.khoiLuong, ghiChu: p.ghiChu, xoa: false };
     })
   };
+  // H-02: ảnh chụp thông tin hợp đồng LÚC MỞ NHÁP — khi Lưu chính thức chỉ ghi các trường người dùng đã đổi so
+  // với ảnh chụp này, không ghi đè thay đổi người khác làm trong lúc nháp còn mở (nháp có thể để nhiều ngày).
+  du.hopDongGoc = JSON.parse(JSON.stringify(du.hopDong));
+  // Tương tự cho từng lô / tài khoản / phụ lục (goc): Lưu chính thức bỏ qua mục không đổi, lô chỉ ghi trường đã đổi
+  // (trước đây ghi lại MỌI lô / tài khoản dù không đổi — đọc Sheet thừa, và ghi đè thay đổi người khác vừa làm).
+  du.rung.forEach(function (r) { r.goc = _anhChup_(r, TRUONG_GOC_LO_); });
+  du.taiKhoan.forEach(function (t) { t.goc = _anhChup_(t, TRUONG_GOC_TK_); });
+  du.phuLuc.forEach(function (p) { p.goc = _anhChup_(p, TRUONG_GOC_PL_); });
   const row = [];
   row[DRAFT_HD_COL.ID_DRAFT] = idDraft; row[DRAFT_HD_COL.ID_HD_GOC] = idHD;
   row[DRAFT_HD_COL.JSON_DATA] = JSON.stringify(du);
@@ -158,14 +174,9 @@ function LAY_DRAFT_THEO_ID_HD_TAO_MOI_(idHD, sh) {
 
 /** Đọc lại thông tin hợp đồng hiện tại (dùng nội bộ để khởi tạo nháp) — không phụ thuộc UI */
 function layHopDongTheoIdHD_ChoDraft_(idHD) {
-  const nccRows = readData_(SHEET_NAME.HD_NCC);
-  for (let i = 0; i < nccRows.length; i++) {
-    if ((nccRows[i][NCC_COL.ID_HD] || '').toString().trim() === idHD.toString().trim()) {
-      const soDong = i + 2;
-      return layHopDongTheoSoDong_(soDong);
-    }
-  }
-  return null;
+  // P-09: chỉ đọc cột ID_HD để tìm dòng (trước đây đọc cả 33 cột HD_NCC)
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
+  return soDong === -1 ? null : layHopDongTheoSoDong_(soDong);
 }
 
 /** Ghi đè toàn bộ JSON của 1 bản nháp — gọi sau MỌI thay đổi ở màn hình (đổi field, thêm/sửa/xóa rừng-TK-phụ lục-GPS nháp) */
@@ -175,13 +186,55 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
     const sh = getOrCreateDraftHopDongSheet_();
     const soDong = timDongDraft_(sh, idDraft);
     if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp ' + idDraft + ' (có thể đã bị Lưu chính thức hoặc hủy ở tab khác).' };
-    sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1).setValue(jsonDuLieu);
+    const oJson = sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1);
+    try {
+      jsonDuLieu = JSON.stringify(_giuTienDoLuuChinhThuc_(JSON.parse(oJson.getValue() || 'null'), JSON.parse(jsonDuLieu)));
+    } catch (e) { /* JSON lạ -> ghi nguyên như trước */ }
+    oJson.setValue(jsonDuLieu);
     sh.getRange(soDong, DRAFT_HD_COL.NGUOI_SUA + 1).setValue(_emailNguoiThucHien_() || '');
     sh.getRange(soDong, DRAFT_HD_COL.THOI_GIAN_SUA + 1).setValue(new Date());
     return { thanhCong: true };
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi lưu nháp: ' + e.message };
   }
+}
+
+/**
+ * Lượt "Lưu chính thức" lỗi giữa chừng để lại dấu tiến độ trong bản nháp (idHD đã tạo, idRung
+ * của lô vừa thêm, daTao / daXoaXong / điểm GPS daGhi). Trình duyệt vẫn giữ bản CŨ trong bộ
+ * nhớ và tự lưu nháp đè lên -> giữ lại các dấu đó, để lần lưu sau không tạo trùng / xóa nhầm dòng.
+ * Khớp mục theo tempId (mục mới) hoặc idRung / số dòng (mục đã có).
+ */
+function _giuTienDoLuuChinhThuc_(cu, moi) {
+  if (!cu || !moi || typeof moi !== 'object') return moi;
+  if (!moi.idHD && cu.idHD) {
+    moi.idHD = cu.idHD;
+    if (moi.hopDong && !moi.hopDong.soHD && cu.hopDong && cu.hopDong.soHD) moi.hopDong.soHD = cu.hopDong.soHD;
+  }
+  if (!moi.hopDongGoc && cu.hopDongGoc) moi.hopDongGoc = cu.hopDongGoc; // H-02: trình duyệt cũ không gửi lại ảnh chụp gốc
+  const theoKhoa = function (ds, khoa) { const m = {}; (ds || []).forEach(function (x) { const k = x && khoa(x); if (k) m[k] = x; }); return m; };
+  const khoaGps = function (p) { return p.lat + '|' + p.lng + '|' + (p.anhUrl || ''); };
+  const rungCu = theoKhoa(cu.rung, function (x) { return x.tempId || x.idRung; });
+  (moi.rung || []).forEach(function (x) {
+    const c = x && rungCu[x.tempId || x.idRung];
+    if (!c) return;
+    if (!x.idRung && c.idRung) x.idRung = c.idRung;
+    if (c.daXoaXong) x.daXoaXong = true;
+    const daGhi = {};
+    (c.gpsMoi || []).forEach(function (p) { if (p && p.daGhi) daGhi[khoaGps(p)] = true; });
+    (x.gpsMoi || []).forEach(function (p) { if (p && daGhi[khoaGps(p)]) p.daGhi = true; });
+  });
+  ['taiKhoan', 'phuLuc'].forEach(function (ten) {
+    const khoa = function (x) { return x.tempId || (x.soDong ? 'dong' + x.soDong : ''); };
+    const m = theoKhoa(cu[ten], khoa);
+    (moi[ten] || []).forEach(function (x) {
+      const c = x && m[khoa(x)];
+      if (!c) return;
+      if (c.daTao) x.daTao = true;
+      if (c.daXoaXong) x.daXoaXong = true;
+    });
+  });
+  return moi;
 }
 
 /** Hủy bản nháp (bấm "Hủy" hoặc rời trang mà không lưu) — không đụng gì tới bảng gốc */
@@ -226,8 +279,19 @@ function LUU_CHINH_THUC_(idDraft) {
     lock.releaseLock();
   }
 
+  // Ghi tiến độ vào bản nháp sau mỗi bước tạo/xóa: lượt này có lỗi hay bị ngắt (quá 6 phút)
+  // giữa chừng thì lần bấm lưu sau chỉ làm NỐT phần còn lại — không tạo trùng hợp đồng/lô
+  // rừng/tài khoản, không xóa nhầm dòng khác (xóa theo số dòng, dòng đã dịch sau lần xóa trước).
+  const ghiTienDo = function () {
+    try {
+      const d = timDongDraft_(sh, idDraft);
+      if (d !== -1) sh.getRange(d, DRAFT_HD_COL.JSON_DATA + 1).setValue(JSON.stringify(du));
+    } catch (e) { log_('WARNING', 'LUU_CHINH_THUC_', 'Không ghi được tiến độ vào bản nháp ' + idDraft, e); }
+  };
   try {
-    const kq = luuChinhThucThucThi_(du);
+    const gom = batDauGomDraft_(); // H-12
+    let kq;
+    try { kq = luuChinhThucThucThi_(du, 'NHAP_' + idDraft, ghiTienDo); } finally { ketThucGomDraft_(gom); }
     if (kq.thanhCong) {
       // Tìm LẠI dòng nháp theo idDraft ngay trước khi xóa: lượt lưu mất vài giây, trong lúc đó nháp
       // khác phía trên có thể đã bị xóa -> số dòng lấy từ đầu hàm đã lệch và xóa NHẦM nháp của người khác.
@@ -244,63 +308,184 @@ function LUU_CHINH_THUC_(idDraft) {
   }
 }
 
+/**
+ * H-02 (rà soát 28/09): các trường thông tin hợp đồng cần GHI khi lưu nháp của hợp đồng ĐÃ CÓ = chỉ những trường
+ * người dùng đã đổi so với lúc mở nháp (du.hopDongGoc). Trước đây ghi TOÀN BỘ -> nháp mở từ hôm trước ghi đè Số TK /
+ * địa chỉ... mà người khác vừa sửa ở trang 27. Trường cả 2 người cùng sửa: giữ giá trị của người đang lưu + cảnh báo.
+ * Nháp cũ không có ảnh chụp gốc / hợp đồng mới: ghi toàn bộ như trước.
+ */
+function _truongHopDongCanGhi_(du, canhBao) {
+  const h = du.hopDong || {};
+  if (!du.idHD || !du.hopDongGoc) return h;
+  const ngay = ['ngayKy', 'ngayCap', 'ngayCapUyQuyen'];
+  const chuan = function (k, v) { return ngay.indexOf(k) !== -1 ? ngayToISO_(v) : (v === null || v === undefined ? '' : String(v).trim()); };
+  let hienTai = null;
+  try { hienTai = _thongTinHopDongHienTai_(du.idHD); } catch (e) { /* không đọc được -> không cảnh báo xung đột */ }
+  const ghi = {};
+  Object.keys(h).forEach(function (k) {
+    if (chuan(k, h[k]) === chuan(k, du.hopDongGoc[k])) return; // người dùng không đổi trường này -> KHÔNG ghi
+    ghi[k] = h[k];
+    if (hienTai && hienTai.hasOwnProperty(k) && chuan(k, hienTai[k]) !== chuan(k, du.hopDongGoc[k]) && chuan(k, hienTai[k]) !== chuan(k, h[k])) {
+      canhBao.push('Trường "' + k + '" đã được người khác sửa thành "' + chuan(k, hienTai[k]) + '" trong lúc nháp còn mở — đã ghi đè bằng giá trị của bạn "' + chuan(k, h[k]) + '".');
+    }
+  });
+  return ghi;
+}
+
+/** P-10: chỉ các trường thông tin của 1 hợp đồng (1 dòng HD_NCC) — không kèm lô rừng/tài khoản như layHopDongTheoSoDong_. */
+function _thongTinHopDongHienTai_(idHD) {
+  const soDong = timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, idHD);
+  if (soDong === -1) return null;
+  const sh = getSheet_(SHEET_NAME.HD_NCC);
+  const r = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), NCC_COL.MA_SO_THUE + 1)).getValues()[0];
+  const kq = {};
+  const map = { tenChuRung: 'TEN_CHU_RUNG', cccdChuRung: 'CCCD_CHU_RUNG', soHD: 'SO_HD', ngayKy: 'NGAY_KY', ngayCap: 'NGAY_CAP', noiCap: 'NOI_CAP',
+    sdtChuRung: 'SDT_CHU_RUNG', diaChiThuongTru: 'DIA_CHI_TT', tinhTrang: 'TINH_TRANG', uyQuyenTT: 'UY_QUYEN_TT', tenUyQuyen: 'TEN_UY_QUYEN',
+    cccdUyQuyen: 'CCCD_UY_QUYEN', ngayCapUyQuyen: 'NGAY_CAP_UQ', noiCapUyQuyen: 'NOI_CAP_UQ', sdtUyQuyen: 'SDT_UQ', diaChiUyQuyen: 'DIA_CHI_UQ',
+    nhomKH: 'NHOM_KH', maSoThue: 'MA_SO_THUE', diaChiRung: 'DIA_CHI_RUNG', soTK: 'SO_TK', nganHang: 'NGAN_HANG' };
+  Object.keys(map).forEach(function (k) { kq[k] = r[NCC_COL[map[k]]]; });
+  return kq;
+}
+
+/** Trường so với ảnh chụp lúc mở nháp (goc) của từng loại mục. */
+const TRUONG_GOC_LO_ = ['diaChiRung', 'dienTichM2', 'donGia', 'khoiLuongDuKien', 'hoSoNguonGoc', 'soGiayTo'];
+const TRUONG_GOC_TK_ = ['soTK', 'nganHang', 'uyQuyenTT', 'tenUyQuyen'];
+const TRUONG_GOC_PL_ = ['donGia', 'khoiLuong', 'ghiChu'];
+function _anhChup_(o, truong) {
+  const kq = {};
+  truong.forEach(function (k) { kq[k] = o[k] === undefined ? null : o[k]; });
+  return kq;
+}
+/** Hai giá trị coi như bằng nhau: rỗng = rỗng; cùng là số -> so số (3000 = "3000"); còn lại so chuỗi đã bỏ khoảng trắng. */
+function _giongGiaTri_(a, b) {
+  const s = function (v) { return v === null || v === undefined ? '' : String(v).trim(); };
+  const x = s(a), y = s(b);
+  if (x === y) return true;
+  return x !== '' && y !== '' && isFinite(Number(x)) && isFinite(Number(y)) && Number(x) === Number(y);
+}
+/** Các trường đã đổi so với ảnh chụp goc; null nếu mục không có goc (nháp cũ / mục mới) -> xử lý như trước. */
+function _truongDaDoi_(o, truong) {
+  if (!o.goc) return null;
+  return truong.filter(function (k) { return !_giongGiaTri_(o.goc[k], o[k]); });
+}
+
 /** Ghi dữ liệu của 1 bản nháp vào các bảng chính (không xóa nháp — LUU_CHINH_THUC_ lo việc đó). */
-function luuChinhThucThucThi_(du) {
-  // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật
-  const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: du.hopDong, rung: [], taiKhoan: [] });
-  if (!ketQuaHD.thanhCong) return ketQuaHD;
-  const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
-
-  const loiChiTiet = [];
-
-  // 2) LÔ RỪNG — thêm mới / cập nhật / xóa, rồi ghi các điểm GPS mới thêm ở bản nháp
-  (du.rung || []).forEach(function (rg) {
-    if (rg.xoa) {
-      if (rg.idRung) { const kq = XOA_LO_RUNG_(rg.idRung); if (!kq.thanhCong) loiChiTiet.push('Xóa lô rừng ' + rg.idRung + ': ' + kq.loi); }
-      return;
+function luuChinhThucThucThi_(du, maThaoTac, ghiTienDo) {
+  ghiTienDo = ghiTienDo || function () {};
+  // Gom tổng hợp lô rừng (14_CtHopDong_PhuLuc.gs): các lần thêm / sửa / xóa lô bên dưới chỉ ghi nhận, tổng hợp 1 lần.
+  const gomTH = batDauGomTongHopRung_();
+  let daXa = false;
+  const xaTongHop = function () { if (!daXa) { daXa = true; ketThucGomTongHopRung_(gomTH); } };
+  try {
+    // 1) HỢP ĐỒNG (HD_NCC) — tạo mới hoặc cập nhật. maThaoTac: lượt lưu lại của CÙNG bản nháp
+    // dùng lại hợp đồng đã tạo thay vì tạo hợp đồng thứ 2 (xem _hdDaTaoTheoMaThaoTac_).
+    const loiChiTiet = [];
+    const laHopDongMoi = !du.idHD;
+    let coDoiLo = false; // có thêm / sửa / xóa lô rừng trong lượt này -> mới cần tổng hợp lại lô (cuối hàm)
+    const hd = _truongHopDongCanGhi_(du, loiChiTiet);
+    // boQuaTongHopRung: cuối hàm này đã tổng hợp lô rừng 1 lần (sau khi ghi xong lô) — không làm 2 lần (P-10)
+    const ketQuaHD = LUU_HOP_DONG_DAY_DU_({ idHD: du.idHD, soDong: null, hopDong: hd, rung: [], taiKhoan: [], maThaoTac: maThaoTac, boQuaTongHopRung: true, hoanChuyenThucHien: true });
+    if (!ketQuaHD.thanhCong) return ketQuaHD;
+    const idHD = ketQuaHD.idHD, soHD = ketQuaHD.soHD;
+    if (!du.idHD) {
+      // Ghi cả Số HĐ vừa tự sinh: lần lưu lại đi đường "sửa hợp đồng" — thiếu Số HĐ thì bị chặn
+      // ("Số HĐ không được để trống"), trước đó còn ghi đè Số HĐ thành trống.
+      du.idHD = idHD;
+      if (du.hopDong && !du.hopDong.soHD) du.hopDong.soHD = soHD;
+      ghiTienDo();
     }
-    const dRung = {
-      idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung,
-      diaChiRung: rg.diaChiRung, dienTichM2: rg.dienTichM2, donGia: rg.donGia,
-      khoiLuongDuKien: rg.khoiLuongDuKien, hoSoNguonGoc: rg.hoSoNguonGoc, soGiayTo: rg.soGiayTo
-    };
-    let idRungThat = rg.idRung;
-    if (idRungThat) {
-      const kq = CAP_NHAT_LO_RUNG_(idRungThat, dRung);
-      if (!kq.thanhCong) { loiChiTiet.push('Cập nhật lô rừng ' + idRungThat + ': ' + kq.loi); return; }
-    } else {
-      const kq = THEM_LO_RUNG_MOI_(dRung);
-      if (!kq.thanhCong) { loiChiTiet.push('Thêm lô rừng "' + rg.diaChiRung + '": ' + kq.loi); return; }
-      idRungThat = kq.idRung;
-    }
-    (rg.gpsMoi || []).forEach(function (p) {
-      const kqGps = CAP_NHAT_GPS_RUNG_(idRungThat, { lat: p.lat, lng: p.lng, anhUrl: p.anhUrl || '' }, false);
-      if (!kqGps.thanhCong) loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
+
+    // 2) LÔ RỪNG — thêm mới / cập nhật / xóa, rồi ghi các điểm GPS mới thêm ở bản nháp
+    (du.rung || []).forEach(function (rg) {
+      if (rg.xoa) {
+        if (rg.idRung && !rg.daXoaXong) {
+          const kq = XOA_LO_RUNG_(rg.idRung);
+          coDoiLo = true;
+          if (kq.thanhCong) { rg.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa lô rừng ' + rg.idRung + ': ' + kq.loi);
+        }
+        return;
+      }
+      const dRung = {
+        idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung,
+        diaChiRung: rg.diaChiRung, dienTichM2: rg.dienTichM2, donGia: rg.donGia,
+        khoiLuongDuKien: rg.khoiLuongDuKien, hoSoNguonGoc: rg.hoSoNguonGoc, soGiayTo: rg.soGiayTo
+      };
+      let idRungThat = rg.idRung;
+      if (idRungThat) {
+        // Lô có ảnh chụp lúc mở nháp: không đổi -> bỏ qua; có đổi -> chỉ ghi đúng các trường đã đổi
+        const doi = _truongDaDoi_(rg, TRUONG_GOC_LO_);
+        if (!doi || doi.length) {
+          const patch = doi ? doi.reduce(function (o, k) { o[k] = dRung[k]; return o; }, {}) : dRung;
+          const kq = CAP_NHAT_LO_RUNG_(idRungThat, patch);
+          if (!kq.thanhCong) { loiChiTiet.push('Cập nhật lô rừng ' + idRungThat + ': ' + kq.loi); return; }
+          coDoiLo = true;
+        }
+      } else {
+        coDoiLo = true;
+        const kq = THEM_LO_RUNG_MOI_(dRung);
+        if (!kq.thanhCong) { loiChiTiet.push('Thêm lô rừng "' + rg.diaChiRung + '": ' + kq.loi); return; }
+        idRungThat = kq.idRung;
+        rg.idRung = idRungThat; ghiTienDo(); // lần lưu lại sẽ CẬP NHẬT lô này, không thêm lô thứ 2
+      }
+      let coGpsMoi = false;
+      (rg.gpsMoi || []).forEach(function (p) {
+        if (p.daGhi) return;
+        const kqGps = CAP_NHAT_GPS_RUNG_(idRungThat, { lat: p.lat, lng: p.lng, anhUrl: p.anhUrl || '' }, false);
+        if (kqGps.thanhCong) { p.daGhi = true; coGpsMoi = true; if (kqGps.canhBaoKhoangCach) loiChiTiet.push(kqGps.canhBaoKhoangCach); }
+        else loiChiTiet.push('Thêm GPS cho ' + idRungThat + ': ' + kqGps.loi);
+      });
+      if (coGpsMoi) ghiTienDo();
     });
-  });
 
-  // 3) TÀI KHOẢN — thêm mới / cập nhật / xóa
-  (du.taiKhoan || []).forEach(function (tk) {
-    if (tk.xoa) {
-      if (tk.soDong) { const kq = XOA_TAI_KHOAN_(tk.soDong); if (!kq.thanhCong) loiChiTiet.push('Xóa tài khoản dòng ' + tk.soDong + ': ' + kq.loi); }
-      return;
+    // 3) TÀI KHOẢN — C-01 (rà soát 28/09): số dòng trong nháp có thể đã cũ (nháp để nhiều ngày, dòng của hợp
+    // đồng khác bị xóa -> dịch lên). Mọi thao tác theo dòng giờ xác minh lại ID_HD + Số TK gốc trước khi ghi,
+    // và làm SỬA/THÊM trước, XÓA sau (từ dòng dưới lên) để các lần xóa trong cùng lượt không làm lệch nhau.
+    const dsTK = du.taiKhoan || [];
+    dsTK.forEach(function (tk) {
+      if (tk.xoa || tk.daTao) return;
+      const doiTK = tk.soDong ? _truongDaDoi_(tk, TRUONG_GOC_TK_) : null;
+      if (doiTK && !doiTK.length) return; // tài khoản không đổi so với lúc mở nháp -> không ghi lại
+      const dTK = { idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung, soTK: tk.soTK, nganHang: tk.nganHang, uyQuyenTT: tk.uyQuyenTT, tenUyQuyen: tk.tenUyQuyen };
+      const kq = tk.soDong ? CAP_NHAT_TAI_KHOAN_(tk.soDong, dTK, idHD, tk.soTKGoc) : THEM_TAI_KHOAN_MOI_(dTK);
+      if (!kq.thanhCong) loiChiTiet.push('Tài khoản ' + (tk.soTK || '') + ': ' + kq.loi);
+      else if (!tk.soDong) { tk.daTao = true; ghiTienDo(); }
+    });
+    dsTK.filter(function (tk) { return tk.xoa && tk.soDong && !tk.daXoaXong; })
+      .sort(function (a, b) { return Number(b.soDong) - Number(a.soDong); })
+      .forEach(function (tk) {
+        const kq = XOA_TAI_KHOAN_(tk.soDong, idHD, tk.soTKGoc);
+        if (kq.thanhCong) { tk.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa tài khoản ' + (tk.soTKGoc || tk.soTK || '') + ': ' + kq.loi);
+      });
+
+    // 4) PHỤ LỤC HỢP ĐỒNG — cùng nguyên tắc (khóa ID_PHU_LUC + ID_HD)
+    const dsPL = du.phuLuc || [];
+    dsPL.forEach(function (pl) {
+      if (pl.xoa || pl.daTao) return;
+      const doiPL = pl.soDong ? _truongDaDoi_(pl, TRUONG_GOC_PL_) : null;
+      if (doiPL && !doiPL.length) return; // phụ lục không đổi -> không ghi lại
+      const kq = LUU_PHU_LUC_({ idHD: idHD, soHD: soHD, soDong: pl.soDong, idPhuLuc: pl.idPhuLuc, donGia: pl.donGia, khoiLuong: pl.khoiLuong, ghiChu: pl.ghiChu });
+      if (!kq.thanhCong) loiChiTiet.push('Phụ lục: ' + kq.loi);
+      else if (!pl.soDong) { pl.daTao = true; ghiTienDo(); }
+    });
+    dsPL.filter(function (pl) { return pl.xoa && pl.soDong && !pl.daXoaXong; })
+      .sort(function (a, b) { return Number(b.soDong) - Number(a.soDong); })
+      .forEach(function (pl) {
+        const kq = XOA_PHU_LUC_(pl.soDong, idHD, pl.idPhuLuc);
+        if (kq.thanhCong) { pl.daXoaXong = true; ghiTienDo(); } else loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi);
+      });
+
+    // Tổng hợp lô rừng -> ct_hopdong + HD_NCC cột Z/T/AA: chỉ khi lô đổi (hoặc HĐ mới / có sửa SL, diện tích, đơn giá cấp HĐ).
+    // Xả gom 1 lần ở đây — TRƯỚC khi chuyển "Đang thực hiện" (quy tắc tổng hợp phụ thuộc tình trạng, giữ đúng thứ tự cũ).
+    if (coDoiLo || laHopDongMoi || ['slDuKien', 'dienTichKy', 'donGia'].some(function (k) { return hd.hasOwnProperty(k); })) dongBoTongHopRungVaoHdNcc_(idHD);
+    xaTongHop();
+
+    // Chọn "Đang thực hiện" ở form: chỉ chuyển khi đã đủ hồ sơ (kiểm tra sau khi lô / GPS / tài khoản đã ghi xong)
+    let nhacDuyet = ketQuaHD.nhacDuyet || '', thieuHoSo = null;
+    if (ketQuaHD.muonThucHien) {
+      const kqChuyen = _thuChuyenDangThucHien_(idHD);
+      if (kqChuyen.thanhCong) nhacDuyet = '';
+      else { loiChiTiet.push(kqChuyen.loi + '\nHợp đồng vẫn giữ trạng thái cũ — dữ liệu khác đã lưu.'); thieuHoSo = kqChuyen.thieuHoSo || null; }
     }
-    const dTK = { idHD: idHD, soHD: soHD, tenChuRung: du.hopDong.tenChuRung, cccd: du.hopDong.cccdChuRung, soTK: tk.soTK, nganHang: tk.nganHang, uyQuyenTT: tk.uyQuyenTT, tenUyQuyen: tk.tenUyQuyen };
-    const kq = tk.soDong ? CAP_NHAT_TAI_KHOAN_(tk.soDong, dTK) : THEM_TAI_KHOAN_MOI_(dTK);
-    if (!kq.thanhCong) loiChiTiet.push('Tài khoản ' + (tk.soTK || '') + ': ' + kq.loi);
-  });
-
-  // 4) PHỤ LỤC HỢP ĐỒNG — thêm mới / cập nhật / xóa
-  (du.phuLuc || []).forEach(function (pl) {
-    if (pl.xoa) {
-      if (pl.soDong) { const kq = XOA_PHU_LUC_(pl.soDong); if (!kq.thanhCong) loiChiTiet.push('Xóa phụ lục dòng ' + pl.soDong + ': ' + kq.loi); }
-      return;
-    }
-    const kq = LUU_PHU_LUC_({ idHD: idHD, soHD: soHD, soDong: pl.soDong, donGia: pl.donGia, khoiLuong: pl.khoiLuong, ghiChu: pl.ghiChu });
-    if (!kq.thanhCong) loiChiTiet.push('Phụ lục: ' + kq.loi);
-  });
-
-  CAP_NHAT_CT_HOPDONG_(idHD);
-
-  return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null };
+    return { thanhCong: true, idHD: idHD, soHD: soHD, canhBao: loiChiTiet.length ? loiChiTiet : null, nhacDuyet: nhacDuyet, thieuHoSo: thieuHoSo };
+  } finally { xaTongHop(); } // lỗi / dừng giữa chừng vẫn tổng hợp các lô đã ghi
 }

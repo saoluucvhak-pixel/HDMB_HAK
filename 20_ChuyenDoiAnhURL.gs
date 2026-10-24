@@ -21,6 +21,14 @@
  * ============================================================
  */
 
+// ⚠️ HIỆU NĂNG: đọc/ghi theo KHỐI 300 dòng/lượt thay vì từng dòng riêng lẻ —
+// giảm số lượt gọi API Sheets từ O(số dòng) xuống O(số dòng/300). Vẫn kiểm
+// tra ngưỡng thời gian an toàn cho TỪNG DÒNG bên trong khối (không phải mỗi
+// khối) vì resolveDriveLink_() gọi Drive API — 1 khối 300 dòng có thể vẫn
+// mất nhiều phút nếu hầu hết ô đều phải tra Drive, nên phải dừng được giữa
+// chừng 1 khối, không chỉ giữa các khối.
+const KICH_THUOC_KHOI_URL_ = 300;
+
 function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_() {
   // Không kiểm tra quyền ở đây: hàm nội bộ (đuôi _) — trang web chỉ gọi được qua api() (đã kiểm tra quyền),
   // còn trigger / bot Telegram gọi thẳng khi KHÔNG có người đăng nhập -> kiểm tra ở đây sẽ chặn nhầm lượt chạy tự động.
@@ -43,21 +51,31 @@ function CHUYEN_DOI_TEN_FILE_ANH_SANG_URL_() {
     dongBatDau = 2; soDaChuyen = 0; soKhongTimThay = 0;
   }
 
+  const cotBatDau = PICTURE_COL.PICTURE_START + 1, soCot = PICTURE_COL.PICTURE_END - PICTURE_COL.PICTURE_START + 1;
   let dongCuoiDaXuLy = dongBatDau - 1;
-  for (let dong = dongBatDau; dong <= lastRow; dong++) {
-    if (new Date().getTime() - batDau > GIOI_HAN_THOI_GIAN_MS) break;
+  let dungSom = false;
+  for (let dongKhoi = dongBatDau; dongKhoi <= lastRow; dongKhoi += KICH_THUOC_KHOI_URL_) {
+    if (dungSom) break;
+    const soDongKhoi = Math.min(KICH_THUOC_KHOI_URL_, lastRow - dongKhoi + 1);
+    const khoi = sh.getRange(dongKhoi, cotBatDau, soDongKhoi, soCot).getValues();
+    let coDoiTrongKhoi = false;
 
-    const hang = sh.getRange(dong, PICTURE_COL.PICTURE_START + 1, 1, PICTURE_COL.PICTURE_END - PICTURE_COL.PICTURE_START + 1).getValues()[0];
-    let coDoi = false;
-    for (let i = 0; i < hang.length; i++) {
-      const v = (hang[i] || '').toString().trim();
-      if (!v || v.indexOf('http') === 0) continue;
-      const link = resolveDriveLink_(v);
-      if (link && link.url) { hang[i] = link.url; coDoi = true; soDaChuyen++; }
-      else soKhongTimThay++;
+    for (let i = 0; i < soDongKhoi; i++) {
+      if (new Date().getTime() - batDau > GIOI_HAN_THOI_GIAN_MS) { dungSom = true; break; }
+      const hang = khoi[i];
+      for (let j = 0; j < hang.length; j++) {
+        const v = (hang[j] || '').toString().trim();
+        if (!v || v.indexOf('http') === 0) continue;
+        const link = resolveDriveLink_(v);
+        if (link && link.url) { hang[j] = link.url; coDoiTrongKhoi = true; soDaChuyen++; }
+        else soKhongTimThay++;
+      }
+      dongCuoiDaXuLy = dongKhoi + i;
     }
-    if (coDoi) sh.getRange(dong, PICTURE_COL.PICTURE_START + 1, 1, hang.length).setValues([hang]);
-    dongCuoiDaXuLy = dong;
+
+    // Ghi lại CẢ KHỐI đã đọc bằng 1 lệnh duy nhất — dòng chưa kịp xử lý (nếu dừng
+    // giữa chừng) vẫn còn nguyên giá trị gốc trong `khoi` nên ghi lại không đổi gì.
+    if (coDoiTrongKhoi) sh.getRange(dongKhoi, cotBatDau, soDongKhoi, soCot).setValues(khoi);
   }
 
   const xongHet = dongCuoiDaXuLy >= lastRow;
@@ -125,22 +143,34 @@ function CHUYEN_DOI_HO_SO_PHAP_LY_SANG_URL_() {
 
   const cotDinhKem = RUNG_COL.DINH_KEM_GIAY_TO + 1;
   let dongCuoiDaXuLy = dongBatDau - 1;
-  for (let dong = dongBatDau; dong <= lastRow; dong++) {
-    if (new Date().getTime() - batDau > GIOI_HAN_THOI_GIAN_MS) break;
+  let dungSom = false;
+  for (let dongKhoi = dongBatDau; dongKhoi <= lastRow; dongKhoi += KICH_THUOC_KHOI_URL_) {
+    if (dungSom) break;
+    const soDongKhoi = Math.min(KICH_THUOC_KHOI_URL_, lastRow - dongKhoi + 1);
+    const khoi = sh.getRange(dongKhoi, cotDinhKem, soDongKhoi, 1).getValues();
+    let coDoiTrongKhoi = false;
 
-    const oDinhKem = sh.getRange(dong, cotDinhKem);
-    const v = (oDinhKem.getValue() || '').toString().trim();
-    dongCuoiDaXuLy = dong;
-    if (!v || v.indexOf('http') === 0) continue;
+    for (let i = 0; i < soDongKhoi; i++) {
+      if (new Date().getTime() - batDau > GIOI_HAN_THOI_GIAN_MS) { dungSom = true; break; }
+      const dong = dongKhoi + i;
+      const v = (khoi[i][0] || '').toString().trim();
+      dongCuoiDaXuLy = dong;
+      if (!v || v.indexOf('http') === 0) continue;
 
-    const link = resolveDriveLink_(v);
-    if (link && link.url) {
-      oDinhKem.setValue(link.url);
-      soDaChuyen++;
-    } else {
-      soKhongTimThay++;
-      if (dsKhongTimThay.length < 5) dsKhongTimThay.push({ dong: dong, giaTriGoc: v });
+      const link = resolveDriveLink_(v);
+      if (link && link.url) {
+        khoi[i][0] = link.url;
+        coDoiTrongKhoi = true;
+        soDaChuyen++;
+      } else {
+        soKhongTimThay++;
+        if (dsKhongTimThay.length < 5) dsKhongTimThay.push({ dong: dong, giaTriGoc: v });
+      }
     }
+
+    // Ghi lại CẢ KHỐI bằng 1 lệnh — dòng chưa kịp xử lý (nếu dừng giữa chừng)
+    // vẫn còn nguyên giá trị gốc trong `khoi` nên ghi lại không đổi gì.
+    if (coDoiTrongKhoi) sh.getRange(dongKhoi, cotDinhKem, soDongKhoi, 1).setValues(khoi);
   }
 
   const xongHet = dongCuoiDaXuLy >= lastRow;

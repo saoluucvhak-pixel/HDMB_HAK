@@ -34,7 +34,6 @@ function LAY_THIET_LAP_MISA_() {
     tenHangMacDinh: p.getProperty('MISA_TEN_HANG_MAC_DINH') || 'Gỗ tròn keo',
     donViTinhMacDinh: p.getProperty('MISA_DON_VI_TINH_MAC_DINH') || 'Tấn',
     loaiTienMacDinh: p.getProperty('MISA_LOAI_TIEN_MAC_DINH') || 'VNĐ',
-    vungDinhDangMisa: p.getProperty('MISA_VUNG_DINH_DANG') || 'vi_VN',
     masterSheetUrl: p.getProperty('MISA_MASTER_SHEET_ID') ? ('https://docs.google.com/spreadsheets/d/' + p.getProperty('MISA_MASTER_SHEET_ID') + '/edit') : ''
   };
 }
@@ -47,7 +46,6 @@ function LUU_THIET_LAP_MISA_(thietLap) {
   p.setProperty('MISA_TEN_HANG_MAC_DINH', (thietLap.tenHangMacDinh || 'Gỗ tròn keo').toString().trim());
   p.setProperty('MISA_DON_VI_TINH_MAC_DINH', (thietLap.donViTinhMacDinh || 'Tấn').toString().trim());
   p.setProperty('MISA_LOAI_TIEN_MAC_DINH', (thietLap.loaiTienMacDinh || 'VNĐ').toString().trim());
-  p.setProperty('MISA_VUNG_DINH_DANG', (thietLap.vungDinhDangMisa || 'vi_VN').toString().trim());
   // ⚠️ MỚI: URL/ID của Sheet CỐ ĐỊNH "Update_Hopdong_NCC_DN" — chấp nhận dán
   // nguyên URL, tự tách ra đúng ID để lưu.
   if (thietLap.masterSheetUrl !== undefined) {
@@ -89,22 +87,24 @@ const MISA_COT_TEXT_HDMB_ = [1, 8, 10];
 // Cột dùng làm KHÓA khi upsert (0-indexed, khớp header ở trên)
 const MISA_COT_KHOA_NCC_ = 26; // "ID_HD"
 const MISA_COT_KHOA_HDMB_ = 23; // "KEY_HD" (= idRung)
+const MISA_COT_ID_HD_HDMB_ = 22; // "ID_HD" của dòng HDMB
+// Cột NGÀY (1-indexed) — định dạng theo "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs),
+// KHÔNG liên quan tới "Vùng Lãnh Thổ" của file dữ liệu chính/Draft.
+const MISA_COT_NGAY_NCC_ = [13]; // "Ngày cấp"
+const MISA_COT_NGAY_HDMB_ = [2]; // "Ngày ký (*)"
 
 /** Tính dữ liệu MISA MỚI NHẤT từ HD_NCC/HD_RUNG/HD_GPS — KHÔNG ghi gì cả, chỉ trả về mảng dòng để nơi khác dùng (đồng bộ hoặc xem trước) */
 function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   let nccRows = readData_(SHEET_NAME.HD_NCC);
   let rungRows = readData_(SHEET_NAME.HD_RUNG);
   const thietLap = LAY_THIET_LAP_MISA_();
+  // Mọi ID_HD còn tồn tại (trước khi lọc ngày) — để dọn dòng của hợp đồng đã xóa khỏi Sheet MISA
+  const tatCaIdHD = {};
+  nccRows.forEach(function (r) { const id = (r[NCC_COL.ID_HD] || '').toString().trim(); if (id) tatCaIdHD[id] = true; });
 
-  const tuNgayDate = tuNgay ? new Date(tuNgay) : null;
-  const denNgayDate = denNgay ? new Date(denNgay) : null;
-  if (tuNgayDate || denNgayDate) {
-    nccRows = nccRows.filter(function (r) {
-      const ngayKy = new Date(r[NCC_COL.NGAY_KY]);
-      if (tuNgayDate && ngayKy < tuNgayDate) return false;
-      if (denNgayDate && ngayKy > denNgayDate) return false;
-      return true;
-    });
+  const tuISO = ngayToISO_(tuNgay), denISO = ngayToISO_(denNgay);
+  if (tuISO || denISO) {
+    nccRows = nccRows.filter(function (r) { return trongKhoangNgay_(r[NCC_COL.NGAY_KY], tuISO, denISO); });
     const idHopLe = {};
     nccRows.forEach(function (r) { idHopLe[(r[NCC_COL.ID_HD] || '').toString().trim()] = true; });
     rungRows = rungRows.filter(function (r) { return idHopLe[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()]; });
@@ -137,12 +137,18 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
   const nccByIdHD = {};
   nccRows.forEach(function (r) { nccByIdHD[(r[NCC_COL.ID_HD] || '').toString().trim()] = r; });
 
+  // Lô RỖNG (laLoRong_, 00_Config.gs) KHÔNG xuất sang MISA nếu hợp đồng còn lô khác có dữ liệu,
+  // tránh mỗi hợp đồng ra 2 dòng HDMB (1 dòng 0 đồng + 1 dòng thật).
+  const hdCoLoThat = {};
+  rungRows.forEach(function (r) { if (!laLoRong_(r)) hdCoLoThat[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()] = true; });
+
   const rowsHDMB = [];
   rungRows.forEach(function (r) {
     const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
     const idRung = (r[RUNG_COL.ID_RUNG] || '').toString().trim();
     const ncc = nccByIdHD[idHD];
     if (!ncc) return; // lô rừng mồ côi — bỏ qua, không tự đoán dữ liệu
+    if (hdCoLoThat[idHD] && laLoRong_(r)) return;
 
     // ⚠️ SỬA: cùng lỗi phân biệt hoa/thường như ở rowsNCC phía trên — chuẩn hóa lowercase
     const uyQuyenHDMBChuan = (ncc[NCC_COL.UY_QUYEN_TT] || '').toString().trim().toLowerCase();
@@ -150,8 +156,8 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
     const cccd = (ncc[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     const masoThue = (ncc[NCC_COL.MA_SO_THUE] || '').toString().trim() || cccd;
     const nguoiLienHe = coUyQuyen ? (ncc[NCC_COL.TEN_UY_QUYEN] || '') : (ncc[NCC_COL.TEN_CHU_RUNG] || '');
-    const soLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
+    const soLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+    const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
     const gps = theoIdRung[idRung];
     const toaDo = gps && gps.toaDo ? (gps.toaDo.lat.toFixed(6) + ', ' + gps.toaDo.lng.toFixed(6)) : '';
 
@@ -159,13 +165,14 @@ function layDuLieuMisaHienTai_(tuNgay, denNgay) {
       r[RUNG_COL.SO_HD] || '', r[RUNG_COL.NGAY_KY] || '', '', thietLap.loaiTienMacDinh, '',
       soLuong * donGia, '', cccd, r[RUNG_COL.THUONG_TRU] || '', masoThue, nguoiLienHe, ncc[NCC_COL.TINH_TRANG] || '',
       thietLap.maHangMacDinh, thietLap.tenHangMacDinh, thietLap.donViTinhMacDinh, soLuong, donGia, soLuong * donGia,
-      Number(r[RUNG_COL.DIEN_TICH_M2]) || 0, toaDo,
+      soTuO_(r[RUNG_COL.DIEN_TICH_M2]), toaDo,
       r[RUNG_COL.HO_SO_NGUON_GOC] || '', r[RUNG_COL.SO_GIAY_TO] || '',
       idHD, idRung, '', ''
     ]);
   });
 
-  return { headerNCC: MISA_HEADER_NCC_, headerHDMB: MISA_HEADER_HDMB_, rowsNCC: rowsNCC, rowsHDMB: rowsHDMB, thietLap: thietLap };
+  return { headerNCC: MISA_HEADER_NCC_, headerHDMB: MISA_HEADER_HDMB_, rowsNCC: rowsNCC, rowsHDMB: rowsHDMB, thietLap: thietLap,
+    tatCaIdHD: tatCaIdHD, idHDTrongPhamVi: nccByIdHD };
 }
 
 /**
@@ -183,10 +190,16 @@ function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
   try { ssMaster = SpreadsheetApp.openById(masterId); } catch (e) { return { thanhCong: false, loi: 'Không mở được Sheet đã cấu hình: ' + e.message }; }
 
   const duLieu = layDuLieuMisaHienTai_(tuNgay, denNgay);
-  const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_);
-  const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_);
+  // ⚠️ "Vùng Định Dạng Báo Cáo Xuất Excel" (21_DinhDangText.gs) — chỉ ảnh hưởng cách ngày
+  // được GHI RA file MISA, KHÔNG ảnh hưởng giao diện webapp (luôn hiển thị kiểu Việt Nam).
+  const mauNgayXuat = mauNgayXuatFile_();
+  const donDep = { tatCaIdHD: duLieu.tatCaIdHD, idHDTrongPhamVi: duLieu.idHDTrongPhamVi };
+  const kqNCC = upsertVaoSheetMisa_(ssMaster, 'Update_DM_NCC', duLieu.headerNCC, duLieu.rowsNCC, MISA_COT_KHOA_NCC_, MISA_COT_TEXT_NCC_, MISA_COT_NGAY_NCC_, mauNgayXuat,
+    { cotIdHD: MISA_COT_KHOA_NCC_, tatCaIdHD: donDep.tatCaIdHD });
+  const kqHDMB = upsertVaoSheetMisa_(ssMaster, 'Update_HDMB', duLieu.headerHDMB, duLieu.rowsHDMB, MISA_COT_KHOA_HDMB_, MISA_COT_TEXT_HDMB_, MISA_COT_NGAY_HDMB_, mauNgayXuat,
+    { cotIdHD: MISA_COT_ID_HD_HDMB_, tatCaIdHD: donDep.tatCaIdHD, idHDTrongPhamVi: donDep.idHDTrongPhamVi });
 
-  ghiNhatKy_('Đồng bộ MISA Master', '', 'NCC: +' + kqNCC.soThem + ' /~' + kqNCC.soCapNhat + ' (dọn ' + kqNCC.soDongTrongDaDon + ' dòng trống, gộp ' + kqNCC.soTrungDaGop + ' trùng) — HDMB: +' + kqHDMB.soThem + ' /~' + kqHDMB.soCapNhat + ' (dọn ' + kqHDMB.soDongTrongDaDon + ' dòng trống, gộp ' + kqHDMB.soTrungDaGop + ' trùng)');
+  ghiNhatKy_('Đồng bộ MISA Master', '', 'NCC: +' + kqNCC.soThem + ' /~' + kqNCC.soCapNhat + ' (dọn ' + kqNCC.soDongTrongDaDon + ' dòng trống, gộp ' + kqNCC.soTrungDaGop + ' trùng, bỏ ' + kqNCC.soDongCuDaBo + ' dòng cũ) — HDMB: +' + kqHDMB.soThem + ' /~' + kqHDMB.soCapNhat + ' (dọn ' + kqHDMB.soDongTrongDaDon + ' dòng trống, gộp ' + kqHDMB.soTrungDaGop + ' trùng, bỏ ' + kqHDMB.soDongCuDaBo + ' dòng cũ)');
   return { thanhCong: true, ncc: kqNCC, hdmb: kqHDMB, masterUrl: ssMaster.getUrl() };
 }
 
@@ -198,7 +211,14 @@ function DONG_BO_VAO_MISA_MASTER_(tuNgay, denNgay) {
  * trước (thực tế phát hiện: file gốc có hàng trăm dòng trống xen giữa do
  * template/thao tác cũ để lại — không thể xử lý bằng cách sửa từng dòng riêng lẻ).
  */
-function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotText) {
+/*
+ * `donDep` (tùy chọn) — bỏ dòng CŨ đã không còn đúng, nguyên nhân báo cáo MISA bị tính DOUBLE:
+ *   - cotIdHD + tatCaIdHD: dòng của hợp đồng ĐÃ XÓA khỏi HD_NCC.
+ *   - idHDTrongPhamVi: dòng thuộc hợp đồng đang đồng bộ lần này nhưng khóa (ID_RUNG) không còn trong
+ *     dữ liệu mới — lô đã xóa / xóa rồi thêm lại (ID_RUNG mới) / lô rỗng không xuất nữa.
+ *   Dòng không có ID_HD (nhập tay) vẫn giữ nguyên như trước.
+ */
+function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotText, cotNgay, mauNgay, donDep) {
   let sh = ssMaster.getSheetByName(tenSheet);
   if (!sh) sh = ssMaster.insertSheet(tenSheet);
   if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, header.length).setValues([header]);
@@ -208,16 +228,28 @@ function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotTe
 
   const ketQuaTheoKhoa = {}; // khóa -> dòng dữ liệu cuối cùng (mới nhất thắng nếu trùng)
   const khongCoKhoa = []; // dòng có dữ liệu nhưng thiếu khóa (hiếm, giữ nguyên không đụng tới)
-  let soDongTrongDaDon = 0;
+  let soDongTrongDaDon = 0, soDongCuDaBo = 0;
+  const khoaMoi = {};
+  rowsMoi.forEach(function (row) { const k = (row[cotKhoa] || '').toString().trim(); if (k) khoaMoi[k] = true; });
+  const coDsIdHD = donDep && donDep.tatCaIdHD && Object.keys(donDep.tatCaIdHD).length > 0; // HD_NCC đọc rỗng -> không dọn gì
+  const laDongCu_ = function (r) {
+    if (!donDep || donDep.cotIdHD === undefined) return false;
+    const idHD = (r[donDep.cotIdHD] || '').toString().trim();
+    if (!idHD) return false;
+    if (coDsIdHD && !donDep.tatCaIdHD[idHD]) return true;
+    if (donDep.idHDTrongPhamVi && donDep.idHDTrongPhamVi[idHD]) return !khoaMoi[(r[cotKhoa] || '').toString().trim()];
+    return false;
+  };
   duLieuHienCo.forEach(function (r) {
     const conDuLieu = r.some(function (o) { return o !== '' && o !== null; });
     if (!conDuLieu) { soDongTrongDaDon++; return; } // dòng trống hoàn toàn -> dọn sạch, không giữ lại
+    if (laDongCu_(r)) { soDongCuDaBo++; return; }
     const khoa = (r[cotKhoa] || '').toString().trim();
     if (khoa) ketQuaTheoKhoa[khoa] = r; else khongCoKhoa.push(r);
   });
   const soKhoaCuTruocKhiGop = Object.keys(ketQuaTheoKhoa).length;
   // Số dòng bị "gộp" do trùng khóa NGAY TRONG dữ liệu cũ (trước khi có dữ liệu mới) — nếu có
-  const soTrungKhoaCu = duLieuHienCo.length - soDongTrongDaDon - khongCoKhoa.length - soKhoaCuTruocKhiGop;
+  const soTrungKhoaCu = duLieuHienCo.length - soDongTrongDaDon - soDongCuDaBo - khongCoKhoa.length - soKhoaCuTruocKhiGop;
 
   let soThem = 0, soCapNhat = 0;
   rowsMoi.forEach(function (row) {
@@ -230,10 +262,13 @@ function upsertVaoSheetMisa_(ssMaster, tenSheet, header, rowsMoi, cotKhoa, cotTe
   if (lastRow >= 2) sh.getRange(2, 1, lastRow - 1, header.length).clearContent(); // dọn sạch toàn bộ vùng cũ trước khi ghi lại gọn gàng
   if (tatCa.length) {
     cotText.forEach(function (c) { sh.getRange(2, c, tatCa.length, 1).setNumberFormat('@'); }); // định dạng TEXT TRƯỚC khi ghi, tránh mất số 0
+    if (cotNgay && cotNgay.length && mauNgay) {
+      cotNgay.forEach(function (c) { sh.getRange(2, c, tatCa.length, 1).setNumberFormat(mauNgay); });
+    }
     sh.getRange(2, 1, tatCa.length, header.length).setValues(tatCa);
   }
 
-  return { soThem: soThem, soCapNhat: soCapNhat, soDongTrongDaDon: soDongTrongDaDon, soTrungDaGop: Math.max(0, soTrungKhoaCu), tongSoDongSauCung: tatCa.length };
+  return { soThem: soThem, soCapNhat: soCapNhat, soDongTrongDaDon: soDongTrongDaDon, soTrungDaGop: Math.max(0, soTrungKhoaCu), soDongCuDaBo: soDongCuDaBo, tongSoDongSauCung: tatCa.length };
 }
 
 /**

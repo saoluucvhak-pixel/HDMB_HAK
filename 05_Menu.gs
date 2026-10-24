@@ -46,6 +46,7 @@ function onOpen() {
     .addItem('🔍 Chẩn đoán ID/Key mồ côi toàn hệ thống', 'CHAN_DOAN_MO_COI_TOAN_HE_THONG_TU_MENU')
     .addItem('🔄 Đồng bộ thông tin lặp lại + điền địa chỉ GPS trống', 'DONG_BO_THONG_TIN_MO_RONG_TU_MENU')
     .addItem('🔧 Chạy TOÀN BỘ bảo trì (chẩn đoán + đồng bộ + trích tọa độ)', 'CHAY_TOAN_BO_BAO_TRI_TU_MENU')
+    .addItem('📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng (xem trước)', 'DIEN_SL_TU_LO_RUNG_TU_MENU')
     .addItem('🧱 Xác nhận cấu trúc cột hiện tại (chỉ sau khi CỐ Ý chèn/xóa cột và đã sửa mã)', 'XAC_NHAN_CAU_TRUC_COT_HIEN_TAI')
     .addToUi();
 }
@@ -53,8 +54,12 @@ function onOpen() {
 /** Hiện hướng dẫn sử dụng đầy đủ trong 1 cửa sổ dialog ngay trong Google Sheet */
 function HIEN_HUONG_DAN_SU_DUNG() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const html = HtmlService.createHtmlOutputFromFile('13_HuongDan')
-    .setWidth(900).setHeight(650);
+  // M-16 (rà soát 28/09): 13_HuongDan là TEMPLATE (có <?= baseUrl ?>, <?= currentPage ?>) — createHtmlOutputFromFile
+  // hiện nguyên văn các thẻ đó, link trong hộp thoại hỏng. Dựng template như doGet.
+  const tmpl = HtmlService.createTemplateFromFile('13_HuongDan');
+  tmpl.baseUrl = ScriptApp.getService().getUrl() || '';
+  tmpl.currentPage = 'huongdan';
+  const html = tmpl.evaluate().setWidth(900).setHeight(650);
   SpreadsheetApp.getUi().showModalDialog(html, '📖 Hướng dẫn sử dụng — Hệ thống HAK');
 }
 
@@ -77,8 +82,22 @@ function moFormNhapLieu() {
 
 /**
  * Dùng trong các file HTML templated (createTemplateFromFile) để ghép các phần
- * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include('TenFileHtml') ?>
+ * dùng chung (CSS, sidebar) vào trang, ví dụ: <?!= include_('TenFileHtml') ?>
  */
-function include(filename) {
+// L-01 (rà soát 28/09): tên có "_" = hàm nội bộ — google.script.run không gọi được. Trước đây include() công khai:
+// ai có link webapp cũng đọc được nguyên văn mọi file HTML. Scriptlet <?!= include_('...') ?> chạy ở máy chủ nên vẫn gọi được.
+function include_(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * Giao diện mới (29/09): menu trái DÙNG CHUNG cho mọi trang — trước đây mỗi trang giữ 1 bản sao 45 dòng.
+ * Gọi trong trang: <?!= menuChung_(currentPage, baseUrl, tabTrang) ?> (dựng ở máy chủ, giá trị đã được escape).
+ */
+function menuChung_(trang, base, tab) {
+  const t = HtmlService.createTemplateFromFile('Menu_Chung');
+  t.trang = String(trang || '');
+  t.base = String(base || '');
+  t.tab = String(tab || '');
+  return t.evaluate().getContent();
 }

@@ -46,57 +46,114 @@ function timDongDraftHoSoRung_(sh, idRung) {
 
 /** Tính lại + ghi đè ĐÚNG 1 dòng cache của 1 lô rừng. Gọi sau Thêm/Sửa lô rừng hoặc thêm GPS. */
 function CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
-  try {
-    if (!idRung) return;
-    const rungRows = readData_(SHEET_NAME.HD_RUNG);
-    const r = rungRows.find(function (x) { return (x[RUNG_COL.ID_RUNG] || '').toString().trim() === idRung.toString().trim(); });
-    if (!r) { XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung); return; } // lô rừng đã bị xóa hẳn -> xóa luôn khỏi cache
-
-    const idHD = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
-    let tinhTrang = 'Đang thực hiện';
-    const nccRow = readData_(SHEET_NAME.HD_NCC).find(function (n) { return (n[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
-    if (nccRow) tinhTrang = nccRow[NCC_COL.TINH_TRANG] || 'Đang thực hiện';
-
-    const diemGPS = layGPSCuaRung_(idRung);
-    let latTB = '', lngTB = '';
-    if (diemGPS.length) {
-      latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
-      lngTB = diemGPS.reduce(function (s, p) { return s + p.lng; }, 0) / diemGPS.length;
-    }
-
-    const dienTich = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-
-    const c = DRAFT_HSR_COL;
-    const dong = [];
-    dong[c.ID_RUNG] = idRung; dong[c.ID_HD] = idHD; dong[c.SO_HD] = r[RUNG_COL.SO_HD]; dong[c.NGAY_KY] = r[RUNG_COL.NGAY_KY];
-    dong[c.TEN_CHU_RUNG] = r[RUNG_COL.TEN_CHU_RUNG]; dong[c.TINH_TRANG] = tinhTrang;
-    dong[c.HO_SO_NGUON_GOC] = r[RUNG_COL.HO_SO_NGUON_GOC]; dong[c.SO_GIAY_TO] = r[RUNG_COL.SO_GIAY_TO]; dong[c.NGAY_GIAY_TO] = r[RUNG_COL.NGAY_GIAY_TO];
-    dong[c.DIEN_TICH] = dienTich; dong[c.KHOI_LUONG_DU_KIEN] = khoiLuong; dong[c.DON_GIA] = donGia; dong[c.GIA_TRI] = donGia * khoiLuong;
-    dong[c.TOA_DO_LAT] = latTB; dong[c.TOA_DO_LNG] = lngTB; dong[c.SO_DIEM_GPS] = diemGPS.length; dong[c.CAP_NHAT_LUC] = new Date();
-
-    const sh = getOrCreateDraftHoSoRungSheet_();
-    const soDong = timDongDraftHoSoRung_(sh, idRung);
-    if (soDong === -1) sh.appendRow(dong);
-    else sh.getRange(soDong, 1, 1, dong.length).setValues([dong]);
-  } catch (e) {
-    // Không để lỗi cập nhật cache làm hỏng thao tác chính (Thêm/Sửa lô rừng vẫn phải thành công)
-    try { ghiNhatKy_('LỖI cập nhật Draft_HoSoRung', idRung, e.message); } catch (e2) { /* bỏ qua */ }
-  }
+  if (!idRung) return;
+  if (_draftDangGom_) { _draftDangGom_.rung.add(idRung.toString().trim()); return; } // H-12: gom, cập nhật 1 lần cuối thao tác
+  capNhatDraftHoSoRungHangLoat_([idRung]);
 }
 
-/** Cập nhật cache Draft_HoSoRung cho TẤT CẢ lô rừng thuộc 1 hợp đồng (dùng khi thông
- *  tin hợp đồng — vd Tình trạng — thay đổi, ảnh hưởng tới mọi lô rừng con của nó). */
+/** Cập nhật cache "Hồ sơ rừng" cho mọi lô rừng của 1 hợp đồng (vd Tình trạng HĐ đổi). */
 function CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_(idHD) {
   try {
     if (!idHD) return;
-    readData_(SHEET_NAME.HD_RUNG).forEach(function (r) {
-      if ((r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD.toString().trim()) {
-        CAP_NHAT_DRAFT_HOSORUNG_MOT_DONG_((r[RUNG_COL.ID_RUNG] || '').toString().trim());
-      }
-    });
+    const can = idHD.toString().trim();
+    const ids = docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [can]) // tốc độ: chỉ lô của HĐ này
+      .filter(function (r) { return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === can; })
+      .map(function (r) { return (r[RUNG_COL.ID_RUNG] || '').toString().trim(); }).filter(Boolean);
+    if (_draftDangGom_) { ids.forEach(function (id) { _draftDangGom_.rung.add(id); }); return; }
+    capNhatDraftHoSoRungHangLoat_(ids);
   } catch (e) { log_('WARNING', 'CAP_NHAT_DRAFT_HOSORUNG_CHO_HOPDONG_', 'Không cập nhật được cache Hồ sơ rừng cho ' + idHD, e); }
+}
+
+/** 1 dòng Draft_HoSoRung từ dòng HD_RUNG + tình trạng HĐ + các điểm GPS {lat,lng} — dùng chung cho cập nhật lẻ và xây lại toàn bộ. */
+function _dongDraftHoSoRung_(r, tinhTrang, diemGPS) {
+  let latTB = '', lngTB = '';
+  if (diemGPS.length) {
+    latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
+    lngTB = diemGPS.reduce(function (s, p) { return s + p.lng; }, 0) / diemGPS.length;
+  }
+  const dienTich = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+  const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
+  const khoiLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+  const c = DRAFT_HSR_COL;
+  const dong = [];
+  dong[c.ID_RUNG] = (r[RUNG_COL.ID_RUNG] || '').toString().trim(); dong[c.ID_HD] = (r[RUNG_COL.ID_KEY_HD] || '').toString().trim();
+  dong[c.SO_HD] = r[RUNG_COL.SO_HD]; dong[c.NGAY_KY] = r[RUNG_COL.NGAY_KY];
+  dong[c.TEN_CHU_RUNG] = r[RUNG_COL.TEN_CHU_RUNG]; dong[c.TINH_TRANG] = tinhTrang;
+  dong[c.HO_SO_NGUON_GOC] = r[RUNG_COL.HO_SO_NGUON_GOC]; dong[c.SO_GIAY_TO] = r[RUNG_COL.SO_GIAY_TO]; dong[c.NGAY_GIAY_TO] = r[RUNG_COL.NGAY_GIAY_TO];
+  dong[c.DIEN_TICH] = dienTich; dong[c.KHOI_LUONG_DU_KIEN] = khoiLuong; dong[c.DON_GIA] = donGia; dong[c.GIA_TRI] = donGia * khoiLuong;
+  dong[c.TOA_DO_LAT] = latTB; dong[c.TOA_DO_LNG] = lngTB; dong[c.SO_DIEM_GPS] = diemGPS.length; dong[c.CAP_NHAT_LUC] = new Date();
+  return dong;
+}
+
+/**
+ * P-10 (rà soát 28/09): cập nhật cache "Hồ sơ rừng" cho NHIỀU lô — đọc HD_RUNG, HD_NCC, HD_GPS và sheet cache ĐÚNG 1 LẦN
+ * rồi ghi lại 1 lệnh. Trước đây mỗi lô tự đọc lại 3 sheet đầy đủ (1 lần Lưu hợp đồng 3 lô 6 điểm GPS ≈ 30 lượt đọc).
+ * Lô không còn trong HD_RUNG -> xóa khỏi cache.
+ */
+function capNhatDraftHoSoRungHangLoat_(idsRung) {
+  try {
+    const can = {};
+    (idsRung || []).forEach(function (id) { id = (id || '').toString().trim(); if (id) can[id] = true; });
+    if (!Object.keys(can).length) return true;
+    // Tốc độ: chỉ đọc đúng các dòng liên quan (docDongTheoKhoa_) thay vì cả HD_RUNG / HD_NCC / HD_GPS
+    const rungTheoId = {};
+    docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_RUNG, Object.keys(can)).forEach(function (r) { const id = (r[RUNG_COL.ID_RUNG] || '').toString().trim(); if (can[id]) rungTheoId[id] = r; });
+    const tinhTrangTheoHD = {};
+    docDongTheoKhoa_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, Object.keys(rungTheoId).map(function (id) { return rungTheoId[id][RUNG_COL.ID_KEY_HD]; }))
+      .forEach(function (n) { const id = (n[NCC_COL.ID_HD] || '').toString().trim(); if (id) tinhTrangTheoHD[id] = n[NCC_COL.TINH_TRANG] || 'Đang thực hiện'; });
+    const gpsTheoRung = {};
+    docDongTheoKhoa_(SHEET_NAME.HD_GPS, GPS_COL.ID_KEY_GPS, Object.keys(can)).forEach(function (g) {
+      const id = (g[GPS_COL.ID_KEY_GPS] || '').toString().trim();
+      if (!can[id]) return;
+      const p = getLatLngFromRow_(g);
+      if (p.lat === null || p.lng === null || isNaN(p.lat) || isNaN(p.lng)) return;
+      (gpsTheoRung[id] = gpsTheoRung[id] || []).push(p);
+    });
+
+    const sh = getOrCreateDraftHoSoRungSheet_();
+    const soCot = Object.keys(DRAFT_HSR_COL).length;
+    const last = sh.getLastRow();
+    // Tốc độ: ít lô, không phải xóa dòng nào -> chỉ ghi đúng dòng của các lô đó (trước đây đọc + ghi lại CẢ sheet cache)
+    const dsCan = Object.keys(can);
+    if (dsCan.length <= 20) {
+      const cotId = last >= 2 ? sh.getRange(2, DRAFT_HSR_COL.ID_RUNG + 1, last - 1, 1).getValues() : [];
+      const viTriNhanh = {};
+      let canGhiLaiCa = false;
+      cotId.forEach(function (r, i) { const id = (r[0] || '').toString().trim(); if (!id) return; if (!viTriNhanh.hasOwnProperty(id)) viTriNhanh[id] = i; else if (can[id]) canGhiLaiCa = true; });
+      dsCan.forEach(function (id) { if (!rungTheoId[id] && viTriNhanh.hasOwnProperty(id)) canGhiLaiCa = true; });
+      if (!canGhiLaiCa) {
+        const themMoi = [];
+        dsCan.forEach(function (id) {
+          const r = rungTheoId[id];
+          if (!r) return;
+          const dong = _dongDraftHoSoRung_(r, tinhTrangTheoHD[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()] || 'Đang thực hiện', gpsTheoRung[id] || []);
+          for (let k = 0; k < soCot; k++) if (dong[k] === undefined) dong[k] = '';
+          if (viTriNhanh.hasOwnProperty(id)) sh.getRange(viTriNhanh[id] + 2, 1, 1, soCot).setValues([dong.slice(0, soCot)]);
+          else themMoi.push(dong.slice(0, soCot));
+        });
+        if (themMoi.length) sh.getRange(Math.max(last, 1) + 1, 1, themMoi.length, soCot).setValues(themMoi);
+        return true;
+      }
+    }
+    const bang = last >= 2 ? sh.getRange(2, 1, last - 1, soCot).getValues() : [];
+    const viTri = {};
+    bang.forEach(function (r, i) { const id = (r[DRAFT_HSR_COL.ID_RUNG] || '').toString().trim(); if (id && !viTri.hasOwnProperty(id)) viTri[id] = i; else if (id && can[id]) bang[i] = null; });
+    Object.keys(can).forEach(function (id) {
+      const r = rungTheoId[id];
+      if (!r) { if (viTri.hasOwnProperty(id)) bang[viTri[id]] = null; return; } // lô đã bị xóa hẳn
+      const dong = _dongDraftHoSoRung_(r, tinhTrangTheoHD[(r[RUNG_COL.ID_KEY_HD] || '').toString().trim()] || 'Đang thực hiện', gpsTheoRung[id] || []);
+      for (let k = 0; k < soCot; k++) if (dong[k] === undefined) dong[k] = '';
+      if (viTri.hasOwnProperty(id)) bang[viTri[id]] = dong; else bang.push(dong);
+    });
+    const moi = bang.filter(function (r) { return r !== null; });
+    const soDongGhi = Math.max(last - 1, moi.length);
+    while (moi.length < soDongGhi) moi.push(new Array(soCot).fill(''));
+    if (soDongGhi) sh.getRange(2, 1, soDongGhi, soCot).setValues(moi);
+    return true;
+  } catch (e) {
+    try { ghiNhatKy_('LỖI cập nhật Draft_HoSoRung', '', e.message); } catch (e2) { /* bỏ qua */ }
+    return false; // P0.1: làm mới Draft dựa vào đây để giữ HĐ lại cho lượt sau
+  }
 }
 
 function XOA_DRAFT_HOSORUNG_MOT_DONG_(idRung) {
@@ -125,7 +182,7 @@ function layBaoCaoHoSoRung_() {
   // được nhập thẳng vào sheet bằng tay, hoặc 1 hàm ghi nào đó quên gọi cập
   // nhật cache này).
   let theoIdRung = {};
-  try { theoIdRung = layCoAnhVaGpsTrucTiep_().theoIdRung; } catch (e) { /* lỗi thì dùng tạm dữ liệu cache cũ bên dưới */ }
+  try { theoIdRung = layCoAnhVaGpsTrucTiepCoCache_().theoIdRung; } catch (e) { /* lỗi thì dùng tạm dữ liệu cache cũ bên dưới */ }
 
   return data.map(function (r) {
     const idRung = (r[c.ID_RUNG] || '').toString().trim();
@@ -187,9 +244,9 @@ function XAY_DUNG_LAI_DRAFT_HOSORUNG_() {
       latTB = diemGPS.reduce(function (s, p) { return s + p.lat; }, 0) / diemGPS.length;
       lngTB = diemGPS.reduce(function (s, p) { return s + p.lng; }, 0) / diemGPS.length;
     }
-    const dienTich = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-    const donGia = Number(r[RUNG_COL.DON_GIA]) || 0;
-    const khoiLuong = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
+    const dienTich = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+    const donGia = soTuO_(r[RUNG_COL.DON_GIA]);
+    const khoiLuong = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
 
     const dong = [];
     dong[c.ID_RUNG] = idRung; dong[c.ID_HD] = idHD; dong[c.SO_HD] = r[RUNG_COL.SO_HD]; dong[c.NGAY_KY] = r[RUNG_COL.NGAY_KY];

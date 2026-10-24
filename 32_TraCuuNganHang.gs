@@ -13,10 +13,12 @@
  * ============================================================
  */
 
-/** Danh sách ngân hàng VN — API công khai VietQR, cache 24h (danh sách hiếm khi đổi) */
+/** Danh sách ngân hàng VN — API công khai VietQR, cache 6 giờ (danh sách hiếm khi đổi; CacheService tối đa 21.600 giây —
+ *  trước đây đặt 86.400 giây nên lệnh lưu có thể lỗi và bị bỏ qua, mỗi lần mở lại tải từ VietQR). Cache dữ liệu lớn
+ *  (_cacheDuLieuLon_, DocumentCache) — không tranh chỗ phiên đăng nhập. */
 function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
   _yeuCauQuyen_(QUYEN.XEM);
-  const cache = CacheService.getScriptCache();
+  const cache = _cacheDuLieuLon_();
   const daCache = cache.get('DS_NGAN_HANG_VIETQR');
   if (daCache) { try { return JSON.parse(daCache); } catch (e) { /* cache hỏng thì tải lại */ } }
 
@@ -24,7 +26,7 @@ function LAY_DANH_SACH_NGAN_HANG_VIETQR_() {
   const json = JSON.parse(resp.getContentText());
   if (json.code !== '00') throw new Error('Không tải được danh sách ngân hàng: ' + (json.desc || 'lỗi không rõ'));
   const list = (json.data || []).map(function (b) { return { code: b.code, bin: b.bin, ten: b.shortName, tenDayDu: b.name }; });
-  try { cache.put('DS_NGAN_HANG_VIETQR', JSON.stringify(list), 86400); } catch (e) { /* danh sách hơi lớn, nếu không cache vừa thì thôi, vẫn trả kết quả bình thường */ }
+  try { cache.put('DS_NGAN_HANG_VIETQR', JSON.stringify(list), 21600); } catch (e) { /* danh sách hơi lớn, nếu không cache vừa thì thôi, vẫn trả kết quả bình thường */ }
   return list;
 }
 
@@ -69,9 +71,16 @@ function TRA_CUU_TEN_CHU_TK_(soTK, tenNganHangGoTuDo, tenChuRungMongDoi) {
   if (!tenLoc) return { thanhCong: false, loi: 'Thiếu tên ngân hàng — nhập/chọn ngân hàng trước khi kiểm tra.' };
   const boDau_ = function (s) { return s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); };
   const tenLocKhongDau = boDau_(tenLoc);
+  // L-09 (rà soát 28/09): ưu tiên khớp CHÍNH XÁC (mã / BIN / tên ngắn / tên đầy đủ) rồi mới khớp 1 phần — trước đây
+  // lấy ngân hàng ĐẦU TIÊN khớp chuỗi con theo 2 chiều, dễ chọn nhầm ngân hàng -> báo "tên chủ TK không khớp" sai.
+  const gon = function (s) { return boDau_(s || '').replace(/[^a-z0-9]/g, ''); };
+  const tenGon = gon(tenLoc);
   const ngan = dsNganHang.find(function (b) {
-    return b.code.toLowerCase() === tenLoc || boDau_(b.ten).indexOf(tenLocKhongDau) !== -1 || tenLocKhongDau.indexOf(boDau_(b.ten)) !== -1 ||
-      boDau_(b.tenDayDu).indexOf(tenLocKhongDau) !== -1;
+    return gon(b.code) === tenGon || String(b.bin) === tenLoc || gon(b.ten) === tenGon || gon(b.tenDayDu) === tenGon;
+  }) || dsNganHang.find(function (b) {
+    return boDau_(b.tenDayDu).indexOf(tenLocKhongDau) !== -1 || (gon(b.ten).length >= 3 && tenGon.indexOf(gon(b.ten)) !== -1);
+  }) || dsNganHang.find(function (b) {
+    return tenGon.length >= 3 && gon(b.ten).indexOf(tenGon) !== -1;
   });
   if (!ngan) return { thanhCong: false, loi: 'Không nhận diện được ngân hàng "' + tenNganHangGoTuDo + '" — kiểm tra lại tên ngân hàng đã nhập (thử chọn đúng tên trong danh sách gợi ý).' };
 

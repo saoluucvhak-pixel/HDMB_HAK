@@ -67,15 +67,28 @@ function TU_DONG_LAY_CHAT_ID_TELEGRAM_() {
  *
  * Polling giải quyết đúng gốc: đổi chiều lại — Apps Script (không phải
  * Telegram) là bên CHỦ ĐỘNG GỌI RA (qua UrlFetchApp, tự đi theo redirect bình
- * thường), hỏi Telegram "có tin mới không" mỗi phút — không còn vướng gì cả.
+ * thường), hỏi Telegram "có tin mới không" mỗi 5 phút — không còn vướng gì cả.
  */
 
-/** Kiểm tra tin nhắn mới — gọi bởi trigger mỗi phút. Dùng offset (lưu trong
+/** Kiểm tra tin nhắn mới — gọi bởi trigger mỗi 5 phút. Dùng offset (lưu trong
  *  Script Properties) để chỉ lấy tin CHƯA xử lý, không hỏi lại tin cũ. */
 function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) return; // chưa cấu hình thì bỏ qua, không báo lỗi (trigger chạy nền, không có ai xem lỗi)
+  // M-08 (rà soát 28/09): trigger 1 phút/lần — lượt trước chưa xong (Gemini chậm) thì lượt sau đọc CÙNG offset và trả lời
+  // lần 2. "Nhận lượt" bằng cờ trong cache, dưới ScriptLock rất ngắn (không giữ lock trong lúc gọi Gemini).
+  const cacheTG = CacheService.getScriptCache();
+  const lockTG = LockService.getScriptLock();
+  if (!lockTG.tryLock(2000)) return;
+  try {
+    if (cacheTG.get('TG_POLL_DANG_CHAY')) return;
+    cacheTG.put('TG_POLL_DANG_CHAY', '1', 300);
+  } finally { lockTG.releaseLock(); }
+  try { kiemTraTinNhanTelegramMoi_(p, token); } finally { cacheTG.remove('TG_POLL_DANG_CHAY'); }
+}
+
+function kiemTraTinNhanTelegramMoi_(p, token) {
   const offsetDaLuu = Number(p.getProperty('TELEGRAM_UPDATE_OFFSET') || 0);
 
   const url = 'https://api.telegram.org/bot' + token + '/getUpdates?offset=' + (offsetDaLuu + 1) + '&timeout=0';
@@ -88,6 +101,7 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
 
   json.result.forEach(function (update) {
     offsetMoiNhat = Math.max(offsetMoiNhat, update.update_id);
+    p.setProperty('TELEGRAM_UPDATE_OFFSET', offsetMoiNhat.toString()); // lưu TRƯỚC khi trả lời: lượt bị ngắt giữa chừng không trả lời lại tin cũ
     const msg = update.message;
     if (!msg || !msg.text) return;
     const chatIdTinNhan = msg.chat.id.toString().trim();
@@ -109,7 +123,7 @@ function KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_() {
   p.setProperty('TELEGRAM_UPDATE_OFFSET', offsetMoiNhat.toString());
 }
 
-/** Bật polling — XÓA webhook trước (2 chế độ không dùng chung được), rồi bật trigger chạy mỗi phút */
+/** Bật polling — XÓA webhook trước (2 chế độ không dùng chung được), rồi bật trigger chạy mỗi 5 phút */
 function BAT_POLLING_TELEGRAM_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);
   const p = PropertiesService.getScriptProperties();
@@ -122,8 +136,10 @@ function BAT_POLLING_TELEGRAM_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_').timeBased().everyMinutes(1).create();
-  return { thanhCong: true, thongBao: 'Đã bật chế độ Polling — bot sẽ kiểm tra tin nhắn mới mỗi phút (có thể chờ tới 1 phút mới thấy trả lời, không phải tức thì như webhook).' };
+  // P-11 (rà soát 28/09): 5 phút/lần thay cho 1 phút — trigger 1 phút chạy ~1.440 lượt/ngày, ăn phần lớn quota
+  // "90 phút/ngày thời gian chạy trigger" của tài khoản Gmail thường (các trigger đồng bộ khác có thể bị Google dừng).
+  ScriptApp.newTrigger('KIEM_TRA_TIN_NHAN_TELEGRAM_MOI_').timeBased().everyMinutes(5).create();
+  return { thanhCong: true, thongBao: 'Đã bật chế độ Polling — bot kiểm tra tin nhắn mới mỗi 5 phút (có thể chờ tới 5 phút mới thấy trả lời).' };
 }
 function TAT_POLLING_TELEGRAM_() {
   _yeuCauQuyen_(QUYEN.QUAN_TRI);

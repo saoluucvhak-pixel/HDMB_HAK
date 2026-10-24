@@ -1,8 +1,17 @@
-<!-- Mã JavaScript DÙNG CHUNG cho 07_Form_HopDong.html và 11_Page_NhapLieu.html (nạp bằng include('NhapLieu_Chung_JS') trong scriptlet).
+<!-- Mã JavaScript DÙNG CHUNG cho 07_Form_HopDong.html và 11_Page_NhapLieu.html (nạp bằng include_('NhapLieu_Chung_JS') trong scriptlet).
      Sửa ở đây là áp dụng cho cả hai trang — trước đây mỗi trang giữ 1 bản sao và từng bị lệch nhau
      (bản vá chỉ vào 1 bên), gây lỗi thật. Chỉ đặt hàm ở đây; biến trạng thái vẫn khai báo trong từng trang. -->
 <script>
-  function val(id) { return document.getElementById(id).value; }
+  // Ô nhập số hiển thị kiểu Việt Nam "1.234.567,5" (DinhDangSo_JS.html, nạp trước file này).
+  // val() của các ô này trả SỐ THÔ kiểu JS ("1234567.5") và setVal() tự định dạng — nên mọi
+  // chỗ đang dùng Number(val(...)) / gửi val(...) lên máy chủ vẫn đúng, không phải sửa từng nơi.
+  var O_NHAP_SO_ = ['rDienTich', 'rDonGia', 'rKhoiLuong', 'plDonGia', 'plKhoiLuong'];
+  function val(id) {
+    var v = document.getElementById(id).value;
+    if (O_NHAP_SO_.indexOf(id) === -1) return v;
+    var n = docSoVN_(v);
+    return isNaN(n) ? '' : String(n);
+  }
 
   // Thông báo nổi KHÔNG chặn thao tác (thay cho alert()): tự tắt sau vài giây, bấm để đóng,
   // màu theo tiền tố ❌ / ⚠️ / ✅ sẵn có của nội dung, trình đọc màn hình đọc được (aria-live).
@@ -29,9 +38,22 @@
   // được chèn vào innerHTML; thiếu escape thì tên file chứa <img onerror=...> hay link javascript: sẽ chạy mã.
   function escAT_(s) { return (s === null || s === undefined ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
+  /** L-03: ngày server gửi -> giá trị ô <input type=date>. Server trả sẵn "yyyy-MM-dd" (ngày thuần) — giữ nguyên,
+   *  không qua new Date().toISOString() (giờ UTC: dữ liệu dạng khác sẽ lùi 1 ngày như lỗi BUG-01 trước đây). */
+  function ngayThuanISO_(v) {
+    var s = (v === null || v === undefined) ? '' : String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    var d = s ? new Date(s) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); // theo giờ máy người dùng
+  }
+
   function urlAT_(u) { u = (u || '').toString().trim(); return /^https?:\/\//i.test(u) ? escAT_(u) : '#'; }
 
-  function setVal(id, v) { document.getElementById(id).value = v || ''; }
+  function setVal(id, v) { document.getElementById(id).value = O_NHAP_SO_.indexOf(id) === -1 ? (v || '') : dinhDangSoVN_(v || ''); }
+  O_NHAP_SO_.forEach(function (id) { ganDinhDangSo_(id); });
 
   function formatSoNhap_(v) { var n = Number(v); if (!v || isNaN(n)) return '0'; return n.toLocaleString('vi-VN'); }
 
@@ -155,10 +177,13 @@
   // ============ DANH SÁCH / TÌM / PHÂN TRANG HỢP ĐỒNG ============
   function debounceTimKiemHD() { clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
 
+  var luotTaiDSHD_ = 0; // phản hồi của lượt tìm CŨ về sau lượt mới (gõ nhanh / mạng chậm) không được ghi đè bảng
   function taiDanhSachHD(trang) {
+    var luot = ++luotTaiDSHD_;
     hakRun_()
-      .withFailureHandler(function (err) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
+      .withFailureHandler(function (err) { if (luot !== luotTaiDSHD_) return; document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
       .withSuccessHandler(function (kq) {
+        if (luot !== luotTaiDSHD_) return;
         try {
           if (kq && kq.loi) { document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ ' + escAT_(kq.loi) + '</td></tr>'; return; }
           trangHDHienTai = kq.trang;
@@ -166,11 +191,11 @@
           if (!kq.items.length) tbody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center">Không có hợp đồng nào khớp.</td></tr>';
           kq.items.forEach(function (r) {
             var badge = r.tinhTrang === 'Đã hủy' ? 'badge-huy' : (r.tinhTrang === 'Đã hoàn thành' ? 'badge-hoan' : 'badge-dang');
-            var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong); };
+            var tr = document.createElement('tr'); tr.style.cursor = 'pointer'; tr.onclick = function () { moTrangXemHopDong(r.soDong, r.idHD); };
             tr.innerHTML = '<td>' + escAT_(r.soHD || '') + '</td><td>' + (r.ngayKy ? new Date(r.ngayKy).toLocaleDateString('vi-VN') : '') + '</td>' +
               '<td>' + escAT_(r.tenChuRung || '') + '</td><td>' + escAT_(r.diaChiRung || '') + '</td>' +
               '<td><span class="badge-status ' + badge + '">' + escAT_(r.tinhTrang || '') + '</span></td>' +
-              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + escAT_(r.soDong) + ')">Xem →</button></td>';
+              '<td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();moTrangXemHopDong(' + escAT_(r.soDong) + ', \'' + escAT_(r.idHD || '') + '\')">Xem →</button></td>';
             tbody.appendChild(tr);
           });
           var pgEl = document.getElementById('phanTrangHD');
@@ -184,7 +209,7 @@
   function veTrangDanhSach() { hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
 
   /** Bấm 1 dòng trong danh sách -> mở/tạo NHÁP cho hợp đồng đó (không đụng bảng gốc cho tới khi Lưu chính thức) */
-  function moTrangXemHopDong(soDong) {
+  function moTrangXemHopDong(soDong, idHD) {
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang mở nháp...' }]);
     hakRun_()
@@ -198,7 +223,7 @@
         apDungCheDoChiXem(kq.tinhTrangGoc === 'Đã thanh lý');
         capNhatBreadcrumbHopDong();
       })
-      .MO_DRAFT_THEO_SO_DONG(soDong);
+      .MO_DRAFT_THEO_SO_DONG(soDong, idHD || '');
   }
 
   function capNhatBreadcrumbHopDong() {
@@ -220,20 +245,25 @@
     dangLuuChinhThuc_ = true;
     showMsg('msgLuuChinhThuc', '⌛ Đang lưu chính thức vào hệ thống...', true);
     hakRun_()
-      .withFailureHandler(function (err) { dangLuuChinhThuc_ = false; showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message, false); })
+      .withFailureHandler(function (err) {
+        dangLuuChinhThuc_ = false;
+        // Máy chủ đã ghi tiến độ vào bản nháp (15_DraftHopDong.gs) -> lưu lại chỉ làm nốt phần còn thiếu, không tạo trùng
+        showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message + ' — Phần đã lưu được giữ lại; bấm "Lưu chính thức" lần nữa để hoàn tất (không tạo hợp đồng trùng).', false);
+      })
       .withSuccessHandler(function (kq) {
         dangLuuChinhThuc_ = false;
         if (!kq.thanhCong) { showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }
         var thongBao = '✅ Đã lưu chính thức hợp đồng ' + kq.soHD + ' vào hệ thống.';
-        if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Một số mục gặp lỗi khi ghi:\n• ' + kq.canhBao.join('\n• ');
+        if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Cần lưu ý:\n• ' + kq.canhBao.join('\n• ');
         thongBao_(thongBao);
+        if (kq.nhacDuyet) thongBao_('⚠️ ' + kq.nhacDuyet);
         veTrangDanhSach();
       })
       .LUU_CHINH_THUC(idDraftHienTai);
   }
 
-  function huyNhapVaThoat() {
-    if (!confirm('Hủy toàn bộ thay đổi trong bản nháp này? (dữ liệu chính thức hiện có, nếu là hợp đồng cũ, sẽ KHÔNG bị ảnh hưởng)')) return;
+  async function huyNhapVaThoat() {
+    if (!(await hakXacNhan_('Hủy toàn bộ thay đổi trong bản nháp này? (dữ liệu chính thức hiện có, nếu là hợp đồng cũ, sẽ KHÔNG bị ảnh hưởng)', { nguyHiem: true }))) return; // A3
     hakRun_().withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).withSuccessHandler(function () { veTrangDanhSach(); }).HUY_DRAFT(idDraftHienTai);
   }
 
@@ -301,10 +331,10 @@
   function quayVeTrangHopDong() { hienTrang('trangHopDong'); capNhatBreadcrumbHopDong(); renderTomTatRung(); }
 
   /** Lưu lô rừng VÀO NHÁP (không ghi HD_RUNG) */
-  function luuLoRungVaoNhap() {
+  async function luuLoRungVaoNhap() {
     var hoSoChon = val('rHoSoNguonGoc');
     if (hoSoChon === '__KHAC__') {
-      var loaiMoi = prompt('Nhập tên loại hồ sơ mới:');
+      var loaiMoi = await hakNhapChu_('Nhập tên loại hồ sơ mới:', { tieuDe: 'Thêm loại hồ sơ' }); // A3
       if (!loaiMoi) { document.getElementById('rHoSoNguonGoc').value = ''; return; }
       hakRun_().withSuccessHandler(function () { naptDanhSachLoaiHoSo(); document.getElementById('rHoSoNguonGoc').value = loaiMoi; luuLoRungVaoNhapThucHien_(loaiMoi); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi thêm loại hồ sơ: ' + err.message); }).themLoaiHoSoMoi(loaiMoi);
       return;
@@ -335,11 +365,11 @@
     showMsg('msgFormRung', '✅ Đã lưu vào nháp.', true);
   }
 
-  function xoaLoRungKhoiNhap() {
+  async function xoaLoRungKhoiNhap() {
     if (!rungDangSuaKey) { quayVeTrangHopDong(); return; }
     var r = timRungTrongNhap_(rungDangSuaKey);
     if (!r) { quayVeTrangHopDong(); return; }
-    if (!confirm('Xóa lô rừng này khỏi nháp?' + (r.idRung ? ' (sẽ xóa thật khỏi hệ thống khi bấm Lưu chính thức)' : ''))) return;
+    if (!(await hakXacNhan_('Xóa lô rừng này khỏi nháp?' + (r.idRung ? ' (sẽ xóa thật khỏi hệ thống khi bấm Lưu chính thức)' : ''), { nguyHiem: true }))) return; // A3
     if (r.idRung) { r.xoa = true; } // đánh dấu xóa, xử lý thật khi Lưu chính thức
     else { duNhap.rung = duNhap.rung.filter(function (x) { return x.tempId !== r.tempId; }); } // nháp thuần -> bỏ luôn
     luuNhapNgay();
@@ -505,8 +535,8 @@
         if (!list || !list.length) { el.innerHTML = '<p class="hint">Chưa có ảnh riêng nào của lô rừng này.</p>'; return; }
         el.innerHTML = list.map(function (a) {
           var badge = a.trangThai === 'Đã duyệt' ? '<span class="badge-da-duyet">✅ Đã duyệt</span>' : '<span class="badge-cho-duyet">⏳ Chờ duyệt</span>';
-          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + escAT_(a.soDong) + ')">✅ Duyệt</button> ' +
-            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + escAT_(a.soDong) + ')">✖ Từ chối</button>';
+          var nut = a.trangThai === 'Đã duyệt' ? '' : '<button class="btn btn-outline" style="padding:3px 8px;font-size:11px" onclick="duyetAnh(' + escAT_(a.soDong) + ', \'' + escAT_(a.idDraft || '') + '\')">✅ Duyệt</button> ' +
+            '<button class="btn" style="padding:3px 8px;font-size:11px;background:#dc2626;color:#fff" onclick="tuChoiAnh(' + escAT_(a.soDong) + ', \'' + escAT_(a.idDraft || '') + '\')">✖ Từ chối</button>';
           return '<div class="anh-row"><span>' + escAT_(a.tenFile || '') + ' ' + badge + '</span><span><a href="' + urlAT_(a.url) + '" target="_blank" class="btn btn-outline" style="padding:3px 8px;font-size:11px">Xem</a> ' + nut + '</span></div>';
         }).join('');
       })
@@ -536,9 +566,9 @@
     }
   }
 
-  function duyetAnh(soDong) { var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong); }
+  function duyetAnh(soDong, idDraft) { var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).DUYET_ANH_RUNG(soDong, idDraft); }
 
-  function tuChoiAnh(soDong) { if (!confirm('Từ chối (xóa) ảnh này?')) return; var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function () { taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong); }
+  async function tuChoiAnh(soDong, idDraft) { if (!(await hakXacNhan_('Từ chối (xóa) ảnh này?', { nguyHiem: true, nutDongY: 'Từ chối' }))) return; /* A3 */ var r = timRungTrongNhap_(rungDangSuaKey); hakRun_().withSuccessHandler(function (kq) { if (kq && !kq.thanhCong) thongBao_('❌ ' + kq.loi); taiDsAnh(r.idRung); }).withFailureHandler(function (err) { thongBao_('❌ ' + err.message); }).TU_CHOI_ANH_RUNG(soDong, idDraft); }
 
   function chonTabRung(tab) {
     tabRungHienTai = tab;
@@ -565,9 +595,9 @@
 
   function timTKTrongNhap_(key) { return (duNhap.taiKhoan || []).find(function (t) { return t.soDong === key || t.soDong === Number(key) || t.tempId === key; }); }
 
-  function xoaTaiKhoanKhoiNhap(key) {
+  async function xoaTaiKhoanKhoiNhap(key) {
     var t = timTKTrongNhap_(key); if (!t) return;
-    if (!confirm('Xóa tài khoản này khỏi nháp?')) return;
+    if (!(await hakXacNhan_('Xóa tài khoản này khỏi nháp?', { nguyHiem: true }))) return; // A3
     if (t.soDong) t.xoa = true; else duNhap.taiKhoan = duNhap.taiKhoan.filter(function (x) { return x.tempId !== t.tempId; });
     luuNhapNgay(); renderTomTatTK(); capNhatDemHD();
   }
@@ -615,9 +645,9 @@
 
   function timPLTrongNhap_(key) { return (duNhap.phuLuc || []).find(function (p) { return p.soDong === key || p.soDong === Number(key) || p.tempId === key; }); }
 
-  function xoaPhuLucKhoiNhap(key) {
+  async function xoaPhuLucKhoiNhap(key) {
     var p = timPLTrongNhap_(key); if (!p) return;
-    if (!confirm('Xóa phụ lục này khỏi nháp?')) return;
+    if (!(await hakXacNhan_('Xóa phụ lục này khỏi nháp?', { nguyHiem: true }))) return; // A3
     if (p.soDong) p.xoa = true; else duNhap.phuLuc = duNhap.phuLuc.filter(function (x) { return x.tempId !== p.tempId; });
     luuNhapNgay(); renderTomTatPhuLuc(); capNhatDemHD();
   }
@@ -669,19 +699,19 @@
   function dongModalPhieuCan() { document.getElementById('modalPhieuCan').style.display = 'none'; }
 
   // ============ VÙNG NGUY HIỂM — áp dụng ngay lên bảng gốc, không qua nháp ============
-  function huyHopDongForm() {
+  async function huyHopDongForm() {
     if (!duNhap.idHD) { thongBao_('Hợp đồng chưa được Lưu chính thức lần nào, chưa thể hủy.'); return; }
-    if (!confirm('Hủy hợp đồng này? (dữ liệu vẫn giữ nguyên, chỉ đổi trạng thái)')) return;
+    if (!(await hakXacNhan_('Hủy hợp đồng này? (dữ liệu vẫn giữ nguyên, chỉ đổi trạng thái)', { nguyHiem: true }))) return; // A3
     hakRun_()
       .withSuccessHandler(function (kq) { if (kq.thanhCong) { document.getElementById('tinhTrang').value = 'Đã hủy'; debounceLuuNhap(); showMsg('msgNguyHiem', '✅ Đã hủy hợp đồng.', true); } else showMsg('msgNguyHiem', '❌ ' + kq.loi, false); })
       .withFailureHandler(function (err) { showMsg('msgNguyHiem', '❌ Lỗi: ' + err.message, false); })
       .HUY_HOP_DONG(duNhap.idHD);
   }
 
-  function xoaVinhVienForm() {
+  async function xoaVinhVienForm() {
     if (!duNhap.idHD) { thongBao_('Hợp đồng chưa được Lưu chính thức lần nào, chưa thể xóa.'); return; }
     if (!document.getElementById('xacNhanXoaForm').checked) { showMsg('msgNguyHiem', '❌ Vui lòng tích xác nhận trước khi xóa vĩnh viễn.', false); return; }
-    if (!confirm('XÓA VĨNH VIỄN hợp đồng ' + soHDHienTai + '? Không thể hoàn tác!')) return;
+    if (!(await hakXacNhan_('XÓA VĨNH VIỄN hợp đồng ' + soHDHienTai + '? Không thể hoàn tác!', { nguyHiem: true }))) return; // A3
     hakRun_()
       .withSuccessHandler(function (kq) { if (kq.thanhCong) { thongBao_('✅ Đã xóa vĩnh viễn.'); veTrangDanhSach(); } else showMsg('msgNguyHiem', '❌ ' + kq.loi, false); })
       .withFailureHandler(function (err) { showMsg('msgNguyHiem', '❌ Lỗi: ' + err.message, false); })

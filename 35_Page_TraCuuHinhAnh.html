@@ -50,11 +50,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -83,7 +83,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -123,59 +123,59 @@
 </style>
 <style>
   .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-  .the-thongke { flex: 1; min-width: 140px; background: #fff; border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .the-thongke { flex: 1; min-width: 140px; background: var(--card-bg, #fff); border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
   .the-thongke:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
-  .the-thongke.active { border-color: var(--active-green); background: #dcfce7; }
+  .the-thongke.active { border-color: var(--active-green); background: var(--ok-bg, #dcfce7); }
   .the-thongke .so { font-size: 26px; font-weight: 700; color: var(--heading); }
   .the-thongke.active .so { color: var(--active-green); }
   .the-thongke .nhan { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
   table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
   table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
-  table.mecon-table tr:hover td { background: #dcfce7; }
+  table.mecon-table tr:hover td { background: var(--ok-bg, #dcfce7); }
   a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
   a.lnk-hd:hover { text-decoration: underline; }
-  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #dcfce7; color: var(--active-green); }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: var(--ok-bg, #dcfce7); color: var(--active-green); }
   .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
 </style>
 <style>
   .tc-o-tim { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
   .tc-o-tim .field { flex: 1; min-width: 240px; }
   .tc-ghi-chu { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
-  .tc-khop { font-size: 11px; color: #6b7280; }
+  .tc-khop { font-size: 11px; color: var(--chu-phu, #6b7280); }
   .tc-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; font-size: 13px; }
-  .tc-luoi .nhan { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .tc-luoi .nhan { font-size: 11px; color: var(--chu-phu, #6b7280); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
   .tc-luoi .gt { margin-top: 2px; word-break: break-word; }
   .tc-anh { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: var(--active-green); }
-  .tc-canh-bao { background: #fef3c7; color: #92400e; border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
+  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: var(--nen-phu, #f3f4f6); border-radius: 6px; text-decoration: none; color: var(--active-green); }
+  .tc-canh-bao { background: var(--warn-bg, #fef3c7); color: var(--warn-chu, #92400e); border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
   .tc-quay-lai { margin-bottom: 14px; }
   .tc-dang-tai { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
   .tc-o-tim .field.tc-ngay { flex: none; min-width: 150px; width: 160px; }
   .tc-nhanh { font-size: 12px; color: var(--text-muted); margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: #fff; border-radius: 14px; cursor: pointer; color: var(--heading); }
+  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: var(--card-bg, #fff); border-radius: 14px; cursor: pointer; color: var(--heading); }
   .tc-nhanh button:hover { border-color: var(--active-green); color: var(--active-green); }
 </style>
 <style>
   .ha-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 8px; }
-  .ha-o { border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; background: #fff; position: relative; }
+  .ha-o { border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; background: var(--card-bg, #fff); position: relative; }
   .ha-o.bo { opacity: .45; }
-  .ha-khung { width: 100%; aspect-ratio: 4 / 3; background: #f3f4f6; display: flex; align-items: center; justify-content: center; cursor: zoom-in; overflow: hidden; }
+  .ha-khung { width: 100%; aspect-ratio: 4 / 3; background: var(--nen-phu, #f3f4f6); display: flex; align-items: center; justify-content: center; cursor: zoom-in; overflow: hidden; }
   .ha-khung img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ha-khung .cho { font-size: 11px; color: #9ca3af; }
+  .ha-khung .cho { font-size: 11px; color: var(--chu-phu, #9ca3af); }
   .ha-chon { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; cursor: pointer; accent-color: #16a34a; }
-  .ha-cap { padding: 6px 8px; font-size: 11px; color: #374151; line-height: 1.35; }
-  .ha-cap .loai { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #dcfce7; color: #166534; }
-  .ha-cap .loai.gps { background: #dbeafe; color: #1e40af; }
+  .ha-cap { padding: 6px 8px; font-size: 11px; color: var(--chu-chinh, #374151); line-height: 1.35; }
+  .ha-cap .loai { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #166534); }
+  .ha-cap .loai.gps { background: var(--info-bg, #dbeafe); color: var(--info-chu, #1e40af); }
   .ha-nhom { margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--heading); }
   .ha-o.hs { border-color: #c7d2fe; }
-  .ha-o.hs .ha-khung { background: #eef2ff; }
-  .ha-o.hs .ha-khung img { object-fit: contain; background: #fff; }
-  .ha-cap .loai.hs { background: #e0e7ff; color: #3730a3; }
-  .ha-kem { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #374151; background: #fff; border: 1px solid var(--border-light); border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+  .ha-o.hs .ha-khung { background: var(--info-bg, #eef2ff); }
+  .ha-o.hs .ha-khung img { object-fit: contain; background: var(--card-bg, #fff); }
+  .ha-cap .loai.hs { background: var(--info-bg, #e0e7ff); color: var(--info-chu, #3730a3); }
+  .ha-kem { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--chu-chinh, #374151); background: var(--card-bg, #fff); border: 1px solid var(--border-light); border-radius: 7px; padding: 7px 10px; cursor: pointer; }
   .ha-kem input { width: 16px; height: 16px; accent-color: #4338ca; }
   .ha-thanh { position: sticky; top: 0; z-index: 5; background: var(--page-bg); padding: 8px 0 10px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .ha-thanh .dem { font-size: 12.5px; color: #374151; margin-left: 4px; }
+  .ha-thanh .dem { font-size: 12.5px; color: var(--chu-chinh, #374151); margin-left: 4px; }
   #haPhongTo { position: fixed; inset: 0; background: rgba(17,24,39,.92); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; }
   #haPhongTo.mo { display: flex; }
   #haPhongTo img { max-width: 92vw; max-height: 80vh; object-fit: contain; background: #111; }
@@ -185,61 +185,27 @@
   #haPhongTo .dong { top: 16px; right: 16px; font-size: 20px; }
   #haPhongTo .truoc { left: 16px; top: 50%; }
   #haPhongTo .sau { right: 16px; top: 50%; }
+  /* Giao diện mới: thanh lọc ảnh + ô ảnh bo góc */
+  .ha-loc { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
+  .ha-loc label { font-size: 13px; color: var(--chu-phu, #6b7280); }
+  .ha-loc select { height: 36px; padding: 0 8px; border: 1px solid var(--vien, #d1d5db); border-radius: 8px; font-size: 13px; background: var(--card-bg, #fff); color: inherit; }
+  .ha-luoi { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .ha-o { border-radius: 12px; transition: box-shadow .15s; }
+  .ha-o:hover { box-shadow: 0 4px 14px rgba(31,41,55,.12); }
+  .ha-cap { padding: 8px 10px; font-size: 12px; }
+  .ha-cap .loai { font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .ha-chon { width: 22px; height: 22px; accent-color: #2563eb; }
+  .ha-nhom { font-size: 14px; margin-top: 18px; }
 </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
-<?!= include('PhanQuyen_JS') ?>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
-    <span class="icon">📊</span> Tổng quan hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
-    <span class="icon">🔍</span> Tra cứu hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
-    <span class="icon">🖼️</span> Tra cứu hình ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
+<?!= include_('PhanQuyen_JS') ?>
+<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
 
   <div class="app-main">
-    <div class="page-title">🖼️ Tra cứu hình ảnh</div>
+    <div class="page-title">Tra cứu hình ảnh</div>
     <div class="page-subtitle">Tìm hợp đồng hoặc khách hàng, xem toàn bộ ảnh hiện trường và ảnh minh chứng GPS theo từng lô rừng, bấm vào ảnh để phóng to, rồi xuất file PDF ảnh hoặc <b>📊 Báo cáo thực hiện</b> (tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý) — chọn/bỏ chọn từng ảnh trước khi xuất. Vai trò Nhập liệu / Quản trị xem được cả hồ sơ pháp lý và ghép chúng vào file PDF.</div>
 
     <div id="haVungTim">
@@ -360,41 +326,69 @@ function haVeThuVien_(d) {
     '<div><div class="nhan">Tổng số ảnh</div><div class="gt">' + d.tongAnh + '</div></div>' +
     '<div><div class="nhan">Hồ sơ pháp lý</div><div class="gt">' + (d.hoSoBiAn ? '🔒 ' + d.hoSoBiAn + ' file (cần vai trò Nhập liệu)' : (d.tongHoSo || 0) + ' file') + '</div></div></div>' +
     (d.chuaCoLink ? '<div class="tc-ghi-chu">⚠️ ' + d.chuaCoLink + ' ảnh còn lưu tên file chưa tìm được trên Drive — chạy menu "Chuyển tên file ảnh sang URL thật" rồi xem lại.</div>' : '') + '</div>';
+  // Giao diện mới: lọc XEM theo loại ảnh và theo nhóm (không đổi ảnh được chọn để xuất PDF)
+  var cacNhom = [];
+  d.hopDong.forEach(function (hd) { hd.nhom.forEach(function (n) { if (cacNhom.indexOf(n.tieuDe) === -1) cacNhom.push(n.tieuDe); }); });
+  var demLoai = { ht: 0, gps: 0, hs: 0 };
+  d.hopDong.forEach(function (hd) { hd.nhom.forEach(function (n) { n.anh.forEach(function (a) { demLoai[a.loai === 'Ảnh GPS' ? 'gps' : 'ht']++; }); }); demLoai.hs += (hd.hoSo || []).length; });
+  h += '<div class="ha-loc" role="group" aria-label="Lọc ảnh để xem"><div class="hak-chips" id="haLocLoai">' +
+    [['', 'Tất cả', demLoai.ht + demLoai.gps + demLoai.hs], ['ht', 'Ảnh hiện trường', demLoai.ht], ['gps', 'Ảnh GPS', demLoai.gps], ['hs', 'Hồ sơ pháp lý', demLoai.hs]]
+      .map(function (x, i) { return '<button type="button" data-loai="' + x[0] + '" aria-pressed="' + (i === 0) + '">' + x[1] + ' <span class="dem">' + x[2] + '</span></button>'; }).join('') + '</div>' +
+    (cacNhom.length > 1 ? '<label for="haLocNhom">Nhóm</label><select id="haLocNhom"><option value="">Tất cả nhóm</option>' + cacNhom.map(function (t) { return '<option value="' + escHA_(t) + '">' + escHA_(t) + '</option>'; }).join('') + '</select>' : '') +
+    '<span class="hint">Lọc chỉ để xem — xuất PDF vẫn theo các ô đã tích.</span></div>';
   d.hopDong.forEach(function (hd) {
     h += '<div class="card"><h3>Hợp đồng ' + escHA_(hd.soHD || hd.idHD) + (hd.ngayKy ? ' — ký ' + escHA_(hd.ngayKy) : '') +
       (hd.tinhTrang ? ' <span class="badge-trang-thai">' + escHA_(hd.tinhTrang) + '</span>' : '') + '</h3>' +
       (hd.diaChiRung ? '<div class="tc-ghi-chu" style="margin-top:-8px">' + escHA_(hd.diaChiRung) + ' · ' + hd.soLo + ' lô rừng</div>' : '');
     if (!hd.nhom.length) h += '<div class="empty-hint">Hợp đồng này chưa có ảnh.</div>';
     hd.nhom.forEach(function (n) {
-      h += '<div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
+      h += '<div class="ha-khoi" data-nhom="' + escHA_(n.tieuDe) + '"><div class="ha-nhom">' + escHA_(n.tieuDe) + ' <span class="tc-khop">(' + n.anh.length + ' ảnh)</span></div><div class="ha-luoi">';
       n.anh.forEach(function (a) {
         var vt = haDanhSach_.length;
         haDanhSach_.push(Object.assign({ nhom: n.tieuDe, soHD: hd.soHD }, a));
         var coGps = a.lat !== null && a.lat !== undefined && a.lng !== null && a.lng !== undefined;
-        h += '<div class="ha-o" id="haO' + vt + '">' +
+        h += '<div class="ha-o" id="haO' + vt + '" data-loai="' + (a.loai === 'Ảnh GPS' ? 'gps' : 'ht') + '">' +
           '<input type="checkbox" class="ha-chon" checked data-vt="' + vt + '" aria-label="Chọn ảnh ' + (vt + 1) + ' để xuất PDF">' +
           '<div class="ha-khung" data-vt="' + vt + '" data-id="' + escHA_(a.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
           '<div class="ha-cap"><span class="loai' + (a.loai === 'Ảnh GPS' ? ' gps' : '') + '">' + escHA_(a.loai) + '</span> #' + (vt + 1) +
           (coGps ? '<br>📍 ' + escHA_(a.lat + ', ' + a.lng) : '') + (a.diaChi ? '<br>' + escHA_(a.diaChi) : '') + '</div></div>';
       });
-      h += '</div>';
+      h += '</div></div>';
     });
     if ((hd.hoSo || []).length) {
-      h += '<div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
+      h += '<div class="ha-khoi" data-nhom=""><div class="ha-nhom">📁 Hồ sơ pháp lý <span class="tc-khop">(' + hd.hoSo.length + ' file — bấm để xem trang đầu, mở file gốc)</span></div><div class="ha-luoi">';
       hd.hoSo.forEach(function (x) {
         var k = haHoSo_.length;
         haHoSo_.push(Object.assign({ soHD: hd.soHD }, x));
-        h += '<div class="ha-o hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
+        h += '<div class="ha-o hs" data-loai="hs"><div class="ha-khung" data-hs="' + k + '" data-id="' + escHA_(x.id) + '"><span class="cho">⏳ đang tải…</span></div>' +
           '<div class="ha-cap"><span class="loai hs">Hồ sơ pháp lý</span><br><b>' + escHA_(x.hoSoNguonGoc || 'Hồ sơ') + '</b>' + (x.soGiayTo ? ' · số ' + escHA_(x.soGiayTo) : '') +
           (x.ngayGiayTo ? ' · ' + escHA_(x.ngayGiayTo) : '') + '<br>' + escHA_(x.lo) + '</div></div>';
       });
-      h += '</div>';
+      h += '</div></div>';
     }
     h += '</div>';
   });
   if (!d.tongAnh && !d.tongHoSo) h += '<div class="card"><div class="empty-hint">Chưa có ảnh nào cho ' + (d.theoKhachHang ? 'khách hàng' : 'hợp đồng') + ' này.</div></div>';
   vung.innerHTML = h;
   haGanNutVe_();
+  var locLoai = '', locNhom = '';
+  var apLoc = function () {
+    vung.querySelectorAll('.ha-o').forEach(function (o) { o.style.display = !locLoai || o.getAttribute('data-loai') === locLoai ? '' : 'none'; });
+    vung.querySelectorAll('.ha-khoi').forEach(function (k) {
+      var nhom = k.getAttribute('data-nhom');
+      var dungNhom = !locNhom || nhom === locNhom || nhom === ''; // khối Hồ sơ pháp lý không thuộc nhóm ảnh nào
+      var conAnh = Array.prototype.some.call(k.querySelectorAll('.ha-o'), function (o) { return o.style.display !== 'none'; });
+      k.style.display = dungNhom && conAnh ? '' : 'none';
+    });
+  };
+  vung.querySelectorAll('#haLocLoai button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      locLoai = b.getAttribute('data-loai');
+      vung.querySelectorAll('#haLocLoai button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      apLoc();
+    });
+  });
+  if (document.getElementById('haLocNhom')) document.getElementById('haLocNhom').addEventListener('change', function () { locNhom = this.value; apLoc(); });
   document.getElementById('haChonHet').addEventListener('click', function () { haChonTatCa_(true); });
   document.getElementById('haBoHet').addEventListener('click', function () { haChonTatCa_(false); });
   document.getElementById('haXuatPdf').addEventListener('click', function () { haXuatPdf_('anh'); });
@@ -629,7 +623,7 @@ function thongBaoHA_(noiDung) {
   } catch (e) { /* ngoài Apps Script */ }
 })();
 </script>
-<?!= include('ChatbotWidget') ?>
+<?!= include_('ChatbotWidget') ?>
 
 </body>
 </html>

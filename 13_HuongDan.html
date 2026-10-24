@@ -50,11 +50,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -83,7 +83,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -129,61 +129,29 @@
   .app-main table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
   .app-main table th, .app-main table td { border: 1px solid var(--border-light); padding: 6px 8px; text-align: left; vertical-align: top; }
   .app-main table th { background: var(--sidebar-bg); color: #fff; }
-  .app-main table tr:nth-child(even) { background: #f7f7f7; }
-  .app-main pre { background: #dcfce7; border: 1px solid #cde; border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
-  .app-main code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-  .app-main .warn { background: #fee2e2; border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; }
+  .app-main table tr:nth-child(even) { background: var(--nen-phu, #f7f7f7); }
+  .app-main pre { background: var(--ok-bg, #dcfce7); border: 1px solid var(--vien, #cde); border-radius: 6px; padding: 10px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+  .app-main code { background: var(--nen-phu, #eee); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .app-main .warn { background: var(--err-bg, #fee2e2); border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; }
   .app-main a { color: var(--active-green); }
+  /* Giao diện mới (đồng bộ mẫu): mỗi phần là 1 thẻ, các "Bước N" là thẻ bước có số tròn, hộp lưu ý theo loại */
+  .app-main .hd-phan { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 4px 22px 16px; margin: 0 0 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .app-main .hd-phan > h2 { margin: 16px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+  .app-main .hd-buoc { position: relative; border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 16px 6px 58px; margin: 12px 0; background: var(--nen-phu, #f9fafb); }
+  .app-main .hd-buoc > h3 { margin-top: 2px; font-size: 14px; }
+  .app-main .hd-buoc .hd-so { position: absolute; left: 14px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--active-green); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .app-main .warn { border-radius: 8px; padding: 10px 14px; line-height: 1.55; }
+  .app-main .warn.hd-tt { background: #eff6ff; border-left-color: var(--active-green); color: #1e3a8a; }
+  .app-main .warn.hd-lu { background: #fffbeb; border-left-color: var(--accent-gold); color: #78350f; }
+  html[data-giao-dien="toi"] .app-main .warn.hd-tt { background: rgba(37,99,235,.14); color: inherit; }
+  html[data-giao-dien="toi"] .app-main .warn.hd-lu { background: rgba(180,83,9,.16); color: inherit; }
+  html[data-giao-dien="toi"] .app-main .hd-buoc { background: rgba(255,255,255,.03); }
 </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
-    <span class="icon">📊</span> Tổng quan hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
-    <span class="icon">🔍</span> Tra cứu hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
-    <span class="icon">🖼️</span> Tra cứu hình ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
+<div hidden data-base="<?= baseUrl ?>"></div>
+<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
 
   <div class="app-main">
 
@@ -247,10 +215,13 @@
       │
       └──❌ Hủy──▶ Đã hủy</pre>
 <div class="warn">🔒 <b>Chỉ "Chờ thực hiện" và "Đang thực hiện" mới được Sửa thông tin / Thêm-Sửa-Xóa Lô rừng / Số tài khoản / Tọa độ GPS / Ảnh.</b> Từ "Đã hoàn thành" trở đi, hợp đồng chuyển sang CHỈ XEM — muốn sửa phải duyệt lùi lại bằng tay trên Sheet (không có nút lùi trên webapp, tránh sửa nhầm dữ liệu đã chốt).</div>
+<div class="warn">💳 <b>App Thanh toán (DNTT) chỉ lấy hợp đồng "Đang thực hiện".</b> Hợp đồng vừa tạo (đang "Chờ thực hiện") cần được <b>✅ Duyệt</b> sang "Đang thực hiện" thì mới làm hồ sơ thanh toán được — sau khi tạo, hệ thống hiện nhắc việc này.</div>
+<div class="warn">📋 <b>Đủ hồ sơ mới Duyệt được "Đang thực hiện"</b>: CCCD, MST, tên, địa chỉ chủ rừng; số tài khoản + ngân hàng; mỗi lô có địa chỉ rừng, file hồ sơ pháp lý và tọa độ GPS; hợp đồng có ảnh GPS hoặc ảnh hiện trường. <b>Thanh tiến độ 5 bước</b> ở trang Hợp đồng tính đúng theo điều kiện này — đủ 5 dấu ✓ là Duyệt được. Hợp đồng đã "Đang thực hiện" mà xóa mất điểm GPS / ảnh cuối cùng thì <b>vẫn xóa được</b>, hệ thống hiện cảnh báo các mục cần bổ sung.</div>
 <p>Nút duyệt nằm ngay đầu trang chi tiết hợp đồng (chỉ hiện đúng bước hợp lệ tiếp theo). Muốn duyệt NHIỀU hợp đồng cùng lúc: vào danh sách hợp đồng của 1 khách hàng → lọc đúng 1 tab trạng thái (vd "Chờ thực hiện") → tick chọn nhiều dòng → bấm nút duyệt hàng loạt hiện ra.</p>
 
 <h3>Bước 3 — Thêm lô rừng</h3>
 <p>Trong 1 hợp đồng → tab "🌲 Lô rừng" → "➕ Thêm lô rừng": Địa chỉ/Diện tích/Đơn giá — gõ Diện tích tự tính luôn Khối lượng dự kiến (=<b>Định mức</b> × DT, mặc định 120 tấn/ha nhưng <b>sửa được ngay trên form</b> — chỉ dùng để tính, không lưu vào Sheet), có nút "💰 Xem gợi ý đơn giá bình quân theo Báo giá" để lấy nhanh giá tham khảo theo đúng tháng ký hợp đồng.</p>
+<p><b>Số liệu cấp hợp đồng tự tính từ lô rừng:</b> mỗi lần thêm/sửa/xóa lô rừng (trên webapp hoặc sửa tay trong sheet HD_RUNG khi đã bật "⚡ Bẫy nhật ký tự động"), hệ thống cộng lại và ghi vào HD_NCC: <b>SL dự kiến (cột Z)</b> = tổng khối lượng dự kiến, <b>Diện tích ký (cột T)</b> = tổng diện tích, <b>Đơn giá (cột AA)</b> = đơn giá bình quân các lô có đơn giá — cùng số với bảng <code>ct_hopdong</code>. Hợp đồng "Đang thực hiện" đã chốt số lúc ký: chỉ điền khi ô đang trống/0, không ghi đè. Hợp đồng chưa có lô rừng nào thì giữ nguyên số đã nhập. Mỗi lần đổi đều ghi Nhật ký (số cũ → mới). Tab <b>📊 Chi tiết hợp đồng</b> và ô Chi tiết ngay trên bảng lô rừng hiện đúng các số này, <b>tự cập nhật sau mỗi lần lưu/xóa lô rừng hoặc đính kèm hồ sơ</b>.</p>
 <p>Bấm "Xem chi tiết →" trên 1 lô rừng để vào 2 tab con: <b>📍 Tọa độ GPS</b> và <b>🖼️ Ảnh</b> (xem định dạng tọa độ hỗ trợ ở mục 2b bên dưới). Ảnh tải lên ở đây <b>tự động duyệt luôn</b>, không cần bước duyệt riêng.</p>
 
 <h4>2a. Phân biệt RÕ 3 loại đính kèm — rất hay bị nhầm, đọc kỹ mục này</h4>
@@ -294,6 +265,7 @@
 
 <h2>4. Cơ chế "Làm mới" & luồng dữ liệu báo cáo</h2>
 <p><b>Vấn đề giải quyết:</b> nếu mỗi lần mở báo cáo đều tính lại từ đầu → rất chậm, dễ timeout. Giải pháp: tính sẵn, lưu lại, chỉ cập nhật phần thay đổi.</p>
+<p>⚡ Cờ <b>"Có ảnh" / "Đủ GPS"</b> và tọa độ trung bình ở Tổng quan / Báo cáo được hệ thống nhớ 5 phút để mở và lọc nhanh. Thêm/xóa GPS, ảnh qua webapp thì cập nhật <b>ngay</b>; sửa tay thẳng trên sheet HD_GPS / HD_Picture (khi chưa bật bẫy tự động) thì hiện chậm tối đa 5 phút.</p>
 <pre>DỮ LIỆU GỐC (HD_NCC, HD_RUNG, HD_STK, HD_GPS, HD_Picture)
         │  Tạo/Sửa/Xóa (webapp hoặc sửa tay trên Sheet)
         ▼
@@ -353,12 +325,50 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
 <tr><td>🖼️ Chẩn đoán ảnh / 🔎 Chẩn đoán ảnh theo 1 lô rừng</td><td>Khi ảnh không hiện link mở được</td></tr>
 <tr><td>⚡ Chuyển tên file ảnh / hồ sơ pháp lý sang URL thật</td><td>Chạy 1 lần nếu "Xem chi tiết" bị chậm/treo lúc hiện ảnh</td></tr>
 <tr><td>🔎 Chẩn đoán Số HĐ trong Hồ sơ rừng</td><td>Khi lọc theo Số HĐ ở tab Hồ sơ rừng ra trống bất thường</td></tr>
+<tr><td>📦 Điền SL dự kiến / Diện tích / Đơn giá từ lô rừng (xem trước) — cũng có ở ⚙️ Thiết lập (Quản trị)</td><td>Chạy 1 lần sau khi cập nhật bản 28/09/2026: hợp đồng tạo trên app trước đó có cột Z (SL dự kiến) — có thể cả T, AA — bằng 0 nên app Thanh toán thấy "không có khối lượng dự kiến". Chỉ điền ô trống/0 bằng tổng lô rừng, không ghi đè số đã có; xem trước danh sách rồi mới ghi, chạy lại không ghi gì thêm</td></tr>
 <tr><td>📝 Định dạng TEXT cho cột quan trọng</td><td>Chạy 1 lần — giữ Số CCCD/SĐT/Số TK/Số HĐ... không bị Sheets tự chuyển thành số (mất số 0 đầu)</td></tr>
 <tr><td>📅 Đồng bộ định dạng ngày/tháng/năm</td><td>Chạy 1 lần — đặt hiển thị ngày kiểu dd/mm/yyyy cho các cột ngày</td></tr>
 </table>
 <div class="warn">✅ Menu "📅 Đồng bộ định dạng ngày/tháng/năm" đã tự đặt luôn <b>Vùng địa lý (Locale) = Việt Nam</b> cho cả file dữ liệu chính lẫn file Draft/Báo cáo riêng bằng code — không cần vào Cài đặt bảng tính làm tay nữa.</div>
 
+<h2>9. Nhúng HDMB vào trang khác (Portal...)</h2>
+<p>Mỗi mục menu của HDMB là 1 trang riêng (<code>?page=...</code>) mở ở <b>cả cửa sổ</b>. Mở HDMB trực tiếp thì đúng; khi HDMB nằm trong khung (iframe) của Portal thì trước đây bấm menu / "Về trang Tổng quan" / "Xem ảnh &amp; xuất PDF" làm cả trình duyệt rời Portal. (Các webapp khác không bị vì chỉ có 1 trang, đổi tab bằng mã trong trang.)</p>
+<ul>
+  <li>Nay HDMB <b>tự biết mình đang bị nhúng</b>: bấm link sang trang khác của HDMB thì tải trang mới <b>ngay trong khung</b> — Portal giữ nguyên. <b>Không cần sửa gì ở Portal</b>, chỉ cần nhúng bằng thẻ <code>&lt;iframe src="https://script.google.com/macros/s/…/exec"&gt;</code> như bình thường.</li>
+  <li>Địa chỉ <code>?page=...</code> vẫn cập nhật nên nút Quay lại / Tiến tới của trình duyệt dùng được.</li>
+  <li>Link mở tab mới (xem file Drive, Google Maps, "Sửa hợp đồng" ở Tổng quan) vẫn mở tab mới. Đăng nhập trong khung vẫn qua cửa sổ nhỏ của Cổng đăng nhập; đăng nhập xong trang tự hiện lại ngay trong khung (trước đây user khác chủ hệ thống bị trắng màn hình ở bước này).</li>
+  <li>Mở HDMB trực tiếp (không nhúng): chuyển trang y như cũ.</li>
+</ul>
+
 
   </div>
+<script>
+  // Giao diện mới: gói mỗi phần (h2 + nội dung tới h2 kế) thành thẻ; h3 "Bước N — ..." thành thẻ bước có số tròn;
+  // tô màu hộp lưu ý theo loại. Chỉ sắp lại cách hiển thị, không đổi nội dung.
+  (function () {
+    var vung = document.querySelector('.app-main');
+    if (!vung) return;
+    Array.prototype.slice.call(vung.querySelectorAll(':scope > h2')).forEach(function (h) {
+      var the = document.createElement('section'); the.className = 'hd-phan';
+      vung.insertBefore(the, h);
+      var n = h; while (n && !(n !== h && n.nodeType === 1 && n.tagName === 'H2')) { var tiep = n.nextSibling; the.appendChild(n); n = tiep; }
+    });
+    Array.prototype.slice.call(vung.querySelectorAll('.hd-phan > h3')).forEach(function (h) {
+      var m = /^\s*Bước\s+(\d+)\s*[—-]\s*/.exec(h.textContent || '');
+      if (!m) return;
+      var the = document.createElement('div'); the.className = 'hd-buoc';
+      h.parentNode.insertBefore(the, h);
+      var so = document.createElement('span'); so.className = 'hd-so'; so.textContent = m[1]; so.setAttribute('aria-hidden', 'true');
+      the.appendChild(so);
+      var n = h; while (n && !(n !== h && n.nodeType === 1 && /^H[23]$/.test(n.tagName))) { var tiep = n.nextSibling; the.appendChild(n); n = tiep; }
+    });
+    Array.prototype.slice.call(vung.querySelectorAll('.warn')).forEach(function (w) {
+      var t = (w.textContent || '').trim();
+      if (/^(💳|✅|ℹ)/u.test(t)) w.classList.add('hd-tt'); else if (/^🔒/u.test(t)) w.classList.add('hd-lu');
+    });
+  })();
+  // Giao diện mới: mục lục dính bên trái theo các phần (h2) + ô lọc mục
+  if (typeof hakTaoMucLuc_ === 'function') hakTaoMucLuc_(document.querySelector('.app-main'), 'h2', { nhan: 'Mục lục', timKiem: 'Tìm trong mục lục…' });
+</script>
 </body>
 </html>

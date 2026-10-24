@@ -43,7 +43,7 @@
  *                          (chỉ cập nhật hợp đồng CÓ THAY ĐỔI, không tính lại từ đầu)
  * @return {Object} { baoCaoHopDong, tongHopWebapp, tinhHinhThucHien, danhSachThanhLy }
  */
-function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc) {
+function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc, boLocTT, trangTT) {
   _yeuCauQuyen_(QUYEN.XEM);
   try {
     boLocBC = boLocBC || {};
@@ -89,13 +89,10 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
       };
     });
 
-    const tuNgay = boLocBC.tuNgay ? new Date(boLocBC.tuNgay) : null;
-    const denNgay = boLocBC.denNgay ? new Date(boLocBC.denNgay) : null;
+    const tuISO = ngayToISO_(boLocBC.tuNgay), denISO = ngayToISO_(boLocBC.denNgay);
 
     const locBC = dsBaoCaoHD.filter(function (r) {
-      const ngayKy = new Date(r.ngayKy);
-      if (tuNgay && ngayKy < tuNgay) return false;
-      if (denNgay && ngayKy > denNgay) return false;
+      if (!trongKhoangNgay_(r.ngayKy, tuISO, denISO)) return false;
       if (!chuaLoc_(r.soHD, boLocBC.soHD)) return false;
       if (!chuaLoc_(r.tenChuRung, boLocBC.tenChuRung)) return false;
       if (!chuaLoc_(r.tenUyQuyen, boLocBC.tenNguoiUyQuyen)) return false;
@@ -116,30 +113,8 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
     // ================================================================
     // 2. TỔNG HỢP KPI + CHI TIẾT "Tình hình thực hiện" — GIỐNG HỆT layTongHopChoWebapp_
     // ================================================================
-    const listDangTH = tatCa.filter(function (m) { return m.tinhTrang === 'Đang thực hiện' || m.tinhTrang === 'Chờ thực hiện'; });
-    const tongKhoiLuong = listDangTH.reduce(function (s, m) { return s + (Number(m.khoiLuongDuKien) || 0); }, 0);
-    const tongGiaTriKPI = listDangTH.reduce(function (s, m) { return s + (Number(m.giaTriHopDong) || 0); }, 0);
-    const tongHopWebapp = {
-      soHopDong: listDangTH.length,
-      tongKhoiLuong: tongKhoiLuong,
-      tongGiaTri: tongGiaTriKPI,
-      chiTiet: listDangTH.slice().sort(function (a, b) { return (b.soHD || 0) - (a.soHD || 0); }).map(function (m) {
-        return {
-          idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung,
-          tongKhoiLuongDuKien: m.khoiLuongDuKien, tongGiaTri: m.giaTriHopDong,
-          tongKhoiLuongThucHien: m.khoiLuongThucHien, tongGiaTriThucHien: m.giaTriThucHien,
-          khoiLuongConLai: m.khoiLuongConLai, giaTriConLai: m.giaTriConLai,
-          donGiaDuKien: m.donGiaDuKien, donGiaThucHien: m.donGiaThucHien,
-          thucHienTuNgay: m.thucHienTuNgay, thucHienDenNgay: m.thucHienDenNgay,
-          danhSachSoPhieuCan: m.danhSachSoPhieuCan
-        };
-      })
-    };
+    const tongHopWebapp = _tongHopWebappTuDraft_(tatCa, boLocTT || {}, trangTT || 1); // P-07b: KPI + 1 trang chi tiết
 
-    // ================================================================
-    // 3. TÌNH HÌNH THỰC HIỆN (KPI GPS/hồ sơ/ảnh + đếm theo trạng thái)
-    //    — GIỐNG HỆT layTinhHinhThucHien_
-    // ================================================================
     const chiTietTH = tatCa.map(function (m) {
       return {
         idHD: m.idHD, soHD: m.soHD, chuRung: m.tenChuRung, tinhTrang: m.tinhTrang || 'Đang thực hiện',
@@ -153,8 +128,9 @@ function TAI_TRANG_BAO_CAO_TONG_HOP_(boLocBC, boLocTL, trangBC, trangTL, boBuoc)
       theoTrangThai: theoTrangThai,
       soHDDaDoGPSDu: chiTietTH.filter(function (c) { return c.daDoGPSDuChua; }).length,
       soHDDuHoSo: chiTietTH.filter(function (c) { return c.hoSoDuChua; }).length,
-      soHDCoAnh: chiTietTH.filter(function (c) { return c.coAnh; }).length,
-      chiTiet: chiTietTH
+      soHDCoAnh: chiTietTH.filter(function (c) { return c.coAnh; }).length
+      // P-07a (rà soát 28/09): bỏ "chiTiet" (1 dòng/hợp đồng) — trang Báo cáo chỉ dùng các số đếm ở trên; danh sách này
+      // làm phản hồi tăng theo số hợp đồng mà không ai đọc.
     };
 
     // ================================================================

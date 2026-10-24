@@ -50,11 +50,11 @@
   /* ---------- MAIN CONTENT ---------- */
   .app-main { flex: 1; padding: 26px 30px; overflow-y: auto; }
   .page-title { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; color: var(--heading); }
-  .page-subtitle { font-size: 13px; color: #667; margin: 0 0 18px 0; }
+  .page-subtitle { font-size: 13px; color: var(--chu-phu, #667); margin: 0 0 18px 0; }
 
   .tab-bar { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
   .tab-bar a, .tab-bar span {
-    padding: 10px 14px; font-size: 13px; font-weight: 600; color: #667; text-decoration: none;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--chu-phu, #667); text-decoration: none;
     border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
   }
   .tab-bar a.active { color: var(--active-green); border-bottom-color: var(--active-green); }
@@ -83,7 +83,7 @@
 
   .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 160px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: #445; margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--chu-phu, #445); margin-bottom: 5px; }
   .field input, .field select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 13px;
   }
@@ -93,7 +93,7 @@
   .btn-green { background: var(--active-green); color: #fff; }
   .btn-gold { background: var(--accent-gold); color: #fff; }
   .btn-purple { background: var(--accent-purple); color: #fff; }
-  .btn-outline { background: #f3f4f6; color: #1f2937; }
+  .btn-outline { background: var(--nen-phu, #f3f4f6); color: var(--chu-chinh, #1f2937); }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
 
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -101,12 +101,12 @@
     flex: 1; min-width: 200px; background: var(--card-bg); border: 1px solid var(--border-light);
     border-radius: 10px; padding: 18px 20px;
   }
-  .kpi-card .label { font-size: 11px; font-weight: 700; color: #889; letter-spacing: .03em; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--chu-phu, #889); letter-spacing: .03em; }
   .kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--heading); }
 
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
-  .msg.ok { background: #dcfce7; color: #16a34a; border-left: 4px solid #16a34a; }
-  .msg.err { background: #fee2e2; color: #dc2626; border-left: 4px solid #dc2626; }
+  .msg.ok { background: var(--ok-bg, #dcfce7); color: var(--ok-chu, #16a34a); border-left: 4px solid #16a34a; }
+  .msg.err { background: var(--err-bg, #fee2e2); color: var(--err-chu, #dc2626); border-left: 4px solid #dc2626; }
 
   table.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   table.data-table th { background: var(--sidebar-bg); color: #fff; padding: 8px; text-align: left; }
@@ -120,96 +120,61 @@
     .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
     .nav-item.active { border-left: none; border-bottom-color: var(--accent-gold); }
   }
+  /* Giao diện mới: 2 cột trên màn rộng */
+  @media (min-width: 1200px) {
+    .tc-hai-cot.co-chi-tiet { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table th:nth-child(n+4), .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table td:nth-child(n+4) { display: none; }
+    .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table th:nth-child(7), .tc-hai-cot.co-chi-tiet #tcVungKetQua .mecon-table td:nth-child(7) { display: table-cell; }
+    .tc-hai-cot.co-chi-tiet .tc-quay-lai { display: none; }
+  }
+  #tcVungKetQua tr.dang-chon td { background: var(--info-bg, #eff6ff); }
+  #tcVungKetQua tr.dang-chon td:first-child { box-shadow: inset 3px 0 0 #2563eb; }
 </style>
 <style>
   .the-thongke-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-  .the-thongke { flex: 1; min-width: 140px; background: #fff; border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .the-thongke { flex: 1; min-width: 140px; background: var(--card-bg, #fff); border-radius: 10px; padding: 16px 18px; border: 2px solid var(--border-light); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
   .the-thongke:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); }
-  .the-thongke.active { border-color: var(--active-green); background: #dcfce7; }
+  .the-thongke.active { border-color: var(--active-green); background: var(--ok-bg, #dcfce7); }
   .the-thongke .so { font-size: 26px; font-weight: 700; color: var(--heading); }
   .the-thongke.active .so { color: var(--active-green); }
   .the-thongke .nhan { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
   table.mecon-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.mecon-table th { background: var(--sidebar-bg); color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
   table.mecon-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
-  table.mecon-table tr:hover td { background: #dcfce7; }
+  table.mecon-table tr:hover td { background: var(--ok-bg, #dcfce7); }
   a.lnk-hd { color: var(--active-green); font-weight: 600; cursor: pointer; text-decoration: none; }
   a.lnk-hd:hover { text-decoration: underline; }
-  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: #dcfce7; color: var(--active-green); }
+  .badge-trang-thai { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; background: var(--ok-bg, #dcfce7); color: var(--active-green); }
   .empty-hint { text-align: center; padding: 24px; color: var(--text-muted); font-size: 12.5px; }
 </style>
 <style>
   .tc-o-tim { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
   .tc-o-tim .field { flex: 1; min-width: 240px; }
   .tc-ghi-chu { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
-  .tc-khop { font-size: 11px; color: #6b7280; }
+  .tc-khop { font-size: 11px; color: var(--chu-phu, #6b7280); }
   .tc-luoi { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; font-size: 13px; }
-  .tc-luoi .nhan { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .tc-luoi .nhan { font-size: 11px; color: var(--chu-phu, #6b7280); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
   .tc-luoi .gt { margin-top: 2px; word-break: break-word; }
   .tc-anh { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; text-decoration: none; color: var(--active-green); }
-  .tc-canh-bao { background: #fef3c7; color: #92400e; border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
+  .tc-anh a { font-size: 12.5px; padding: 6px 10px; background: var(--nen-phu, #f3f4f6); border-radius: 6px; text-decoration: none; color: var(--active-green); }
+  .tc-canh-bao { background: var(--warn-bg, #fef3c7); color: var(--warn-chu, #92400e); border-left: 4px solid #b45309; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 14px; }
   .tc-quay-lai { margin-bottom: 14px; }
   .tc-dang-tai { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
   .tc-o-tim .field.tc-ngay { flex: none; min-width: 150px; width: 160px; }
   .tc-nhanh { font-size: 12px; color: var(--text-muted); margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: #fff; border-radius: 14px; cursor: pointer; color: var(--heading); }
+  .tc-nhanh button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-light); background: var(--card-bg, #fff); border-radius: 14px; cursor: pointer; color: var(--heading); }
   .tc-nhanh button:hover { border-color: var(--active-green); color: var(--active-green); }
 </style>
+<?!= include_('GiaoDien_Chung') ?>
 </head>
 <body>
 <div id="hakPhanQuyen" hidden data-phien="<?= typeof phien === 'undefined' ? '' : phien ?>" data-loi="<?= typeof loiDangNhap === 'undefined' ? '' : loiDangNhap ?>" data-trang="<?= typeof currentPage === 'undefined' ? '' : currentPage ?>" data-base="<?= typeof baseUrl === 'undefined' ? '' : baseUrl ?>"></div>
-<?!= include('PhanQuyen_JS') ?>
-<div class="app-sidebar">
-  <div class="brand">
-    <div class="logo">HAK</div>
-    <div>
-      <div class="title">HAKGROUP</div>
-      <div class="subtitle">Quản lý Hợp đồng Gỗ Keo</div>
-    </div>
-  </div>
-
-  <a class="nav-item <?= currentPage === 'tongquan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tongquan">
-    <span class="icon">📊</span> Tổng quan hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'tracuu' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=tracuu">
-    <span class="icon">🔍</span> Tra cứu hợp đồng
-  </a>
-  <a class="nav-item <?= currentPage === 'hinhanh' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hinhanh">
-    <span class="icon">🖼️</span> Tra cứu hình ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'map' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=map">
-    <span class="icon">🗺️</span> Bản đồ GPS
-  </a>
-  <a class="nav-item <?= currentPage === 'hopdongmc' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=hopdongmc">
-    <span class="icon">📝</span> Nhập liệu HĐ / Rừng / TK
-  </a>
-  <a class="nav-item <?= currentPage === 'baocao' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=baocao">
-    <span class="icon">📊</span> Báo cáo tổng hợp
-  </a>
-
-  <div class="nav-group-label">Kiểm tra &amp; đối chiếu</div>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">📋</span> Kiểm tra hồ sơ
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🖼️</span> Kiểm tra ảnh
-  </a>
-  <a class="nav-item <?= currentPage === 'kiemtra' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=kiemtra">
-    <span class="icon">🔎</span> Đối chiếu OCR
-  </a>
-
-  <div class="nav-group-label">Khác</div>
-  <a class="nav-item <?= currentPage === 'huongdan' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=huongdan">
-    <span class="icon">📖</span> Hướng dẫn sử dụng
-  </a>
-  <a class="nav-item <?= currentPage === 'thietlap' ? 'active' : '' ?>" href="<?= baseUrl ?>?page=thietlap">
-    <span class="icon">⚙️</span> Thiết lập
-  </a>
-</div>
+<?!= include_('PhanQuyen_JS') ?>
+<?!= menuChung_(typeof currentPage === 'undefined' ? '' : currentPage, typeof baseUrl === 'undefined' ? '' : baseUrl, typeof tabTrang === 'undefined' ? '' : tabTrang) ?>
 
   <div class="app-main">
-    <div class="page-title">🔍 Tra cứu hợp đồng</div>
+    <div class="page-title">Tra cứu hợp đồng</div>
     <div class="page-subtitle">Tìm theo Số HĐ, tên chủ rừng / người ủy quyền (gõ có dấu hoặc không dấu), CCCD, số điện thoại, số tài khoản hoặc địa chỉ rừng, và/hoặc lọc theo khoảng ngày ký. Bấm vào 1 hợp đồng để xem chi tiết.</div>
 
     <div class="card">
@@ -238,8 +203,10 @@
       <div class="tc-ghi-chu" id="tcGhiChu">Từ khóa ít nhất 2 ký tự; CCCD / SĐT / số tài khoản nhập từ 4 chữ số (có thể chỉ 1 phần). Chỉ chọn ngày, để trống từ khóa = xem mọi hợp đồng ký trong khoảng đó.</div>
     </div>
 
-    <div id="tcVungKetQua"></div>
-    <div id="tcVungChiTiet"></div>
+    <div id="tcHaiCot" class="tc-hai-cot">
+      <div id="tcVungKetQua"></div>
+      <div id="tcVungChiTiet"></div>
+    </div>
   </div>
 
 <script>
@@ -254,7 +221,7 @@ function soTC_(v) {
   return isNaN(n) ? escTC_(v) : n.toLocaleString('vi-VN');
 }
 function oTC_(nhan, giaTri) {
-  var gt = (giaTri === null || giaTri === undefined || giaTri === '') ? '<span style="color:#9ca3af">—</span>' : giaTri;
+  var gt = (giaTri === null || giaTri === undefined || giaTri === '') ? '<span style="color:var(--chu-phu, #9ca3af)">—</span>' : giaTri;
   return '<div><div class="nhan">' + escTC_(nhan) + '</div><div class="gt">' + gt + '</div></div>';
 }
 
@@ -288,6 +255,14 @@ function moTaLoc_(kq) {
   return p.join(', ');
 }
 
+// Giao diện mới: màn rộng (>= 1200px) hiện 2 cột — danh sách kết quả bên trái, chi tiết bên phải (không ẩn danh sách).
+function tcManRong_() { return !!(window.matchMedia && window.matchMedia('(min-width: 1200px)').matches); }
+function tcHaiCot_(bat) { document.getElementById('tcHaiCot').classList.toggle('co-chi-tiet', !!bat); }
+function tcDanhDauChon_(idHD) {
+  var ds = document.querySelectorAll('#tcVungKetQua tr[data-id]');
+  for (var i = 0; i < ds.length; i++) ds[i].classList.toggle('dang-chon', ds[i].getAttribute('data-id') === idHD);
+}
+
 function traCuu_() {
   var tk = document.getElementById('tcTuKhoa').value.trim();
   var tuNgay = document.getElementById('tcTuNgay').value;
@@ -308,6 +283,8 @@ function traCuu_() {
       tcDangTim_ = false;
       document.getElementById('tcNutTim').disabled = false;
       tcKetQuaCuoi_ = kq;
+      tcNhoChiTiet_ = {}; // lượt tìm mới -> bỏ chi tiết đã nhớ (dữ liệu có thể vừa đổi)
+      if (kq && kq.chiTietDau && kq.ketQua && kq.ketQua.length) tcNhoChiTiet_[kq.ketQua[0].idHD] = kq.chiTietDau;
       veKetQua_(kq);
     })
     .withFailureHandler(function (err) {
@@ -315,12 +292,13 @@ function traCuu_() {
       document.getElementById('tcNutTim').disabled = false;
       vung.innerHTML = '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
     })
-    .TRA_CUU_HOP_DONG(tk, tuNgay, denNgay);
+    .TRA_CUU_HOP_DONG(tk, tuNgay, denNgay, tcManRong_()); // màn rộng: máy chủ trả luôn chi tiết HĐ đầu (bớt 1 lượt gọi)
 }
 
 function veKetQua_(kq) {
   var vung = document.getElementById('tcVungKetQua');
   document.getElementById('tcVungChiTiet').innerHTML = '';
+  tcHaiCot_(false);
   if (!kq) { vung.innerHTML = ''; return; }
   if (kq.loi) { vung.innerHTML = '<div class="msg err">' + escTC_(kq.loi) + '</div>'; return; }
   if (!kq.ketQua.length) {
@@ -331,7 +309,7 @@ function veKetQua_(kq) {
     (kq.tongSo > kq.ketQua.length ? ' <span class="tc-khop">(hiện ' + kq.ketQua.length + ' hợp đồng mới ký nhất — nhập từ khóa hoặc thu hẹp khoảng ngày)</span>' : '') + '</h3>' +
     '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Số HĐ</th><th>Ngày ký</th><th>Chủ rừng</th><th>Người ủy quyền</th><th>CCCD chủ rừng</th><th>Địa chỉ rừng</th><th>Tình trạng</th><th>Khớp theo</th></tr></thead><tbody>';
   kq.ketQua.forEach(function (x, i) {
-    h += '<tr><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
+    h += '<tr data-id="' + escTC_(x.idHD) + '"><td><a class="lnk-hd" data-i="' + i + '">' + escTC_(x.soHD || x.idHD) + '</a></td>' +
       '<td>' + escTC_(x.ngayKy) + '</td><td>' + escTC_(x.tenChuRung) + '</td><td>' + escTC_(x.tenUyQuyen) + '</td>' +
       '<td>' + escTC_(x.cccdChuRung) + '</td><td>' + escTC_(x.diaChiRung) + '</td>' +
       '<td>' + (x.tinhTrang ? '<span class="badge-trang-thai">' + escTC_(x.tinhTrang) + '</span>' : '') + '</td>' +
@@ -343,15 +321,25 @@ function veKetQua_(kq) {
   for (var k = 0; k < links.length; k++) {
     links[k].addEventListener('click', function () { xemChiTiet_(kq.ketQua[Number(this.getAttribute('data-i'))].idHD); });
   }
+  if (tcManRong_()) xemChiTiet_(kq.ketQua[0].idHD); // màn rộng: mở sẵn hợp đồng đầu tiên ở cột phải
 }
 
+// Tốc độ: chi tiết đã tải trong lượt tìm này được nhớ lại — bấm qua lại giữa các hợp đồng hiện ngay, không gọi lại máy chủ
+var tcNhoChiTiet_ = {};
+var tcDangXem_ = '';
 function xemChiTiet_(idHD) {
   var vungKQ = document.getElementById('tcVungKetQua');
   var vung = document.getElementById('tcVungChiTiet');
-  vungKQ.style.display = 'none';
+  if (tcManRong_()) { tcHaiCot_(true); tcDanhDauChon_(idHD); } else vungKQ.style.display = 'none';
+  tcDangXem_ = idHD;
+  if (tcNhoChiTiet_[idHD]) { veChiTiet_(tcNhoChiTiet_[idHD]); return; }
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
   hakRun_()
-    .withSuccessHandler(function (ct) { veChiTiet_(ct); })
+    .withSuccessHandler(function (ct) {
+      if (ct && !ct.khongTimThay) tcNhoChiTiet_[idHD] = ct;
+      if (tcDangXem_ !== idHD) return; // đã bấm sang hợp đồng khác trong lúc chờ
+      veChiTiet_(ct);
+    })
     .withFailureHandler(function (err) {
       vung.innerHTML = nutQuayLai_() + '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
       ganNutQuayLai_();
@@ -367,6 +355,7 @@ function ganNutQuayLai_() {
   if (b) b.addEventListener('click', function () {
     document.getElementById('tcVungChiTiet').innerHTML = '';
     document.getElementById('tcVungKetQua').style.display = '';
+    tcHaiCot_(false);
   });
 }
 
@@ -414,7 +403,7 @@ function veChiTiet_(ct) {
     ct.loRung.forEach(function (l) {
       h += '<tr><td>' + escTC_(l.maRung || l.idRung) + '</td><td>' + escTC_(l.diaChiRung) + '</td><td>' + soTC_(l.dienTichM2) + '</td><td>' + soTC_(l.dienTichGPS) + '</td>' +
         '<td>' + soTC_(l.khoiLuongDuKien) + '</td><td>' + soTC_(l.khoiLuongThucHien) + '</td><td>' + escTC_(l.namTrong) + '</td>' +
-        '<td>' + (l.soDiemGPS ? l.soDiemGPS + ' điểm' : '<span style="color:#dc2626">chưa có</span>') + '</td></tr>';
+        '<td>' + (l.soDiemGPS ? l.soDiemGPS + ' điểm' : '<span style="color:var(--err-chu, #dc2626)">chưa có</span>') + '</td></tr>';
     });
     h += '</tbody></table></div>';
   }
@@ -440,7 +429,7 @@ function veChiTiet_(ct) {
     h += '<div style="overflow-x:auto"><table class="mecon-table"><thead><tr><th>Lô rừng</th><th>Hồ sơ nguồn gốc</th><th>Số giấy tờ</th><th>Ngày</th><th>File</th></tr></thead><tbody>';
     ct.hoSo.forEach(function (x) {
       var file = x.url ? '<a target="_blank" rel="noopener" href="' + urlTC_(x.url) + '">Mở file</a>'
-        : (x.coFile ? (ct.daCheSo ? '🔒 có file' : 'có file (chưa chuyển sang link)') : '<span style="color:#dc2626">chưa có</span>');
+        : (x.coFile ? (ct.daCheSo ? '🔒 có file' : 'có file (chưa chuyển sang link)') : '<span style="color:var(--err-chu, #dc2626)">chưa có</span>');
       h += '<tr><td>' + escTC_(x.idRung) + '</td><td>' + escTC_(x.hoSoNguonGoc) + '</td><td>' + escTC_(x.soGiayTo) + '</td><td>' + escTC_(x.ngayGiayTo) + '</td><td>' + file + '</td></tr>';
     });
     h += '</tbody></table></div>';
@@ -452,6 +441,14 @@ function veChiTiet_(ct) {
     ' <a class="btn btn-outline" style="padding:4px 10px;font-size:12px;text-decoration:none;margin-left:8px" target="_top" href="' + escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0') + '">Xem ảnh &amp; xuất PDF</a></h3>';
   h = h.replace('<h3>📄 Hợp đồng ', '<h3><a class="btn btn-gold" style="float:right;padding:5px 12px;font-size:12px;text-decoration:none" target="_top" title="Tiến độ khai thác, thanh toán, bản đồ Google Maps từng lô, ảnh tọa độ, ảnh rừng, hồ sơ pháp lý" href="' +
     escTC_(goc + '?page=hinhanh&idhd=' + encodeURIComponent(ct.idHD) + '&kh=0&bc=1') + '">📊 Báo cáo thực hiện (PDF)</a>📄 Hợp đồng ');
+  // Nút Sửa: chỉ vai trò Nhập liệu / Quản trị — mở đúng hợp đồng này ở trang Nhập liệu (máy chủ vẫn kiểm tra quyền khi lưu).
+  // Hợp đồng đã chốt (Đã hoàn thành / Đã thanh lý / Đã hủy) mở ở chế độ chỉ xem như trang Nhập liệu vẫn làm.
+  if (typeof hakCoQuyen_ === 'function' && hakCoQuyen_('NHAP_LIEU') && !ct.daCheSo) {
+    var suaDuoc = !hd.tinhTrang || hd.tinhTrang === 'Chờ thực hiện' || hd.tinhTrang === 'Đang thực hiện';
+    h = h.replace('<h3>', '<h3><a class="btn ' + (suaDuoc ? 'btn-green' : 'btn-outline') + ' tc-nut-sua" style="float:right;padding:5px 12px;font-size:12px;text-decoration:none;margin-left:6px" target="_top" href="' +
+      escTC_(goc + '?page=hopdongmc&idHD=' + encodeURIComponent(ct.idHD)) + '" title="' + (suaDuoc ? 'Sửa thông tin, lô rừng, tài khoản, GPS, ảnh của hợp đồng này' : 'Hợp đồng đã chốt (' + escTC_(hd.tinhTrang) + ') — chỉ xem; muốn sửa phải duyệt lùi trên Sheet') + '">' +
+      (suaDuoc ? '✏️ Sửa hợp đồng' : '👁️ Mở ở Nhập liệu') + '</a>');
+  }
   if (!ct.anh.length) h += '<div class="empty-hint">Chưa có ảnh.</div>';
   else {
     h += '<div class="tc-anh">';
@@ -481,7 +478,7 @@ function veChiTiet_(ct) {
   } catch (e) { /* ngoài Apps Script */ }
 })();
 </script>
-<?!= include('ChatbotWidget') ?>
+<?!= include_('ChatbotWidget') ?>
 
 </body>
 </html>

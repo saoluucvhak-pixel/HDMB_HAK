@@ -356,6 +356,8 @@ function api(phien, tenHam, thamSo) {
   const route = Object.prototype.hasOwnProperty.call(bang, tenHam) ? bang[tenHam] : null;
   if (!route) throw new Error('Chức năng không tồn tại: ' + tenHam);
   _nguoiDungHienTai_ = null;
+  const batDau = Date.now(); // giám sát hiệu năng (17_ChanDoanTocDo.gs): chỉ ghi sổ khi chậm hơn ngưỡng hoặc lỗi nghiệp vụ
+  let loiGoi = null, daQuaQuyen = false;
   try {
     if (phien) {
       const email = _docPhien_(phien);
@@ -363,10 +365,36 @@ function api(phien, tenHam, thamSo) {
       _nguoiDungHienTai_ = { email: email, vaiTro: _vaiTroCua_(email) };
     }
     _yeuCauQuyen_(route.quyen);
-    return route.fn.apply(null, Array.isArray(thamSo) ? thamSo : []);
+    daQuaQuyen = true;
+    return _anToanChoTrinhDuyet_(route.fn.apply(null, Array.isArray(thamSo) ? thamSo : []), 0);
+  } catch (e) {
+    loiGoi = e;
+    throw e;
   } finally {
+    // Lỗi đăng nhập / thiếu quyền không ghi sổ hiệu năng (không phải lỗi hệ thống)
+    if (daQuaQuyen) ghiHieuNangNeuCham_(tenHam, Date.now() - batDau, loiGoi, _nguoiDungHienTai_ ? _nguoiDungHienTai_.vaiTro : '');
     _nguoiDungHienTai_ = null;
   }
+}
+
+/**
+ * google.script.run trả NULL cho CẢ kết quả nếu bên trong có 1 giá trị Date (vd ô "Năm trồng" / ô ngày trên Sheet
+ * chưa qua ngayToISO_) -> trang nhận null và lỗi "Cannot read properties of null". Đổi mọi Date thành chuỗi:
+ * ngày thuần -> "yyyy-MM-dd", có giờ -> "yyyy-MM-dd HH:mm:ss" (múi giờ bảng tính). Sửa tại chỗ (kết quả là dữ liệu mới).
+ */
+function _anToanChoTrinhDuyet_(v, sau) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return '';
+    const tz = layMuiGioBangTinh_();
+    const coGio = Utilities.formatDate(v, tz, 'HH:mm:ss') !== '00:00:00';
+    return Utilities.formatDate(v, tz, coGio ? 'yyyy-MM-dd HH:mm:ss' : 'yyyy-MM-dd');
+  }
+  if (sau > 20) return v;
+  if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) v[i] = _anToanChoTrinhDuyet_(v[i], sau + 1); return v; }
+  if (Object.getPrototypeOf(v) !== Object.prototype && Object.getPrototypeOf(v) !== null) return v; // chỉ đi vào object dữ liệu thuần
+  Object.keys(v).forEach(function (k) { v[k] = _anToanChoTrinhDuyet_(v[k], sau + 1); });
+  return v;
 }
 
 let _bangQuyenApiCache_ = null;
@@ -383,6 +411,7 @@ function _bangQuyenApi_() {
   _bangQuyenApiCache_ = {
     // --- Xem: tổng quan, bản đồ, báo cáo, tra cứu, trợ lý AI ---
     LAY_TONG_QUAN_HOP_DONG: r(LAY_TONG_QUAN_HOP_DONG_, X),
+    TIEN_DO_HO_SO_HD: r(TIEN_DO_HO_SO_HD_, X),                 // giao diện mới: thanh 5 bước ở trang Nhập liệu
     getMapData: r(getMapData_, X),
     layThoiGianCapNhatBanDo: r(layThoiGianCapNhatBanDo_, X),
     TAI_TRANG_BAO_CAO_TONG_HOP: r(TAI_TRANG_BAO_CAO_TONG_HOP_, X),
@@ -398,6 +427,7 @@ function _bangQuyenApi_() {
     layDanhSachLoaiHoSo: r(layDanhSachLoaiHoSo_, X),
     layDanhSachNhomKH: r(layDanhSachNhomKH_, X),
     layDanhSachRung: r(layDanhSachRung_, X),
+    layChiTietHopDong: r(layChiTietHopDong_, X),
     layDanhSachTaiKhoan: r(layDanhSachTaiKhoan_, X),
     layGPSCuaRung: r(layGPSCuaRung_, X),
     layAnhCuaHopDong: r(layAnhCuaHopDong_, X),
@@ -409,13 +439,14 @@ function _bangQuyenApi_() {
     traCuuDiaChiThamChieu: r(traCuuDiaChiThamChieu_, X),
     layPhieuCanTheoChuRung: r(layPhieuCanTheoChuRung_, X),
     LAY_DANH_SACH_NGAN_HANG_VIETQR: r(LAY_DANH_SACH_NGAN_HANG_VIETQR_, X),
-    XUAT_BANG_RA_FILE: r(XUAT_BANG_RA_FILE_, X),
+    XUAT_BAO_CAO_FILE: r(XUAT_BAO_CAO_FILE_, X), // P-07b/H-13: máy chủ tự dựng dữ liệu file xuất (thay XUAT_BANG_RA_FILE nhận bảng từ trình duyệt)
     TRA_LOI_CHATBOT: r(TRA_LOI_CHATBOT_, X),
     TRA_CUU_HOP_DONG: r(TRA_CUU_HOP_DONG_, X),
     CHI_TIET_TRA_CUU_HOP_DONG: r(CHI_TIET_TRA_CUU_HOP_DONG_, X),
     LAY_ANH_TRA_CUU: r(LAY_ANH_TRA_CUU_, X),
     LAY_DU_LIEU_ANH: r(LAY_DU_LIEU_ANH_, X),
     XUAT_PDF_ANH: r(XUAT_PDF_ANH_, X),
+    LAY_THONG_KE_HIEU_NANG: r(LAY_THONG_KE_HIEU_NANG_, Q),       // giám sát hiệu năng (17_ChanDoanTocDo.gs)
     BAO_CAO_HOP_DONG_PDF: r(BAO_CAO_HOP_DONG_PDF_, X),
     LAY_FILE_HO_SO: r(LAY_FILE_HO_SO_, N),
     XEM_FILE_DRIVE: r(XEM_FILE_DRIVE_, X),
@@ -430,14 +461,18 @@ function _bangQuyenApi_() {
     // --- Nhập liệu: hợp đồng, lô rừng, tài khoản, ảnh, GPS, hồ sơ, kiểm tra ---
     layHopDongTheoIdHD: r(layHopDongTheoIdHD_, N),
     TAO_HOP_DONG_MOI: r(TAO_HOP_DONG_MOI_, N),
-    CAP_NHAT_HOP_DONG: r(CAP_NHAT_HOP_DONG_, N),
+    DOI_TINH_TRANG_HANG_LOAT: r(DOI_TINH_TRANG_HANG_LOAT_, N), // A2: duyệt/hủy nhiều hợp đồng trong 1 lệnh
+    CAP_NHAT_HOP_DONG: r(CAP_NHAT_HOP_DONG_WEB_, N), // H-01: bản cho trang web — kiểm tra bước chuyển trạng thái, ghi nhật ký, cập nhật Draft
     THEM_LO_RUNG_MOI: r(THEM_LO_RUNG_MOI_, N),
     CAP_NHAT_LO_RUNG: r(CAP_NHAT_LO_RUNG_, N),
     XOA_LO_RUNG: r(XOA_LO_RUNG_, N),
+    XOA_DIEM_GPS: r(XOA_DIEM_GPS_, N),
+    XOA_ANH_RUNG: r(XOA_ANH_RUNG_, N),
     THEM_TAI_KHOAN_MOI: r(THEM_TAI_KHOAN_MOI_, N),
     CAP_NHAT_TAI_KHOAN: r(CAP_NHAT_TAI_KHOAN_, N),
     XOA_TAI_KHOAN: r(XOA_TAI_KHOAN_, N),
     CAP_NHAT_GPS_RUNG: r(CAP_NHAT_GPS_RUNG_, N),
+    KIEM_TRA_DU_HO_SO_HD: r(KIEM_TRA_DU_HO_SO_HD_, X), // 37: còn thiếu gì trước khi chuyển Đang thực hiện
     TRA_CUU_TEN_CHU_TK: r(TRA_CUU_TEN_CHU_TK_, N),
     TAO_DRAFT_MOI: r(TAO_DRAFT_MOI_, N),
     LUU_DRAFT: r(LUU_DRAFT_, N),
@@ -475,6 +510,9 @@ function _bangQuyenApi_() {
     CHIA_SE_DU_LIEU_CHO_EMAIL: r(CHIA_SE_DU_LIEU_CHO_EMAIL_, Q),
     THU_HOI_QUYEN_TRUY_CAP: r(THU_HOI_QUYEN_TRUY_CAP_, Q),
     LAY_NHAT_KY_THEO_NGAY: r(LAY_NHAT_KY_THEO_NGAY_, Q),
+    LAY_DS_LUU_TRU_XOA: r(LAY_DS_LUU_TRU_XOA_, Q),               // B2: các đợt xóa đã lưu trữ
+    LAY_NHAT_KY_CHI_TIET: r(LAY_NHAT_KY_CHI_TIET_, Q),           // B2: lịch sử cũ -> mới theo ID_HD
+    KHOI_PHUC_DU_LIEU_DA_XOA: r(KHOI_PHUC_DU_LIEU_DA_XOA_, Q),   // B2: khôi phục 1 đợt xóa
     LAY_CAI_DAT_CHATBOT: r(LAY_CAI_DAT_CHATBOT_, Q),
     LUU_CAI_DAT_CHATBOT: r(LUU_CAI_DAT_CHATBOT_, Q),
     LAY_CAI_DAT_TRA_CUU_NH: r(LAY_CAI_DAT_TRA_CUU_NH_, Q),
@@ -507,10 +545,19 @@ function _bangQuyenApi_() {
     KIEM_TRA_TRANG_THAI_KHOA_TEXT: r(KIEM_TRA_TRANG_THAI_KHOA_TEXT_, Q),
     LAY_VUNG_HIEN_TAI: r(LAY_VUNG_HIEN_TAI_, Q),
     DAT_VUNG_HE_THONG: r(DAT_VUNG_HE_THONG_, Q),
+    LAY_VUNG_XUAT_EXCEL: r(LAY_VUNG_XUAT_EXCEL_, Q),
+    DAT_VUNG_XUAT_EXCEL: r(DAT_VUNG_XUAT_EXCEL_, Q),
+    LAY_MA_VUNG_XUAT_BAO_CAO: r(LAY_MA_VUNG_XUAT_BAO_CAO_, X),
     XAY_DUNG_LAI_TOAN_BO_DRAFT: r(XAY_DUNG_LAI_TOAN_BO_DRAFT_, Q),
     XAY_DUNG_LAI_DRAFT_HOSORUNG: r(XAY_DUNG_LAI_DRAFT_HOSORUNG_, Q),
     CHAN_DOAN_MO_COI_TOAN_HE_THONG: r(CHAN_DOAN_MO_COI_TOAN_HE_THONG_, Q),
     CHAY_TOAN_BO_BAO_TRI: r(CHAY_TOAN_BO_BAO_TRI_, Q),
+    TIM_DONG_NGHI_TRUNG: r(TIM_DONG_NGHI_TRUNG_, Q),
+    XOA_DONG_NGHI_TRUNG: r(XOA_DONG_NGHI_TRUNG_, Q),
+    XOA_DONG_MO_COI: r(XOA_DONG_MO_COI_, Q),
+    LAM_SACH_O_SO_LA_NGAY: r(LAM_SACH_O_SO_LA_NGAY_, Q),
+    XEM_TRUOC_DIEN_SL_TU_LO_RUNG: r(XEM_TRUOC_DIEN_SL_TU_LO_RUNG_, Q),
+    AP_DUNG_DIEN_SL_TU_LO_RUNG: r(AP_DUNG_DIEN_SL_TU_LO_RUNG_, Q),
 
     // --- Người dùng & Cổng đăng nhập ---
     LAY_DANH_SACH_NGUOI_DUNG: r(LAY_DANH_SACH_NGUOI_DUNG_, Q),

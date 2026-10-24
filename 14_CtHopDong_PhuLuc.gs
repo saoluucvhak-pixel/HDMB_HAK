@@ -4,8 +4,8 @@
  *  BẢNG CON MỚI CỦA HD_NCC:
  *   - ct_hopdong      : "Chi tiết hợp đồng" — TỰ ĐỘNG tổng hợp lại từ toàn bộ
  *                        HD_RUNG của hợp đồng mỗi khi có Thêm/Sửa/Xóa lô rừng
- *                        (xem hook CAP_NHAT_CT_HOPDONG_ gọi từ 06_CreateUpdate.gs).
- *                        KHÔNG nhập tay — chỉ đọc để hiển thị.
+ *                        (dongBoTongHopRungVaoHdNcc_ — cùng lúc ghi cột Z/T/AA
+ *                        của HD_NCC). KHÔNG nhập tay — chỉ đọc để hiển thị.
  *   - PhuLucHopDong   : các phụ lục hợp đồng (mỗi lần ký/bổ sung đơn giá-khối
  *                        lượng-thành tiền), có đối chiếu tham khảo với Phiếu cân
  *                        (PhieuCan_DN — sheet NGOÀI) theo tên chủ rừng.
@@ -61,64 +61,188 @@ function timDongCtHopDong_(sh, idHD) {
 }
 
 /**
- * TÍNH LẠI + GHI ĐÈ dòng ct_hopdong cho 1 hợp đồng, dựa trên TOÀN BỘ HD_RUNG
- * hiện có của hợp đồng đó. Gọi hàm này mỗi khi Thêm/Sửa/Xóa 1 lô rừng.
+ * PHÉP TÍNH DUY NHẤT tổng hợp các lô rừng (dòng HD_RUNG) của 1 hợp đồng — dùng chung
+ * cho ct_hopdong, cột Z/T/AA của HD_NCC và chức năng bảo trì (28_BaoTri_DongBo.gs):
  *   - Diện tích ký HĐ   = TỔNG diện tích các lô rừng
  *   - Khối lượng dự kiến = TỔNG khối lượng dự kiến các lô rừng
  *   - Giá trị dự kiến    = TỔNG (khối lượng × đơn giá) của TỪNG lô rừng
- *   - Đơn giá            = BÌNH QUÂN đơn giá các lô rừng có đơn giá > 0
- *   - Địa chỉ rừng / Số giấy tờ = nối các giá trị KHÁC NHAU bằng dấu ","
- *   - Loại hồ sơ nguồn gốc      = nối các loại KHÁC NHAU (đã loại trùng) bằng dấu ","
- * Bọc try/catch để lỗi tổng hợp KHÔNG làm hỏng thao tác chính (lưu lô rừng vẫn
- * phải thành công dù việc tổng hợp ct_hopdong có trục trặc).
+ *   - Đơn giá            = BÌNH QUÂN đơn giá các lô rừng có đơn giá > 0 (làm tròn đồng)
+ *   - Địa chỉ rừng / Số giấy tờ / Loại hồ sơ nguồn gốc = các giá trị KHÁC NHAU
+ * Tổng diện tích/khối lượng làm tròn 3 chữ số lẻ để bỏ sai số cộng số thực (0,1 + 0,2).
  */
-function CAP_NHAT_CT_HOPDONG_(idHD) {
+function tinhTongHopLoRung_(rungRows) {
+  let soHD = '';
+  let tongDienTich = 0, tongKhoiLuong = 0, tongGiaTri = 0, tongDonGia = 0, soRungCoGia = 0;
+  const diaChiSet = [], soGiayToSet = [], hoSoSet = [];
+  const them = function (ds, v) { v = (v || '').toString().trim(); if (v && ds.indexOf(v) === -1) ds.push(v); };
+
+  rungRows.forEach(function (r) {
+    soHD = r[RUNG_COL.SO_HD] || soHD;
+    const dt = soTuO_(r[RUNG_COL.DIEN_TICH_M2]);
+    const kl = soTuO_(r[RUNG_COL.KHOI_LUONG_DK]);
+    const dg = soTuO_(r[RUNG_COL.DON_GIA]);
+    tongDienTich += dt; tongKhoiLuong += kl; tongGiaTri += kl * dg;
+    if (dg > 0) { tongDonGia += dg; soRungCoGia++; }
+    them(diaChiSet, r[RUNG_COL.DIA_CHI_RUNG]);
+    them(soGiayToSet, r[RUNG_COL.SO_GIAY_TO]);
+    them(hoSoSet, r[RUNG_COL.HO_SO_NGUON_GOC]);
+  });
+
+  const lamTron3 = function (x) { return Math.round(x * 1000) / 1000; };
+  return {
+    soHD: soHD, soLo: rungRows.length,
+    tongDienTich: lamTron3(tongDienTich), tongKhoiLuong: lamTron3(tongKhoiLuong), tongGiaTri: Math.round(tongGiaTri),
+    donGiaBQ: soRungCoGia ? Math.round(tongDonGia / soRungCoGia) : 0,
+    diaChiRung: diaChiSet.join(', '), soGiayTo: soGiayToSet.join(', '), hoSoNguonGoc: hoSoSet.join(', ')
+  };
+}
+
+/** Ghi đè dòng ct_hopdong của 1 hợp đồng từ kết quả tinhTongHopLoRung_(). */
+function ghiCtHopDong_(idHD, th) {
+  const row = [];
+  row[CT_HOPDONG_COL.ID_HD] = idHD;
+  row[CT_HOPDONG_COL.SO_HD] = th.soHD;
+  row[CT_HOPDONG_COL.DIEN_TICH_KY] = th.tongDienTich;
+  row[CT_HOPDONG_COL.DON_GIA] = th.donGiaBQ;
+  row[CT_HOPDONG_COL.KHOI_LUONG_DU_KIEN] = th.tongKhoiLuong;
+  row[CT_HOPDONG_COL.GIA_TRI_DU_KIEN] = th.tongGiaTri;
+  row[CT_HOPDONG_COL.LOAI_HO_SO_NGUON_GOC] = th.hoSoNguonGoc;
+  row[CT_HOPDONG_COL.SO_GIAY_TO] = th.soGiayTo;
+  row[CT_HOPDONG_COL.DIA_CHI_RUNG] = th.diaChiRung;
+  row[CT_HOPDONG_COL.SO_LO_RUNG] = th.soLo;
+  row[CT_HOPDONG_COL.CAP_NHAT_LUC] = new Date();
+  const sh = getOrCreateCtHopDongSheet_();
+  const soDong = timDongCtHopDong_(sh, idHD);
+  if (soDong === -1) sh.appendRow(row);
+  else sh.getRange(soDong, 1, 1, row.length).setValues([row]);
+}
+
+/**
+ * 3 cột số cấp hợp đồng của HD_NCC lấy từ tổng lô rừng. App Thanh toán (ĐNTT) đọc cột Z
+ * (SL dự kiến) khi hợp đồng không có lô rừng — KHÔNG đổi vị trí các cột này.
+ * (Hàm, không phải hằng: NCC_COL nằm ở 00_Config.gs, có thể nạp SAU file này.)
+ */
+function cotHdNccTuLoRung_() {
+  return [
+    { cot: NCC_COL.SL_DU_KIEN, ten: 'SL dự kiến (Z)', truong: 'tongKhoiLuong' },
+    { cot: NCC_COL.DIEN_TICH_KY, ten: 'Diện tích ký (T)', truong: 'tongDienTich' },
+    { cot: NCC_COL.DON_GIA, ten: 'Đơn giá (AA)', truong: 'donGiaBQ' }
+  ];
+}
+
+/**
+ * Các ô Z/T/AA của 1 dòng HD_NCC cần đổi theo tổng lô rừng `th`. Quy tắc:
+ *   - Hợp đồng không có lô rừng nào -> không đổi (không có gì để suy ra, giữ số đã nhập).
+ *   - Tổng lô rừng của ô đó = 0 -> không đổi (không xóa số đã có bằng số 0 do lô thiếu dữ liệu).
+ *   - "Đang thực hiện" (khối lượng/đơn giá đã chốt lúc ký) hoặc chiDienTrong=true (bảo trì):
+ *     chỉ điền ô đang TRỐNG/0, không ghi đè số > 0.
+ *   - Trạng thái khác (Chờ thực hiện...): ghi theo tổng lô rừng.
+ * Trả mảng { cot, ten, cu, moi }.
+ */
+function tinhThayDoiHdNccTuLoRung_(rowNcc, th, chiDienTrong) {
+  if (!th || !th.soLo) return [];
+  const dangThucHien = (rowNcc[NCC_COL.TINH_TRANG] || '').toString().trim().toLowerCase() === 'đang thực hiện';
+  const chiDien = chiDienTrong || dangThucHien;
+  const kq = [];
+  cotHdNccTuLoRung_().forEach(function (c) {
+    const cu = rowNcc[c.cot];
+    const soCu = Number(cu) || 0;
+    const moi = th[c.truong];
+    if (!(moi > 0)) return;
+    if (chiDien && soCu > 0) return;
+    if (typeof cu === 'number' && soCu === moi) return;
+    kq.push({ cot: c.cot, ten: c.ten, cu: cu === null || cu === undefined ? '' : cu, moi: moi });
+  });
+  return kq;
+}
+
+/** Ghi các thay đổi Z/T/AA vào dòng soDong của HD_NCC (ghi SỐ, định dạng số chuẩn) + nhật ký cũ -> mới. */
+function ghiThayDoiHdNcc_(sh, soDong, idHD, thayDoi, lyDo) {
+  if (!thayDoi.length) return;
+  // Định dạng số chuẩn cho mọi ô 1 lệnh; ghi giá trị theo từng khúc cột liền nhau (Z + AA = 1 lệnh) — trước đây 2 lệnh / ô
+  datDinhDangCacO_(sh, soDong, thayDoi.map(function (t) { return t.cot; }), MAU_SO_CHUAN_);
+  const theoCot = thayDoi.slice().sort(function (a, b) { return a.cot - b.cot; });
+  for (let i = 0; i < theoCot.length;) {
+    let j = i;
+    while (j + 1 < theoCot.length && theoCot[j + 1].cot === theoCot[j].cot + 1) j++;
+    sh.getRange(soDong, theoCot[i].cot + 1, 1, j - i + 1).setValues([theoCot.slice(i, j + 1).map(function (t) { return t.moi; })]);
+    i = j + 1;
+  }
+  ghiNhatKy_(lyDo, idHD, thayDoi.map(function (t) { return t.ten + ': ' + (t.cu === '' ? '(trống)' : t.cu) + ' → ' + t.moi; }).join('; '));
+}
+
+/**
+ * CHỈ ĐỌC — "Chi tiết hợp đồng" để hiển thị: tổng hợp lô rừng HIỆN TẠI (cùng phép tính
+ * tinhTongHopLoRung_ với ct_hopdong, không tính riêng ở trình duyệt) + số đang ghi trên
+ * HD_NCC (Z/T/AA — số app Thanh toán đọc). Trả null nếu không có hợp đồng.
+ */
+function layChiTietHopDong_(idHD) {
+  idHD = (idHD || '').toString().trim();
+  if (!idHD) return null;
+  const r = readData_(SHEET_NAME.HD_NCC).find(function (x) { return (x[NCC_COL.ID_HD] || '').toString().trim() === idHD; });
+  if (!r) return null;
+  const th = tinhTongHopLoRung_(readData_(SHEET_NAME.HD_RUNG).filter(function (x) {
+    return (x[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD;
+  }));
+  const so = function (v) { return typeof v === 'number' ? v : (v === '' || v === null || v === undefined ? '' : String(v)); };
+  return {
+    tongHop: th,
+    hdNcc: { slDuKien: so(r[NCC_COL.SL_DU_KIEN]), dienTichKy: so(r[NCC_COL.DIEN_TICH_KY]), donGia: so(r[NCC_COL.DON_GIA]) },
+    tinhTrang: (r[NCC_COL.TINH_TRANG] || '').toString()
+  };
+}
+
+/**
+ * ĐỒNG BỘ SỐ LIỆU LÔ RỪNG CỦA 1 HỢP ĐỒNG: tính 1 lần (tinhTongHopLoRung_) rồi ghi vào
+ * ct_hopdong VÀ cột Z/T/AA của HD_NCC (theo quy tắc ở tinhThayDoiHdNccTuLoRung_).
+ * Gọi ở MỌI chỗ thêm/sửa/xóa lô rừng. Không ném lỗi — lưu lô rừng vẫn phải thành công dù
+ * việc tổng hợp có trục trặc (ghi log để kiểm tra). Trả { thayDoi } (mảng rỗng nếu không đổi).
+ */
+/**
+ * GOM tổng hợp lô rừng trong 1 thao tác nhiều lô (Lưu chính thức): mỗi lần thêm / sửa / xóa lô chỉ ghi nhận hợp đồng,
+ * tổng hợp 1 lần khi xả (trước đây N lô đổi = N + 1 lần tổng hợp, mỗi lần ~5 lượt đọc + ghi ct_hopdong / HD_NCC).
+ */
+let _tongHopRungDangGom_ = null;
+function batDauGomTongHopRung_() {
+  if (_tongHopRungDangGom_) return false; // đã có nơi gom ở ngoài -> nơi đó xả
+  _tongHopRungDangGom_ = new Set();
+  return true;
+}
+function ketThucGomTongHopRung_(laNguoiGom) {
+  if (!laNguoiGom || !_tongHopRungDangGom_) return;
+  const g = _tongHopRungDangGom_;
+  _tongHopRungDangGom_ = null;
+  g.forEach(function (id) { dongBoTongHopRungVaoHdNcc_(id); });
+}
+
+function dongBoTongHopRungVaoHdNcc_(idHD) {
+  if (!idHD) return { thayDoi: [] };
+  idHD = idHD.toString().trim();
+  if (_tongHopRungDangGom_) { _tongHopRungDangGom_.add(idHD); return { thayDoi: [], daGom: true }; }
+  let th;
   try {
-    if (!idHD) return;
-    const rungRows = readData_(SHEET_NAME.HD_RUNG).filter(function (r) {
-      return (r[RUNG_COL.ID_KEY_HD] || '').toString().trim() === idHD.toString().trim();
-    });
-
-    let soHD = '';
-    let tongDienTich = 0, tongKhoiLuong = 0, tongGiaTri = 0, tongDonGia = 0, soRungCoGia = 0;
-    const diaChiSet = [], soGiayToSet = [], hoSoSet = [];
-
-    rungRows.forEach(function (r) {
-      soHD = r[RUNG_COL.SO_HD] || soHD;
-      const dt = Number(r[RUNG_COL.DIEN_TICH_M2]) || 0;
-      const kl = Number(r[RUNG_COL.KHOI_LUONG_DK]) || 0;
-      const dg = Number(r[RUNG_COL.DON_GIA]) || 0;
-      tongDienTich += dt; tongKhoiLuong += kl; tongGiaTri += kl * dg;
-      if (dg > 0) { tongDonGia += dg; soRungCoGia++; }
-
-      const dc = (r[RUNG_COL.DIA_CHI_RUNG] || '').toString().trim();
-      if (dc && diaChiSet.indexOf(dc) === -1) diaChiSet.push(dc);
-      const sgt = (r[RUNG_COL.SO_GIAY_TO] || '').toString().trim();
-      if (sgt && soGiayToSet.indexOf(sgt) === -1) soGiayToSet.push(sgt);
-      const hs = (r[RUNG_COL.HO_SO_NGUON_GOC] || '').toString().trim();
-      if (hs && hoSoSet.indexOf(hs) === -1) hoSoSet.push(hs);
-    });
-
-    const donGiaBQ = soRungCoGia ? Math.round(tongDonGia / soRungCoGia) : 0;
-
-    const row = [];
-    row[CT_HOPDONG_COL.ID_HD] = idHD;
-    row[CT_HOPDONG_COL.SO_HD] = soHD;
-    row[CT_HOPDONG_COL.DIEN_TICH_KY] = tongDienTich;
-    row[CT_HOPDONG_COL.DON_GIA] = donGiaBQ;
-    row[CT_HOPDONG_COL.KHOI_LUONG_DU_KIEN] = tongKhoiLuong;
-    row[CT_HOPDONG_COL.GIA_TRI_DU_KIEN] = tongGiaTri;
-    row[CT_HOPDONG_COL.LOAI_HO_SO_NGUON_GOC] = hoSoSet.join(', ');
-    row[CT_HOPDONG_COL.SO_GIAY_TO] = soGiayToSet.join(', ');
-    row[CT_HOPDONG_COL.DIA_CHI_RUNG] = diaChiSet.join(', ');
-    row[CT_HOPDONG_COL.SO_LO_RUNG] = rungRows.length;
-    row[CT_HOPDONG_COL.CAP_NHAT_LUC] = new Date();
-
-    const sh = getOrCreateCtHopDongSheet_();
-    const soDong = timDongCtHopDong_(sh, idHD);
-    if (soDong === -1) sh.appendRow(row);
-    else sh.getRange(soDong, 1, 1, row.length).setValues([row]);
-  } catch (e) { log_('ERROR', 'CAP_NHAT_CT_HOPDONG_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e); }
+    th = tinhTongHopLoRung_(docDongTheoKhoa_(SHEET_NAME.HD_RUNG, RUNG_COL.ID_KEY_HD, [idHD])); // chỉ đọc lô của HĐ này
+    ghiCtHopDong_(idHD, th);
+  } catch (e) {
+    log_('ERROR', 'dongBoTongHopRungVaoHdNcc_', 'Không tổng hợp được ct_hopdong cho ' + idHD + ' — số liệu tổng hợp có thể cũ', e);
+    if (!th) return { thayDoi: [] };
+  }
+  try {
+    const sh = getSheet_(SHEET_NAME.HD_NCC);
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return { thayDoi: [] };
+    const ids = sh.getRange(2, NCC_COL.ID_HD + 1, lastRow - 1, 1).getValues();
+    let soDong = -1;
+    for (let i = 0; i < ids.length; i++) { if ((ids[i][0] || '').toString().trim() === idHD) { soDong = i + 2; break; } }
+    if (soDong === -1) return { thayDoi: [] };
+    const rowNcc = sh.getRange(soDong, 1, 1, Math.max(sh.getLastColumn(), NCC_COL.TINH_TRANG + 1)).getValues()[0];
+    const thayDoi = tinhThayDoiHdNccTuLoRung_(rowNcc, th, false);
+    ghiThayDoiHdNcc_(sh, soDong, idHD, thayDoi, 'Đồng bộ số liệu hợp đồng từ lô rừng');
+    return { thayDoi: thayDoi };
+  } catch (e) {
+    log_('ERROR', 'dongBoTongHopRungVaoHdNcc_', 'Không ghi được SL dự kiến/Diện tích/Đơn giá vào HD_NCC cho ' + idHD, e);
+    return { thayDoi: [] };
+  }
 }
 
 // ============================================================
@@ -156,13 +280,23 @@ function LUU_PHU_LUC_(d) {
   const sh = getOrCreatePhuLucSheet_();
   const c = PHU_LUC_COL;
 
-  if (d.soDong) {
-    if (d.soDong < 2 || d.soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
-    sh.getRange(d.soDong, c.DON_GIA + 1).setValue(donGia);
-    sh.getRange(d.soDong, c.KHOI_LUONG + 1).setValue(khoiLuong);
-    sh.getRange(d.soDong, c.THANH_TIEN + 1).setValue(thanhTien);
-    sh.getRange(d.soDong, c.GHI_CHU + 1).setValue(d.ghiChu || '');
-    return { thanhCong: true, soDong: d.soDong, thanhTien: thanhTien };
+  if (d.soDong || d.idPhuLuc) {
+    // C-01 (rà soát 28/09): trước đây ghi thẳng vào d.soDong (số dòng lưu trong nháp, có thể đã dịch) ->
+    // sửa NHẦM phụ lục của hợp đồng khác. Giờ tìm lại theo ID_PHU_LUC (duy nhất) + ID_HD, dưới lock.
+    const lockSua = LockService.getScriptLock();
+    try { lockSua.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+    try {
+      const dong = _timDongBangCon_(sh, d.soDong, d.idHD, c.ID_HD, c.ID_PHU_LUC, d.idPhuLuc);
+      if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+      const cuPL = sh.getRange(dong, c.DON_GIA + 1, 1, 4).getValues()[0];
+      ghiNhatKyChiTiet_('Sửa phụ lục', SHEET_PHU_LUC, d.idHD, sh.getRange(dong, c.ID_PHU_LUC + 1).getValue(), [
+        { truong: 'donGia', cu: cuPL[0], moi: donGia }, { truong: 'khoiLuong', cu: cuPL[1], moi: khoiLuong },
+        { truong: 'thanhTien', cu: cuPL[2], moi: thanhTien }, { truong: 'ghiChu', cu: cuPL[3], moi: d.ghiChu || '' }]); // B2
+      sh.getRange(dong, c.DON_GIA + 1, 1, 4).setValues([[donGia, khoiLuong, thanhTien, giaTriAnToan_(d.ghiChu || '')]]); // M-18 // ĐƠN GIÁ..GHI CHÚ liền nhau
+      return { thanhCong: true, soDong: dong, thanhTien: thanhTien };
+    } finally {
+      lockSua.releaseLock();
+    }
   }
 
   const lock = LockService.getScriptLock();
@@ -187,7 +321,7 @@ function LUU_PHU_LUC_(d) {
     const row = [];
     row[c.ID_PHU_LUC] = idPhuLuc; row[c.ID_HD] = d.idHD; row[c.SO_HD] = d.soHD || '';
     row[c.LAN_PHU_LUC] = lanMax + 1; row[c.DON_GIA] = donGia; row[c.KHOI_LUONG] = khoiLuong;
-    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = d.ghiChu || ''; row[c.TIMESTAMP] = new Date();
+    row[c.THANH_TIEN] = thanhTien; row[c.GHI_CHU] = giaTriAnToan_(d.ghiChu || ''); row[c.TIMESTAMP] = new Date();
     sh.appendRow(row);
     return { thanhCong: true, soDong: sh.getLastRow(), idPhuLuc: idPhuLuc, thanhTien: thanhTien };
   } finally {
@@ -195,11 +329,21 @@ function LUU_PHU_LUC_(d) {
   }
 }
 
-/** Xóa 1 phụ lục theo số dòng thật (lấy từ layDanhSachPhuLuc_) */
-function XOA_PHU_LUC_(soDong) {
+/** Xóa 1 phụ lục — xác minh lại theo ID_HD (+ ID_PHU_LUC nếu có) dưới lock trước khi xóa (C-01). */
+function XOA_PHU_LUC_(soDong, idHD, idPhuLuc) {
   const sh = getOrCreatePhuLucSheet_();
-  if (soDong < 2 || soDong > sh.getLastRow()) return { thanhCong: false, loi: 'Số dòng không hợp lệ' };
-  sh.deleteRow(soDong);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { thanhCong: false, loi: 'Hệ thống đang bận, vui lòng thử lại sau vài giây.' }; }
+  try {
+    const dong = _timDongBangCon_(sh, soDong, idHD, PHU_LUC_COL.ID_HD, PHU_LUC_COL.ID_PHU_LUC, idPhuLuc);
+    if (dong === -1) return { thanhCong: false, loi: LOI_DONG_DA_DOI_ };
+    idPhuLuc = sh.getRange(dong, PHU_LUC_COL.ID_PHU_LUC + 1).getValue();
+    luuTruDongBiXoa_(taoMaDotXoa_(), 'Xóa phụ lục', sh, [sh.getRange(dong, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0]], idHD); // B2
+    sh.deleteRow(dong);
+  } finally {
+    lock.releaseLock();
+  }
+  ghiNhatKy_('Xóa phụ lục', idHD, 'Phụ lục ' + idPhuLuc);
   return { thanhCong: true };
 }
 
@@ -271,7 +415,9 @@ function layPhieuCanTheoChuRung_(tenChuRung) {
       const row = data[i];
       const kh = boDauTV(row[IDX.khachHang]);
       if (!kh) continue;
-      if (kh.indexOf(ten) === -1 && ten.indexOf(kh) === -1) continue;
+      // M-04 (rà soát 28/09): khớp NGUYÊN CỤM TÊN theo ranh giới từ ("Lê Văn A" không còn khớp "Lê Văn Anh"), bỏ chiều
+      // ngược (tên khách ngắn như "An" từng khớp mọi chủ rừng có chữ "an") -> không lấy nhầm phiếu cân của người khác.
+      if ((' ' + kh.replace(/\s+/g, ' ') + ' ').indexOf(' ' + ten.replace(/\s+/g, ' ') + ' ') === -1) continue;
       if (IDX.trangThai !== -1) {
         const tt = boDauTV(row[IDX.trangThai]);
         if (tt && tt !== 'ok') continue; // bỏ qua phiếu bị hủy/lỗi

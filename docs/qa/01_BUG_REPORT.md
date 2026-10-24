@@ -95,6 +95,7 @@ Tất cả đều có test hồi quy trong bộ test hiện tại (T-LOCK-001, T
 |---|---|---|---|
 | LOCK-004/006/008 | 🟡 | TOCTOU theo số dòng ở một số hàm sửa/xóa; lớp cache Draft không khóa | Rủi ro lồng lock — cần xác minh `LockService` có tái nhập trong cùng lượt chạy trên runtime thật |
 | BUG-11 | 🟡 | Nháp lưu JSON trong 1 ô: > 50.000 ký tự (hợp đồng rất nhiều lô + điểm GPS) sẽ lưu nháp thất bại | Chưa gặp trên dữ liệu thật; cần đo kích thước nháp lớn nhất |
-| BUG-12 | ⚪ | Tạo hợp đồng qua `LUU_HOP_DONG_DAY_DU` ghi Ngày ký kèm giờ 07:00 (`new Date('yyyy-mm-dd')` là nửa đêm UTC) | Hiển thị đúng; chỉ ảnh hưởng so sánh chính xác theo thời điểm |
+| BUG-12 | ✅ Đã sửa `381c037` | Tạo hợp đồng qua `LUU_HOP_DONG_DAY_DU` ghi Ngày ký kèm giờ 07:00 (`new Date('yyyy-mm-dd')` là nửa đêm UTC) | Lọc "Từ ngày" từng loại nhầm hợp đồng ký đúng ngày đó |
+| BUG-14 | ✅ Đã sửa (đợt 5) | Hợp đồng tạo trên app có HD_NCC cột Z (SL dự kiến) — có thể cả T, AA — = 0: màn hình không gửi số cấp hợp đồng, số chỉ có ở lô rừng → app Thanh toán không có khối lượng dự kiến | Nay đồng bộ từ lô rừng ở máy chủ + bảo trì điền dữ liệu cũ (xem 08_CHANGELOG) |
 | BUG-13 | ⚪ | Tên file xuất ở trang 10 dùng ngày UTC (từ 0–7 giờ sáng ra ngày hôm trước) | Chỉ là tên file |
 | DATA-001 | ⚪ | `HD_Picture` cũ lưu nhầm ID_RUNG vào cột ID_HD | Đã có lớp đối chiếu 2 chiều |
