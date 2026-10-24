@@ -1122,10 +1122,32 @@ function layCoAnhVaGpsTrucTiep_(chiCacHD) {
 
 function docToanBoDraftBaoCao_() {
   if (_draftDataCache) return _draftDataCache; // đã đọc rồi trong lượt chạy này -> dùng lại luôn
+  _draftDataCache = _docDraftBaoCaoTho_();
 
+  // ---- GHI ĐÈ coAnh/daDoGPSDu/toaDoTrungBinh bằng dữ liệu đọc THẲNG từ
+  // HD_GPS/HD_Picture (xem layCoAnhVaGpsTrucTiep_ ở trên) — đảm bảo báo cáo luôn
+  // khớp với dữ liệu THẬT, không phụ thuộc Draft có được đồng bộ đúng lúc hay
+  // không (vd dữ liệu GPS/ảnh được nhập thẳng vào sheet bằng tay, hoặc 1 hàm
+  // ghi nào đó lỡ quên gọi cập nhật Draft).
+  _ghiDeAnhGpsTrucTiep_(_draftDataCache);
+  return _draftDataCache;
+}
+
+/**
+ * Rà soát 24/10/2026: Draft báo cáo KHÔNG ghi đè cờ ảnh / GPS — cho màn hình không dùng các cờ đó (Tổng quan hợp đồng).
+ * Trước đây Tổng quan gọi docToanBoDraftBaoCao_() nên lần mở đầu đọc thêm HD_RUNG + HD_GPS (1.000 HĐ: 31.000 ô) chỉ để
+ * tính 3 cờ không hiển thị. Số liệu (KL, giá trị, trạng thái, ngày ký) giống hệt docToanBoDraftBaoCao_(). Không nhớ lại
+ * (mỗi lượt Tổng quan gọi 1 lần); đã có bản đầy đủ trong lượt chạy thì dùng luôn.
+ */
+function docDraftBaoCaoKhongAnhGps_() {
+  return _draftDataCache || _docDraftBaoCaoTho_();
+}
+
+/** Đọc Draft_BaoCaoHopDong thành đối tượng, bỏ dòng trùng ID_HD (giữ dòng cập nhật sau cùng). */
+function _docDraftBaoCaoTho_() {
   const sh = getOrCreateDraftBaoCaoSheet_();
   const lastRow = sh.getLastRow();
-  if (lastRow < 2) { _draftDataCache = []; return _draftDataCache; }
+  if (lastRow < 2) return [];
   const c = DRAFT_BAOCAO_COL;
   // H-05: nếu 1 hợp đồng lỡ có 2 dòng Draft (ghi đồng thời) -> chỉ giữ dòng cập nhật SAU CÙNG, tránh cộng đôi KPI
   const tatCa = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
@@ -1139,15 +1161,7 @@ function docToanBoDraftBaoCao_() {
   const giu = {};
   Object.keys(moiNhatTheoId).forEach(function (k) { giu[moiNhatTheoId[k]] = true; });
   const data = tatCa.filter(function (r, i) { return giu[i]; });
-  _draftDataCache = data.map(_dongDraftBaoCaoThanhDoiTuong_);
-
-  // ---- GHI ĐÈ coAnh/daDoGPSDu/toaDoTrungBinh bằng dữ liệu đọc THẲNG từ
-  // HD_GPS/HD_Picture (xem layCoAnhVaGpsTrucTiep_ ở trên) — đảm bảo báo cáo luôn
-  // khớp với dữ liệu THẬT, không phụ thuộc Draft có được đồng bộ đúng lúc hay
-  // không (vd dữ liệu GPS/ảnh được nhập thẳng vào sheet bằng tay, hoặc 1 hàm
-  // ghi nào đó lỡ quên gọi cập nhật Draft).
-  _ghiDeAnhGpsTrucTiep_(_draftDataCache);
-  return _draftDataCache;
+  return data.map(_dongDraftBaoCaoThanhDoiTuong_);
 }
 
 function _ghiDeAnhGpsTrucTiep_(ds, chiCacHD) {

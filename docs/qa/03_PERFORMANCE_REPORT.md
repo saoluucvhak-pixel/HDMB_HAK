@@ -6,6 +6,10 @@
 - Thay vào đó đo **số lượt gọi Sheets API** (mỗi `getValues`/`setValues` là 1 vòng mạng tới máy chủ Google — thường 50–300 ms, tăng theo kích thước vùng đọc) và **số ô được đọc**, bằng cách chạy chính mã `.gs` của dự án trong một bộ giả lập Apps Script. Đây là chỉ số quyết định thời gian chạy trên Apps Script; thời gian quy đổi bên dưới là **ước tính** theo giả định đó.
 - Giới hạn của Apps Script/Sheets liên quan: **6 phút/lượt chạy**, 100 KB/giá trị ScriptCache, 50.000 ký tự/ô, và giới hạn kích thước dữ liệu trả về qua `google.script.run` (lý do dự án đã phải phân trang một số danh sách).
 
+> **Cập nhật 11/10/2026:** số đo trước / sau của đợt nâng cấp hiệu năng (100 → 10.000 HĐ) ở `PERFORMANCE_BASELINE.md` và
+> `PERFORMANCE_COMPARISON.md`; giám sát thời gian thật sau triển khai: sheet `NhatKy_HieuNang` + `LAY_THONG_KE_HIEU_NANG`
+> (p50 / p95 theo chức năng). Các mục dưới đây là đợt trước.
+
 ## 2. Đã tối ưu (số liệu đo được)
 
 ### PERF-001 🔴 Đồng bộ thanh toán / làm mới Draft: N+1 → hàng loạt (`8cbf662`)

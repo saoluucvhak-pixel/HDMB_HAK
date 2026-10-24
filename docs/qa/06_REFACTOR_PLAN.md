@@ -54,3 +54,15 @@ function TEST_LOCK_TAI_NHAP() {
 ## Thứ tự đề xuất
 R7 → phần còn lại của R2 → R6 (nếu chuyển sang đồng bộ bằng `clasp`).
 Đã xong: R1, R3, R4, R5, phần chính của R2.
+
+## R8 — Lớp truy cập dữ liệu (11/10/2026) — ✅ phần cần thiết
+
+Yêu cầu nêu các lớp `DataAccess`, `DataIndexService`, `CacheManager`, `DraftSyncService`... Đánh giá: tạo đủ các file đó
+làm tăng số file phải chép tay sang Apps Script (rủi ro quên file — xem R6) mà lợi ích chính đạt được bằng vài hàm dùng chung
+trong file sẵn có:
+- `docCacCot_` (00_Config) — đọc đúng cột cần; `docDongTheoKhoa_` (đã có) — đọc theo khóa.
+- `_cacheDuLieuLon_`, `xoaCacheChiaManh_`, `docCacheChiaManh_`, `luuCacheChiaManh_` (00_Config) — 1 chỗ quyết định cache dữ liệu lớn.
+- `capNhatDraftHangLoatChiTiet_` + `_ghiDraftTheoId_` (01) — đồng bộ Draft trả kết quả từng HĐ, ghi theo ID.
+- `ghiHieuNangNeuCham_` (17) — giám sát.
+Không tạo thêm tầng trừu tượng. Nếu sau này chuyển sang `clasp` (đồng bộ tự động, không chép tay) thì có thể tách file theo
+các nhóm trên.

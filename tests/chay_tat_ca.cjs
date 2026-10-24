@@ -4,15 +4,23 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 const env = Object.assign({}, process.env, { TZ: 'Asia/Ho_Chi_Minh' });
 const buoc = [
+  ['Phản hồi cũ / nhập liệu / lọc 10.000 khách hàng', 'chong_phan_hoi_cu.cjs'],
   ['Cú pháp', 'kiem_tra_cu_phap.cjs'],
+  ['Phân quyền tĩnh: hàm ghi, trigger, chặn nhầm', 'test_phan_quyen_tinh.cjs'],
   ['Máy chủ (giả lập Apps Script)', 'test_may_chu.cjs'],
+  ['Máy chủ P0: đồng bộ Draft / thanh toán, chống tạo trùng', 'test_p0_dong_bo.cjs'],
+  ['Máy chủ P1: tối ưu đọc Sheet + cache', 'test_p1_hieu_suat.cjs'],
+  ['Máy chủ: lưu nháp đúng thứ tự (bản cũ về sau không ghi đè)', 'test_luu_nhap.cjs'],
   ['Giao diện: khóa nút khi đang gửi (A1)', 'ui_khoa_nut.cjs', true],
   ['Giao diện: hộp thoại + nhớ bộ lọc (A3/A4)', 'ui_hop_thoai_bo_loc.cjs', true],
   ['Giao diện: chế độ tối + hỗ trợ truy cập (A5)', 'ui_giao_dien.cjs', true],
   ['Giao diện mới: trang thật, menu chung, bản đồ', 'ui_trang_that.cjs', true],
   ['Giao diện mới đợt 2: Tổng quan, Tra cứu 2 cột, tiến độ 5 bước, so khớp OCR', 'ui_giao_dien_dot2.cjs', true],
   ['Giao diện: nhúng trong Portal — chuyển trang trong khung', 'ui_nhung_portal.cjs', true],
-  ['Giao diện: ô nhập số khi gõ bằng bộ gõ tiếng Việt / điện thoại', 'ui_dinh_dang_so.cjs', true]
+  ['Giao diện: ô nhập số khi gõ bằng bộ gõ tiếng Việt / điện thoại', 'ui_dinh_dang_so.cjs', true],
+  ['Giao diện: phản hồi tìm kiếm cũ không ghi đè kết quả mới', 'ui_phan_hoi_cu.cjs', true],
+  ['Giao diện: tự lưu nháp đúng thứ tự, chờ lưu xong trước Lưu chính thức', 'ui_tu_luu_nhap.cjs', true],
+  ['Giao diện: mạng chậm, phản hồi sai thứ tự, quay lại danh sách, bộ gõ', 'ui_mang_cham.cjs', true]
 ];
 let hong = 0;
 buoc.forEach(function (b) {
@@ -25,3 +33,4 @@ buoc.forEach(function (b) {
 });
 console.log('\n' + (hong ? '❌ ' + hong + ' nhóm kiểm thử thất bại' : '✅ Tất cả kiểm thử đạt'));
 process.exit(hong ? 1 : 0);
+

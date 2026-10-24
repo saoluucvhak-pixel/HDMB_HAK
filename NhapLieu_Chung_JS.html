@@ -85,13 +85,63 @@
 
   function toggleUyQuyenTK() { document.getElementById('khoTenUyQuyenTK').style.display = (val('tUyQuyenTT') === 'Có') ? 'flex' : 'none'; }
 
-  function debounceLuuNhap() { clearTimeout(timeoutLuuNhap); timeoutLuuNhap = setTimeout(function () { capNhatDuNhapTuFormHopDong_(); luuNhapNgay(); }, 700); }
+  function debounceLuuNhap() { clearTimeout(timeoutLuuNhap); timeoutLuuNhap = setTimeout(function () { timeoutLuuNhap = null; capNhatDuNhapTuFormHopDong_(); luuNhapNgay(); }, 700); }
+
+  // TỰ LƯU NHÁP THEO HÀNG ĐỢI (rà soát 24/10/2026). Trước đây mỗi thay đổi gọi LUU_DRAFT riêng, chạy song song trên máy chủ:
+  // lượt CŨ xong sau lượt mới -> ghi đè bản mới (mất lần nhập cuối); "Lưu chính thức" đọc nháp khi lần gõ cuối còn chờ 700 ms;
+  // quay lại danh sách rồi mở HĐ khác trong 700 ms -> lần gõ cuối của HĐ trước bị bỏ. Nay mỗi bản nháp chỉ 1 lượt LUU_DRAFT
+  // chạy cùng lúc; thay đổi đến trong lúc chờ được GỘP (giữ bản mới nhất) và gửi ngay khi lượt trước xong. Mỗi lần gửi kèm
+  // { tab, seq } để máy chủ bỏ qua bản cũ của cùng tab nếu lỡ về sau (LUU_DRAFT_). Biến của hàng đợi chỉ dùng trong file này.
+  var TAB_LUU_NHAP_ = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  var soLuotLuuNhap_ = 0;
+  var hangDoiLuuNhap_ = {}; // idDraft -> { dangGui, choGui (JSON chờ gửi | null), noiDungCuoi, loi, tamDung, cho: [cb] }
 
   function luuNhapNgay() {
     if (!idDraftHienTai) return;
-    hakRun_().withFailureHandler(function (err) { console.error('Lỗi lưu nháp: ', err); }).LUU_DRAFT(idDraftHienTai, JSON.stringify(duNhap));
+    var idDraft = idDraftHienTai;
+    var h = hangDoiLuuNhap_[idDraft] || (hangDoiLuuNhap_[idDraft] = { dangGui: false, choGui: null, noiDungCuoi: null, loi: '', tamDung: false, cho: [] });
+    delete duNhap._luuNhap;
+    var noiDung = JSON.stringify(duNhap);
     renderChiTietXemTruoc();
+    // Không đổi so với lần gửi gần nhất (đang gửi / chờ gửi / đã lưu được) -> không gọi lại máy chủ
+    if (noiDung === h.noiDungCuoi && (h.dangGui || h.choGui !== null || !h.loi)) return;
+    h.noiDungCuoi = noiDung;
+    duNhap._luuNhap = { tab: TAB_LUU_NHAP_, seq: ++soLuotLuuNhap_ };
+    h.choGui = JSON.stringify(duNhap);
+    guiLuuNhap_(idDraft);
   }
+
+  function guiLuuNhap_(idDraft) {
+    var h = hangDoiLuuNhap_[idDraft];
+    if (!h || h.dangGui || h.tamDung || h.choGui === null) return;
+    var json = h.choGui; h.choGui = null; h.dangGui = true;
+    var xong = function (loi) {
+      h.dangGui = false; h.loi = loi || '';
+      if (h.choGui !== null && !h.tamDung) { guiLuuNhap_(idDraft); return; }
+      if (h.choGui === null) { var ds = h.cho; h.cho = []; ds.forEach(function (f) { f(h.loi); }); }
+    };
+    hakRun_()
+      .withSuccessHandler(function (kq) { xong(kq && kq.thanhCong === false ? (kq.loi || 'Lưu nháp không thành công') : ''); })
+      .withFailureHandler(function (err) { console.error('Lỗi lưu nháp: ', err); xong((err && err.message) || String(err)); })
+      .LUU_DRAFT(idDraft, json);
+  }
+
+  /** Thay đổi còn chờ 700 ms -> gửi ngay (rời trang / mở HĐ khác / lưu chính thức không làm mất lần gõ cuối). */
+  function guiNgayNhapDangCho_() {
+    if (!timeoutLuuNhap) return;
+    clearTimeout(timeoutLuuNhap); timeoutLuuNhap = null;
+    capNhatDuNhapTuFormHopDong_(); luuNhapNgay();
+  }
+
+  /** Gọi cb(loi) khi mọi lượt lưu nháp của bản nháp idDraft đã xong ('' = đã lưu được bản mới nhất). */
+  function choLuuNhapXong_(idDraft, cb) {
+    var h = hangDoiLuuNhap_[idDraft];
+    if (!h || (!h.dangGui && (h.choGui === null || h.tamDung))) { cb(h ? h.loi : ''); return; }
+    h.cho.push(cb);
+  }
+
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') guiNgayNhapDangCho_(); });
+  window.addEventListener('pagehide', guiNgayNhapDangCho_);
 
   function goiYDiaChiTheoTen() {
     var ten = val('tenChuRung');
@@ -154,7 +204,7 @@
       ['Khối lượng dự kiến', formatSoNhap_(tongKL) + ' tấn'], ['Giá trị dự kiến', formatSoNhap_(tongGT) + ' đ'],
       ['Số lô rừng', dsConLai.length], ['Loại hồ sơ nguồn gốc', hoSoSet.join(', ') || '—'],
       ['Số giấy tờ', soGiayToSet.join(', ') || '—'], ['Địa chỉ rừng', diaChiSet.join(', ') || '—']
-    ].map(function (kv) { return '<div class="ct-item"><div class="lbl">' + kv[0] + '</div><div class="val">' + kv[1] + '</div></div>'; }).join('');
+    ].map(function (kv) { return '<div class="ct-item"><div class="lbl">' + escAT_(kv[0]) + '</div><div class="val">' + escAT_(kv[1]) + '</div></div>'; }).join('');
   }
 
   // ============ TAB BẬC 1: Lô rừng / Tài khoản / Phụ lục ============
@@ -175,10 +225,11 @@
   }
 
   // ============ DANH SÁCH / TÌM / PHÂN TRANG HỢP ĐỒNG ============
-  function debounceTimKiemHD() { clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
+  function debounceTimKiemHD() { ++luotTaiDSHD_; clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
 
   var luotTaiDSHD_ = 0; // phản hồi của lượt tìm CŨ về sau lượt mới (gõ nhanh / mạng chậm) không được ghi đè bảng
   function taiDanhSachHD(trang) {
+    clearTimeout(timeoutTimKiemHD);
     var luot = ++luotTaiDSHD_;
     hakRun_()
       .withFailureHandler(function (err) { if (luot !== luotTaiDSHD_) return; document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
@@ -206,15 +257,20 @@
       }).layDanhSachHopDong(trang || 1, 20, val('tuKhoaHD'), val('locTinhTrangHD'));
   }
 
-  function veTrangDanhSach() { hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
+  // Lượt mở hợp đồng: mạng chậm, mở A rồi quay lại / mở B -> phản hồi của A về sau không được nạp đè (form, nháp đang sửa).
+  var luotMoHD_ = 0;
+  function veTrangDanhSach() { ++luotMoHD_; guiNgayNhapDangCho_(); hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
 
   /** Bấm 1 dòng trong danh sách -> mở/tạo NHÁP cho hợp đồng đó (không đụng bảng gốc cho tới khi Lưu chính thức) */
   function moTrangXemHopDong(soDong, idHD) {
+    guiNgayNhapDangCho_();
+    var luot = ++luotMoHD_;
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang mở nháp...' }]);
     hakRun_()
-      .withFailureHandler(function (err) { thongBao_('❌ Lỗi mở nháp: ' + err.message); veTrangDanhSach(); })
+      .withFailureHandler(function (err) { if (luot !== luotMoHD_) return; thongBao_('❌ Lỗi mở nháp: ' + err.message); veTrangDanhSach(); })
       .withSuccessHandler(function (kq) {
+        if (luot !== luotMoHD_) return;
         if (!kq) { thongBao_('❌ Không tìm thấy hợp đồng.'); veTrangDanhSach(); return; }
         idDraftHienTai = kq.idDraft; duNhap = kq.du; tinhTrangGocDangSua = kq.tinhTrangGoc;
         soHDHienTai = duNhap.hopDong.soHD; tenChuRungHienTai = duNhap.hopDong.tenChuRung;
@@ -243,28 +299,56 @@
     }
     if (dangLuuChinhThuc_) return; // chặn bấm 2 lần (server cũng tự chặn — xem LUU_CHINH_THUC)
     dangLuuChinhThuc_ = true;
+    var idDraft = idDraftHienTai;
+    clearTimeout(timeoutLuuNhap); timeoutLuuNhap = null;
+    showMsg('msgLuuChinhThuc', '⌛ Đang lưu nháp lần cuối...', true);
+    // Máy chủ lưu chính thức TỪ BẢN NHÁP đã lưu -> gửi lần gõ cuối và chờ mọi lượt lưu nháp xong rồi mới gọi LUU_CHINH_THUC
+    luuNhapNgay();
+    choLuuNhapXong_(idDraft, function (loi) {
+      if (idDraft !== idDraftHienTai) { dangLuuChinhThuc_ = false; return; } // đã mở hợp đồng khác trong lúc chờ
+      if (loi) {
+        dangLuuChinhThuc_ = false;
+        showMsg('msgLuuChinhThuc', '❌ Chưa lưu được thay đổi mới nhất vào bản nháp (' + loi + ') — CHƯA lưu chính thức. Kiểm tra mạng rồi bấm "Lưu chính thức" lại.', false);
+        return;
+      }
+      luuChinhThucGuiMayChu_(idDraft);
+    });
+  }
+
+  function luuChinhThucGuiMayChu_(idDraft) {
+    var h = hangDoiLuuNhap_[idDraft];
+    if (h) h.tamDung = true; // gõ thêm trong lúc lưu chính thức: giữ lại, không ghi nháp song song với máy chủ đang đọc / ghi tiến độ
+    var tiepTucLuuNhap = function () { if (h) { h.tamDung = false; guiLuuNhap_(idDraft); } };
     showMsg('msgLuuChinhThuc', '⌛ Đang lưu chính thức vào hệ thống...', true);
     hakRun_()
       .withFailureHandler(function (err) {
         dangLuuChinhThuc_ = false;
+        tiepTucLuuNhap();
         // Máy chủ đã ghi tiến độ vào bản nháp (15_DraftHopDong.gs) -> lưu lại chỉ làm nốt phần còn thiếu, không tạo trùng
         showMsg('msgLuuChinhThuc', '❌ Lỗi: ' + err.message + ' — Phần đã lưu được giữ lại; bấm "Lưu chính thức" lần nữa để hoàn tất (không tạo hợp đồng trùng).', false);
       })
       .withSuccessHandler(function (kq) {
         dangLuuChinhThuc_ = false;
-        if (!kq.thanhCong) { showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }
+        if (!kq.thanhCong) { tiepTucLuuNhap(); showMsg('msgLuuChinhThuc', '❌ ' + kq.loi, false); return; }
+        // Bản nháp đã được máy chủ xóa: phần gõ thêm TRONG LÚC đang lưu không còn chỗ ghi -> báo rõ thay vì bỏ im lặng
+        var conGoDo = !!timeoutLuuNhap || !!(h && h.choGui !== null);
+        clearTimeout(timeoutLuuNhap); timeoutLuuNhap = null;
+        delete hangDoiLuuNhap_[idDraft];
         var thongBao = '✅ Đã lưu chính thức hợp đồng ' + kq.soHD + ' vào hệ thống.';
         if (kq.canhBao && kq.canhBao.length) thongBao += '\n\n⚠️ Cần lưu ý:\n• ' + kq.canhBao.join('\n• ');
         thongBao_(thongBao);
         if (kq.nhacDuyet) thongBao_('⚠️ ' + kq.nhacDuyet);
+        if (conGoDo) thongBao_('⚠️ Phần vừa gõ thêm trong lúc đang lưu chính thức CHƯA được ghi — mở lại hợp đồng ' + (kq.soHD || '') + ' để nhập lại.');
         veTrangDanhSach();
       })
-      .LUU_CHINH_THUC(idDraftHienTai);
+      .LUU_CHINH_THUC(idDraft);
   }
 
   async function huyNhapVaThoat() {
     if (!(await hakXacNhan_('Hủy toàn bộ thay đổi trong bản nháp này? (dữ liệu chính thức hiện có, nếu là hợp đồng cũ, sẽ KHÔNG bị ảnh hưởng)', { nguyHiem: true }))) return; // A3
-    hakRun_().withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).withSuccessHandler(function () { veTrangDanhSach(); }).HUY_DRAFT(idDraftHienTai);
+    clearTimeout(timeoutLuuNhap); timeoutLuuNhap = null; // hủy nháp -> không gửi lần gõ đang chờ
+    var idDraft = idDraftHienTai;
+    hakRun_().withFailureHandler(function (err) { thongBao_('❌ Lỗi: ' + err.message); }).withSuccessHandler(function () { delete hangDoiLuuNhap_[idDraft]; veTrangDanhSach(); }).HUY_DRAFT(idDraft);
   }
 
   // ============ TAB: LÔ RỪNG — thao tác trên duNhap.rung[], không đụng HD_RUNG cho tới khi Lưu chính thức ============
@@ -718,3 +802,4 @@
       .XOA_VINH_VIEN_HOP_DONG(duNhap.idHD, true);
   }
 </script>
+
