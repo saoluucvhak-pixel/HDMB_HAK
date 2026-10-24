@@ -14,7 +14,7 @@ Nguồn: main, commit 97917a5e143b9351ec5200c229c4fe41036dd2e6. Rà soát tập 
 
 - Trước và sau sửa: 170/170 ca máy chủ giả lập Apps Script đạt; 50 khối mã không lỗi cú pháp.
 - Kiểm thử hồi quy mới `node tests/chong_phan_hoi_cu.cjs` đạt: đảo thứ tự phản hồi, lỗi đến trễ, quay lại, đổi bộ lọc, xóa tìm kiếm, debounce, timer phân trang và lọc 10.000 khách hàng. Trường hợp mọi tên đều khớp chỉ đọc 30 bản ghi thay vì 10.000 (đếm thao tác, không phải phép đo thời gian trình duyệt).
-- Đã chạy bộ UI Playwright với Chromium có sẵn: nhóm khóa nút, hộp thoại/bộ lọc, giao diện tối/hỗ trợ truy cập đạt. Nhóm trang thật timeout tại `#dsLo .lo` của bản đồ. Môi trường chưa có dependency leaflet để phục vụ thư viện ngoại tuyến; cần chạy lại sau khi cài đủ dependency. Không coi toàn bộ UI là đạt.
+- Bộ UI Playwright với Chromium: 5/7 nhóm đạt (khóa nút, hộp thoại/bộ lọc, giao diện tối/hỗ trợ truy cập, nhúng Portal, nhập số/IME). Hai nhóm trang thật và giao diện đợt 2 đều timeout tại `#dsLo .lo` của bản đồ. Môi trường chưa có dependency leaflet để phục vụ thư viện ngoại tuyến; cần chạy lại sau khi cài đủ dependency để xác định nguyên nhân. Không coi toàn bộ UI là đạt.
 - Chưa đo độ trễ p50/p95, INP hay độ mượt trên bản Google Apps Script đang triển khai; chưa kiểm tra Google Sheets/Drive thật, mạng di động hoặc bộ gõ trên điện thoại thật. Chưa triển khai production.
 
 ## Đo tải giả lập 1.000 hợp đồng
