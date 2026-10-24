@@ -186,7 +186,8 @@ Số lời gọi của trình duyệt (`node tests/do_rpc.cjs`, trang thật):
 `thanhCong:false`, mất phản hồi, timer theo phiên, hủy, callback tạo nháp cũ); `test_luu_nhap.cjs` 15 mục; `test_khach_hang.cjs`
 9; `ui_khach_hang.cjs` 10; TQ-2..5 trong `test_may_chu.cjs`. Tất cả đã vào CI cùng nhập số / bộ gõ (`ui_dinh_dang_so.cjs`).
 Trên mã `main`: `ui_tu_luu_nhap` trượt 18/29 (một phần do đổi thiết kế Lưu chính thức 1 RPC, không phải mục nào cũng là lỗi),
-`test_luu_nhap` trượt 5/15, `test_khach_hang` K1 trượt (thiếu khách sau 5.000).
+`test_luu_nhap` trượt 6/15 (L6 nhiều tab, L8–L11 Lưu chính thức kèm bản mới, L12 JSON hỏng), `test_khach_hang` không chạy
+được (chưa có hàm mới; cách cũ `layDanhSachKhachHang(1, 5000)` thiếu 200 / 5.200 khách — mục K1).
 
 Hai nhóm UI bản đồ: đạt khi có `tests/node_modules/leaflet` (`cd tests && npm install`; CI tự cài). Thiếu thì nay báo rõ và dừng
 ngay thay vì chờ 30 s rồi timeout.
