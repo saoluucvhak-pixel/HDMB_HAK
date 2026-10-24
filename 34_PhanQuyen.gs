@@ -86,8 +86,17 @@ function _getNguoiDungSheet_() {
 function _docDanhSachNguoiDung_() {
   const cache = CacheService.getScriptCache();
   const raw = cache.get(AUTH_CFG.CACHE_KEY_NGUOI_DUNG);
-  if (raw) return JSON.parse(raw);
+  if (raw) {
+    try {
+      const cached = JSON.parse(raw);
+      if (Array.isArray(cached)) return cached;
+    } catch (e) {
+      // Corrupt cache must not prevent authorization checks.
+    }
+    cache.remove(AUTH_CFG.CACHE_KEY_NGUOI_DUNG);
+  }
   let list = [];
+  let docThanhCong = false;
   try {
     const sh = getSS_().getSheetByName(NGUOI_DUNG_SHEET);
     if (sh && sh.getLastRow() > 1) {
@@ -103,8 +112,12 @@ function _docDanhSachNguoiDung_() {
         })
         .filter(function (x) { return x.email; });
     }
+    docThanhCong = true;
   } catch (e) { log_('ERROR', '_docDanhSachNguoiDung_', 'Không đọc được ' + NGUOI_DUNG_SHEET, e); }
-  try { cache.put(AUTH_CFG.CACHE_KEY_NGUOI_DUNG, JSON.stringify(list), AUTH_CFG.CACHE_NGUOI_DUNG_GIAY); } catch (e) { /* danh sách quá lớn cho cache -> lần sau đọc lại */ }
+  // Do not cache an empty list caused by a transient Sheets failure.
+  if (docThanhCong) {
+    try { cache.put(AUTH_CFG.CACHE_KEY_NGUOI_DUNG, JSON.stringify(list), AUTH_CFG.CACHE_NGUOI_DUNG_GIAY); } catch (e) { /* cache size limit */ }
+  }
   return list;
 }
 
@@ -227,11 +240,20 @@ function _xacMinhSso_(token) {
   }
   if (!payload || typeof payload.exp !== 'number' || payload.exp < Date.now()) throw new Error('Link đăng nhập đã hết hạn - vui lòng đăng nhập lại.');
   const nonce = String(payload.n || '');
-  const cache = CacheService.getScriptCache();
-  if (!nonce || cache.get(AUTH_CFG.TIEN_TO_NONCE + nonce)) throw new Error('Link đăng nhập đã được dùng - vui lòng đăng nhập lại.');
-  cache.put(AUTH_CFG.TIEN_TO_NONCE + nonce, '1', AUTH_CFG.SSO_NONCE_TTL_GIAY);
   const email = _chuanHoaEmail_(payload.email);
   if (!MAU_EMAIL.test(email)) throw new Error('Mã đăng nhập không có email hợp lệ.');
+  if (!nonce || nonce.length > 128) throw new Error('Mã đăng nhập không hợp lệ.');
+  // Lock serializes the check-and-consume operation across concurrent executions.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Hệ thống đăng nhập đang bận - vui lòng thử lại.');
+  try {
+    const cache = CacheService.getScriptCache();
+    const key = AUTH_CFG.TIEN_TO_NONCE + nonce;
+    if (cache.get(key)) throw new Error('Link đăng nhập đã được dùng - vui lòng đăng nhập lại.');
+    cache.put(key, '1', AUTH_CFG.SSO_NONCE_TTL_GIAY);
+  } finally {
+    lock.releaseLock();
+  }
   return { email: email, yeuCau: MAU_MA_YEU_CAU.test(String(payload.yc || '')) ? payload.yc : '' };
 }
 
