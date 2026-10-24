@@ -2,6 +2,16 @@
 
 Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit. Đợt 11/10/2026 nằm ở nhánh `feature/hdmb-performance-optimization` (chưa gộp `main`); các đợt trước ở `main`.
 
+## 24/10/2026 — Đợt 3: bảo toàn nháp, tìm khách hàng, Tổng quan (nhánh `claude/test-code-bug-project-nywz0r`, từ `main` `d7c76f6`)
+
+Chi tiết D-1..D-7, số đo 1.000 / 10.000 HĐ: `BAO_CAO_RA_SOAT_20261024.md` mục "Đợt 3".
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `19573be` | 🐛🔴 | Tự lưu: chống kẹt khi hết phiên đăng nhập / mất phản hồi, tự thử lại, dòng trạng thái, timer theo phiên, nhiều tab (số thứ tự từng tab + nhắc), không ghi JSON hỏng; Lưu chính thức 1 RPC kèm bản mới nhất | NhapLieu_Chung_JS, 15 |
+| `c1904b7` | 🐛⚡ | Khách hàng: danh sách gọn đủ mọi khách (trước cắt ở 5.000) + tra chi tiết theo CCCD (Nhập liệu, trang 27); SĐT số → chữ có 0 đầu khi tự điền. Tổng quan nhớ theo dấu vân tay Draft. Test bản đồ báo rõ khi thiếu leaflet | 00, 01, 06, 34, 11, 27, tests/ |
+| `245d111` | 📈 | Công cụ đo: cột RPC, 10.000 HĐ nhanh (`NHAN_BAN`), `do_rpc.cjs` | tests/ |
+
 ## 24/10/2026 — Rà soát nhập liệu / tra cứu đợt 2 (nhánh `claude/test-code-bug-project-nywz0r`, từ `main` `97917a5`)
 
 Gồm 5 sửa của nhánh `codex/nhap-lieu-tra-cuu-20261024` (xem `BAO_CAO_RA_SOAT_20261024.md` phần đầu) + bộ kiểm thử của PR #2.

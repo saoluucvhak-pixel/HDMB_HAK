@@ -118,3 +118,92 @@ chữ của Chromium, không phải Gboard / Laban Key). Không kết luận "h�
   tiếp + Enter → hiện kết quả từ khóa sau; Tổng quan mở bình thường.
 - Quay lại: Manage deployments → chọn lại Version cũ (trình duyệt cũ / mới đều tương thích: máy chủ mới nhận nháp không có
   số thứ tự; máy chủ cũ bỏ qua trường `_luuNhap`).
+
+---
+
+# Đợt 3 — bảo toàn dữ liệu nháp + đo / giảm tải 1.000 / 10.000 HĐ (24/10/2026)
+
+Nhánh `claude/test-code-bug-project-nywz0r`, từ `main` `d7c76f6` (đã gồm PR #4 và đợt 2). Không merge, không triển khai.
+
+## 1. Bảo toàn dữ liệu nháp
+
+| ID | Lỗi / chỗ hở trên `main` | Sửa |
+|---|---|---|
+| D-1 | Hết phiên đăng nhập khi đang tự lưu: `hakRun_` hiện hộp đăng nhập nhưng **không gọi hàm lỗi** → hàng đợi kẹt "đang gửi" mãi, "Lưu chính thức" chờ mãi | Chờ tối đa 60 s; không có phản hồi coi là lỗi, hàng đợi chạy tiếp; phản hồi muộn bị bỏ |
+| D-2 | Lưu nháp lỗi (mạng / `thanhCong:false`) chỉ ghi console, không thử lại, người dùng không biết | Tự thử lại 3 lần (2 s, 5 s, 15 s) cùng nội dung; dòng trạng thái "Đang lưu / Đã lưu lúc … / Chưa lưu được (đang thử lại)"; "Không tìm thấy bản nháp" / lỗi quyền: không thử lại, báo ❌ |
+| D-3 | Nhiều tab: máy chủ chỉ so số thứ tự với tab lưu gần nhất → bản cũ của tab A về muộn sau khi tab B lưu vẫn ghi đè | Nhớ số thứ tự lớn nhất của từng tab (20 tab gần nhất); tab khác vừa sửa trong 10 phút → nhắc người dùng |
+| D-4 | `LUU_DRAFT_` nhận JSON hỏng → ghi nguyên lên bản nháp (bản nháp hỏng, Lưu chính thức lỗi mãi) | Không bao giờ ghi JSON hỏng; nháp cũ hỏng thì bản mới hợp lệ ghi đè được |
+| D-5 | Lưu chính thức = `LUU_DRAFT` rồi `LUU_CHINH_THUC` (2 lời gọi) | 1 lời gọi `LUU_CHINH_THUC(idDraft, bản mới nhất)`: máy chủ ghi bản đó vào nháp trước (cùng quy tắc chống bản cũ), lỗi thì không lưu chính thức. Vẫn chờ lượt LUU_DRAFT đang chạy |
+| D-6 | Timer tự lưu đọc form theo bản nháp HIỆN TẠI lúc chạy | Gắn với bản nháp lúc gõ; đã sang bản nháp khác thì bỏ |
+| D-7 | Lưu chính thức xong / hủy: ẩn form làm ô đang nhập phát `change` → gửi thêm LUU_DRAFT vào bản nháp đã xóa | Đóng phiên nháp khi kết thúc |
+
+Callback mở / tạo nháp cũ không ghi đè form (đợt 2, R-3) nay có thêm test cho "Tạo mới (chậm) rồi mở HĐ khác" (N13).
+
+## 2. Tìm khách hàng
+
+- `main`: Nhập liệu nạp `layDanhSachKhachHang(1, 5000)` lúc mở trang (9 trường / khách) và dựng sẵn 2 datalist × mọi khách;
+  **cắt ở 5.000 khách** → khách thứ 5.001 trở đi (theo tên) không được nhận diện. Trang 27 "Thêm HĐ cho khách đã chọn" với
+  khách ngoài 5.000 mở form **thông tin trống**.
+- Nay: danh sách GỌN của MỌI khách (`[cccd, tên, số HĐ, địa chỉ]`), gợi ý ≤ 20 dòng theo chữ đang gõ, chi tiết tự điền lấy
+  theo CCCD khi chọn (chi tiết về muộn sau khi đã sang HĐ khác thì bỏ; trang 27 bấm A rồi B chỉ dùng B).
+- SĐT lỡ bị Sheets đổi thành số (9 chữ số) trả lại dạng chữ có số 0 đầu khi tự điền. CCCD giữ nguyên như cũ (khóa nhóm).
+
+## 3. Tổng quan
+
+Nhớ 5 phút theo dấu vân tay Draft (số dòng + mốc `CAP_NHAT_LUC` lớn nhất + tổng mốc, đọc 1 cột). Mọi lần ghi Draft của hệ
+thống đặt lại `CAP_NHAT_LUC` → sửa / thêm / xóa / xây dựng lại Draft thấy ngay (test TQ-3..5). **Giới hạn:** sửa TAY sheet
+Draft (không qua hệ thống) thấy sau tối đa 5 phút; 2 lần ghi cùng 1 dòng trong cùng 1 mili-giây không phân biệt được (trên Apps
+Script thật mỗi lần ghi mất hàng chục mili-giây).
+
+## 4. Số đo (bộ giả lập; không phải thời gian thật)
+
+`SO_HD=1000 node tests/do_hieu_suat.cjs` và `SO_HD=10000 NHAN_BAN=10 node tests/do_hieu_suat.cjs` (10.000 HĐ: 1.000 qua hàm thật
+× 10 nhân bản dòng — dựng qua hàm thật mất hàng giờ trên bộ giả lập). "Trước" = `main` `d7c76f6`.
+
+| Thao tác | 1.000 trước | 1.000 sau | 10.000 trước | 10.000 sau |
+|---|---|---|---|---|
+| Mở Nhập liệu: nạp khách hàng — dữ liệu tải về | 144,5 KB (1.000 khách) | **38,0 KB** | 730,9 KB (**chỉ 5.000 khách**) | **397,4 KB (đủ 10.000)** |
+| Chọn 1 khách để tự điền | 0 RPC (đã nạp sẵn) | 1 RPC, 0 lượt đọc Sheet, 0,1 KB | 0 RPC | 1 RPC, 0 lượt đọc |
+| Tổng quan — lần đầu (bản nhớ trống) | 1 lượt / 31.000 ô | 2 / 32.000 | 1 / 310.000 | 2 / 320.000 |
+| Tổng quan — mở lại / đổi lọc | 1 / 31.000 | **1 / 1.000** | 1 / 310.000 | **1 / 10.000** |
+| Lưu chính thức gồm lần gõ cuối | **2 RPC**, 23 lượt / 12.303 ô, 9 lượt ghi | **1 RPC**, 21 / 12.299, 7 ghi | 2 RPC, 23 / 120.303, 9 ghi | 1 RPC, 21 / 120.299, 7 ghi |
+| Tự lưu 1 lần | 2 lượt / 2 ô, 3 lượt ghi | 2 / 4, **1 lượt ghi** | như 1.000 | như 1.000 |
+| Thao tác khác | — | không đổi | — | không đổi |
+
+Số lời gọi của trình duyệt (`node tests/do_rpc.cjs`, trang thật):
+
+| Tình huống | `main` | Sau |
+|---|---|---|
+| Mở trang Nhập liệu | 4 | 4 (khách hàng: danh sách gọn thay bản đầy đủ) |
+| Mở Tổng quan | 1 | 1 |
+| Mở HĐ, sửa 3 ô cách nhau 1 s, Lưu chính thức ngay | 4 | 4 |
+| Mạng chậm 1,5 s: sửa 3 ô liên tục (cách 0,8 s), Lưu chính thức ngay | 5 | **3** |
+
+## 5. Kiểm thử
+
+`node tests/chay_tat_ca.cjs`: **417 đạt / 0 trượt**. Mới / viết lại trong đợt này:
+`ui_tu_luu_nhap.cjs` 29 mục (N1–N14: mạng chậm, phản hồi đảo thứ tự, lưu ngay sau nhập, nhiều tab, thử lại sau lỗi,
+`thanhCong:false`, mất phản hồi, timer theo phiên, hủy, callback tạo nháp cũ); `test_luu_nhap.cjs` 15 mục; `test_khach_hang.cjs`
+9; `ui_khach_hang.cjs` 10; TQ-2..5 trong `test_may_chu.cjs`. Tất cả đã vào CI cùng nhập số / bộ gõ (`ui_dinh_dang_so.cjs`).
+Trên mã `main`: `ui_tu_luu_nhap` trượt 18/29 (một phần do đổi thiết kế Lưu chính thức 1 RPC, không phải mục nào cũng là lỗi),
+`test_luu_nhap` trượt 5/15, `test_khach_hang` K1 trượt (thiếu khách sau 5.000).
+
+Hai nhóm UI bản đồ: đạt khi có `tests/node_modules/leaflet` (`cd tests && npm install`; CI tự cài). Thiếu thì nay báo rõ và dừng
+ngay thay vì chờ 30 s rồi timeout.
+
+**Chưa chạy:** thời gian thật p50 / p95 trên Apps Script; Google Sheets / Drive thật; CacheService thật với ~400 KB khách hàng
+và bản nhớ Tổng quan 10.000 HĐ (nếu vượt giới hạn cache thì tự đọc thẳng như cũ — chậm hơn nhưng đúng); bộ gõ trên điện thoại thật.
+
+## 6. Còn lại
+
+- Bản đồ GPS 10.000 HĐ trả về **~4 MB** — lớn nhất hệ thống, chưa xử lý (ngoài phạm vi đợt này).
+- Lưu chính thức 10.000 HĐ vẫn đọc ~120.000 ô (chủ yếu cột khóa HD_GPS / HD_RUNG khi cập nhật Draft); các lượt đọc lặp là kiểm tra
+  lại dưới khóa, chưa gộp.
+- 2 người cùng sửa 1 bản nháp: vẫn là bản lưu sau ghi đè bản trước (nay có nhắc).
+
+## 7. Đưa lên Apps Script và quay lại
+
+8 file so với `main` `d7c76f6`: `.gs` — `00_Config`, `01_ContractManager`, `06_CreateUpdate`, `15_DraftHopDong`, `34_PhanQuyen`;
+`.html` — `11_Page_NhapLieu`, `27_Page_HopDongMeCon`, `NhapLieu_Chung_JS`. Chép đủ 8 (34 có 2 chức năng mới mà 11 / 27 gọi).
+Không file mới, không đổi sheet. Quay lại: chọn Version cũ — máy chủ mới vẫn nhận lời gọi của trình duyệt cũ (Lưu chính thức
+không kèm bản nháp, nạp `layDanhSachKhachHang`); trình duyệt mới cần máy chủ mới (gọi `LAY_DS_KHACH_HANG_GON`).
