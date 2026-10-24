@@ -227,6 +227,8 @@ function oTC_(nhan, giaTri) {
 
 var tcKetQuaCuoi_ = null;
 var tcDangTim_ = false;
+var tcLuotTim_ = 0;
+var tcLuotChiTiet_ = 0;
 
 /** Ngày (Date) -> 'yyyy-MM-dd' theo giờ máy người dùng (ô <input type=date>). */
 function isoTC_(d) {
@@ -241,7 +243,7 @@ function chonNhanhNgay_(kieu) {
   document.getElementById('tcTuNgay').value = tu;
   document.getElementById('tcDenNgay').value = den;
   if (kieu !== 'xoa' || document.getElementById('tcTuKhoa').value.trim().length >= 2) traCuu_();
-  else { document.getElementById('tcVungKetQua').innerHTML = ''; document.getElementById('tcVungChiTiet').innerHTML = ''; }
+  else { ++tcLuotTim_; ++tcLuotChiTiet_; tcDangTim_ = false; tcDangXem_ = ''; document.getElementById('tcNutTim').disabled = false; document.getElementById('tcVungKetQua').innerHTML = ''; document.getElementById('tcVungChiTiet').innerHTML = ''; }
 }
 (function () {
   var nut = document.querySelectorAll('.tc-nhanh button[data-kn]');
@@ -264,6 +266,10 @@ function tcDanhDauChon_(idHD) {
 }
 
 function traCuu_() {
+  var luot = ++tcLuotTim_;
+  ++tcLuotChiTiet_; tcDangXem_ = '';
+  tcDangTim_ = false;
+  document.getElementById('tcNutTim').disabled = false;
   var tk = document.getElementById('tcTuKhoa').value.trim();
   var tuNgay = document.getElementById('tcTuNgay').value;
   var denNgay = document.getElementById('tcDenNgay').value;
@@ -273,13 +279,13 @@ function traCuu_() {
   if (!tuNgay && !denNgay && tk.length < 2) { vung.innerHTML = '<div class="msg err">Nhập ít nhất 2 ký tự để tìm, hoặc chọn khoảng ngày ký.</div>'; return; }
   if (tk.length === 1) { vung.innerHTML = '<div class="msg err">Từ khóa cần ít nhất 2 ký tự (hoặc để trống để xem mọi hợp đồng trong khoảng ngày).</div>'; return; }
   if (tuNgay && denNgay && tuNgay > denNgay) { vung.innerHTML = '<div class="msg err">"Từ ngày" phải trước hoặc bằng "Đến ngày".</div>'; return; }
-  if (tcDangTim_) return;
   tcDangTim_ = true;
   document.getElementById('tcNutTim').disabled = true;
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tìm…</div>';
   try { google.script.history.replace(null, { page: 'tracuu', q: tk, tu: tuNgay, den: denNgay }); } catch (e) { /* ngoài Apps Script */ }
   hakRun_()
     .withSuccessHandler(function (kq) {
+      if (luot !== tcLuotTim_) return;
       tcDangTim_ = false;
       document.getElementById('tcNutTim').disabled = false;
       tcKetQuaCuoi_ = kq;
@@ -288,6 +294,7 @@ function traCuu_() {
       veKetQua_(kq);
     })
     .withFailureHandler(function (err) {
+      if (luot !== tcLuotTim_) return;
       tcDangTim_ = false;
       document.getElementById('tcNutTim').disabled = false;
       vung.innerHTML = '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
@@ -328,6 +335,7 @@ function veKetQua_(kq) {
 var tcNhoChiTiet_ = {};
 var tcDangXem_ = '';
 function xemChiTiet_(idHD) {
+  var luot = ++tcLuotChiTiet_;
   var vungKQ = document.getElementById('tcVungKetQua');
   var vung = document.getElementById('tcVungChiTiet');
   if (tcManRong_()) { tcHaiCot_(true); tcDanhDauChon_(idHD); } else vungKQ.style.display = 'none';
@@ -336,11 +344,13 @@ function xemChiTiet_(idHD) {
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
   hakRun_()
     .withSuccessHandler(function (ct) {
+      if (luot !== tcLuotChiTiet_) return;
       if (ct && !ct.khongTimThay) tcNhoChiTiet_[idHD] = ct;
       if (tcDangXem_ !== idHD) return; // đã bấm sang hợp đồng khác trong lúc chờ
       veChiTiet_(ct);
     })
     .withFailureHandler(function (err) {
+      if (luot !== tcLuotChiTiet_) return;
       vung.innerHTML = nutQuayLai_() + '<div class="msg err">❌ ' + escTC_(err && err.message ? err.message : err) + '</div>';
       ganNutQuayLai_();
     })
@@ -353,6 +363,7 @@ function nutQuayLai_() {
 function ganNutQuayLai_() {
   var b = document.getElementById('tcQuayLai');
   if (b) b.addEventListener('click', function () {
+    ++tcLuotChiTiet_; tcDangXem_ = '';
     document.getElementById('tcVungChiTiet').innerHTML = '';
     document.getElementById('tcVungKetQua').style.display = '';
     tcHaiCot_(false);
@@ -482,3 +493,4 @@ function veChiTiet_(ct) {
 
 </body>
 </html>
+

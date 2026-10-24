@@ -434,7 +434,7 @@
   <div class="modal-box-kh">
     <h3 style="margin-top:0">➕ Tạo hợp đồng mới — cho khách hàng nào?</h3>
     <p class="hint" style="margin-top:-6px">Tìm nhanh khách hàng đã ký hợp đồng trước đó, hoặc bấm "Khách hàng mới" nếu đây là người lần đầu ký.</p>
-    <input id="oTimKhachHangModal" placeholder="Gõ tên chủ rừng hoặc số CCCD để tìm..." style="width:100%;padding:9px 10px;border:1px solid var(--vien, #ccc);border-radius:6px;font-size:13px" oninput="locKhachHangTrongModal()">
+    <input id="oTimKhachHangModal" placeholder="Gõ tên chủ rừng hoặc số CCCD để tìm..." style="width:100%;padding:9px 10px;border:1px solid var(--vien, #ccc);border-radius:6px;font-size:13px" oninput="henLocKhachHangTrongModal_()">
     <div class="ds-kh-ket-qua" id="dsKhachHangTrongModal"></div>
     <div class="row" style="margin-top:14px;display:flex;gap:10px">
       <button class="btn btn-green" onclick="chonKhachHangMoiTrongModal()">➕ Khách hàng mới (chưa từng ký hợp đồng)</button>
@@ -568,14 +568,22 @@
     document.getElementById('modalChonKhachHang').classList.add('mo');
   }
   function dongModalChonKhachHang() {
+    clearTimeout(henLocKhachHang_);
     document.getElementById('modalChonKhachHang').classList.remove('mo');
+  }
+  var henLocKhachHang_ = null;
+  function henLocKhachHangTrongModal_() {
+    clearTimeout(henLocKhachHang_);
+    henLocKhachHang_ = setTimeout(locKhachHangTrongModal, 150);
   }
   function locKhachHangTrongModal() {
     var tk = document.getElementById('oTimKhachHangModal').value.trim().toLowerCase();
     if (!tk) { renderKetQuaKhachHangModal_(danhSachKhachHangArr_.slice(0, 30)); return; }
-    var ketQua = danhSachKhachHangArr_.filter(function (kh) {
-      return (kh.tenChuRung || '').toLowerCase().indexOf(tk) !== -1 || (kh.cccd || '').toLowerCase().indexOf(tk) !== -1;
-    });
+    var ketQua = [];
+    for (var i = 0; i < danhSachKhachHangArr_.length && ketQua.length < 30; i++) {
+      var kh = danhSachKhachHangArr_[i];
+      if (String(kh.tenChuRung || '').toLowerCase().indexOf(tk) !== -1 || String(kh.cccd || '').toLowerCase().indexOf(tk) !== -1) ketQua.push(kh);
+    }
     renderKetQuaKhachHangModal_(ketQua.slice(0, 30));
   }
   function renderKetQuaKhachHangModal_(list) {
@@ -667,3 +675,4 @@
   </div>
 </body>
 </html>
+

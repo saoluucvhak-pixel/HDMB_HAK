@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 const env = Object.assign({}, process.env, { TZ: 'Asia/Ho_Chi_Minh' });
 const buoc = [
+  ['Phản hồi cũ / nhập liệu / lọc 10.000 khách hàng', 'chong_phan_hoi_cu.cjs'],
   ['Cú pháp', 'kiem_tra_cu_phap.cjs'],
   ['Máy chủ (giả lập Apps Script)', 'test_may_chu.cjs'],
   ['Giao diện: khóa nút khi đang gửi (A1)', 'ui_khoa_nut.cjs', true],
@@ -25,3 +26,4 @@ buoc.forEach(function (b) {
 });
 console.log('\n' + (hong ? '❌ ' + hong + ' nhóm kiểm thử thất bại' : '✅ Tất cả kiểm thử đạt'));
 process.exit(hong ? 1 : 0);
+
