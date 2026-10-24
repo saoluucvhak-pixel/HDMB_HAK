@@ -544,6 +544,7 @@
 
   /** "➕ Tạo hợp đồng mới" -> tạo 1 bản NHÁP trắng ngay (TAO_DRAFT_MOI) */
   function moTrangTaoHopDong(khachHangDaChon) {
+    guiNgayNhapDangCho_();
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang tạo nháp...' }]);
     hakRun_()

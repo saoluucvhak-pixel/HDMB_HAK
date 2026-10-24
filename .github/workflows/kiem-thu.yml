@@ -25,6 +25,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Cú pháp .gs / .html
         run: node kiem_tra_cu_phap.cjs
+      - name: Phản hồi cũ / nhập liệu / lọc 10.000 khách hàng
+        run: node chong_phan_hoi_cu.cjs
       - name: Phân quyền tĩnh (hàm ghi, trigger, chặn nhầm)
         run: node test_phan_quyen_tinh.cjs
       - name: Máy chủ (giả lập Apps Script)
@@ -33,6 +35,8 @@ jobs:
         run: node test_p0_dong_bo.cjs
       - name: Máy chủ P1 (tối ưu đọc Sheet + cache)
         run: node test_p1_hieu_suat.cjs
+      - name: Máy chủ (lưu nháp đúng thứ tự)
+        run: node test_luu_nhap.cjs
       - name: Giao diện (Playwright)
         run: |
           node ui_khoa_nut.cjs
@@ -43,3 +47,4 @@ jobs:
           node ui_nhung_portal.cjs
           node ui_dinh_dang_so.cjs
           node ui_phan_hoi_cu.cjs
+          node ui_tu_luu_nhap.cjs

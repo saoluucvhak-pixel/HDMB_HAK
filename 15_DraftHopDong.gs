@@ -182,13 +182,20 @@ function layHopDongTheoIdHD_ChoDraft_(idHD) {
 /** Ghi đè toàn bộ JSON của 1 bản nháp — gọi sau MỌI thay đổi ở màn hình (đổi field, thêm/sửa/xóa rừng-TK-phụ lục-GPS nháp) */
 function LUU_DRAFT_(idDraft, jsonDuLieu) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
+  // Rà soát 24/10/2026: đọc - so - ghi dưới 1 khóa ngắn. Không lấy được khóa trong 3 giây (máy chủ đang ghi việc khác) thì
+  // vẫn lưu như trước — tự lưu nháp không được thất bại chỉ vì bận.
+  const lock = LockService.getScriptLock();
+  let coKhoa = false;
+  try { coKhoa = lock.tryLock(3000); } catch (e) { /* bỏ qua */ }
   try {
     const sh = getOrCreateDraftHopDongSheet_();
     const soDong = timDongDraft_(sh, idDraft);
     if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp ' + idDraft + ' (có thể đã bị Lưu chính thức hoặc hủy ở tab khác).' };
     const oJson = sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1);
     try {
-      jsonDuLieu = JSON.stringify(_giuTienDoLuuChinhThuc_(JSON.parse(oJson.getValue() || 'null'), JSON.parse(jsonDuLieu)));
+      const cu = JSON.parse(oJson.getValue() || 'null'), moi = JSON.parse(jsonDuLieu);
+      if (_banNhapCuHon_(cu, moi)) return { thanhCong: true, boQua: true };
+      jsonDuLieu = JSON.stringify(_giuTienDoLuuChinhThuc_(cu, moi));
     } catch (e) { /* JSON lạ -> ghi nguyên như trước */ }
     oJson.setValue(jsonDuLieu);
     sh.getRange(soDong, DRAFT_HD_COL.NGUOI_SUA + 1).setValue(_emailNguoiThucHien_() || '');
@@ -196,7 +203,19 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
     return { thanhCong: true };
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi lưu nháp: ' + e.message };
+  } finally {
+    if (coKhoa) lock.releaseLock();
   }
+}
+
+/**
+ * Trình duyệt đánh số mỗi lần tự lưu nháp: _luuNhap = { tab, seq } (NhapLieu_Chung_JS.html). Bản đến SAU nhưng có số
+ * NHỎ HƠN bản đã lưu của CÙNG tab (lượt cũ bị chậm, hoặc trình duyệt tưởng lỗi rồi gửi bản mới) -> bỏ qua, không ghi đè.
+ * Tab khác / trình duyệt cũ không gửi số -> ghi như trước (bản đến sau thắng).
+ */
+function _banNhapCuHon_(cu, moi) {
+  const a = cu && cu._luuNhap, b = moi && moi._luuNhap;
+  return !!(a && b && a.tab && a.tab === b.tab && Number(b.seq) <= Number(a.seq));
 }
 
 /**
