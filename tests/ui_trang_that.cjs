@@ -103,6 +103,12 @@ const TRANG = [
     if (trang === 'huongdan') {
       const hd = await p.evaluate(() => ({ phan: document.querySelectorAll('.hd-phan').length, buoc: [...document.querySelectorAll('.hd-buoc .hd-so')].map(x => x.textContent).join(','), tt: document.querySelectorAll('.warn.hd-tt').length, lu: document.querySelectorAll('.warn.hd-lu').length }));
       kq.push(['Hướng dẫn: mỗi phần 1 thẻ, 5 thẻ bước đánh số, hộp lưu ý tô theo loại', hd.phan >= 8 && hd.buoc === '1,2,3,4,5' && hd.tt >= 2 && hd.lu >= 1 ? true : JSON.stringify(hd)]);
+      // Mục 10: sơ đồ luồng dữ liệu có tín hiệu chạy dọc 16 mũi tên; nút Dừng tắt hẳn, bấm lại chạy tiếp
+      const lay = () => p.evaluate(() => { const t = [...document.querySelectorAll('#ldlKhung .ldl-tin')]; const cs = t.length ? getComputedStyle(t[0]) : null; return { so: t.length, ten: cs && cs.animationName, an: cs && cs.opacity, lech: t.length ? getComputedStyle(t[0]).strokeDashoffset : '', nut: document.getElementById('ldlNutChay').textContent }; });
+      const a1 = await lay(); await p.waitForTimeout(400); const a2 = await lay();
+      await p.click('#ldlNutChay'); const a3 = await lay();
+      await p.click('#ldlNutChay'); const a4 = await lay();
+      kq.push(['Hướng dẫn mục 10: 16 tín hiệu chạy dọc mũi tên, nút Dừng tắt / Chạy bật lại', a1.so === 16 && a1.ten === 'ldlChay' && a1.lech !== a2.lech && a3.ten === 'none' && a3.an === '0' && /Chạy/.test(a3.nut) && a4.ten === 'ldlChay' && /Dừng/.test(a4.nut) ? true : JSON.stringify([a1, a2, a3, a4])]);
     }
     if (trang === 'baocao') {
       const bc = await p.evaluate(() => {
