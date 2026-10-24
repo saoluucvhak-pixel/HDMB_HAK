@@ -37,6 +37,8 @@ jobs:
         run: node test_p1_hieu_suat.cjs
       - name: Máy chủ (lưu nháp đúng thứ tự)
         run: node test_luu_nhap.cjs
+      - name: Máy chủ (danh sách khách hàng gọn)
+        run: node test_khach_hang.cjs
       - name: Giao diện (Playwright)
         run: |
           node ui_khoa_nut.cjs
@@ -49,3 +51,4 @@ jobs:
           node ui_phan_hoi_cu.cjs
           node ui_tu_luu_nhap.cjs
           node ui_mang_cham.cjs
+          node ui_khach_hang.cjs

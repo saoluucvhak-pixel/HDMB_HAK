@@ -22,22 +22,42 @@ let docLon = {};
 { const g = RP.getValues; RP.getValues = function () { const o = this.nr * this.nc; if (o > 500 && process.env.AI_DOC) { const st = (new Error().stack || '').split('\n').slice(2).map(s => (s.match(/at ([\w$.]+) /) || [])[1]).filter(x => x && !/^(Range|Object|Array|Sheet|getValue|readData_|docDongTheoKhoa_)/.test(x)).slice(0, 2).join(' < '); const k = this.sh.name + ' ← ' + st; docLon[k] = (docLon[k] || 0) + o; } return g.apply(this, arguments); }; }
 const t0 = Date.now();
 const ds = [];
-for (let i = 0; i < N; i++) {
+// NHAN_BAN=k: dựng N/k HĐ qua hàm thật rồi NHÂN BẢN dòng thẳng vào sheet (đổi khóa ID / Số HĐ / CCCD cho khỏi trùng), dựng lại
+// Draft bằng XAY_DUNG_LAI_TOAN_BO_DRAFT_ — 10.000 HĐ qua hàm thật trên bộ giả lập mất hàng giờ (mỗi lần tạo quét lại cả sheet).
+const NHAN = Math.max(1, Number(process.env.NHAN_BAN || 1));
+const N_GOC = Math.ceil(N / NHAN);
+for (let i = 0; i < N_GOC; i++) {
   const k = run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Khach Hang ' + i, cccdChuRung: '0490' + String(10000000 + i), ngayKy: '2026-0' + (1 + i % 9) + '-10', soTK: '11' + i, nganHang: 'VCB', soHD: 'S' + i, diaChiRung: 'Thon ' + i, dienTichKy: 10000, slDuKien: 120, donGia: 1000 }) + ')');
   const l = run('THEM_LO_RUNG_MOI_(' + J({ idHD: k.idHD, diaChiRung: 'Lo ' + i, dienTichM2: 3000, donGia: 2000, khoiLuongDuKien: 36 }) + ')');
   for (let g = 0; g < 3; g++) run('CAP_NHAT_GPS_RUNG_(' + J(l.idRung) + ', {lat: 15.' + g + '1' + i + ', lng: 108.1}, false)');
   ds.push({ idHD: k.idHD, idRung: l.idRung, cccd: '0490' + String(10000000 + i), ten: 'Khach Hang ' + i });
 }
-const X = ds[Math.floor(N / 2)];
+if (NHAN > 1) {
+  const C = k => run(k);
+  const nhanBan = (ten, cotDoi) => {
+    const sh = ss.getSheetByName(ten); const goc = sh.getDataRange().getValues().slice(1); const moi = [];
+    for (let k = 1; k < NHAN; k++) goc.forEach(r => { const x = r.slice(); cotDoi.forEach(([c, f]) => { x[c] = f(x[c], k); }); moi.push(x); });
+    if (moi.length) sh.getRange(sh.getLastRow() + 1, 1, moi.length, moi[0].length).setValues(moi);
+  };
+  const duoi = (v, k) => v === '' || v == null ? v : String(v) + '_' + k;
+  const cccd = (v, k) => v === '' || v == null ? v : String(k) + String(v).slice(1);
+  nhanBan('HD_NCC', [[C('NCC_COL.ID_HD'), duoi], [C('NCC_COL.SO_HD'), duoi], [C('NCC_COL.CCCD_CHU_RUNG'), cccd], [C('NCC_COL.TEN_CHU_RUNG'), duoi]]);
+  nhanBan('HD_RUNG', [[C('RUNG_COL.ID_KEY_HD'), duoi], [C('RUNG_COL.ID_RUNG'), duoi], [C('RUNG_COL.MA_RUNG'), duoi], [C('RUNG_COL.SO_HD'), duoi]]);
+  nhanBan('HD_STK', [[C('STK_COL.ID_HD'), duoi], [C('STK_COL.ID_STK'), duoi], [C('STK_COL.SO_HD'), duoi]]);
+  nhanBan('HD_GPS', [[C('GPS_COL.ID_KEY_GPS'), duoi], [C('GPS_COL.ID_GPS'), duoi]]);
+  run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
+  run('xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); xoaCacheTraCuu_(); xoaCacheAnhGps_(); xoaCacheBanDo_(); _draftDataCache = null;');
+}
+const X = ds[Math.floor(N_GOC / 2)];
 const soDongX = () => run('timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, ' + J(X.idHD) + ')');
 const tk = () => run('layDanhSachTaiKhoan_(' + J(X.idHD) + ')')[0];
 
 const kq = [];
-const doMot = (nhom, ten, code) => {
+const doMot = (nhom, ten, code, rpc) => {
   m.demDoc.n = 0; m.demDoc.o = 0; demGhi.n = 0; m.demGhiRangeList.n = 0; const t = Date.now();
-  let loi = '';
-  try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; } catch (e) { loi = e.message; }
-  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
+  let loi = '', kb = 0;
+  try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; try { kb = Buffer.byteLength(JSON.stringify(r === undefined ? null : r)) / 1024; } catch (e) { /* bỏ qua */ } } catch (e) { loi = e.message; }
+  kq.push({ nhom, ten, rpc: rpc === undefined ? 1 : rpc, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, kb, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
   m.demDoc.theo = {}; docLon = {};
 };
 // ---- TRA CỨU ----
@@ -45,6 +65,9 @@ doMot('Tra cứu', 'Tìm theo tên (Tra cứu HĐ)', 'TRA_CUU_HOP_DONG_(' + J(X.
 doMot('Tra cứu', 'Tìm theo CCCD', 'TRA_CUU_HOP_DONG_(' + J(X.cccd) + ', "", "")');
 doMot('Tra cứu', 'Xem chi tiết 1 HĐ (Tra cứu)', 'CHI_TIET_TRA_CUU_HOP_DONG_(' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Danh sách khách hàng (Nhập liệu)', 'layDanhSachKhachHang_(1, 20, "")');
+// Mở trang Nhập liệu: bản cũ nạp 5.000 khách đầy đủ, bản mới nạp danh sách gọn (cùng 1 lời gọi lúc mở trang)
+doMot('Tra cứu', 'Nhập liệu: nạp khách hàng lúc mở trang', 'xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); typeof LAY_DS_KHACH_HANG_GON_ === "function" ? LAY_DS_KHACH_HANG_GON_() : layDanhSachKhachHang_(1, 5000, "")');
+doMot('Tra cứu', 'Nhập liệu: chọn 1 khách -> lấy chi tiết để tự điền', 'typeof LAY_KHACH_HANG_THEO_CCCD_ === "function" ? LAY_KHACH_HANG_THEO_CCCD_(' + J(X.cccd) + ') : null', run('typeof LAY_KHACH_HANG_THEO_CCCD_') === 'function' ? 1 : 0);
 doMot('Tra cứu', 'Danh sách khách hàng: trang 2 / tìm', 'layDanhSachKhachHang_(2, 20, "khach")');
 doMot('Tra cứu', 'Tìm tiếp theo tên khác', 'TRA_CUU_HOP_DONG_("Khach Hang 7", "", "")');
 doMot('Tra cứu', 'HĐ của 1 khách hàng', 'layHopDongTheoKhachHang_(' + J(X.cccd) + ')');
@@ -73,10 +96,14 @@ doMot('Sửa', 'Sửa tài khoản', 'CAP_NHAT_TAI_KHOAN_(' + t.soDong + ', {nga
 doMot('Sửa', 'Duyệt trạng thái', 'CAP_NHAT_HOP_DONG_WEB_(' + soDongX() + ', {tinhTrang: "Đang thực hiện"}, ' + J(X.idHD) + ')');
 doMot('Sửa', 'Sửa qua nháp: mở nháp', 'var __n = LAY_DRAFT_THEO_ID_HD_(' + J(X.idHD) + '); __n');
 doMot('Sửa', 'Sửa qua nháp: lưu nháp', '__n.du.hopDong.sdtChuRung = "0911000000"; LUU_DRAFT_(__n.idDraft, JSON.stringify(__n.du))');
-doMot('Sửa', 'Sửa qua nháp: lưu chính thức', 'LUU_CHINH_THUC_(__n.idDraft)');
+// Lưu chính thức ngay sau lần gõ cuối: bản cũ = LUU_DRAFT rồi LUU_CHINH_THUC (2 lời gọi); bản mới = 1 lời gọi kèm bản mới nhất
+const CO_KEM = run('LUU_CHINH_THUC_.length') >= 2;
+doMot('Sửa', 'Sửa qua nháp: lưu chính thức (gồm lần gõ cuối)', '__n.du.hopDong.sdtChuRung = "0911222333"; ' + (CO_KEM
+  ? 'LUU_CHINH_THUC_(__n.idDraft, JSON.stringify(__n.du))'
+  : 'LUU_DRAFT_(__n.idDraft, JSON.stringify(__n.du)); LUU_CHINH_THUC_(__n.idDraft)'), CO_KEM ? 1 : 2);
 
-console.log('Bộ dữ liệu: ' + N + ' HĐ, ' + N + ' x 2 lô, ' + (N * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
-console.log(['Nhóm', 'Thao tác', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Lỗi'].join(' | '));
-kq.forEach(r => console.log([r.nhom, r.ten, r.doc, r.o.toLocaleString('vi'), r.ghi, r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
+console.log('Bộ dữ liệu: ' + N_GOC * NHAN + ' HĐ' + (NHAN > 1 ? ' (' + N_GOC + ' qua hàm thật × ' + NHAN + ' nhân bản)' : '') + ', ' + N_GOC * NHAN + ' x 2 lô, ' + (N_GOC * NHAN * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
+console.log(['Nhóm', 'Thao tác', 'RPC', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Phản hồi (KB)', 'Lỗi'].join(' | '));
+kq.forEach(r => console.log([r.nhom, r.ten, r.rpc, r.doc, r.o.toLocaleString('vi'), r.ghi, r.kb.toFixed(1), r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
 if (process.env.CHI_TIET) kq.forEach(r => console.log(r.ten, J(r.theo)));
 if (process.env.AI_DOC) kq.forEach(r => { console.log('## ' + r.ten); Object.keys(r.docLon).sort((a, b) => r.docLon[b] - r.docLon[a]).forEach(k => console.log('   ' + r.docLon[k] + '  ' + k)); });

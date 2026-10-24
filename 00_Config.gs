@@ -1143,6 +1143,40 @@ function docDraftBaoCaoKhongAnhGps_() {
   return _draftDataCache || _docDraftBaoCaoTho_();
 }
 
+/**
+ * Rà soát 24/10/2026: số liệu Tổng quan hợp đồng có NHỚ 5 phút, kèm "dấu vân tay" của Draft: số dòng + mốc CAP_NHAT_LUC lớn
+ * nhất + tổng các mốc (đọc ĐÚNG 1 cột). Mọi lần ghi Draft của hệ thống đều đi qua tinhDongDraftChoHopDong_ (đặt lại
+ * CAP_NHAT_LUC) -> thêm / sửa / xóa / xây dựng lại Draft đều đổi dấu vân tay -> đọc lại đầy đủ ngay. Khớp -> dùng bản nhớ.
+ * 10.000 HĐ: mở / đổi lọc Tổng quan đọc 10.000 ô thay vì 310.000. Chỉ giữ các trường Tổng quan dùng, số đã đổi như
+ * LAY_TONG_QUAN_HOP_DONG_ (Number(x) || 0) -> kết quả giống hệt khi đọc thẳng.
+ */
+const KHOA_TONG_QUAN_ = 'TONG_QUAN_HD_V1';
+function _dsTongQuanCoCache_() {
+  if (_draftDataCache) return _chieuTongQuan_(_draftDataCache);
+  const sh = getOrCreateDraftBaoCaoSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  let lon = 0, tong = 0;
+  sh.getRange(2, DRAFT_BAOCAO_COL.CAP_NHAT_LUC + 1, last - 1, 1).getValues().forEach(function (r) {
+    const t = r[0] instanceof Date ? r[0].getTime() : (r[0] ? new Date(r[0]).getTime() || 0 : 0);
+    if (t > lon) lon = t;
+    tong += t;
+  });
+  const dau = (last - 1) + '|' + lon + '|' + tong;
+  const nho = docCacheChiaManh_(KHOA_TONG_QUAN_);
+  if (nho && nho.dau === dau && Array.isArray(nho.ds)) return nho.ds;
+  const ds = _chieuTongQuan_(docDraftBaoCaoKhongAnhGps_());
+  luuCacheChiaManh_(KHOA_TONG_QUAN_, { dau: dau, ds: ds }, 300);
+  return ds;
+}
+function _chieuTongQuan_(list) {
+  const so = function (v) { return Number(v) || 0; };
+  return list.map(function (m) {
+    return { idHD: m.idHD, soHD: m.soHD, tenChuRung: m.tenChuRung, ngayKy: m.ngayKy, tinhTrang: m.tinhTrang,
+      khoiLuongDuKien: so(m.khoiLuongDuKien), khoiLuongThucHien: so(m.khoiLuongThucHien), giaTriHopDong: so(m.giaTriHopDong), giaTriThucHien: so(m.giaTriThucHien) };
+  });
+}
+
 /** Đọc Draft_BaoCaoHopDong thành đối tượng, bỏ dòng trùng ID_HD (giữ dòng cập nhật sau cùng). */
 function _docDraftBaoCaoTho_() {
   const sh = getOrCreateDraftBaoCaoSheet_();

@@ -1031,11 +1031,7 @@ function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
 
   // P1.2 (nâng cấp 10/2026): danh sách khách hàng đã nhóm theo CCCD nhớ 5 phút (đổi trang / tìm kiếm không đọc lại Sheet);
   // mọi thay đổi hợp đồng qua webapp xóa ngay (xoaCacheTraCuu_). Dựng lại chỉ đọc 8 cột cần thiết (trước đây cả 33 cột).
-  let ds = docCacheChiaManh_(KHOA_DS_KHACH_HANG_);
-  if (!Array.isArray(ds)) {
-    ds = _dungDanhSachKhachHang_();
-    luuCacheChiaManh_(KHOA_DS_KHACH_HANG_, ds, 300);
-  }
+  let ds = _dsKhachHangCoCache_();
   if (tk) {
     ds = ds.filter(function (kh) {
       return (kh.tenChuRung || '').toLowerCase().indexOf(tk) !== -1 || (kh.cccd || '').toLowerCase().indexOf(tk) !== -1;
@@ -1052,6 +1048,36 @@ function layDanhSachKhachHang_(trang, kichThuoc, tuKhoa) {
 
 const KHOA_DS_KHACH_HANG_ = 'DS_KHACH_HANG_V1';
 
+/** Danh sách khách hàng đã nhóm theo CCCD, nhớ 5 phút (mọi thay đổi hợp đồng qua webapp xóa ngay — xoaCacheTraCuu_). */
+function _dsKhachHangCoCache_() {
+  let ds = docCacheChiaManh_(KHOA_DS_KHACH_HANG_);
+  if (!Array.isArray(ds)) {
+    ds = _dungDanhSachKhachHang_();
+    luuCacheChiaManh_(KHOA_DS_KHACH_HANG_, ds, 300);
+  }
+  return ds;
+}
+
+/**
+ * Rà soát 24/10/2026: danh sách khách hàng GỌN cho trang Nhập liệu (gợi ý tên / CCCD, modal "Tạo hợp đồng mới").
+ * Trước đây trang nạp layDanhSachKhachHang(1, 5000) — 9 trường mỗi khách, 1.000 HĐ ~145 KB, 10.000 HĐ ~730 KB, và CẮT ở
+ * 5.000 khách (khách thứ 5.001 trở đi theo thứ tự tên không được nhận diện -> nhập lại tay, dễ lệch thông tin).
+ * Nay trả ĐỦ mọi khách hàng nhưng chỉ [cccd, tên, số HĐ, địa chỉ thường trú] (địa chỉ để phân biệt người trùng tên);
+ * chi tiết để tự điền lấy bằng LAY_KHACH_HANG_THEO_CCCD_ khi chọn. CCCD giữ nguyên dạng chuỗi.
+ */
+function LAY_DS_KHACH_HANG_GON_() {
+  _yeuCauQuyen_(QUYEN.XEM);
+  return { ds: _dsKhachHangCoCache_().map(function (kh) { return [kh.cccd, kh.tenChuRung || '', kh.soLuongHopDong || 0, kh.thuongTru || '']; }) };
+}
+
+/** Đủ thông tin 1 khách hàng (cùng trường như layDanhSachKhachHang_) theo CCCD — null nếu không có. */
+function LAY_KHACH_HANG_THEO_CCCD_(cccd) {
+  _yeuCauQuyen_(QUYEN.XEM);
+  cccd = (cccd || '').toString().trim();
+  if (!cccd) return null;
+  return _dsKhachHangCoCache_().filter(function (kh) { return kh.cccd === cccd; })[0] || null;
+}
+
 /** Nhóm HD_NCC theo CCCD chủ rừng (giữ thông tin của hợp đồng ĐẦU TIÊN trên sheet), sắp xếp theo tên — như trước đây. */
 function _dungDanhSachKhachHang_() {
   const rows = docCacCot_(SHEET_NAME.HD_NCC, [NCC_COL.TEN_CHU_RUNG, NCC_COL.DIA_CHI_TT, NCC_COL.CCCD_CHU_RUNG, NCC_COL.NGAY_CAP,
@@ -1061,8 +1087,11 @@ function _dungDanhSachKhachHang_() {
     const cccd = (r[NCC_COL.CCCD_CHU_RUNG] || '').toString().trim();
     if (!cccd) return; // không có CCCD -> không nhóm được, bỏ qua (hợp đồng đó vẫn xem được bình thường qua tab "Hợp đồng")
     if (!theoCccd[cccd]) {
+      // SĐT lỡ bị Sheets đổi thành số (mất số 0 đầu, 9 chữ số) -> trả lại dạng chữ có 0 đầu: tự điền ở Nhập liệu / Thêm HĐ
+      // trước đây chép SĐT thiếu số 0 sang hợp đồng mới. (CCCD giữ nguyên như cũ: là khóa nhóm và khóa tra "HĐ của khách hàng".)
+      const sdt = r[NCC_COL.SDT_CHU_RUNG];
       theoCccd[cccd] = {
-        cccd: cccd, tenChuRung: r[NCC_COL.TEN_CHU_RUNG], sdt: r[NCC_COL.SDT_CHU_RUNG],
+        cccd: cccd, tenChuRung: r[NCC_COL.TEN_CHU_RUNG], sdt: typeof sdt === 'number' && isFinite(sdt) && String(Math.round(sdt)).length === 9 ? '0' + Math.round(sdt) : sdt,
         thuongTru: r[NCC_COL.DIA_CHI_TT], ngayCap: ngayToISO_(r[NCC_COL.NGAY_CAP]),
         noiCap: r[NCC_COL.NOI_CAP], nhomKH: r[NCC_COL.NHOM_KH], maSoThue: r[NCC_COL.MA_SO_THUE], soLuongHopDong: 0
       };

@@ -191,16 +191,9 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
     const sh = getOrCreateDraftHopDongSheet_();
     const soDong = timDongDraft_(sh, idDraft);
     if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp ' + idDraft + ' (có thể đã bị Lưu chính thức hoặc hủy ở tab khác).' };
-    const oJson = sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1);
-    try {
-      const cu = JSON.parse(oJson.getValue() || 'null'), moi = JSON.parse(jsonDuLieu);
-      if (_banNhapCuHon_(cu, moi)) return { thanhCong: true, boQua: true };
-      jsonDuLieu = JSON.stringify(_giuTienDoLuuChinhThuc_(cu, moi));
-    } catch (e) { /* JSON lạ -> ghi nguyên như trước */ }
-    oJson.setValue(jsonDuLieu);
-    sh.getRange(soDong, DRAFT_HD_COL.NGUOI_SUA + 1).setValue(_emailNguoiThucHien_() || '');
-    sh.getRange(soDong, DRAFT_HD_COL.THOI_GIAN_SUA + 1).setValue(new Date());
-    return { thanhCong: true };
+    const kq = _ghiBanNhapMoi_(sh, soDong, jsonDuLieu);
+    if (kq.loiDuLieu) return { thanhCong: false, loi: 'Dữ liệu nháp gửi lên không hợp lệ — chưa lưu (tải lại trang rồi nhập lại phần vừa sửa).' };
+    return kq.boQua ? { thanhCong: true, boQua: true } : { thanhCong: true, canhBaoTabKhac: kq.canhBaoTabKhac, nguoiSuaKhac: kq.nguoiSuaKhac };
   } catch (e) {
     return { thanhCong: false, loi: 'Lỗi lưu nháp: ' + e.message };
   } finally {
@@ -214,8 +207,46 @@ function LUU_DRAFT_(idDraft, jsonDuLieu) {
  * Tab khác / trình duyệt cũ không gửi số -> ghi như trước (bản đến sau thắng).
  */
 function _banNhapCuHon_(cu, moi) {
-  const a = cu && cu._luuNhap, b = moi && moi._luuNhap;
-  return !!(a && b && a.tab && a.tab === b.tab && Number(b.seq) <= Number(a.seq));
+  const b = moi && moi._luuNhap;
+  if (!cu || !b || !b.tab) return false;
+  const a = cu._luuNhap, theoTab = cu._luuNhapTab || {};
+  let daLuu = Number(theoTab[b.tab]) || 0;
+  if (a && a.tab === b.tab) daLuu = Math.max(daLuu, Number(a.seq) || 0);
+  return Number(b.seq) <= daLuu;
+}
+
+/**
+ * Ghi 1 bản nháp mới lên dòng soDong (đọc JSON + người sửa + giờ sửa trong 1 lệnh). Bỏ qua nếu là bản CŨ của cùng tab
+ * (_banNhapCuHon_). Giữ dấu tiến độ Lưu chính thức (_giuTienDoLuuChinhThuc_). Nhớ số thứ tự lớn nhất của TỪNG tab
+ * (_luuNhapTab, tối đa 20 tab gần nhất) -> tab A gửi bản cũ về muộn sau khi tab B đã lưu cũng bị bỏ (trước đây chỉ so
+ * với tab lưu gần nhất). Bản trước đến từ tab khác trong 10 phút -> báo canhBaoTabKhac để trình duyệt nhắc người dùng.
+ * Trả { boQua, du (đối tượng đã ghi | null nếu JSON lạ), canhBaoTabKhac, nguoiSuaKhac }.
+ */
+function _ghiBanNhapMoi_(sh, soDong, jsonDuLieu) {
+  const o = sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1, 1, 3).getValues()[0]; // JSON, người sửa, giờ sửa (3 cột liền nhau)
+  let cu = null, moi = null;
+  try { moi = JSON.parse(jsonDuLieu); } catch (e) { moi = null; }
+  // Không bao giờ ghi JSON hỏng lên bản nháp (trước đây ghi nguyên -> bản nháp hỏng, Lưu chính thức báo lỗi mãi)
+  if (!moi || typeof moi !== 'object') return { boQua: false, loiDuLieu: true, du: null };
+  try { cu = JSON.parse(o[0] || 'null'); } catch (e) { cu = null; } // nháp cũ hỏng -> ghi bản mới hợp lệ đè lên
+  let canhBaoTabKhac = false, nguoiSuaKhac = '';
+  if (_banNhapCuHon_(cu, moi)) return { boQua: true, du: cu };
+  const b = moi._luuNhap;
+  if (b && b.tab) {
+    const a = cu && cu._luuNhap;
+    const gioSua = o[2] instanceof Date ? o[2].getTime() : 0;
+    if (a && a.tab && a.tab !== b.tab && gioSua && Date.now() - gioSua < 10 * 60 * 1000) { canhBaoTabKhac = true; nguoiSuaKhac = String(o[1] || ''); }
+    const theoTab = {};
+    const cuTheoTab = (cu && cu._luuNhapTab) || {};
+    Object.keys(cuTheoTab).slice(-19).forEach(function (k) { if (k !== b.tab) theoTab[k] = cuTheoTab[k]; });
+    if (a && a.tab && a.tab !== b.tab) theoTab[a.tab] = Math.max(Number(theoTab[a.tab]) || 0, Number(a.seq) || 0);
+    theoTab[b.tab] = Number(b.seq) || 0;
+    moi._luuNhapTab = theoTab;
+  }
+  moi = _giuTienDoLuuChinhThuc_(cu, moi);
+  jsonDuLieu = JSON.stringify(moi);
+  sh.getRange(soDong, DRAFT_HD_COL.JSON_DATA + 1, 1, 3).setValues([[jsonDuLieu, _emailNguoiThucHien_() || '', new Date()]]);
+  return { boQua: false, du: moi, canhBaoTabKhac: canhBaoTabKhac, nguoiSuaKhac: nguoiSuaKhac };
 }
 
 /**
@@ -271,7 +302,7 @@ function HUY_DRAFT_(idDraft) {
  * có sẵn (để không phải viết lại logic tính mã, ghi log, cập nhật ct_hopdong...).
  * Xóa bản nháp sau khi ghi xong thành công.
  */
-function LUU_CHINH_THUC_(idDraft) {
+function LUU_CHINH_THUC_(idDraft, jsonMoiNhat) {
   _yeuCauQuyen_(QUYEN.NHAP_LIEU);
   const sh = getOrCreateDraftHopDongSheet_();
   const cache = CacheService.getScriptCache();
@@ -288,8 +319,16 @@ function LUU_CHINH_THUC_(idDraft) {
     const soDong = timDongDraft_(sh, idDraft);
     if (soDong === -1) return { thanhCong: false, loi: 'Không tìm thấy bản nháp — có thể đã được lưu chính thức ở nơi khác.' };
     if (cache.get(khoaDangLuu)) return { thanhCong: false, loi: 'Bản nháp này đang được lưu chính thức (có thể do bấm "Lưu" 2 lần) — vui lòng chờ kết quả, không bấm lại.' };
-    const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
-    du = JSON.parse(r[DRAFT_HD_COL.JSON_DATA]);
+    if (jsonMoiNhat) {
+      // Rà soát 24/10/2026: trình duyệt gửi KÈM bản nháp mới nhất (gồm lần gõ cuối) — ghi vào nháp trước (cùng quy tắc với
+      // LUU_DRAFT_: bỏ bản cũ của cùng tab, giữ dấu tiến độ), rồi lưu chính thức TỪ bản đó. Ghi lỗi -> dừng, không lưu chính thức.
+      const ghi = _ghiBanNhapMoi_(sh, soDong, jsonMoiNhat);
+      du = ghi.du;
+      if (!du || typeof du !== 'object') return { thanhCong: false, loi: 'Bản nháp gửi lên không hợp lệ — tải lại trang rồi thử lại.' };
+    } else {
+      const r = sh.getRange(soDong, 1, 1, sh.getLastColumn()).getValues()[0];
+      du = JSON.parse(r[DRAFT_HD_COL.JSON_DATA]);
+    }
     if (!du.hopDong || !du.hopDong.tenChuRung || !du.hopDong.cccdChuRung || !du.hopDong.ngayKy) {
       return { thanhCong: false, loi: 'Thiếu Họ tên chủ rừng / CCCD hợp lệ / Ngày ký hợp đồng.' };
     }
