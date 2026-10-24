@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "ff0ae0c5-584d-4cfa-bbad-9b0c30126350",
+  "status": "current",
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/candidate.json",
+  "output": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html",
+  "specification": {
+    "sha256": "f934c0e2ce84d89079e4a507ceb5907300b92ae4a354208fd45f43bc33ddd6ee",
+    "bytes": 9903
+  },
+  "artifact": {
+    "sha256": "7934c317e315e00ddbff830e8d69c6b2679d7b32c0b8565495c5e216d45b7414",
+    "bytes": 844841
+  }
+}

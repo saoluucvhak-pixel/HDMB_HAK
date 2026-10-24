@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "HDMB_HAK — Luồng dữ liệu hợp đồng mua bán",
+    "output": ".archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/saoluucvhak-pixel/HDMB_HAK",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "3a15df609ffbe2212a1f229198e4670450e53a93"
+    }
+  },
+  "stages": [
+    { "label": "Nguồn dữ liệu" },
+    { "label": "Tiếp nhận" },
+    { "label": "Ghi chính thức" },
+    { "label": "Tổng hợp báo cáo" },
+    { "label": "Đọc & hiển thị" }
+  ],
+  "nodes": [
+    { "id": "trinhDuyet", "type": "frontend", "label": "Trình duyệt", "sublabel": "Nhập liệu, tự lưu", "stage": 0, "row": 0, "tag": "hàng đợi nháp",
+      "sources": [
+        { "path": "NhapLieu_Chung_JS.html", "line": 125, "end_line": 170, "label": "luuNhapNgay / guiLuuNhap_" },
+        { "path": "NhapLieu_Chung_JS.html", "line": 401, "end_line": 428, "label": "luuChinhThucGuiMayChu_" }
+      ] },
+    { "id": "fileNgoai", "type": "external", "label": "DNTT + Phiếu cân", "sublabel": "Sheet ngoài", "stage": 0, "row": 3, "tag": "openByUrl",
+      "sources": [
+        { "path": "06_CreateUpdate.gs", "line": 151, "end_line": 157, "label": "_docBangDNTT_" },
+        { "path": "06_CreateUpdate.gs", "line": 75, "end_line": 144, "label": "ngày cân PhieuCan_DN" }
+      ] },
+    { "id": "congApi", "type": "security", "label": "Cổng api()", "sublabel": "phiên + quyền", "stage": 1, "row": 0, "tag": "phân quyền",
+      "sources": [ { "path": "34_PhanQuyen.gs", "line": 354, "end_line": 378, "label": "api()" } ] },
+    { "id": "draftHopDong", "type": "database", "label": "Draft_HopDong", "sublabel": "nháp JSON", "stage": 1, "row": 1, "tag": "tab + seq",
+      "sources": [
+        { "path": "15_DraftHopDong.gs", "line": 183, "end_line": 202, "label": "LUU_DRAFT_" },
+        { "path": "15_DraftHopDong.gs", "line": 225, "end_line": 250, "label": "_ghiBanNhapMoi_" }
+      ] },
+    { "id": "dongBoTT", "type": "backend", "label": "Đồng bộ thanh toán", "sublabel": "trigger 30 phút", "stage": 1, "row": 3, "tag": "tăng dần",
+      "sources": [
+        { "path": "01_ContractManager.gs", "line": 1109, "end_line": 1165, "label": "dongBoThanhToanNeuCoThayDoi_" },
+        { "path": "01_ContractManager.gs", "line": 1068, "end_line": 1081, "label": "_lamMoiCacheThanhToan_" }
+      ] },
+    { "id": "luuChinhThuc", "type": "backend", "label": "LUU_CHINH_THUC", "sublabel": "nháp → bảng gốc", "stage": 2, "row": 0, "tag": "khóa ghi",
+      "sources": [
+        { "path": "15_DraftHopDong.gs", "line": 305, "end_line": 367, "label": "LUU_CHINH_THUC_" },
+        { "path": "06_CreateUpdate.gs", "line": 2538, "end_line": 2727, "label": "luuHopDongDayDuThucThi_" }
+      ] },
+    { "id": "bangGoc", "type": "database", "label": "Bảng gốc HD_*", "sublabel": "NCC · RUNG · STK · GPS", "stage": 2, "row": 1, "tag": "số 0 đầu",
+      "sources": [
+        { "path": "06_CreateUpdate.gs", "line": 2614, "end_line": 2619, "label": "ghi dòng HD_NCC" },
+        { "path": "06_CreateUpdate.gs", "line": 662, "end_line": 700, "label": "THEM_LO_RUNG_MOI_" }
+      ] },
+    { "id": "cacheBaoCao", "type": "database", "label": "Cache_BaoCao", "sublabel": "KL thực hiện DNTT", "stage": 2, "row": 3, "tag": "file báo cáo",
+      "sources": [
+        { "path": "00_Config.gs", "line": 880, "end_line": 895, "label": "luuCacheBaoCao_" },
+        { "path": "01_ContractManager.gs", "line": 1157, "end_line": 1158, "label": "dnttDaApDung" }
+      ] },
+    { "id": "nhatKy", "type": "database", "label": "NhatKy_SuaDoi", "sublabel": "mỗi thao tác 1 dòng", "stage": 3, "row": 0, "tag": "mốc theo dòng",
+      "sources": [
+        { "path": "00_Config.gs", "line": 776, "end_line": 784, "label": "ghiNhatKy_" },
+        { "path": "06_CreateUpdate.gs", "line": 2621, "end_line": 2621, "label": "Tạo hợp đồng mới" }
+      ] },
+    { "id": "capNhatDraft", "type": "backend", "label": "Cập nhật Draft", "sublabel": "1 HĐ / hàng loạt", "stage": 3, "row": 2, "tag": "dòng đổi",
+      "sources": [
+        { "path": "01_ContractManager.gs", "line": 445, "end_line": 493, "label": "CAP_NHAT_DRAFT_MOT_HOP_DONG_" },
+        { "path": "01_ContractManager.gs", "line": 691, "end_line": 749, "label": "lamMoiDraftThucThi_" }
+      ] },
+    { "id": "draftBaoCao", "type": "database", "label": "Draft_BaoCaoHopDong", "sublabel": "1 dòng / hợp đồng", "stage": 3, "row": 3, "tag": "CAP_NHAT_LUC",
+      "sources": [ { "path": "01_ContractManager.gs", "line": 618, "end_line": 648, "label": "_ghiDraftTheoId_" } ] },
+    { "id": "traCuu", "type": "backend", "label": "Tra cứu hợp đồng", "sublabel": "chỉ mục nhớ 5 phút", "stage": 4, "row": 0, "tag": "đọc",
+      "sources": [
+        { "path": "33_TraCuuHopDong.gs", "line": 71, "end_line": 95, "label": "_dungChiMucTraCuu_" },
+        { "path": "33_TraCuuHopDong.gs", "line": 105, "end_line": 158, "label": "TRA_CUU_HOP_DONG_" }
+      ] },
+    { "id": "khachHang", "type": "backend", "label": "Khách hàng gọn", "sublabel": "nhóm theo CCCD", "stage": 4, "row": 1, "tag": "đọc",
+      "sources": [
+        { "path": "06_CreateUpdate.gs", "line": 1052, "end_line": 1071, "label": "LAY_DS_KHACH_HANG_GON_" },
+        { "path": "11_Page_NhapLieu.html", "line": 497, "end_line": 506, "label": "nạp lúc mở trang" }
+      ] },
+    { "id": "banDo", "type": "backend", "label": "Bản đồ GPS", "sublabel": "lô + tọa độ", "stage": 4, "row": 2, "tag": "đọc",
+      "sources": [ { "path": "Code.gs", "line": 248, "end_line": 314, "label": "getMapData_" } ] },
+    { "id": "tongQuan", "type": "backend", "label": "Tổng quan", "sublabel": "chỉ số + bảng HĐ", "stage": 4, "row": 3, "tag": "đọc",
+      "sources": [
+        { "path": "01_ContractManager.gs", "line": 101, "end_line": 163, "label": "LAY_TONG_QUAN_HOP_DONG_" },
+        { "path": "00_Config.gs", "line": 1154, "end_line": 1171, "label": "_dsTongQuanCoCache_" }
+      ] }
+  ],
+  "flows": [
+    { "id": "goiApi", "from": "trinhDuyet", "to": "congApi", "label": "google.script.run", "classification": "phiên đăng nhập", "variant": "security" },
+    { "id": "luuNhap", "from": "congApi", "to": "draftHopDong", "label": "LUU_DRAFT", "classification": "1 lượt / bản nháp", "variant": "emphasis" },
+    { "id": "goiLuu", "from": "congApi", "to": "luuChinhThuc", "label": "Lưu chính thức", "classification": "kèm bản mới nhất", "variant": "emphasis" },
+    { "id": "docNhap", "from": "draftHopDong", "to": "luuChinhThuc", "label": "bản nháp JSON", "classification": "dưới khóa" },
+    { "id": "ghiBang", "from": "luuChinhThuc", "to": "bangGoc", "label": "ghi dòng theo ID", "classification": "khóa + xác minh", "variant": "emphasis" },
+    { "id": "ghiNhatKy", "from": "luuChinhThuc", "to": "nhatKy", "label": "ghi nhật ký", "classification": "ID_HD + thao tác" },
+    { "id": "docBang", "from": "bangGoc", "to": "capNhatDraft", "label": "dòng theo ID_HD", "classification": "đọc theo khóa" },
+    { "id": "lamMoi", "from": "nhatKy", "to": "capNhatDraft", "label": "HĐ vừa đổi", "classification": "Làm mới Draft", "variant": "dashed" },
+    { "id": "docDntt", "from": "fileNgoai", "to": "dongBoTT", "label": "KL cột M, số CT", "classification": "file đổi mới đọc", "variant": "dashed" },
+    { "id": "ghiCache", "from": "dongBoTT", "to": "cacheBaoCao", "label": "dnttDaApDung", "classification": "chỉ khi đọc OK", "variant": "dashed" },
+    { "id": "klThucHien", "from": "cacheBaoCao", "to": "capNhatDraft", "label": "KL thực hiện", "classification": "theo Số HĐ" },
+    { "id": "ghiDraft", "from": "capNhatDraft", "to": "draftBaoCao", "label": "ghi dòng đổi", "classification": "định vị theo ID_HD", "variant": "emphasis" },
+    { "id": "docTongQuan", "from": "draftBaoCao", "to": "tongQuan", "label": "nhớ theo vân tay", "classification": "đọc 1 cột" },
+    { "id": "docTraCuu", "from": "bangGoc", "to": "traCuu", "label": "cột cần thiết", "classification": "19/33 cột" },
+    { "id": "docKhach", "from": "bangGoc", "to": "khachHang", "label": "8 cột HD_NCC", "classification": "đủ mọi khách" },
+    { "id": "docBanDo", "from": "bangGoc", "to": "banDo", "label": "lô + điểm GPS", "classification": "cache chia mảnh" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Ghi: nháp trước, bảng gốc sau",
+      "items": [
+        "Mọi thay đổi trên form chỉ ghi vào Draft_HopDong (JSON), mỗi bản nháp 1 lượt lưu, gộp thay đổi chờ",
+        "LUU_CHINH_THUC nhận kèm bản mới nhất, ghi vào nháp rồi mới ghi HD_NCC / HD_RUNG / HD_STK / HD_GPS",
+        "Mỗi lần ghi bảng gốc tìm lại dòng theo ID dưới khóa (chống ghi nhầm khi dòng dịch)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Thanh toán: tăng dần, theo lịch",
+      "items": [
+        "Trigger 30 phút chỉ đọc DNTT khi số dòng hoặc giờ sửa file đổi",
+        "Đọc DNTT lỗi thì giữ cache cũ, không ghi mốc — không đưa KL thực hiện về 0",
+        "Chỉ hợp đồng có số liệu đổi được tính lại vào Draft báo cáo"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Đọc: từ bản nhớ khi có thể",
+      "items": [
+        "Tra cứu, khách hàng, bản đồ đọc thẳng bảng gốc đúng các cột cần, nhớ 5 phút, xóa khi đổi HĐ",
+        "Tổng quan đọc Draft báo cáo; nhớ theo dấu vân tay cột CAP_NHAT_LUC",
+        "Kết quả về trình duyệt cũng qua cổng api() (không vẽ chiều về)"
+      ]
+    }
+  ]
+}
