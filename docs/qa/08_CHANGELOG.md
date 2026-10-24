@@ -2,6 +2,17 @@
 
 Mỗi dòng là 1 commit đã đẩy lên GitHub; chi tiết nằm trong nội dung commit. Đợt 11/10/2026 nằm ở nhánh `feature/hdmb-performance-optimization` (chưa gộp `main`); các đợt trước ở `main`.
 
+## 24/10/2026 — Rà soát nhập liệu / tra cứu đợt 2 (nhánh `claude/test-code-bug-project-nywz0r`, từ `main` `97917a5`)
+
+Gồm 5 sửa của nhánh `codex/nhap-lieu-tra-cuu-20261024` (xem `BAO_CAO_RA_SOAT_20261024.md` phần đầu) + bộ kiểm thử của PR #2.
+Chi tiết lỗi R-1..R-8 và số đo: `BAO_CAO_RA_SOAT_20261024.md` mục "Đợt 2".
+
+| Commit | Loại | Thay đổi | File |
+|---|---|---|---|
+| `2a600df` | 🐛🔴 | **Tự lưu nháp theo hàng đợi**: không chạy song song, gộp theo bản nháp, Lưu chính thức chờ lưu nháp xong (trước: mất lần gõ cuối), rời form / mở HĐ khác gửi ngay thay đổi đang chờ; máy chủ bỏ bản cũ của cùng tab. Test `ui_tu_luu_nhap`, `test_luu_nhap` | NhapLieu_Chung_JS, 07, 11, 15 |
+| `2d48438` | 🐛 UI | Tra cứu: không khóa nút (Enter tìm lại được khi mạng chậm), nút Quay lại khi đang tải chi tiết; Nhập liệu: phản hồi mở HĐ cũ không nạp đè HĐ mới, ô tìm `oninput`. Test `ui_mang_cham` | 33_Page, NhapLieu_Chung_JS, 07, 11 |
+| `c43dade` | ⚡ | Tổng quan không đọc HD_RUNG / HD_GPS / HD_Picture cho cờ không hiển thị (1.000 HĐ lần đầu: 4 / 62.000 → 1 / 31.000). Test TQ-1 | 00, 01 |
+
 ## 11/10/2026 — Nâng cấp toàn vẹn dữ liệu & hiệu năng (nhánh `feature/hdmb-performance-optimization`, từ `main` `8d4bd25`)
 
 Chi tiết lỗi / bằng chứng: `DATA_INTEGRITY_TEST.md`; số đo trước / sau: `PERFORMANCE_COMPARISON.md`; triển khai:
