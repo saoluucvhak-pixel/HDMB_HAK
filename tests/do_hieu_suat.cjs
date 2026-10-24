@@ -53,11 +53,11 @@ const soDongX = () => run('timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD
 const tk = () => run('layDanhSachTaiKhoan_(' + J(X.idHD) + ')')[0];
 
 const kq = [];
-const doMot = (nhom, ten, code) => {
+const doMot = (nhom, ten, code, rpc) => {
   m.demDoc.n = 0; m.demDoc.o = 0; demGhi.n = 0; m.demGhiRangeList.n = 0; const t = Date.now();
   let loi = '', kb = 0;
   try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; try { kb = Buffer.byteLength(JSON.stringify(r === undefined ? null : r)) / 1024; } catch (e) { /* bỏ qua */ } } catch (e) { loi = e.message; }
-  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, kb, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
+  kq.push({ nhom, ten, rpc: rpc === undefined ? 1 : rpc, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, kb, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
   m.demDoc.theo = {}; docLon = {};
 };
 // ---- TRA CỨU ----
@@ -65,7 +65,9 @@ doMot('Tra cứu', 'Tìm theo tên (Tra cứu HĐ)', 'TRA_CUU_HOP_DONG_(' + J(X.
 doMot('Tra cứu', 'Tìm theo CCCD', 'TRA_CUU_HOP_DONG_(' + J(X.cccd) + ', "", "")');
 doMot('Tra cứu', 'Xem chi tiết 1 HĐ (Tra cứu)', 'CHI_TIET_TRA_CUU_HOP_DONG_(' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Danh sách khách hàng (Nhập liệu)', 'layDanhSachKhachHang_(1, 20, "")');
-doMot('Tra cứu', 'Nhập liệu: nạp sẵn khách hàng (1, 5000)', 'xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); layDanhSachKhachHang_(1, 5000, "")');
+// Mở trang Nhập liệu: bản cũ nạp 5.000 khách đầy đủ, bản mới nạp danh sách gọn (cùng 1 lời gọi lúc mở trang)
+doMot('Tra cứu', 'Nhập liệu: nạp khách hàng lúc mở trang', 'xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); typeof LAY_DS_KHACH_HANG_GON_ === "function" ? LAY_DS_KHACH_HANG_GON_() : layDanhSachKhachHang_(1, 5000, "")');
+doMot('Tra cứu', 'Nhập liệu: chọn 1 khách -> lấy chi tiết để tự điền', 'typeof LAY_KHACH_HANG_THEO_CCCD_ === "function" ? LAY_KHACH_HANG_THEO_CCCD_(' + J(X.cccd) + ') : null', run('typeof LAY_KHACH_HANG_THEO_CCCD_') === 'function' ? 1 : 0);
 doMot('Tra cứu', 'Danh sách khách hàng: trang 2 / tìm', 'layDanhSachKhachHang_(2, 20, "khach")');
 doMot('Tra cứu', 'Tìm tiếp theo tên khác', 'TRA_CUU_HOP_DONG_("Khach Hang 7", "", "")');
 doMot('Tra cứu', 'HĐ của 1 khách hàng', 'layHopDongTheoKhachHang_(' + J(X.cccd) + ')');
@@ -94,10 +96,14 @@ doMot('Sửa', 'Sửa tài khoản', 'CAP_NHAT_TAI_KHOAN_(' + t.soDong + ', {nga
 doMot('Sửa', 'Duyệt trạng thái', 'CAP_NHAT_HOP_DONG_WEB_(' + soDongX() + ', {tinhTrang: "Đang thực hiện"}, ' + J(X.idHD) + ')');
 doMot('Sửa', 'Sửa qua nháp: mở nháp', 'var __n = LAY_DRAFT_THEO_ID_HD_(' + J(X.idHD) + '); __n');
 doMot('Sửa', 'Sửa qua nháp: lưu nháp', '__n.du.hopDong.sdtChuRung = "0911000000"; LUU_DRAFT_(__n.idDraft, JSON.stringify(__n.du))');
-doMot('Sửa', 'Sửa qua nháp: lưu chính thức', 'LUU_CHINH_THUC_(__n.idDraft)');
+// Lưu chính thức ngay sau lần gõ cuối: bản cũ = LUU_DRAFT rồi LUU_CHINH_THUC (2 lời gọi); bản mới = 1 lời gọi kèm bản mới nhất
+const CO_KEM = run('LUU_CHINH_THUC_.length') >= 2;
+doMot('Sửa', 'Sửa qua nháp: lưu chính thức (gồm lần gõ cuối)', '__n.du.hopDong.sdtChuRung = "0911222333"; ' + (CO_KEM
+  ? 'LUU_CHINH_THUC_(__n.idDraft, JSON.stringify(__n.du))'
+  : 'LUU_DRAFT_(__n.idDraft, JSON.stringify(__n.du)); LUU_CHINH_THUC_(__n.idDraft)'), CO_KEM ? 1 : 2);
 
 console.log('Bộ dữ liệu: ' + N_GOC * NHAN + ' HĐ' + (NHAN > 1 ? ' (' + N_GOC + ' qua hàm thật × ' + NHAN + ' nhân bản)' : '') + ', ' + N_GOC * NHAN + ' x 2 lô, ' + (N_GOC * NHAN * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
-console.log(['Nhóm', 'Thao tác', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Phản hồi (KB)', 'Lỗi'].join(' | '));
-kq.forEach(r => console.log([r.nhom, r.ten, r.doc, r.o.toLocaleString('vi'), r.ghi, r.kb.toFixed(1), r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
+console.log(['Nhóm', 'Thao tác', 'RPC', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Phản hồi (KB)', 'Lỗi'].join(' | '));
+kq.forEach(r => console.log([r.nhom, r.ten, r.rpc, r.doc, r.o.toLocaleString('vi'), r.ghi, r.kb.toFixed(1), r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
 if (process.env.CHI_TIET) kq.forEach(r => console.log(r.ten, J(r.theo)));
 if (process.env.AI_DOC) kq.forEach(r => { console.log('## ' + r.ten); Object.keys(r.docLon).sort((a, b) => r.docLon[b] - r.docLon[a]).forEach(k => console.log('   ' + r.docLon[k] + '  ' + k)); });
