@@ -35,9 +35,9 @@ const tk = () => run('layDanhSachTaiKhoan_(' + J(X.idHD) + ')')[0];
 const kq = [];
 const doMot = (nhom, ten, code) => {
   m.demDoc.n = 0; m.demDoc.o = 0; demGhi.n = 0; m.demGhiRangeList.n = 0; const t = Date.now();
-  let loi = '';
-  try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; } catch (e) { loi = e.message; }
-  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
+  let loi = '', kb = 0;
+  try { const r = run(code); if (r && r.thanhCong === false) loi = r.loi; try { kb = Buffer.byteLength(JSON.stringify(r === undefined ? null : r)) / 1024; } catch (e) { /* bỏ qua */ } } catch (e) { loi = e.message; }
+  kq.push({ nhom, ten, doc: m.demDoc.n, o: m.demDoc.o, ghi: demGhi.n + m.demGhiRangeList.n, kb, ms: Date.now() - t, loi, theo: Object.assign({}, m.demDoc.theo || {}), docLon: docLon });
   m.demDoc.theo = {}; docLon = {};
 };
 // ---- TRA CỨU ----
@@ -45,6 +45,7 @@ doMot('Tra cứu', 'Tìm theo tên (Tra cứu HĐ)', 'TRA_CUU_HOP_DONG_(' + J(X.
 doMot('Tra cứu', 'Tìm theo CCCD', 'TRA_CUU_HOP_DONG_(' + J(X.cccd) + ', "", "")');
 doMot('Tra cứu', 'Xem chi tiết 1 HĐ (Tra cứu)', 'CHI_TIET_TRA_CUU_HOP_DONG_(' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Danh sách khách hàng (Nhập liệu)', 'layDanhSachKhachHang_(1, 20, "")');
+doMot('Tra cứu', 'Nhập liệu: nạp sẵn khách hàng (1, 5000)', 'xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); layDanhSachKhachHang_(1, 5000, "")');
 doMot('Tra cứu', 'Danh sách khách hàng: trang 2 / tìm', 'layDanhSachKhachHang_(2, 20, "khach")');
 doMot('Tra cứu', 'Tìm tiếp theo tên khác', 'TRA_CUU_HOP_DONG_("Khach Hang 7", "", "")');
 doMot('Tra cứu', 'HĐ của 1 khách hàng', 'layHopDongTheoKhachHang_(' + J(X.cccd) + ')');
@@ -76,7 +77,7 @@ doMot('Sửa', 'Sửa qua nháp: lưu nháp', '__n.du.hopDong.sdtChuRung = "0911
 doMot('Sửa', 'Sửa qua nháp: lưu chính thức', 'LUU_CHINH_THUC_(__n.idDraft)');
 
 console.log('Bộ dữ liệu: ' + N + ' HĐ, ' + N + ' x 2 lô, ' + (N * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
-console.log(['Nhóm', 'Thao tác', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Lỗi'].join(' | '));
-kq.forEach(r => console.log([r.nhom, r.ten, r.doc, r.o.toLocaleString('vi'), r.ghi, r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
+console.log(['Nhóm', 'Thao tác', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Phản hồi (KB)', 'Lỗi'].join(' | '));
+kq.forEach(r => console.log([r.nhom, r.ten, r.doc, r.o.toLocaleString('vi'), r.ghi, r.kb.toFixed(1), r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
 if (process.env.CHI_TIET) kq.forEach(r => console.log(r.ten, J(r.theo)));
 if (process.env.AI_DOC) kq.forEach(r => { console.log('## ' + r.ten); Object.keys(r.docLon).sort((a, b) => r.docLon[b] - r.docLon[a]).forEach(k => console.log('   ' + r.docLon[k] + '  ' + k)); });
