@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "dataflow",
+  "quality": "showcase",
+  "specification": {
+    "path": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/candidate.json",
+    "sha256": "f934c0e2ce84d89079e4a507ceb5907300b92ae4a354208fd45f43bc33ddd6ee",
+    "bytes": 9903
+  },
+  "artifact": {
+    "path": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html",
+    "sha256": "7934c317e315e00ddbff830e8d69c6b2679d7b32c0b8565495c5e216d45b7414",
+    "bytes": 844841
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/review-1/hdmb-luong-du-lieu.finalize.json",
+    "summaryReceipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/review-1/hdmb-luong-du-lieu.finalize-summary.json",
+    "browserCheckReceipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/review-1/hdmb-luong-du-lieu.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4612,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 3
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "lamMoi",
+            "from": "nhatKy",
+            "to": "capNhatDraft",
+            "label": "HĐ vừa đổi",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "docTraCuu",
+            "from": "bangGoc",
+            "to": "traCuu",
+            "label": "cột cần thiết",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            745,
+            258
+          ]
+        },
+        {
+          "left": {
+            "id": "lamMoi",
+            "from": "nhatKy",
+            "to": "capNhatDraft",
+            "label": "HĐ vừa đổi",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "docKhach",
+            "from": "bangGoc",
+            "to": "khachHang",
+            "label": "8 cột HD_NCC",
+            "collectionIndex": 14,
+            "artifactIndex": 15
+          },
+          "point": [
+            745,
+            266.6666666666667
+          ]
+        },
+        {
+          "left": {
+            "id": "lamMoi",
+            "from": "nhatKy",
+            "to": "capNhatDraft",
+            "label": "HĐ vừa đổi",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "docBanDo",
+            "from": "bangGoc",
+            "to": "banDo",
+            "label": "lô + điểm GPS",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "point": [
+            745,
+            275.33333333333337
+          ]
+        }
+      ],
+      "detours": [],
+      "truncated": false
+    },
+    "repair": "Advisory only: this mode places or routes these relationships itself. Report them; do not remove relationships or meaning to reduce crossings."
+  }
+}

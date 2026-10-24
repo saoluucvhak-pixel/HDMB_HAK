@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "skipped",
+  "type": "dataflow",
+  "quality": "showcase",
+  "specification": {
+    "path": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/candidate.json",
+    "sha256": "f934c0e2ce84d89079e4a507ceb5907300b92ae4a354208fd45f43bc33ddd6ee",
+    "bytes": 9903
+  },
+  "artifact": {
+    "path": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html",
+    "sha256": "7934c317e315e00ddbff830e8d69c6b2679d7b32c0b8565495c5e216d45b7414",
+    "bytes": 844841
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "skipped"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/chrome-unavailable",
+      "severity": "warning",
+      "message": "No supported browser found. Install Chrome/Chromium (or Microsoft Edge), or set ARCHIFY_CHROME to its executable path.",
+      "subject": {
+        "artifact": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html"
+      },
+      "evidence": {
+        "executable": null
+      },
+      "supportedFixes": [
+        "set ARCHIFY_CHROME to a Chrome/Chromium executable (or Microsoft Edge) and rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.finalize.json",
+    "summaryReceipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.finalize-summary.json",
+    "browserCheckReceipt": "/home/user/HDMB_HAK/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 968,
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  }
+}

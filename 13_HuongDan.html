@@ -146,6 +146,34 @@
   html[data-giao-dien="toi"] .app-main .warn.hd-tt { background: rgba(37,99,235,.14); color: inherit; }
   html[data-giao-dien="toi"] .app-main .warn.hd-lu { background: rgba(180,83,9,.16); color: inherit; }
   html[data-giao-dien="toi"] .app-main .hd-buoc { background: rgba(255,255,255,.03); }
+  /* Mục 10 — sơ đồ luồng dữ liệu (theo kiểu Archify: cột = giai đoạn, màu nút = loại, mũi tên có nhãn) */
+  .ldl-khung { overflow-x: auto; border: 1px solid var(--border-light); border-radius: 10px; background: var(--ldl-nen, #fbfcfe); margin: 10px 0 6px; }
+  .ldl-khung svg { display: block; width: 100%; max-width: 900px; min-width: 600px; margin: 0 auto; height: auto; font-family: inherit; }
+  .ldl-cot-nen { fill: var(--ldl-cot, #f1f5f9); }
+  .ldl-cot-chu { font-size: 10px; font-weight: 800; fill: var(--ldl-chu-phu, #475569); letter-spacing: .06em; text-transform: uppercase; }
+  .ldl-nut rect { stroke-width: 1.5; rx: 9; }
+  .ldl-nut .t { font-size: 12.5px; font-weight: 800; fill: var(--ldl-chu, #0f172a); }
+  .ldl-nut .p { font-size: 10.5px; fill: var(--ldl-chu-phu, #475569); }
+  .ldl-fe rect { fill: #ecfeff; stroke: #0891b2; } .ldl-be rect { fill: #ecfdf5; stroke: #059669; }
+  .ldl-db rect { fill: #f5f3ff; stroke: #7c3aed; } .ldl-sec rect { fill: #fff1f2; stroke: #e11d48; } .ldl-ext rect { fill: #f8fafc; stroke: #64748b; }
+  .ldl-l { fill: none; stroke: #64748b; stroke-width: 1.6; }
+  .ldl-l.chinh { stroke: #2563eb; stroke-width: 2.4; } .ldl-l.bm { stroke: #e11d48; stroke-width: 2; } .ldl-l.lich { stroke: #b45309; stroke-dasharray: 6 4; }
+  .ldl-cau { fill: none; stroke: var(--ldl-nen, #fbfcfe); stroke-width: 7; }
+  .ldl-nhan { font-size: 10px; font-weight: 600; fill: var(--ldl-chu, #0f172a); paint-order: stroke; stroke: var(--ldl-nen, #fbfcfe); stroke-width: 4px; stroke-linejoin: round; }
+  .ldl-chu-giai { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; margin: 8px 0 4px; }
+  .ldl-chu-giai span { display: inline-flex; align-items: center; gap: 6px; }
+  .ldl-chu-giai i { display: inline-block; width: 26px; height: 0; border-top: 2px solid #64748b; }
+  .ldl-chu-giai i.chinh { border-top: 3px solid #2563eb; } .ldl-chu-giai i.bm { border-top-color: #e11d48; } .ldl-chu-giai i.lich { border-top: 2px dashed #b45309; }
+  .ldl-chu-giai b.o { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; }
+  .ldl-the-hang { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 12px 0; }
+  .ldl-the { border: 1px solid var(--border-light); border-radius: 10px; padding: 10px 14px; background: var(--card-bg); }
+  .ldl-the h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .ldl-the h4::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--ldl-cham, #64748b); }
+  .ldl-the ul { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.55; }
+  html[data-giao-dien="toi"] { --ldl-nen: #111827; --ldl-cot: #1f2937; --ldl-chu: #e5e7eb; --ldl-chu-phu: #9ca3af; }
+  html[data-giao-dien="toi"] .ldl-fe rect { fill: rgba(8,145,178,.18); } html[data-giao-dien="toi"] .ldl-be rect { fill: rgba(5,150,105,.18); }
+  html[data-giao-dien="toi"] .ldl-db rect { fill: rgba(124,58,237,.2); } html[data-giao-dien="toi"] .ldl-sec rect { fill: rgba(225,29,72,.18); }
+  html[data-giao-dien="toi"] .ldl-ext rect { fill: rgba(100,116,139,.2); }
 </style>
 <?!= include_('GiaoDien_Chung') ?>
 </head>
@@ -281,6 +309,7 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
         ▼
    (nhập vào Draft ở trên, cùng cơ chế)</pre>
 
+<p>👉 Sơ đồ đầy đủ toàn hệ thống (nhập liệu, lưu chính thức, thanh toán, các màn hình đọc): xem <a href="#" onclick="var h=[].slice.call(document.querySelectorAll('.app-main h2')).filter(function(x){return /^10\./.test(x.textContent)})[0]; if(h) h.scrollIntoView({behavior:'smooth'}); return false;">mục 10</a>.</p>
 <h3>3 cơ chế cập nhật Draft — không cái nào xóa hết làm lại</h3>
 <table>
 <tr><th>Cơ chế</th><th>Kích hoạt khi nào</th><th>Phạm vi cập nhật</th></tr>
@@ -339,6 +368,49 @@ DỮ LIỆU NGOÀI: DNTT_GK_DN_CT + PhieuCan_DN
   <li>Link mở tab mới (xem file Drive, Google Maps, "Sửa hợp đồng" ở Tổng quan) vẫn mở tab mới. Đăng nhập trong khung vẫn qua cửa sổ nhỏ của Cổng đăng nhập; đăng nhập xong trang tự hiện lại ngay trong khung (trước đây user khác chủ hệ thống bị trắng màn hình ở bước này).</li>
   <li>Mở HDMB trực tiếp (không nhúng): chuyển trang y như cũ.</li>
 </ul>
+
+
+<h2>10. Sơ đồ luồng dữ liệu (toàn hệ thống)</h2>
+<p>Sơ đồ dưới đây vẽ theo kiểu <b>Archify</b> từ mã nguồn thật (nhánh <code>main</code> <code>3a15df6</code>): mỗi <b>dải ngang</b> là 1 giai đoạn của dữ liệu (đọc từ trên xuống), <b>màu ô</b> là loại thành phần, <b>mũi tên</b> là dữ liệu đi từ đâu tới đâu. Màn hình nhỏ: vuốt ngang trong khung để xem hết.</p>
+<div class="ldl-chu-giai" aria-label="Chú giải">
+  <span><b class="o" style="background:#ecfeff;border-color:#0891b2"></b>Trình duyệt</span>
+  <span><b class="o" style="background:#fff1f2;border-color:#e11d48"></b>Cổng phân quyền</span>
+  <span><b class="o" style="background:#ecfdf5;border-color:#059669"></b>Xử lý trên máy chủ</span>
+  <span><b class="o" style="background:#f5f3ff;border-color:#7c3aed"></b>Sheet lưu dữ liệu</span>
+  <span><b class="o" style="background:#f8fafc;border-color:#64748b"></b>File ngoài</span>
+  <span><i class="chinh"></i>Luồng ghi chính</span>
+  <span><i class="bm"></i>Qua phiên đăng nhập</span>
+  <span><i class="lich"></i>Theo lịch / khi bấm Làm mới</span>
+  <span><i></i>Đọc / dữ liệu phụ</span>
+</div>
+<div class="ldl-khung"><svg viewBox="0 0 720 530" role="img" aria-labelledby="ldlTieuDe ldlMoTa"><title id="ldlTieuDe">Sơ đồ luồng dữ liệu HDMB</title><desc id="ldlMoTa">Trình duyệt gửi qua cổng api() vào bản nháp Draft_HopDong; Lưu chính thức ghi bảng gốc HD_* và nhật ký; Cập nhật Draft tổng hợp từ bảng gốc, nhật ký và thanh toán DNTT vào Draft_BaoCaoHopDong; Tra cứu, Khách hàng, Bản đồ đọc bảng gốc; Tổng quan đọc Draft báo cáo.</desc><defs><marker id="ldlMui" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs><rect class="ldl-cot-nen" x="6" y="22" width="708" height="96" rx="10"/><text class="ldl-cot-chu" x="704" y="36" text-anchor="end">Nguồn dữ liệu</text><rect class="ldl-cot-nen" x="6" y="122" width="708" height="96" rx="10"/><text class="ldl-cot-chu" x="704" y="136" text-anchor="end">Tiếp nhận</text><rect class="ldl-cot-nen" x="6" y="222" width="708" height="96" rx="10"/><text class="ldl-cot-chu" x="704" y="236" text-anchor="end">Ghi chính thức</text><rect class="ldl-cot-nen" x="6" y="322" width="708" height="96" rx="10"/><text class="ldl-cot-chu" x="704" y="336" text-anchor="end">Tổng hợp báo cáo</text><rect class="ldl-cot-nen" x="6" y="422" width="708" height="96" rx="10"/><text class="ldl-cot-chu" x="704" y="436" text-anchor="end">Đọc &amp; hiển thị</text><path class="ldl-l bm" d="M80,104 V150" marker-end="url(#ldlMui)"/><path class="ldl-l chinh" d="M140,178 H191" marker-end="url(#ldlMui)"/><path class="ldl-l chinh" d="M80,204 V250" marker-end="url(#ldlMui)"/><path class="ldl-l " d="M220,204 V230 H110 V250" marker-end="url(#ldlMui)"/><path class="ldl-l chinh" d="M140,278 H191" marker-end="url(#ldlMui)"/><path class="ldl-l " d="M80,304 V350" marker-end="url(#ldlMui)"/><path class="ldl-l " d="M313,278 H427 V350" marker-end="url(#ldlMui)"/><path class="ldl-l lich" d="M140,378 H365" marker-end="url(#ldlMui)"/><path class="ldl-l lich" d="M600,104 V150" marker-end="url(#ldlMui)"/><path class="ldl-l lich" d="M600,204 V250" marker-end="url(#ldlMui)"/><path class="ldl-l " d="M590,304 V325 H455 V350" marker-end="url(#ldlMui)"/><path class="ldl-l chinh" d="M487,378 H538" marker-end="url(#ldlMui)"/><path class="ldl-l " d="M600,404 V450" marker-end="url(#ldlMui)"/><path class="ldl-cau" d="M225,370 V386"/><path class="ldl-l" d="M225,304 V420 H80 V450" marker-end="url(#ldlMui)"/><path class="ldl-cau" d="M253,370 V386"/><path class="ldl-l" d="M253,304 V450" marker-end="url(#ldlMui)"/><path class="ldl-cau" d="M281,370 V386"/><path class="ldl-l" d="M281,304 V420 H427 V450" marker-end="url(#ldlMui)"/><text class="ldl-nhan" x="88" y="116" text-anchor="start">google.script.run</text><text class="ldl-nhan" x="166" y="170" text-anchor="middle">tự lưu</text><text class="ldl-nhan" x="88" y="216" text-anchor="start">Lưu chính thức</text><text class="ldl-nhan" x="180" y="243" text-anchor="middle">bản nháp</text><text class="ldl-nhan" x="166" y="270" text-anchor="middle">ghi ID</text><text class="ldl-nhan" x="88" y="316" text-anchor="start">nhật ký</text><text class="ldl-nhan" x="372" y="271" text-anchor="middle">đọc dòng</text><text class="ldl-nhan" x="318" y="371" text-anchor="middle">HĐ vừa đổi</text><text class="ldl-nhan" x="608" y="116" text-anchor="start">KL cột M</text><text class="ldl-nhan" x="608" y="216" text-anchor="start">dnttDaApDung</text><text class="ldl-nhan" x="525" y="319" text-anchor="middle">KL thực hiện</text><text class="ldl-nhan" x="513" y="370" text-anchor="middle">ghi dòng</text><text class="ldl-nhan" x="608" y="416" text-anchor="start">vân tay</text><text class="ldl-nhan" x="345" y="414" text-anchor="middle">đọc đúng cột cần</text><g class="ldl-nut ldl-fe"><rect x="20" y="52" width="120" height="52" rx="9"/><text class="t" x="80" y="74" text-anchor="middle">Trình duyệt</text><text class="p" x="80" y="91" text-anchor="middle">Nhập liệu · tự lưu</text></g><g class="ldl-nut ldl-ext"><rect x="540" y="52" width="120" height="52" rx="9"/><text class="t" x="600" y="74" text-anchor="middle">DNTT + Phiếu cân</text><text class="p" x="600" y="91" text-anchor="middle">Sheet ngoài</text></g><g class="ldl-nut ldl-sec"><rect x="20" y="152" width="120" height="52" rx="9"/><text class="t" x="80" y="174" text-anchor="middle">Cổng api()</text><text class="p" x="80" y="191" text-anchor="middle">phiên + phân quyền</text></g><g class="ldl-nut ldl-db"><rect x="193" y="152" width="120" height="52" rx="9"/><text class="t" x="253" y="174" text-anchor="middle">Draft_HopDong</text><text class="p" x="253" y="191" text-anchor="middle">bản nháp JSON</text></g><g class="ldl-nut ldl-be"><rect x="540" y="152" width="120" height="52" rx="9"/><text class="t" x="600" y="174" text-anchor="middle">Đồng bộ thanh toán</text><text class="p" x="600" y="191" text-anchor="middle">trigger 30 phút</text></g><g class="ldl-nut ldl-be"><rect x="20" y="252" width="120" height="52" rx="9"/><text class="t" x="80" y="274" text-anchor="middle">Lưu chính thức</text><text class="p" x="80" y="291" text-anchor="middle">nháp → bảng gốc</text></g><g class="ldl-nut ldl-db"><rect x="193" y="252" width="120" height="52" rx="9"/><text class="t" x="253" y="274" text-anchor="middle">Bảng gốc HD_*</text><text class="p" x="253" y="291" text-anchor="middle">NCC·RUNG·STK·GPS</text></g><g class="ldl-nut ldl-db"><rect x="540" y="252" width="120" height="52" rx="9"/><text class="t" x="600" y="274" text-anchor="middle">Cache_BaoCao</text><text class="p" x="600" y="291" text-anchor="middle">KL thực hiện DNTT</text></g><g class="ldl-nut ldl-db"><rect x="20" y="352" width="120" height="52" rx="9"/><text class="t" x="80" y="374" text-anchor="middle">NhatKy_SuaDoi</text><text class="p" x="80" y="391" text-anchor="middle">1 dòng / thao tác</text></g><g class="ldl-nut ldl-be"><rect x="367" y="352" width="120" height="52" rx="9"/><text class="t" x="427" y="374" text-anchor="middle">Cập nhật Draft</text><text class="p" x="427" y="391" text-anchor="middle">1 HĐ / hàng loạt</text></g><g class="ldl-nut ldl-db"><rect x="540" y="352" width="120" height="52" rx="9"/><text class="t" x="600" y="374" text-anchor="middle">Draft_BaoCao</text><text class="p" x="600" y="391" text-anchor="middle">1 dòng / hợp đồng</text></g><g class="ldl-nut ldl-be"><rect x="20" y="452" width="120" height="52" rx="9"/><text class="t" x="80" y="474" text-anchor="middle">Tra cứu</text><text class="p" x="80" y="491" text-anchor="middle">chỉ mục nhớ 5 phút</text></g><g class="ldl-nut ldl-be"><rect x="193" y="452" width="120" height="52" rx="9"/><text class="t" x="253" y="474" text-anchor="middle">Khách hàng</text><text class="p" x="253" y="491" text-anchor="middle">danh sách gọn</text></g><g class="ldl-nut ldl-be"><rect x="367" y="452" width="120" height="52" rx="9"/><text class="t" x="427" y="474" text-anchor="middle">Bản đồ GPS</text><text class="p" x="427" y="491" text-anchor="middle">lô + tọa độ</text></g><g class="ldl-nut ldl-be"><rect x="540" y="452" width="120" height="52" rx="9"/><text class="t" x="600" y="474" text-anchor="middle">Tổng quan · Báo cáo</text><text class="p" x="600" y="491" text-anchor="middle">đọc Draft báo cáo</text></g></svg></div>
+<p class="hint" style="font-size:12px">Kết quả đọc (Tra cứu, Khách hàng, Bản đồ, Tổng quan) quay về trình duyệt cũng qua cổng <code>api()</code> — không vẽ chiều về để sơ đồ gọn. Bản tương tác đầy đủ (bấm vào ô để xem đúng dòng mã): <code>.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/hdmb-luong-du-lieu.html</code> trong repo.</p>
+
+<div class="ldl-the-hang">
+  <div class="ldl-the" style="--ldl-cham:#059669"><h4>Ghi: nháp trước, bảng gốc sau</h4><ul>
+    <li>Gõ trên form chỉ ghi vào <b>Draft_HopDong</b>; dòng trạng thái cạnh nút Lưu cho biết <i>Đang lưu / Đã lưu lúc … / Chưa lưu được</i>.</li>
+    <li><b>Lưu chính thức</b> gửi kèm bản mới nhất rồi mới ghi HD_NCC / HD_RUNG / HD_STK / HD_GPS — bấm ngay sau khi gõ vẫn đủ dữ liệu.</li>
+    <li>Mỗi lần ghi bảng gốc tìm lại dòng theo ID dưới khóa — người khác xóa dòng phía trên cũng không ghi nhầm hợp đồng.</li>
+  </ul></div>
+  <div class="ldl-the" style="--ldl-cham:#b45309"><h4>Thanh toán: theo lịch, tăng dần</h4><ul>
+    <li>Trigger 30 phút chỉ đọc file DNTT khi file có thay đổi (số dòng hoặc giờ sửa).</li>
+    <li>Đọc DNTT lỗi thì <b>giữ số liệu cũ</b> — khối lượng thực hiện không bị về 0.</li>
+    <li>Cần số liệu ngay: menu <i>Đồng bộ thanh toán ngay</i> (Quản trị).</li>
+  </ul></div>
+  <div class="ldl-the" style="--ldl-cham:#0891b2"><h4>Đọc: nhanh nhờ bản nhớ</h4><ul>
+    <li>Tra cứu, Khách hàng, Bản đồ đọc thẳng bảng gốc (chỉ các cột cần), nhớ 5 phút, tự xóa khi có hợp đồng thay đổi.</li>
+    <li>Tổng quan đọc Draft báo cáo; hệ thống ghi Draft là thấy ngay. Sửa <b>tay</b> sheet Draft thì tối đa 5 phút mới hiện.</li>
+    <li>Thấy số liệu báo cáo lệch: bấm <b>🔄 Làm mới</b> (luồng nét đứt "HĐ vừa đổi").</li>
+  </ul></div>
+</div>
+
+<table>
+<tr><th>Bạn làm</th><th>Dữ liệu đi qua</th><th>Ghi vào</th><th>Thấy kết quả ở</th></tr>
+<tr><td>Gõ / sửa ô trên form Nhập liệu</td><td>Trình duyệt → api() → tự lưu nháp</td><td>Draft_HopDong</td><td>Dòng trạng thái cạnh nút Lưu</td></tr>
+<tr><td>Bấm "✅ Lưu chính thức"</td><td>api() → Lưu chính thức</td><td>HD_NCC, HD_RUNG, HD_STK, HD_GPS + NhatKy_SuaDoi</td><td>Tra cứu, Khách hàng, Bản đồ — ngay</td></tr>
+<tr><td>Bấm "🔄 Làm mới" ở Tổng quan / Báo cáo</td><td>NhatKy_SuaDoi → Cập nhật Draft</td><td>Draft_BaoCaoHopDong (chỉ HĐ có thay đổi)</td><td>Tổng quan, Báo cáo tổng hợp</td></tr>
+<tr><td>Kế toán nhập DNTT / phiếu cân</td><td>File ngoài → Đồng bộ thanh toán (30 phút) → Cache_BaoCao</td><td>Draft_BaoCaoHopDong (KL thực hiện)</td><td>Tổng quan, Báo cáo tổng hợp</td></tr>
+</table>
 
 
   </div>
