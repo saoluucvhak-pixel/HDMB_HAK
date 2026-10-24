@@ -257,16 +257,20 @@
       }).layDanhSachHopDong(trang || 1, 20, val('tuKhoaHD'), val('locTinhTrangHD'));
   }
 
-  function veTrangDanhSach() { guiNgayNhapDangCho_(); hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
+  // Lượt mở hợp đồng: mạng chậm, mở A rồi quay lại / mở B -> phản hồi của A về sau không được nạp đè (form, nháp đang sửa).
+  var luotMoHD_ = 0;
+  function veTrangDanhSach() { ++luotMoHD_; guiNgayNhapDangCho_(); hienTrang('trangDanhSach'); renderBreadcrumb([{ label: '📋 Hợp đồng' }]); taiDanhSachHD(trangHDHienTai || 1); }
 
   /** Bấm 1 dòng trong danh sách -> mở/tạo NHÁP cho hợp đồng đó (không đụng bảng gốc cho tới khi Lưu chính thức) */
   function moTrangXemHopDong(soDong, idHD) {
     guiNgayNhapDangCho_();
+    var luot = ++luotMoHD_;
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang mở nháp...' }]);
     hakRun_()
-      .withFailureHandler(function (err) { thongBao_('❌ Lỗi mở nháp: ' + err.message); veTrangDanhSach(); })
+      .withFailureHandler(function (err) { if (luot !== luotMoHD_) return; thongBao_('❌ Lỗi mở nháp: ' + err.message); veTrangDanhSach(); })
       .withSuccessHandler(function (kq) {
+        if (luot !== luotMoHD_) return;
         if (!kq) { thongBao_('❌ Không tìm thấy hợp đồng.'); veTrangDanhSach(); return; }
         idDraftHienTai = kq.idDraft; duNhap = kq.du; tinhTrangGocDangSua = kq.tinhTrangGoc;
         soHDHienTai = duNhap.hopDong.soHD; tenChuRungHienTai = duNhap.hopDong.tenChuRung;

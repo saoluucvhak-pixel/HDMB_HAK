@@ -280,7 +280,8 @@ function traCuu_() {
   if (tk.length === 1) { vung.innerHTML = '<div class="msg err">Từ khóa cần ít nhất 2 ký tự (hoặc để trống để xem mọi hợp đồng trong khoảng ngày).</div>'; return; }
   if (tuNgay && denNgay && tuNgay > denNgay) { vung.innerHTML = '<div class="msg err">"Từ ngày" phải trước hoặc bằng "Đến ngày".</div>'; return; }
   tcDangTim_ = true;
-  document.getElementById('tcNutTim').disabled = true;
+  // KHÔNG khóa nút Tra cứu: nút submit bị khóa thì Enter trong ô từ khóa không gửi form -> không tìm lại được khi mạng chậm.
+  // Lượt mới thay lượt đang chờ (tcLuotTim_), phản hồi cũ bị bỏ.
   vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tìm…</div>';
   try { google.script.history.replace(null, { page: 'tracuu', q: tk, tu: tuNgay, den: denNgay }); } catch (e) { /* ngoài Apps Script */ }
   hakRun_()
@@ -341,7 +342,8 @@ function xemChiTiet_(idHD) {
   if (tcManRong_()) { tcHaiCot_(true); tcDanhDauChon_(idHD); } else vungKQ.style.display = 'none';
   tcDangXem_ = idHD;
   if (tcNhoChiTiet_[idHD]) { veChiTiet_(tcNhoChiTiet_[idHD]); return; }
-  vung.innerHTML = '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>';
+  vung.innerHTML = nutQuayLai_() + '<div class="tc-dang-tai">⏳ Đang tải chi tiết hợp đồng…</div>'; // mạng chậm: vẫn quay lại được
+  ganNutQuayLai_();
   hakRun_()
     .withSuccessHandler(function (ct) {
       if (luot !== tcLuotChiTiet_) return;

@@ -189,7 +189,7 @@
   <div class="card">
     <button class="btn btn-green" style="margin-bottom:14px" onclick="moModalChonKhachHang()">➕ Tạo hợp đồng mới</button>
     <div class="field-row">
-      <div class="field"><label>Tìm theo tên chủ rừng, số HĐ, hoặc ID_HD</label><input id="tuKhoaHD" placeholder="vd: Nguyễn Văn A" onkeyup="debounceTimKiemHD()"></div>
+      <div class="field"><label>Tìm theo tên chủ rừng, số HĐ, hoặc ID_HD</label><input id="tuKhoaHD" placeholder="vd: Nguyễn Văn A" oninput="debounceTimKiemHD()"></div>
       <div class="field">
         <label>Lọc theo trạng thái</label>
         <select id="locTinhTrangHD" onchange="taiDanhSachHD(1)">
@@ -545,11 +545,13 @@
   /** "➕ Tạo hợp đồng mới" -> tạo 1 bản NHÁP trắng ngay (TAO_DRAFT_MOI) */
   function moTrangTaoHopDong(khachHangDaChon) {
     guiNgayNhapDangCho_();
+    var luot = ++luotMoHD_;
     hienTrang('trangHopDong');
     renderBreadcrumb([{ label: '📋 Hợp đồng', onClick: 'veTrangDanhSach' }, { label: '⌛ Đang tạo nháp...' }]);
     hakRun_()
-      .withFailureHandler(function (err) { thongBao_('❌ Lỗi tạo nháp: ' + err.message); veTrangDanhSach(); })
+      .withFailureHandler(function (err) { if (luot !== luotMoHD_) return; thongBao_('❌ Lỗi tạo nháp: ' + err.message); veTrangDanhSach(); })
       .withSuccessHandler(function (kq) {
+        if (luot !== luotMoHD_) return;
         idDraftHienTai = kq.idDraft;
         duNhap = { idHD: null, hopDong: {}, rung: [], taiKhoan: [], phuLuc: [] };
         tinhTrangGocDangSua = null; soHDHienTai = null; tenChuRungHienTai = null;

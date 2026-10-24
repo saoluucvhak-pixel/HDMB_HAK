@@ -48,3 +48,4 @@ jobs:
           node ui_dinh_dang_so.cjs
           node ui_phan_hoi_cu.cjs
           node ui_tu_luu_nhap.cjs
+          node ui_mang_cham.cjs

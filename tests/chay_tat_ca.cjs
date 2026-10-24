@@ -19,7 +19,8 @@ const buoc = [
   ['Giao diện: nhúng trong Portal — chuyển trang trong khung', 'ui_nhung_portal.cjs', true],
   ['Giao diện: ô nhập số khi gõ bằng bộ gõ tiếng Việt / điện thoại', 'ui_dinh_dang_so.cjs', true],
   ['Giao diện: phản hồi tìm kiếm cũ không ghi đè kết quả mới', 'ui_phan_hoi_cu.cjs', true],
-  ['Giao diện: tự lưu nháp đúng thứ tự, chờ lưu xong trước Lưu chính thức', 'ui_tu_luu_nhap.cjs', true]
+  ['Giao diện: tự lưu nháp đúng thứ tự, chờ lưu xong trước Lưu chính thức', 'ui_tu_luu_nhap.cjs', true],
+  ['Giao diện: mạng chậm, phản hồi sai thứ tự, quay lại danh sách, bộ gõ', 'ui_mang_cham.cjs', true]
 ];
 let hong = 0;
 buoc.forEach(function (b) {
