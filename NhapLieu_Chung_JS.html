@@ -154,7 +154,7 @@
       ['Khối lượng dự kiến', formatSoNhap_(tongKL) + ' tấn'], ['Giá trị dự kiến', formatSoNhap_(tongGT) + ' đ'],
       ['Số lô rừng', dsConLai.length], ['Loại hồ sơ nguồn gốc', hoSoSet.join(', ') || '—'],
       ['Số giấy tờ', soGiayToSet.join(', ') || '—'], ['Địa chỉ rừng', diaChiSet.join(', ') || '—']
-    ].map(function (kv) { return '<div class="ct-item"><div class="lbl">' + kv[0] + '</div><div class="val">' + kv[1] + '</div></div>'; }).join('');
+    ].map(function (kv) { return '<div class="ct-item"><div class="lbl">' + escAT_(kv[0]) + '</div><div class="val">' + escAT_(kv[1]) + '</div></div>'; }).join('');
   }
 
   // ============ TAB BẬC 1: Lô rừng / Tài khoản / Phụ lục ============
@@ -175,10 +175,11 @@
   }
 
   // ============ DANH SÁCH / TÌM / PHÂN TRANG HỢP ĐỒNG ============
-  function debounceTimKiemHD() { clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
+  function debounceTimKiemHD() { ++luotTaiDSHD_; clearTimeout(timeoutTimKiemHD); timeoutTimKiemHD = setTimeout(function () { taiDanhSachHD(1); }, 300); }
 
   var luotTaiDSHD_ = 0; // phản hồi của lượt tìm CŨ về sau lượt mới (gõ nhanh / mạng chậm) không được ghi đè bảng
   function taiDanhSachHD(trang) {
+    clearTimeout(timeoutTimKiemHD);
     var luot = ++luotTaiDSHD_;
     hakRun_()
       .withFailureHandler(function (err) { if (luot !== luotTaiDSHD_) return; document.querySelector('#tblDSHopDong tbody').innerHTML = '<tr><td colspan="6" style="color:red">❌ Lỗi: ' + escAT_(err.message) + '</td></tr>'; })
@@ -718,3 +719,4 @@
       .XOA_VINH_VIEN_HOP_DONG(duNhap.idHD, true);
   }
 </script>
+
