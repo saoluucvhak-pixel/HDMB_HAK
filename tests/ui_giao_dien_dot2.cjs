@@ -1,7 +1,8 @@
 // Giao diện mới đợt 2: Tổng quan (4 chỉ số, nút lọc, tiến độ), Tra cứu 2 cột, thanh tiến độ 5 bước + bảng so khớp OCR
 // ở Nhập liệu, bản đồ điện thoại (thẻ trượt). Dựng TRANG THẬT từ template (gas_template.cjs), dữ liệu giả lập.
 const { danhGia } = require('./gas_template.cjs');
-const { moTrinhDuyet, ghiTrangTam, inKetQua } = require('./ui_chung.cjs');
+const { moTrinhDuyet, ghiTrangTam, inKetQua, canLeaflet } = require('./ui_chung.cjs');
+canLeaflet();
 const giaLap = du => `<script>window.__du=${JSON.stringify(du)};(function(){function taoRunner(){var ok=null;var r=new Proxy({},{get:function(_,k){
  if(k==='withSuccessHandler')return function(f){ok=f;return r}; if(k==='withFailureHandler'||k==='withUserObject')return function(){return r};
  return function(){var ten=k==='api'?arguments[1]:k;window.__goi=(window.__goi||[]).concat(ten);setTimeout(function(){if(!ok)return;var kq=window.__du[ten];

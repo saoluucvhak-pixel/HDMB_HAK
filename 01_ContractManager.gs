@@ -114,7 +114,7 @@ function LAY_TONG_QUAN_HOP_DONG_(boLoc) {
   if (tuNgay) tuNgay.setHours(0, 0, 0, 0);
   if (denNgay) denNgay.setHours(23, 59, 59, 999); // lấy trọn ngày kết thúc
 
-  const list = docDraftBaoCaoKhongAnhGps_(); // Tổng quan không hiển thị cờ ảnh / GPS -> không đọc HD_RUNG / HD_GPS
+  const list = _dsTongQuanCoCache_(); // không cần cờ ảnh / GPS; nhớ 5 phút theo dấu vân tay Draft (00_Config.gs)
   const locChung = list.filter(function (m) {
     if (soHDLoc && (m.soHD || '').toString().toLowerCase().indexOf(soHDLoc) === -1) return false;
     if (tenLoc && (m.tenChuRung || '').toString().toLowerCase().indexOf(tenLoc) === -1) return false;

@@ -2,7 +2,8 @@
 // menu chung đủ 11 mục, đúng 1 mục sáng theo trang, mục lục Thiết lập/Hướng dẫn, bản đồ vẽ lô + thẻ chi tiết.
 const path = require('path');
 const { danhGia } = require('./gas_template.cjs');
-const { moTrinhDuyet, ghiTrangTam, inKetQua } = require('./ui_chung.cjs');
+const { moTrinhDuyet, ghiTrangTam, inKetQua, canLeaflet } = require('./ui_chung.cjs');
+canLeaflet();
 const giaLap = `<script>(function(){function taoRunner(){var ok=null;var r=new Proxy({},{get:function(_,k){
  if(k==='withSuccessHandler')return function(f){ok=f;return r}; if(k==='withFailureHandler'||k==='withUserObject')return function(){return r};
  return function(){var ten=k==='api'?arguments[1]:k;(window.__goi=window.__goi||[]).push([ten,[].slice.call(arguments,k==='api'?2:0)]);setTimeout(function(){if(!ok)return;var kq=window.__du&&window.__du[ten];

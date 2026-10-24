@@ -473,6 +473,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('tenChuRung').addEventListener('input', function () { goiYKhachHang_('tenChuRung', 'dlKhachHangCoSanTheoTen', false); });
+    document.getElementById('cccdChuRung').addEventListener('input', function () { goiYKhachHang_('cccdChuRung', 'dlKhachHangCoSan', true); });
     var card = document.getElementById('cardThongTinHD');
     card.addEventListener('input', debounceLuuNhap);
     card.addEventListener('change', debounceLuuNhap);
@@ -486,25 +488,53 @@
     if (f4) f4.addEventListener('change', function () { document.getElementById('tenFileAnhChoDiemGPS').textContent = f4.files[0] ? '✅ ' + f4.files[0].name : ''; });
   });
 
-  var khachHangCoSan_ = {}; // { cccd: {...} } — nạp 1 lần lúc mở trang
-  var khachHangTheoTen_ = {}; // { tenThuongHoa: {...} } — tra theo tên (lưu ý: tên có thể trùng giữa nhiều người, ưu tiên khớp theo CCCD trước)
+  // Rà soát 24/10/2026: nạp danh sách khách hàng GỌN (đủ mọi khách — trước đây cắt ở 5.000; chỉ CCCD / tên / số HĐ / địa chỉ),
+  // gợi ý ≤ 20 dòng theo chữ đang gõ (trước: dựng sẵn 2 datalist × mọi khách hàng — nặng trên điện thoại), chi tiết để tự
+  // điền lấy theo CCCD khi cần (layChiTietKhachHang_).
+  var khachHangCoSan_ = {}; // { cccd: {cccd, tenChuRung, soLuongHopDong, thuongTru} }
+  var khachHangTheoTen_ = {}; // { tenThuongHoa: {...} } — tên trùng nhiều người: giữ người đứng SAU theo thứ tự tên (như trước)
   var danhSachKhachHangArr_ = []; // mảng phẳng để lọc trong modal "Tạo hợp đồng mới"
   function naptDanhSachKhachHangCoSan() {
     hakRun_().withSuccessHandler(function (kq) {
-      var dl = document.getElementById('dlKhachHangCoSan'); dl.innerHTML = '';
-      var dlTen = document.getElementById('dlKhachHangCoSanTheoTen'); dlTen.innerHTML = '';
-      danhSachKhachHangArr_ = kq.items || [];
+      danhSachKhachHangArr_ = ((kq && kq.ds) || []).map(function (a) { return { cccd: String(a[0]), tenChuRung: a[1], soLuongHopDong: a[2], thuongTru: a[3] }; });
+      khachHangCoSan_ = {}; khachHangTheoTen_ = {};
       danhSachKhachHangArr_.forEach(function (kh) {
         khachHangCoSan_[kh.cccd] = kh;
-        if (kh.tenChuRung) khachHangTheoTen_[kh.tenChuRung.trim().toLowerCase()] = kh;
-        var opt = document.createElement('option');
-        opt.value = kh.cccd; opt.label = kh.cccd + ' — ' + (kh.tenChuRung || '');
-        dl.appendChild(opt);
-        var optTen = document.createElement('option');
-        optTen.value = kh.tenChuRung || ''; optTen.label = (kh.tenChuRung || '') + ' — CCCD ' + kh.cccd + (kh.soLuongHopDong > 1 ? ' (' + kh.soLuongHopDong + ' HĐ)' : '');
-        dlTen.appendChild(optTen);
+        if (kh.tenChuRung) khachHangTheoTen_[String(kh.tenChuRung).trim().toLowerCase()] = kh;
       });
-    }).withFailureHandler(function (err) { console.error('naptDanhSachKhachHangCoSan:', err); }).layDanhSachKhachHang(1, 5000, '');
+    }).withFailureHandler(function (err) { console.error('naptDanhSachKhachHangCoSan:', err); }).LAY_DS_KHACH_HANG_GON();
+  }
+  /** Gợi ý ≤ 20 khách hàng khớp chữ đang gõ vào datalist của ô tên / CCCD (dừng khi đủ 20, không dựng sẵn cả danh sách). */
+  var henGoiYKhachHang_ = null;
+  function goiYKhachHang_(oId, dlId, theoCccd) {
+    clearTimeout(henGoiYKhachHang_);
+    henGoiYKhachHang_ = setTimeout(function () {
+      var tk = String(val(oId) || '').trim().toLowerCase(), dl = document.getElementById(dlId);
+      if (!dl) return;
+      dl.innerHTML = '';
+      if (tk.length < (theoCccd ? 3 : 2)) return;
+      for (var i = 0, n = 0; i < danhSachKhachHangArr_.length && n < 20; i++) {
+        var kh = danhSachKhachHangArr_[i];
+        var khop = theoCccd ? kh.cccd.indexOf(tk) !== -1 : String(kh.tenChuRung || '').toLowerCase().indexOf(tk) !== -1;
+        if (!khop) continue;
+        var opt = document.createElement('option'); n++;
+        if (theoCccd) { opt.value = kh.cccd; opt.label = kh.cccd + ' — ' + (kh.tenChuRung || ''); }
+        else { opt.value = kh.tenChuRung || ''; opt.label = (kh.tenChuRung || '') + ' — CCCD ' + kh.cccd + (kh.soLuongHopDong > 1 ? ' (' + kh.soLuongHopDong + ' HĐ)' : ''); }
+        dl.appendChild(opt);
+      }
+    }, 120);
+  }
+  /** Đủ thông tin 1 khách hàng theo CCCD (nhớ trong trang; nhiều lời gọi cùng lúc chờ chung 1 lượt). cb(kh | null) */
+  var chiTietKhachHang_ = {};
+  function layChiTietKhachHang_(cccd, cb) {
+    var m = chiTietKhachHang_[cccd];
+    if (m && m.xong) { if (cb) cb(m.kh); return; }
+    if (m) { if (cb) m.cho.push(cb); return; }
+    m = chiTietKhachHang_[cccd] = { xong: false, kh: null, cho: cb ? [cb] : [] };
+    var xong = function (kh, giuLai) { m.xong = true; m.kh = kh; if (!giuLai) delete chiTietKhachHang_[cccd]; var ds = m.cho; m.cho = []; ds.forEach(function (f) { f(kh); }); };
+    hakRun_().withSuccessHandler(function (kh) { xong(kh || null, true); })
+      .withFailureHandler(function (err) { console.error('layChiTietKhachHang_:', err); xong(null, false); })
+      .LAY_KHACH_HANG_THEO_CCCD(cccd);
   }
   /** Khi gõ/chọn xong CCCD ở ô "Tạo hợp đồng mới" — nếu khớp khách hàng ĐÃ CÓ, tự điền
    *  các thông tin cá nhân (chỉ điền vào ô ĐANG TRỐNG, không ghi đè nếu đã có sẵn tự nhập) */
@@ -522,6 +552,14 @@
   }
   function apDungThongTinKhachHang_(kh) {
     if (!kh || duNhap.idHD) return; // chỉ áp dụng lúc TẠO MỚI (chưa có idHD chính thức), không đụng vào hợp đồng đang sửa
+    // Danh sách gọn chưa có SĐT / ngày cấp... -> lấy chi tiết theo CCCD; về muộn khi đã sang bản nháp khác thì bỏ
+    var idDraft = idDraftHienTai, luot = luotMoHD_;
+    layChiTietKhachHang_(kh.cccd, function (day) {
+      if (!day || idDraft !== idDraftHienTai || luot !== luotMoHD_ || duNhap.idHD) return;
+      dienThongTinKhachHang_(day);
+    });
+  }
+  function dienThongTinKhachHang_(kh) {
     var dienNeuTrong = function (id, giaTri) { if (giaTri && !val(id)) setVal(id, giaTri); };
     dienNeuTrong('tenChuRung', kh.tenChuRung);
     dienNeuTrong('cccdChuRung', kh.cccd);
@@ -599,6 +637,7 @@
       dong.innerHTML = '<div class="ten">' + escHtmlNL_(kh.tenChuRung) + '</div>' +
         '<div class="phu">CCCD ' + escHtmlNL_(kh.cccd) + (kh.thuongTru ? ' — ' + escHtmlNL_(kh.thuongTru) : '') + ' — ' + escAT_(kh.soLuongHopDong) + ' hợp đồng trước đó</div>';
       dong.addEventListener('click', function () {
+        layChiTietKhachHang_(kh.cccd); // lấy trước chi tiết song song với lúc tạo nháp
         dongModalChonKhachHang();
         moTrangTaoHopDong(kh);
       });

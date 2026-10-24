@@ -22,13 +22,33 @@ let docLon = {};
 { const g = RP.getValues; RP.getValues = function () { const o = this.nr * this.nc; if (o > 500 && process.env.AI_DOC) { const st = (new Error().stack || '').split('\n').slice(2).map(s => (s.match(/at ([\w$.]+) /) || [])[1]).filter(x => x && !/^(Range|Object|Array|Sheet|getValue|readData_|docDongTheoKhoa_)/.test(x)).slice(0, 2).join(' < '); const k = this.sh.name + ' ← ' + st; docLon[k] = (docLon[k] || 0) + o; } return g.apply(this, arguments); }; }
 const t0 = Date.now();
 const ds = [];
-for (let i = 0; i < N; i++) {
+// NHAN_BAN=k: dựng N/k HĐ qua hàm thật rồi NHÂN BẢN dòng thẳng vào sheet (đổi khóa ID / Số HĐ / CCCD cho khỏi trùng), dựng lại
+// Draft bằng XAY_DUNG_LAI_TOAN_BO_DRAFT_ — 10.000 HĐ qua hàm thật trên bộ giả lập mất hàng giờ (mỗi lần tạo quét lại cả sheet).
+const NHAN = Math.max(1, Number(process.env.NHAN_BAN || 1));
+const N_GOC = Math.ceil(N / NHAN);
+for (let i = 0; i < N_GOC; i++) {
   const k = run('TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Khach Hang ' + i, cccdChuRung: '0490' + String(10000000 + i), ngayKy: '2026-0' + (1 + i % 9) + '-10', soTK: '11' + i, nganHang: 'VCB', soHD: 'S' + i, diaChiRung: 'Thon ' + i, dienTichKy: 10000, slDuKien: 120, donGia: 1000 }) + ')');
   const l = run('THEM_LO_RUNG_MOI_(' + J({ idHD: k.idHD, diaChiRung: 'Lo ' + i, dienTichM2: 3000, donGia: 2000, khoiLuongDuKien: 36 }) + ')');
   for (let g = 0; g < 3; g++) run('CAP_NHAT_GPS_RUNG_(' + J(l.idRung) + ', {lat: 15.' + g + '1' + i + ', lng: 108.1}, false)');
   ds.push({ idHD: k.idHD, idRung: l.idRung, cccd: '0490' + String(10000000 + i), ten: 'Khach Hang ' + i });
 }
-const X = ds[Math.floor(N / 2)];
+if (NHAN > 1) {
+  const C = k => run(k);
+  const nhanBan = (ten, cotDoi) => {
+    const sh = ss.getSheetByName(ten); const goc = sh.getDataRange().getValues().slice(1); const moi = [];
+    for (let k = 1; k < NHAN; k++) goc.forEach(r => { const x = r.slice(); cotDoi.forEach(([c, f]) => { x[c] = f(x[c], k); }); moi.push(x); });
+    if (moi.length) sh.getRange(sh.getLastRow() + 1, 1, moi.length, moi[0].length).setValues(moi);
+  };
+  const duoi = (v, k) => v === '' || v == null ? v : String(v) + '_' + k;
+  const cccd = (v, k) => v === '' || v == null ? v : String(k) + String(v).slice(1);
+  nhanBan('HD_NCC', [[C('NCC_COL.ID_HD'), duoi], [C('NCC_COL.SO_HD'), duoi], [C('NCC_COL.CCCD_CHU_RUNG'), cccd], [C('NCC_COL.TEN_CHU_RUNG'), duoi]]);
+  nhanBan('HD_RUNG', [[C('RUNG_COL.ID_KEY_HD'), duoi], [C('RUNG_COL.ID_RUNG'), duoi], [C('RUNG_COL.MA_RUNG'), duoi], [C('RUNG_COL.SO_HD'), duoi]]);
+  nhanBan('HD_STK', [[C('STK_COL.ID_HD'), duoi], [C('STK_COL.ID_STK'), duoi], [C('STK_COL.SO_HD'), duoi]]);
+  nhanBan('HD_GPS', [[C('GPS_COL.ID_KEY_GPS'), duoi], [C('GPS_COL.ID_GPS'), duoi]]);
+  run('XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
+  run('xoaCacheChiaManh_(KHOA_DS_KHACH_HANG_); xoaCacheTraCuu_(); xoaCacheAnhGps_(); xoaCacheBanDo_(); _draftDataCache = null;');
+}
+const X = ds[Math.floor(N_GOC / 2)];
 const soDongX = () => run('timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, ' + J(X.idHD) + ')');
 const tk = () => run('layDanhSachTaiKhoan_(' + J(X.idHD) + ')')[0];
 
@@ -76,7 +96,7 @@ doMot('Sửa', 'Sửa qua nháp: mở nháp', 'var __n = LAY_DRAFT_THEO_ID_HD_('
 doMot('Sửa', 'Sửa qua nháp: lưu nháp', '__n.du.hopDong.sdtChuRung = "0911000000"; LUU_DRAFT_(__n.idDraft, JSON.stringify(__n.du))');
 doMot('Sửa', 'Sửa qua nháp: lưu chính thức', 'LUU_CHINH_THUC_(__n.idDraft)');
 
-console.log('Bộ dữ liệu: ' + N + ' HĐ, ' + N + ' x 2 lô, ' + (N * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
+console.log('Bộ dữ liệu: ' + N_GOC * NHAN + ' HĐ' + (NHAN > 1 ? ' (' + N_GOC + ' qua hàm thật × ' + NHAN + ' nhân bản)' : '') + ', ' + N_GOC * NHAN + ' x 2 lô, ' + (N_GOC * NHAN * 4) + ' điểm GPS — dựng mất ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
 console.log(['Nhóm', 'Thao tác', 'Lượt đọc', 'Ô đọc', 'Lượt ghi', 'Phản hồi (KB)', 'Lỗi'].join(' | '));
 kq.forEach(r => console.log([r.nhom, r.ten, r.doc, r.o.toLocaleString('vi'), r.ghi, r.kb.toFixed(1), r.loi ? r.loi.slice(0, 60) : ''].join(' | ')));
 if (process.env.CHI_TIET) kq.forEach(r => console.log(r.ten, J(r.theo)));

@@ -24,4 +24,12 @@ function inKetQua(kq) {
   console.log(kq.map(x => (x[1] === true ? 'PASS ' : 'FAIL ') + x[0] + (x[1] === true ? '' : ' ' + x[1])).join('\n'));
 }
 
-module.exports = { moTrinhDuyet, docMa, ghiTrangTam, inKetQua, GOC };
+/** Test bản đồ phục vụ leaflet NGOẠI TUYẾN từ tests/node_modules (mạng ngoài bị chặn trong test). Thiếu -> báo rõ và dừng NGAY
+ *  (trước đây chờ 30 giây rồi báo timeout ở '#dsLo .lo', dễ hiểu nhầm là lỗi mã bản đồ). */
+function canLeaflet() {
+  try { require.resolve('leaflet/dist/leaflet.js'); return true; } catch (e) { /* thiếu */ }
+  console.log('FAIL thiếu thư viện leaflet cho test bản đồ — chạy: cd tests && npm install   (package.json đã khai báo leaflet 1.9.4)');
+  process.exit(1);
+}
+
+module.exports = { moTrinhDuyet, docMa, ghiTrangTam, inKetQua, canLeaflet, GOC };

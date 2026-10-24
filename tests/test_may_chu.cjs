@@ -1063,6 +1063,27 @@ try {
     kiem('TQ-1 Tổng quan lần đầu (bản nhớ cờ ảnh/GPS trống) không đọc HD_RUNG / HD_GPS / HD_Picture', !lanDau.theo.some(k => /^HD_(RUNG|GPS|Picture)/.test(k)), J(lanDau.theo));
     const dayDu = t.run('(function(){ _draftDataCache = null; docToanBoDraftBaoCao_(); return LAY_TONG_QUAN_HOP_DONG_({}); })()');
     kiem('TQ-1 kết quả Tổng quan giống hệt khi đọc bản đầy đủ (có ghi đè ảnh/GPS)', J(lanDau.r) === J(dayDu), J(lanDau.r).slice(0, 200));
+    // TQ-2..5 (rà soát 24/10/2026): Tổng quan nhớ theo dấu vân tay Draft — lần sau chỉ đọc cột CAP_NHAT_LUC; ghi Draft -> thấy ngay
+    const B = t.tao('TQ B', '049000000302', '2222', 'T2');
+    tq();
+    const lan3 = tq();
+    kiem('TQ-2 mở lại Tổng quan (lượt chạy mới): chỉ đọc 1 cột của Draft', J(lan3.theo) === J(['Draft_BaoCaoHopDong(1 cột)']) && lan3.r.tongSoHopDong === 2, J(lan3.theo));
+    kiem('TQ-2 kết quả từ bản nhớ giống hệt đọc thẳng', J(lan3.r) === J(t.run('(function(){ _draftDataCache = null; docToanBoDraftBaoCao_(); return LAY_TONG_QUAN_HOP_DONG_({}); })()')));
+    // Dấu vân tay dựa trên CAP_NHAT_LUC (mili-giây): bộ giả lập chạy nhanh tới mức tạo + sửa cùng 1 mili-giây — trên Apps Script
+    // thật mỗi lần ghi Sheet mất hàng chục mili-giây. Chờ 3 ms cho giống thật (giới hạn đã ghi trong tài liệu).
+    { const t0 = Date.now(); while (Date.now() - t0 < 3) { /* chờ */ } }
+    t.run('CAP_NHAT_HOP_DONG_(timSoDongTheoGiaTri_(SHEET_NAME.HD_NCC, NCC_COL.ID_HD, ' + J(B.idHD) + '), { tenChuRung: "TQ B da sua" }, ' + J(B.idHD) + '); CAP_NHAT_DRAFT_MOT_HOP_DONG_(' + J(B.idHD) + ')');
+    const sau = tq();
+    const itB = sau.r.items.find(x => x.idHD === B.idHD);
+    kiem('TQ-3 sửa hợp đồng + cập nhật Draft -> Tổng quan thấy dữ liệu mới ngay (bản nhớ không dùng lại)', itB && itB.tenChuRung === 'TQ B da sua' && sau.theo.length > 1, J(itB) + J(sau.theo));
+    const shD = t.m.ssBaoCao.getSheetByName('Draft_BaoCaoHopDong');
+    const dongB = shD.getDataRange().getValues().findIndex(r => r[0] === B.idHD) + 1;
+    shD.deleteRow(dongB);
+    const xoa = tq();
+    kiem('TQ-4 dòng Draft bị xóa -> Tổng quan thấy ngay', xoa.r.tongSoHopDong === 1 && !xoa.r.items.some(x => x.idHD === B.idHD), J(xoa.r.tongSoHopDong));
+    t.run('_draftDataCache = null; XAY_DUNG_LAI_TOAN_BO_DRAFT_()');
+    const dl = tq();
+    kiem('TQ-5 xây dựng lại Draft -> Tổng quan thấy ngay', dl.r.tongSoHopDong === 2, J(dl.r.tongSoHopDong));
     // cache chia mảnh: chuỗi > 25.000 ký tự đọc lại nguyên vẹn
     const lon = t.run('(function () { var o = { s: new Array(60001).join("ạ") }; luuCacheChiaManh_("THU_LON", o, 60); var d = docCacheChiaManh_("THU_LON"); return !!d && d.s.length === 60000 && JSON.parse(CacheService.getScriptCache().get("THU_LON")).n === 3; })()');
     kiem('HS-TQ cache chia mảnh: 60.000 ký tự -> 3 khúc, đọc lại đúng', lon === true);

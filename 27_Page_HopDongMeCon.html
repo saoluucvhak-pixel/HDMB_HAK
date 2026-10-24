@@ -288,10 +288,24 @@
     } catch (e) { moTheoThamSo_(''); }
   });
   var daTaiKhachHangDayDu_ = false;
-  /** Tải lười — chỉ gọi lần đầu tiên cần đến (mở wizard/form thêm hợp đồng), các lần sau dùng lại cache */
+  /** Tải lười — chỉ gọi lần đầu tiên cần đến (mở wizard), các lần sau dùng lại. Rà soát 24/10/2026: danh sách GỌN của MỌI
+   *  khách hàng (trước: 5.000 bản ghi đầy đủ — khách thứ 5.001 trở đi không chọn được, form thêm HĐ ra thông tin trống). */
   function damBaoDaTaiKhachHangDayDu_(khiXong) {
     if (daTaiKhachHangDayDu_) { khiXong(); return; }
-    hakRun_().withSuccessHandler(function (kq) { khachHangCoSan_ = kq.items || []; daTaiKhachHangDayDu_ = true; khiXong(); }).withFailureHandler(function (err) { thongBao_('❌ Lỗi tải danh sách khách hàng: ' + err.message); }).layDanhSachKhachHang(1, 5000, '');
+    hakRun_().withSuccessHandler(function (kq) {
+      khachHangCoSan_ = ((kq && kq.ds) || []).map(function (a) { return { cccd: String(a[0]), tenChuRung: a[1], soLuongHopDong: a[2], thuongTru: a[3] }; });
+      daTaiKhachHangDayDu_ = true; khiXong();
+    }).withFailureHandler(function (err) { thongBao_('❌ Lỗi tải danh sách khách hàng: ' + err.message); }).LAY_DS_KHACH_HANG_GON();
+  }
+  /** Đủ thông tin 1 khách hàng theo CCCD. Bấm nhanh 2 người: chỉ lượt bấm SAU CÙNG được dùng. cb(kh) — không có thì báo lỗi, không gọi cb. */
+  var luotLayKH27_ = 0;
+  function layKhachHangDayDu27_(cccd, cb) {
+    var luot = ++luotLayKH27_;
+    hakRun_().withSuccessHandler(function (kh) {
+      if (luot !== luotLayKH27_) return;
+      if (!kh) { thongBao_('❌ Không tìm thấy thông tin khách hàng CCCD ' + cccd + ' — tải lại trang rồi thử lại.'); return; }
+      cb(kh);
+    }).withFailureHandler(function (err) { if (luot === luotLayKH27_) thongBao_('❌ Lỗi tải thông tin khách hàng: ' + err.message); }).LAY_KHACH_HANG_THEO_CCCD(cccd);
   }
 
   // ============ TRANG 1: DANH MỤC KHÁCH HÀNG (GỐC) ============
@@ -478,11 +492,10 @@
 
   /** Thêm 1 hợp đồng MỚI cho khách hàng ĐÃ CHỌN (không cần nhập lại thông tin cá nhân — chỉ hỏi phần hợp đồng) */
   function moFormThemHopDongChoKhachHangCoSan_() {
-    damBaoDaTaiKhachHangDayDu_(function () { moFormThemHopDongChoKhachHangCoSan_ThucHien_(); });
+    layKhachHangDayDu27_(ctxKH.cccd, moFormThemHopDongChoKhachHangCoSan_ThucHien_);
   }
-  function moFormThemHopDongChoKhachHangCoSan_ThucHien_() {
+  function moFormThemHopDongChoKhachHangCoSan_ThucHien_(kh) {
     batDauLanTaoHopDong_();
-    var kh = khachHangCoSan_.find(function (x) { return x.cccd === ctxKH.cccd; }) || {};
     var html = '<h3 style="margin-top:0">➕ Thêm hợp đồng cho ' + escHtml_(ctxKH.tenChuRung) + '</h3>' +
       '<p class="hint" style="margin-top:-6px">Thông tin cá nhân dùng lại từ khách hàng đã chọn — chỉ cần điền phần hợp đồng mới.</p>' +
       '<div class="form2col">' + truong_('nfNgayKy', 'Ngày ký hợp đồng *', '', 'type="date"') + truong_('nfSoHD', 'Số hợp đồng', '', 'placeholder="Để trống sẽ tự sinh"') + '</div>' +
@@ -584,7 +597,7 @@
     list.forEach(function (kh) {
       var d = document.createElement('div'); d.className = 'ds-kh-dong';
       d.innerHTML = '<div class="ten">' + escHtml_(kh.tenChuRung) + '</div><div class="phu">CCCD ' + escHtml_(kh.cccd) + ' — ' + escHtml_(kh.soLuongHopDong) + ' hợp đồng trước đó</div>';
-      d.addEventListener('click', function () { wz.khachHangCoSan = kh; renderWizardBuoc1b_(); });
+      d.addEventListener('click', function () { layKhachHangDayDu27_(kh.cccd, function (day) { wz.khachHangCoSan = day; renderWizardBuoc1b_(); }); });
       el.appendChild(d);
     });
   }

@@ -424,6 +424,8 @@ function _bangQuyenApi_() {
     layDanhSachThanhLy: r(layDanhSachThanhLy_, X),
     layDanhSachHopDong: r(layDanhSachHopDong_, X),
     layDanhSachKhachHang: r(layDanhSachKhachHang_, X),
+    LAY_DS_KHACH_HANG_GON: r(LAY_DS_KHACH_HANG_GON_, X),
+    LAY_KHACH_HANG_THEO_CCCD: r(LAY_KHACH_HANG_THEO_CCCD_, X),
     layDanhSachLoaiHoSo: r(layDanhSachLoaiHoSo_, X),
     layDanhSachNhomKH: r(layDanhSachNhomKH_, X),
     layDanhSachRung: r(layDanhSachRung_, X),
