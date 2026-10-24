@@ -103,6 +103,24 @@ const TRANG = [
     if (trang === 'huongdan') {
       const hd = await p.evaluate(() => ({ phan: document.querySelectorAll('.hd-phan').length, buoc: [...document.querySelectorAll('.hd-buoc .hd-so')].map(x => x.textContent).join(','), tt: document.querySelectorAll('.warn.hd-tt').length, lu: document.querySelectorAll('.warn.hd-lu').length }));
       kq.push(['Hướng dẫn: mỗi phần 1 thẻ, 5 thẻ bước đánh số, hộp lưu ý tô theo loại', hd.phan >= 8 && hd.buoc === '1,2,3,4,5' && hd.tt >= 2 && hd.lu >= 1 ? true : JSON.stringify(hd)]);
+      // Mục 10: sơ đồ luồng dữ liệu có tín hiệu chạy dọc 16 mũi tên; nút Dừng tắt hẳn, bấm lại chạy tiếp
+      const lay = () => p.evaluate(() => { const t = [...document.querySelectorAll('#ldlKhung .ldl-tin')]; const cs = t.length ? getComputedStyle(t[0]) : null; return { so: t.length, ten: cs && cs.animationName, an: cs && cs.opacity, lech: t.length ? getComputedStyle(t[0]).strokeDashoffset : '', nut: document.getElementById('ldlNutChay').textContent }; });
+      const a1 = await lay(); await p.waitForTimeout(400); const a2 = await lay();
+      await p.click('#ldlNutChay'); const a3 = await lay();
+      await p.click('#ldlNutChay'); const a4 = await lay();
+      // Bấm 1 ô: ô sáng, ô liên quan giữ sáng, phần còn lại mờ; bảng thông tin đủ nguồn + gửi tới / nhận từ; bấm sang ô khác; Esc bỏ chọn; đổi nền tối
+      await p.click('.ldl-nut[data-id="luuChinhThuc"]', { force: true }); await p.waitForTimeout(300); // chờ hiệu ứng mờ 0,15 s
+      const c1 = await p.evaluate(() => ({ hien: !document.getElementById('ldlHoChieu').hidden, td: (document.querySelector('#ldlHoChieu h4') || {}).textContent, ra: document.querySelectorAll('#ldlHoChieu .huong.ra').length, vao: document.querySelectorAll('#ldlHoChieu .huong.vao').length, nguon: [...document.querySelectorAll('#ldlHoChieu .nguon a')].map(a => a.getAttribute('href')), mo: getComputedStyle(document.querySelector('.ldl-nut[data-id="traCuu"]')).opacity, lien: getComputedStyle(document.querySelector('.ldl-nut[data-id="bangGoc"]')).opacity }));
+      await p.click('#ldlHoChieu .toi-o[data-chon="bangGoc"]');
+      const c2 = await p.evaluate(() => ({ td: document.querySelector('#ldlHoChieu h4').textContent, ra: document.querySelectorAll('#ldlHoChieu .huong.ra').length }));
+      await p.keyboard.press('Escape');
+      const c3 = await p.evaluate(() => ({ an: document.getElementById('ldlHoChieu').hidden, coChon: document.getElementById('ldlKhung').classList.contains('co-chon') }));
+      await p.click('#ldlNutGiaoDien');
+      const c4 = await p.evaluate(() => ({ toi: document.querySelector('.ldl-vung').classList.contains('toi'), nen: getComputedStyle(document.getElementById('ldlKhung')).backgroundColor }));
+      kq.push(['Hướng dẫn mục 10: bấm ô -> sáng + bảng thông tin (2 nguồn mã, 2 ra, 2 vào), ô không liên quan mờ, chuyển ô, Esc, nền tối',
+        c1.hien && c1.td === 'Lưu chính thức' && c1.ra === 2 && c1.vao === 2 && c1.nguon.length === 2 && /blob\/[0-9a-f]{40}\/15_DraftHopDong\.gs#L\d+-L\d+/.test(c1.nguon[0]) && Number(c1.mo) < 0.5 && c1.lien === '1' &&
+        c2.td === 'Bảng gốc HD_*' && c2.ra === 4 && c3.an && !c3.coChon && c4.toi && c4.nen === 'rgb(11, 18, 32)' ? true : JSON.stringify([c1, c2, c3, c4])]);
+      kq.push(['Hướng dẫn mục 10: 16 tín hiệu chạy dọc mũi tên, nút Dừng tắt / Chạy bật lại', a1.so === 16 && a1.ten === 'ldlChay' && a1.lech !== a2.lech && a3.ten === 'none' && a3.an === '0' && /Chạy/.test(a3.nut) && a4.ten === 'ldlChay' && /Dừng/.test(a4.nut) ? true : JSON.stringify([a1, a2, a3, a4])]);
     }
     if (trang === 'baocao') {
       const bc = await p.evaluate(() => {
