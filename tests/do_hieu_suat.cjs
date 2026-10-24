@@ -45,6 +45,8 @@ doMot('Tra cứu', 'Tìm theo tên (Tra cứu HĐ)', 'TRA_CUU_HOP_DONG_(' + J(X.
 doMot('Tra cứu', 'Tìm theo CCCD', 'TRA_CUU_HOP_DONG_(' + J(X.cccd) + ', "", "")');
 doMot('Tra cứu', 'Xem chi tiết 1 HĐ (Tra cứu)', 'CHI_TIET_TRA_CUU_HOP_DONG_(' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Danh sách khách hàng (Nhập liệu)', 'layDanhSachKhachHang_(1, 20, "")');
+doMot('Tra cứu', 'Danh sách khách hàng: trang 2 / tìm', 'layDanhSachKhachHang_(2, 20, "khach")');
+doMot('Tra cứu', 'Tìm tiếp theo tên khác', 'TRA_CUU_HOP_DONG_("Khach Hang 7", "", "")');
 doMot('Tra cứu', 'HĐ của 1 khách hàng', 'layHopDongTheoKhachHang_(' + J(X.cccd) + ')');
 doMot('Tra cứu', 'Mở 1 HĐ ở Nhập liệu', 'layHopDongTheoIdHD_(' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Thanh tiến độ 5 bước', 'TIEN_DO_HO_SO_HD_(' + J(X.idHD) + ')');
@@ -54,6 +56,9 @@ doMot('Tra cứu', 'Tab GPS của 1 lô', 'layGPSCuaRung_(' + J(X.idRung) + ')')
 doMot('Tra cứu', 'Tab Ảnh của 1 lô', 'layDraftAnhChoRung_(' + J(X.idRung) + ',' + J(X.idHD) + ')');
 doMot('Tra cứu', 'Tổng quan hợp đồng', 'LAY_TONG_QUAN_HOP_DONG_({})');
 doMot('Tra cứu', 'Tổng quan (mở lại / đổi bộ lọc)', '_draftDataCache = null; LAY_TONG_QUAN_HOP_DONG_({ tinhTrangLoc: "Chờ thực hiện" })');
+doMot('Tra cứu', 'Bản đồ GPS (mở lần đầu)', 'getMapData_()');
+doMot('Tra cứu', 'Bản đồ GPS (mở lại)', 'getMapData_()');
+doMot('Tra cứu', 'Làm mới Draft (không có thay đổi)', 'LAM_MOI_DRAFT_THEO_THAY_DOI_(); LAM_MOI_DRAFT_THEO_THAY_DOI_()');
 // ---- GHI ----
 doMot('Ghi', 'Tạo hợp đồng mới', 'TAO_HOP_DONG_MOI_(' + J({ tenChuRung: 'Khach Moi', cccdChuRung: '049099999999', ngayKy: '2026-09-01', soTK: '999', nganHang: 'VCB', diaChiRung: 'Thon Moi', dienTichKy: 10000, slDuKien: 120, donGia: 1000 }) + ')');
 doMot('Ghi', 'Thêm lô rừng', 'THEM_LO_RUNG_MOI_(' + J({ idHD: X.idHD, diaChiRung: 'Lo them', dienTichM2: 2000, donGia: 1800, khoiLuongDuKien: 24 }) + ')');

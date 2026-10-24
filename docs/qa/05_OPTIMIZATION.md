@@ -40,3 +40,24 @@ Danh sách kỹ thuật tối ưu trong yêu cầu, đối chiếu với **kiế
 | requestAnimationFrame | Không có animation / cập nhật liên tục |
 | IndexedDB | Dữ liệu phải luôn mới từ Sheet (nhiều người cùng sửa); lưu cục bộ dễ gây hiển thị dữ liệu cũ |
 | State Management framework | Trạng thái đơn giản (biến `duNhap`, `wz`, `ctxHD` theo trang); thêm framework là thừa |
+
+## Đợt 11/10/2026 (nhánh `feature/hdmb-performance-optimization`)
+
+Số đo: `PERFORMANCE_COMPARISON.md`. Kết quả nghiệp vụ không đổi: `DATA_INTEGRITY_TEST.md` (110/110 trường hợp giống mã cũ).
+
+| Kỹ thuật | Ở đâu | Kết quả (bộ giả lập, 5.000 HĐ) |
+|---|---|---|
+| **Đọc theo cột** (`docCacCot_`) | Danh sách KH, chỉ mục Tra cứu, cờ ảnh/GPS, bản đồ, phiếu cân | Danh sách KH 165.000 → 40.000 ô; Tổng quan 605.000 → 310.000; bản đồ lần đầu 615.063 → 390.010 |
+| **Đọc theo khóa** (cột khóa + dòng khớp) | Hợp đồng của 1 khách hàng | 165.000 → 5.033 ô |
+| **Cache có xóa đúng lúc** | Danh sách KH (5 phút), bản đồ (chia mảnh, 15 phút) | Đổi trang / mở lại: 0 ô đọc |
+| **Gom N lượt đọc thành 1** | Làm mới Draft: lô rừng của mọi HĐ đổi | 10.014 → 24 lượt đọc |
+| **Mốc theo dòng** (nhật ký chỉ ghi thêm) | Làm mới Draft | Chỉ đọc dòng nhật ký mới |
+| **Đồng bộ tăng dần theo bản đã áp dụng** | Đồng bộ thanh toán 30 phút | Chỉ tính lại HĐ có thanh toán đổi; 24 giờ tính lại toàn bộ 1 lần |
+| **Ghi theo chênh lệch** | Cập nhật Draft hàng loạt | Chỉ ghi dòng đổi, gom dòng liền nhau; không ghi đè dòng HĐ khác |
+| **Đọc 1 lần / lượt** | Bảng DNTT | 2 → 1 lần đọc file ngoài mỗi lượt đồng bộ |
+
+**Không làm (đã đánh giá):**
+- Phân vùng bản đồ theo khung nhìn: 20.000 điểm GPS là 1 lần đọc 390.010 ô rồi dùng cache — chưa cần, lại đổi giao diện bản đồ.
+- Làm tròn tọa độ để thu nhỏ JSON bản đồ: đổi số hiển thị / diện tích tính phía trình duyệt → không làm (yêu cầu không đổi tọa độ).
+- Gộp lệnh ghi của các thao tác Tạo / Sửa: đã tối ưu ở đợt 04/10 (chủ yếu chỉ đọc 1 cột khóa) — đo lại không thấy chỗ lợi rõ.
+- Lazy-load ảnh: trang Tra cứu hình ảnh đã tải danh sách trước, ảnh thu nhỏ theo nhóm và nhớ ở DocumentCache 6 giờ.
