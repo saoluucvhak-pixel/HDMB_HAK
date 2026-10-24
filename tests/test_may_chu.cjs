@@ -1057,6 +1057,12 @@ try {
     tq();
     const m3 = t.run('(function(){ _draftDataCache = null; return docToanBoDraftBaoCao_().filter(function (m) { return m.idHD === ' + J(A.idHD) + '; })[0]; })()');
     kiem('HS-TQ thêm GPS + ảnh qua webapp -> báo cáo / Tổng quan thấy ngay (đủ GPS, có ảnh)', m3.daDoGPSDu === true && m3.coAnh === true, J(m3));
+    // TQ-1 (rà soát 24/10/2026): Tổng quan không hiển thị cờ ảnh / GPS -> ngay LẦN ĐẦU (bản nhớ cờ đã hết hạn) cũng không đọc HD_RUNG / HD_GPS / HD_Picture
+    t.run('xoaCacheAnhGps_()');
+    const lanDau = tq();
+    kiem('TQ-1 Tổng quan lần đầu (bản nhớ cờ ảnh/GPS trống) không đọc HD_RUNG / HD_GPS / HD_Picture', !lanDau.theo.some(k => /^HD_(RUNG|GPS|Picture)/.test(k)), J(lanDau.theo));
+    const dayDu = t.run('(function(){ _draftDataCache = null; docToanBoDraftBaoCao_(); return LAY_TONG_QUAN_HOP_DONG_({}); })()');
+    kiem('TQ-1 kết quả Tổng quan giống hệt khi đọc bản đầy đủ (có ghi đè ảnh/GPS)', J(lanDau.r) === J(dayDu), J(lanDau.r).slice(0, 200));
     // cache chia mảnh: chuỗi > 25.000 ký tự đọc lại nguyên vẹn
     const lon = t.run('(function () { var o = { s: new Array(60001).join("ạ") }; luuCacheChiaManh_("THU_LON", o, 60); var d = docCacheChiaManh_("THU_LON"); return !!d && d.s.length === 60000 && JSON.parse(CacheService.getScriptCache().get("THU_LON")).n === 3; })()');
     kiem('HS-TQ cache chia mảnh: 60.000 ký tự -> 3 khúc, đọc lại đúng', lon === true);
