@@ -1,7 +1,8 @@
 # Sinh lại sơ đồ mục 10 của 13_HuongDan.html (SVG + dữ liệu bảng thông tin) từ candidate.json của Archify.
 # Chạy: python3 tests/sinh_so_do_huong_dan.py  (sửa mô tả từng ô trong danh sách NUT; vị trí / nhãn mũi tên trong DUONG)
 import json, re, html
-REPO='/home/user/HDMB_HAK'
+import os
+REPO=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 cand=json.load(open(REPO+'/.archify/dataflow-hdmb-luong-du-lieu-20261024-081228/candidate.json'))
 CN={n['id']:n for n in cand['nodes']}
 CF={f['id']:f for f in cand['flows']}
@@ -94,8 +95,12 @@ for fid,cls,d,lab,txt in DUONG:
     f=CF[fid]; du['duong'].append({'tu':f['from'],'den':f['to'],'nhan':f['label'],'phu':f.get('classification','')})
 svg=''.join(o)
 p=REPO+'/13_HuongDan.html'; s=open(p).read()
-start=s.index('<button type="button" class="ldl-nut-chay"')
-end=s.index('</svg></div>',start)+len('</svg></div>')
+if '<div class="ldl-cong-cu">' in s:  # đã có bản tương tác -> thay nguyên khối (công cụ + sơ đồ + bảng thông tin + dữ liệu)
+    start=s.index('<div class="ldl-cong-cu">')
+    end=s.index('</script>', s.index('<script>var LDL_DU_LIEU_=', start))+len('</script>')
+else:
+    start=s.index('<button type="button" class="ldl-nut-chay"')
+    end=s.index('</svg></div>',start)+len('</svg></div>')
 khoi=('<div class="ldl-cong-cu"><button type="button" class="ldl-nut-chay" id="ldlNutChay" onclick="ldlBatTatTinHieu_(this)">⏸ Dừng tín hiệu</button>'
  '<button type="button" class="ldl-nut-chay" id="ldlNutGiaoDien" onclick="ldlDoiGiaoDien_(this)" aria-pressed="false">🌙 Nền tối</button></div>'
  '<div class="ldl-vung"><div class="ldl-khung" id="ldlKhung">'+svg+'</div>'
@@ -103,4 +108,4 @@ khoi=('<div class="ldl-cong-cu"><button type="button" class="ldl-nut-chay" id="l
  '<script>var LDL_DU_LIEU_='+json.dumps(du,ensure_ascii=False)+';</script>')
 s=s[:start]+khoi+s[end:]
 open(p,'w').write(s)
-print('ok', len(khoi))
+print('Đã sinh lại sơ đồ mục 10:', len(khoi), 'ký tự')
